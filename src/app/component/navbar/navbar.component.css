@@ -1,0 +1,75 @@
+.navbar-logo {
+    width: 200px; /* Increase the default width for a larger logo */
+    height: auto; /* Maintain aspect ratio */
+    transition: width 0.3s ease-in-out; /* Smooth transition for resizing */
+}
+
+@media (min-width: 992px) {
+    .navbar-logo {
+        width: 250px; /* Larger logo for larger screens */
+    }
+}
+
+.bg-prettier {
+    background: linear-gradient(45deg, #007bff, #6610f2); /* Aesthetic gradient background */
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: #fff;
+    transition: color 0.2s ease-in-out;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+    color: #adb5bd;
+}
+
+
+body, html {
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    width: 100%; /* Ensure the body doesn't exceed viewport width */
+}
+
+
+
+@media (max-width: 768px) {
+    .dropdown-menu {
+        padding: 10px; /* Add padding for better touch targets */
+        font-size: 16px; /* Adjust font size for readability on mobile */
+    }
+
+    .navbar-toggler {
+        margin-right: 15px; /* Ensure space around the toggler */
+    }
+
+    .navbar-nav {
+        text-align: right; /* Align text to the right within the dropdown */
+    }
+}
+
+/* Ensure the dropdown does not exceed the screen width */
+.dropdown-menu {
+    max-width: 90%; /* Limit maximum width to prevent overflow */
+}
+
+/* Navbar and Dropdown Styles */
+.navbar {
+    padding: 0 15px; /* Adjust navbar padding */
+}
+
+.dropdown-menu {
+    min-width: 250px; /* Minimum width for desktop */
+    border: none;
+    color: #f8f9fa;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+.user-avatar-md {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
