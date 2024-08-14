@@ -1,0 +1,78 @@
+<section *ngIf="(loginState$ | async) as state" [ngSwitch]="state.dataState" class="bg-container">
+  <!-- Login Screen -->
+  <div *ngIf="!state.loginSuccess && !state.isUsingMfa" class="d-flex justify-content-center align-items-center vh-100">
+    <div class="card fancy-card shadow-lg border-0 rounded-3" style=" max-width: 480px; width: 95%; margin-top: 20px;">
+      <div class="card-body p-4 p-lg-5 text-center">
+        <img src="/assets/images/bostoneo-logo-1.svg" height="100" class="img-fluid mb-3" alt="Bostoneo Logo" loading="lazy" />
+        <h5 class="card-title mt-4 mb-4">Account Login</h5>
+        <div *ngIf="state.dataState === DataState.ERROR" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
+          {{state.error}}
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <form #loginForm="ngForm" (ngSubmit)="login(loginForm)">
+          <div class="form-outline mb-4">
+            <label class="form-label" for="email">Email Address</label>
+            <input [disabled]="state.dataState === DataState.LOADING" ngModel type="email" name="email" class="form-control rounded border-0 shadow-sm" required>
+          </div>
+          <div class="form-outline mb-4">
+            <label for="password" class="form-label">Password</label>
+            <input [disabled]="state.dataState === DataState.LOADING" ngModel type="password" name="password" class="form-control rounded border-0 shadow-sm" required>
+          </div>
+          <div class="d-flex justify-content-center mb-4">
+            <button [disabled]="state.dataState === DataState.LOADING || loginForm.invalid || loginForm.pristine" type="submit" class="btn btn-primary rounded-pill shadow-lg fancy-btn">
+              <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
+              <span *ngIf="state.dataState === DataState.LOADING">Loading...</span>
+              <span *ngIf="!(state.dataState === DataState.LOADING)">Log In</span>
+            </button>
+          </div>
+        </form>
+        <div class="row mb-4">
+          <div class="col-12 d-flex justify-content-center">
+            <a [ngStyle]="{'pointer-events':state.dataState === DataState.LOADING ? 'none':''}" routerLink="/register" class="text-decoration-underline text-primary">Create an Account</a>
+          </div>
+          <div class="col-12 d-flex justify-content-center mt-2">
+            <a [ngStyle]="{'pointer-events':state.dataState === DataState.LOADING ? 'none':''}" routerLink="/resetpassword" class="text-decoration-underline text-primary">Forgot Password?</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MFA Verification Screen -->
+  <div *ngIf="state.isUsingMfa" class="d-flex justify-content-center align-items-center vh-100">
+    <div class="card fancy-card shadow-lg border-0 rounded-3">
+      <div class="card-body p-4 p-lg-5 text-center">
+        <img src="/assets/images/bostoneo-logo-1.svg" height="100" class="img-fluid mb-3" alt="Bostoneo Logo" loading="lazy" />
+        <h5 class="card-title mt-4 mb-4">Verification Code Sent To ...{{ state.phone }}</h5>
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 30px;"></i>
+        <p class="mt-2" style="font-size: 20px;">Please check your SMS and enter the code.</p>
+        <div *ngIf="state.dataState === DataState.ERROR" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
+          {{ state.error }}
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <form #verifyCodeForm="ngForm" (ngSubmit)="verifyCode(verifyCodeForm)">
+          <div class="form-outline mb-4">
+            <label class="form-label" for="code">Verification Code</label>
+            <input [disabled]="state.dataState === DataState.LOADING" ngModel type="text" name="code" class="form-control rounded border-0 shadow-sm" required>
+          </div>
+          <div class="d-flex justify-content-center mb-4">
+            <button [disabled]="state.dataState === DataState.LOADING || verifyCodeForm.invalid || verifyCodeForm.pristine" type="submit" class="btn btn-primary rounded-pill shadow-lg fancy-btn">
+              <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
+              <span *ngIf="state.dataState === DataState.LOADING">Loading...</span>
+              <span *ngIf="!(state.dataState === DataState.LOADING)">Verify Code</span>
+            </button>
+          </div>
+        </form>
+        <div class="row mb-4">
+          <div class="col-12 d-flex justify-content-center">
+            <a (click)="loginPage()" class="text-decoration-underline text-primary" style="cursor: pointer;">Account Login</a>
+          </div>
+          <div class="col-12 d-flex justify-content-center mt-2">
+            <a [routerLink]="['/register']" class="text-decoration-underline text-primary">Create an account</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
