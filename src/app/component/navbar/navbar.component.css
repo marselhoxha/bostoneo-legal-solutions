@@ -1,12 +1,12 @@
 .navbar-logo {
-    width: 200px; /* Increase the default width for a larger logo */
+    width: 250px; /* Increase the default width for a larger logo */
     height: auto; /* Maintain aspect ratio */
     transition: width 0.3s ease-in-out; /* Smooth transition for resizing */
 }
 
 @media (min-width: 992px) {
     .navbar-logo {
-        width: 250px; /* Larger logo for larger screens */
+        width: 275px; /* Larger logo for larger screens */
     }
 }
 

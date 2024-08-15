@@ -40,7 +40,7 @@
 
   <!-- MFA Verification Screen -->
   <div *ngIf="state.isUsingMfa" class="d-flex justify-content-center align-items-center vh-100">
-    <div class="card fancy-card shadow-lg border-0 rounded-3">
+    <div class="card fancy-card shadow-lg border-0 rounded-3" style=" max-width: 480px; width: 95%; margin-top: 20px;">
       <div class="card-body p-4 p-lg-5 text-center">
         <img src="/assets/images/bostoneo-logo-1.svg" height="100" class="img-fluid mb-3" alt="Bostoneo Logo" loading="lazy" />
         <h5 class="card-title mt-4 mb-4">Verification Code Sent To ...{{ state.phone }}</h5>
