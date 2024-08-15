@@ -26,7 +26,7 @@ export class LoginComponent {
     this.loginState$ = this.userService.login$(loginForm.value.email, loginForm.value.password)
       .pipe(
         map(response => {
-          if (response.data.user?.usingMfa) {
+          if (response.data.user?.usingMFA) {
             this.phoneSubject.next(response.data.user.phone);
             this.emailSubject.next(response.data.user.email);
             return {
