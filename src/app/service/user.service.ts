@@ -90,7 +90,15 @@ export class UserService {
       .pipe(
         tap(console.log),
         catchError(this.handleError)
-      );    
+      );  
+  
+  updateImage$ = (formData: FormData) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.patch<CustomHttpResponse<Profile>>
+      (`${this.server}/user/update/image`, formData)
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );      
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.log(error);
