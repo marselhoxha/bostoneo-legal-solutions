@@ -26,7 +26,7 @@ export class LoginComponent {
     this.loginState$ = this.userService.login$(loginForm.value.email, loginForm.value.password)
       .pipe(
         map(response => {
-          if (response.data.user?.usingMFA) {
+          if (response.data.user.usingMFA) {
             this.phoneSubject.next(response.data.user.phone);
             this.emailSubject.next(response.data.user.email);
             return {
@@ -42,6 +42,7 @@ export class LoginComponent {
         }),
         startWith({ dataState: DataState.LOADING, isUsingMfa: false }),
         catchError((error: string) => {
+          console.log(error);
           return of({ dataState: DataState.ERROR, isUsingMfa: false, loginSuccess: false, error })
         })
       )
