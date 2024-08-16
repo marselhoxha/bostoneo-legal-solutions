@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
+import { catchError,tap } from 'rxjs/operators';
 import { CustomHttpResponse, Profile } from '../interface/appstates';
-import { catchError, tap } from 'rxjs/operators'; // Add this line
 import { User } from '../interface/user';
 import { Key } from '../enum/key.enum';
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class UserService {
   private readonly server: string = 'http://localhost:8080';
@@ -48,7 +48,7 @@ export class UserService {
 
   refreshToken$ = () => <Observable<CustomHttpResponse<Profile>>>
     this.http.get<CustomHttpResponse<Profile>>
-      (`${this.server}/user/refresh/token`, { headers: { Authorization: `Bearer ${localStorage.getItem(Key.REFRESH_TOKEN)}` }})
+      (`${this.server}/user/refresh/token`, { headers: { Authorization: `Bearer ${localStorage.getItem(Key.REFRESH_TOKEN)}` } })
       .pipe(
         tap(response => {
           console.log(response);
@@ -57,6 +57,30 @@ export class UserService {
           localStorage.setItem(Key.TOKEN, response.data.access_token);
           localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
         }),
+        catchError(this.handleError)
+      );
+
+  updatePassword$ = (form: { currentPassword: string, newPassword: string, confirmNewPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.patch<CustomHttpResponse<Profile>>
+      (`${this.server}/user/update/password`, form)
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );
+
+  updateRoles$ = (roleName: string) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.patch<CustomHttpResponse<Profile>>
+      (`${this.server}/user/update/role/${roleName}`, {})
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );
+
+  updateAccountSettings$ = (settings: { enabled: boolean, notLocked: boolean }) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.patch<CustomHttpResponse<Profile>>
+      (`${this.server}/user/update/settings`, settings)
+      .pipe(
+        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -73,6 +97,6 @@ export class UserService {
         errorMessage = `An error occurred - Error status ${error.status}`;
       }
     }
-    return throwError(() => errorMessage);
+    return throwError(errorMessage);
   }
 }

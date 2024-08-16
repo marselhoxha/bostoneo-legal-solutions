@@ -31,7 +31,7 @@ export class TokenInterceptor implements HttpInterceptor {
           if(error instanceof HttpErrorResponse && error.status === 401 && error.error.reason.includes('expired')) {
             return this.handleRefreshToken(request, next);
           } else {
-            return throwError(() => error);
+            return throwError(error);
           }
         })
       );
