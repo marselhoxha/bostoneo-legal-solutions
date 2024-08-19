@@ -234,7 +234,8 @@
                                  </div>
                                  <div class="col-auto">
                                      <div class="custom-control custom-switch">
-                                         <input type="checkbox" class="custom-control-input" id="activityLog">
+                                         <input type="checkbox" (change)="toggleLogs()" [disabled]="(isLoading$ | async)" 
+                                         [checked]="(showLogs$ | async)" class="custom-control-input" id="activityLog">
                                          <span class="custom-control-label"></span>
                                      </div>
                                  </div>
@@ -244,44 +245,59 @@
                   </div>
                </div>
             </div>
-            <div class="row">
-               <div class="col-xl-12 mt-4">
-                  <div class="card" style="border-radius: 8px;">
-                     <div class="card-body">
-                        <h5 class="card-title">Account Activities</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">Latest activities on your account.                        </h6>
-                        <table class="table table-hover">
-                           <thead>
-                              <tr>
-                                 <th scope="col">Device</th>
-                                 <th scope="col">IP Address</th>
-                                 <th scope="col">Date</th>
-                                 <th scope="col">Type</th>
-                                 <th scope="col">Description</th>
-                                 <th scope="col">Action</th>
-                              </tr>
-                           </thead>
-                           <tbody>
-                              <tr >
-                                 <td>Chrome</td>
-                                 <td>192.168.1.209</td>
-                                 <td>01-15-2023 5:25:20</td>
-                                 <td>
-                                    <span class="badge pill bg-success">
-                                            LOGIN_ATTEMPT_SUCCESS
-                                    </span>
-                                 </td>
-                                 <td>You logged in successfully</td>
-                                 <td>
-                                    <button type="button" class="btn btn-sm" style="background-color: #fd5d0d; font-weight: 450;">Report</button>
-                                 </td>
-                              </tr>
-                           </tbody>
-                        </table>
-                     </div>
-                  </div>
+            <div class="container">
+               <div *ngIf="showLogs$ | async" class="row">
+                   <div class="col-12 mt-4">
+                       <div class="card" style="border-radius: 8px;">
+                           <div class="card-body">
+                               <h5 class="card-title">Account Activities</h5>
+                               <h6 class="card-subtitle mb-2 text-muted">Latest activities on your account.</h6>
+                               <div class="table-responsive">
+                                   <table class="table table-hover">
+                                       <thead>
+                                           <tr>
+                                               <th scope="col">Device</th>
+                                               <th scope="col">IP Address</th>
+                                               <th scope="col">Date</th>
+                                               <th scope="col">Type</th>
+                                               <th scope="col">Description</th>
+                                               <th scope="col">Action</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody>
+                                           <tr *ngFor="let event of state?.appData?.data?.events">
+                                               <td>{{ event.device }}</td>
+                                               <td>{{ event.ipAddress }}</td>
+                                               <td>{{ event.createdAt | date: 'MMMM d, y, h:mm a' }}</td>
+                                               <td>
+                                                   <span class="badge pill" [ngClass]="[
+                                                   event.type === EventType.LOGIN_ATTEMPT_SUCCESS ? 'bg-success' : '',
+                                                   event.type === EventType.LOGIN_ATTEMPT ? 'bg-warning' : '',
+                                                   event.type === EventType.PROFILE_UPDATE ? 'bg-primary' : '',
+                                                   event.type === EventType.LOGIN_ATTEMPT_FAILURE ? 'bg-danger' : '',
+                                                   event.type === EventType.PROFILE_PICTURE_UPDATE ? 'bg-primary' : '',
+                                                   event.type === EventType.ROLE_UPDATE ? 'bg-info' : '',
+                                                   event.type === EventType.ACCOUNT_SETTINGS_UPDATE ? 'bg-info' : '',
+                                                   event.type === EventType.PASSWORD_UPDATE ? 'bg-info' : '',
+                                                   event.type === EventType.MFA_UPDATE ? 'bg-info' : ''
+                                                   ]">
+                                                   {{ event.type }}
+                                                </span>
+                                               </td>
+                                               <td>{{ event.description }}</td>
+                                               <td>
+                                                   <button type="button" class="btn btn-sm text-white" style="background-color: #fa7e40; font-weight: 450;">Report</button>
+                                               </td>
+                                           </tr>
+                                       </tbody>
+                                   </table>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
                </div>
-            </div>
+           </div>
+           
          </div>
       </section>
    </ng-container>
