@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError,tap } from 'rxjs/operators';
+import { JwtHelperService } from '@auth0/angular-jwt';
 import { CustomHttpResponse, Profile } from '../interface/appstates';
 import { User } from '../interface/user';
 import { Key } from '../enum/key.enum';
@@ -11,6 +12,7 @@ import { Key } from '../enum/key.enum';
 })
 export class UserService {
   private readonly server: string = 'http://localhost:8080';
+  private jwtHelper =  new JwtHelperService();
 
   constructor(private http: HttpClient) { }
 
@@ -98,7 +100,9 @@ export class UserService {
       .pipe(
         tap(console.log),
         catchError(this.handleError)
-      );      
+      );   
+      
+  isAuthenticated = (): boolean => (this.jwtHelper.decodeToken<string>(localStorage.getItem(Key.TOKEN)) && this.jwtHelper.isTokenExpired(localStorage.getItem(Key.TOKEN) )) ? true : false;   
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.log(error);
