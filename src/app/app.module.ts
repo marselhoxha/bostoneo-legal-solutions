@@ -20,9 +20,11 @@ import { NewcustomerComponent } from './component/newcustomer/newcustomer.compon
 import { NewinvoiceComponent } from './component/newinvoice/newinvoice.component';
 import { InvoicesComponent } from './component/invoices/invoices.component';
 import { InvoiceComponent } from './component/invoice/invoice.component';
-
+import { ExtractArrayValue } from './pipes/extractvalue.pipe';
+import { CacheInterceptor } from './interceptor/cache.interceptor';
 @NgModule({
   declarations: [
+    ExtractArrayValue,
     AppComponent,
     LoginComponent,
     RegisterComponent,
@@ -37,7 +39,8 @@ import { InvoiceComponent } from './component/invoice/invoice.component';
     NewcustomerComponent,
     NewinvoiceComponent,
     InvoicesComponent,
-    InvoiceComponent
+    InvoiceComponent,
+   
   ],
   imports: [
     BrowserModule,
@@ -45,7 +48,9 @@ import { InvoiceComponent } from './component/invoice/invoice.component';
     HttpClientModule,
     FormsModule
   ],
-  providers: [ {provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true} ],
+  providers: [ {provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true},
+               {provide: HTTP_INTERCEPTORS, useClass: CacheInterceptor, multi: true}
+             ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
