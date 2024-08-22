@@ -1,0 +1,133 @@
+/* General Section Styling */
+.customer-section {
+    padding-top: 30px;
+    padding-bottom: 50px;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Breadcrumb Styling */
+.breadcrumb-container {
+    margin-bottom: 30px;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb {
+    background-color: transparent;
+    margin-bottom: 0;
+}
+
+.breadcrumb a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
+
+/* Card Styling */
+.customer-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+}
+
+.customer-card .card-header {
+    background-color: #343a40;
+    color: #ffffff;
+    border-bottom: none;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    padding: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.customer-card h3 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 24px;
+}
+
+.customer-card .card-body {
+    padding: 40px;
+    background-color: #f8f9fa;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Input and Form Styling */
+.custom-input {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 12px 15px;
+    transition: all 0.3s;
+    background-color: #ffffff;
+}
+
+.custom-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* Button Styling */
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    border-radius: 8px;
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.spinner-border-sm {
+    width: 1.2rem;
+    height: 1.2rem;
+    border-width: 3px;
+}
+
+/* Alert Styling */
+.custom-alert {
+    margin-bottom: 25px;
+    border-radius: 8px;
+    padding: 15px 20px;
+    background-color: #dc3545;
+    color: #ffffff;
+    box-shadow: 0 2px 15px rgba(220, 53, 69, 0.25);
+}
+
+.custom-alert .btn-close-white {
+    color: #ffffff;
+}
+
+/* Responsive Styling */
+@media (max-width: 768px) {
+    .customer-card .card-body {
+        padding: 20px;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+    }
+    
+    .breadcrumb-container {
+        padding: 8px 15px;
+    }
+}

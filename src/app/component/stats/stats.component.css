@@ -1,88 +1,128 @@
-.rounded {
-    -webkit-border-radius: 3px !important;
-    -moz-border-radius: 3px !important;
-    border-radius: 3px !important;
-  }
-  
-  .mini-stat {
-    padding: 15px;
-    margin-bottom: 20px;
-  }
-  
-  .mini-stat-icon {
-    width: 60px;
-    height: 60px;
-    display: inline-block;
-    line-height: 60px;
-    text-align: center;
-    font-size: 30px;
-    background: none repeat scroll 0% 0% #EEE;
-    border-radius: 100%;
-    float: left;
-    margin-right: 10px;
-    color: #FFF;
-  }
-  
-  .mini-stat-info {
-    font-size: 12px;
-    padding-top: 2px;
-  }
-  
-  span, p {
-    color: white;
-  }
-  
-  .mini-stat-info span {
-    display: block;
-    font-size: 30px;
-    font-weight: 600;
-    margin-bottom: 5px;
-    margin-top: 7px;
-  }
-  
-  /* ================ colors =====================*/
-  .bg-facebook {
-    background-color: #285a71 !important;
-    border: 1px solid #3b5998;
-    color: white;
-  }
-  
-  .fg-facebook {
-    color: #3b5998 !important;
-  }
-  
-  .bg-twitter {
-    background-color: #04994e !important;
-    border: 1px solid #04994e;
-    color: white;
-  }
-  
-  .fg-twitter {
-    color: #00a0d1 !important;
-  }
-  
-  .bg-googleplus {
-    background-color: #81830b !important;
-    border: 1px solid #81830b;
-    color: white;
-  }
-  
-  .fg-googleplus {
-    color: #db4a39 !important;
-  }
-  
-  .bg-bitbucket {
-    background-color: #6218b0 !important;
-    border: 1px solid #6218b0;
-    color: white;
-  }
-  
-  .fg-bitbucket {
-    color: #4f096a !important;
-  }  
+/* General Styling for the Section */
+.container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-  /* General Responsive Fixes */
-body, html {
-    width: 100%;
-    overflow-x: hidden; /* Prevent horizontal scrolling caused by overflow */
+/* Mini Stats Cards */
+.mini-stat {
+  padding: 30px 25px;
+  border-radius: 15px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); /* Consistent shadow for all cards */
+  margin-bottom: 20px; /* Equal spacing between cards */
+}
+
+
+.mini-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: 0;
+  z-index: 0;
+  transform: scale(1.2);
+}
+
+.mini-stat:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Icon Styling */
+.mini-stat-icon {
+  font-size: 4rem;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  opacity: 0.85;
+  z-index: 1;
+}
+
+/* Stat Info Styling */
+.mini-stat-info {
+  text-align: right;
+  z-index: 2;
+  position: relative;
+}
+
+.stat-number {
+  display: block;
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  color: #e0e0e0;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Background Colors */
+.bg-facebook {
+  background: linear-gradient(135deg, #00838F, #00ACC1); /* New Teal gradient */
+}
+
+.bg-googleplus {
+  background: linear-gradient(135deg, #43A047, #66BB6A); /* New Green gradient */
+}
+
+.bg-twitter {
+  background: linear-gradient(135deg, #1976D2, #42A5F5); /* New Blue gradient */
+}
+
+/* Shadow Effect */
+.shadow-sm {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); /* Static shadow */
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .mini-stat {
+      padding: 20px;
+      margin-bottom: 15px; /* Equal spacing between cards in responsive layout */
+  }
+
+  .mini-stat-icon {
+      font-size: 3rem;
+  }
+
+  .stat-number {
+      font-size: 2.5rem;
+  }
+
+  .stat-label {
+      font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .mini-stat {
+      padding: 15px;
+      margin-bottom: 10px; /* Equal spacing between cards in smaller screens */
+  }
+
+  .mini-stat-icon {
+      font-size: 2.5rem;
+  }
+
+  .stat-number {
+      font-size: 2rem;
+  }
+
+  .stat-label {
+      font-size: 1rem;
+  }
 }
