@@ -23,7 +23,7 @@ export class LoginComponent implements OnInit{
   constructor(private router: Router, private userService: UserService) { }
 
   ngOnInit(): void {
-    this.userService.isAuthenticated() ? this.router.navigate(['/']) : this.router.navigate(['login']);
+    this.userService.isAuthenticated() ? this.router.navigate(['/']) : this.router.navigate(['/login']);
   }
 
   login(loginForm: NgForm): void {

@@ -1,3 +1,120 @@
+.disabled{
+    pointer-events: none;
+    opacity: 0.6;
+}
 
+/* General Styles */
+.container {
+    max-width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+}
 
+/* Table Styles */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Progress Bar */
+.progress {
+    height: 20px;
+}
+
+.progress-bar {
+    width: 5%;
+}
+
+/* Buttons and Icons */
+.btn-info {
+    padding: 5px 10px;
+    font-size: 0.875rem;
+}
+
+.bi-file-earmark-excel {
+    cursor: pointer;
+    font-size: 1.875rem;
+    color: green;
+    transition: color 0.3s;
+}
+
+.bi-file-earmark-excel:hover {
+    color: darkgreen;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .col-6 {
+        margin-bottom: 15px;
+    }
+
+    .bi-file-earmark-excel {
+        font-size: 1.5rem;
+    }
+
+    .btn-info {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .table th, .table td {
+        font-size: 0.9rem;
+    }
+
+    .table-responsive {
+        margin-bottom: 15px;
+    }
+
+    .bi-file-earmark-excel {
+        font-size: 1.25rem;
+    }
+
+    .btn-info {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .progress-bar {
+        width: 100%;
+        height: 15px;
+    }
+
+    .bi-file-earmark-excel {
+        font-size: 1rem;
+    }
+
+    .btn-info {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+
+    .table th, .table td {
+        font-size: 0.8rem;
+        padding: 10px 5px;
+    }
+
+    .pagination {
+        font-size: 0.8rem;
+    }
+}
+/* Responsive Adjustments for Pagination Buttons */
+@media (max-width: 768px) {
+    .pagination .page-link {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .pagination .page-link {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+    }
+}
 
