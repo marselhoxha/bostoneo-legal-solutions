@@ -1,0 +1,96 @@
+<ng-container *ngIf="(newCustomerState$ | async) as state" [ngSwitch]="state.dataState">
+    <ng-container *ngSwitchCase="DataState.LOADED">
+      <app-navbar [user]="state?.appData?.data?.user"></app-navbar>
+      <section class="pt-4 pb-5">
+        <div class="container">
+          <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item">
+                <a [routerLink]="['/']">Home</a>
+              </li>
+              <li class="breadcrumb-item">
+                <a [routerLink]="['/customers']">Customers</a>
+              </li>
+              <li class="breadcrumb-item active" aria-current="page">New</li>
+            </ol>
+          </nav>
+  
+          <div class="row justify-content-center">
+            <div class="col-lg-10">
+              <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white text-center">
+                  <h3 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i> New Customer</h3>
+                </div>
+                <div class="card-body p-4">
+                  <div *ngIf="state.error" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
+                    {{ state.error }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+  
+                  <form #newCustomerForm="ngForm" (ngSubmit)="createCustomer(newCustomerForm)">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <div class="form-group">
+                          <label for="name" class="form-label">Name</label>
+                          <input id="name" type="text" ngModel name="name" class="form-control" required>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="form-group">
+                          <label for="email" class="form-label">Email</label>
+                          <input id="email" type="text" ngModel name="email" class="form-control" required>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="form-group">
+                          <label for="address" class="form-label">Address</label>
+                          <input id="address" type="text" ngModel name="address" class="form-control" required>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="form-group">
+                          <label for="phone" class="form-label">Phone</label>
+                          <input id="phone" type="text" ngModel name="phone" class="form-control" required>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="type" class="form-label">Type</label>
+                        <select id="type" name="type" ngModel="INDIVIDUAL" class="form-select" required>
+                          <option value="INDIVIDUAL">INDIVIDUAL</option>
+                          <option value="INSTITUTION" selected>INSTITUTION</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="status" class="form-label">Status</label>
+                        <select id="status" name="status" ngModel="ACTIVE" class="form-select" required>
+                          <option value="ACTIVE" selected>ACTIVE</option>
+                          <option value="BANNED">BANNED</option>
+                          <option value="PENDING">PENDING</option>
+                          <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                      </div>
+                      <div class="col-md-12">
+                        <div class="form-group">
+                          <label for="imageUrl" class="form-label">Image URL</label>
+                          <input id="imageUrl" type="text" ngModel name="imageUrl" class="form-control" required>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-center mt-4">
+                      <button [disabled]="state.dataState === DataState.LOADING || newCustomerForm.invalid || newCustomerForm.pristine || (isLaoding$ | async)"
+                        type="submit" class="btn btn-primary">
+                        <span *ngIf="isLaoding$ | async" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span *ngIf="isLaoding$ | async">Saving...</span>
+                        <span *ngIf="!(isLaoding$ | async)">Save Customer</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </ng-container>
+  

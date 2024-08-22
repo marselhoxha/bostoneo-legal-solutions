@@ -1,38 +1,39 @@
 <section>
-    <div class="container mt-2">
-       <div class="container bootstrap snippets bootdey">
-          <div class="row">
-             <div class="col-md-4 col-sm-6 col-xs-12">
-                <div class="mini-stat clearfix bg-facebook rounded">
-                   <span class="mini-stat-icon">
-                      <i class="bi bi-people-fill fg-facebook"></i> </span>
-                   <div class="mini-stat-info text-end">
-                      <span>1</span>
-                      Total Customers
-                   </div>
-                </div>
-             </div>
-             <div class="col-md-4 col-sm-6 col-xs-12">
-                <div class="mini-stat clearfix bg-googleplus rounded">
-                   <span class="mini-stat-icon">
-                      <i class="bi bi-receipt-cutoff fg-googleplus"></i></span>
-                   <div class="mini-stat-info text-end">
-                      <span>5</span>
-                      Total Invoices
-                   </div>
-                </div>
-             </div>
-             <div class="col-md-4 col-sm-6 col-xs-12">
-                <div class="mini-stat clearfix bg-twitter rounded">
-                   <span class="mini-stat-icon">
-                      <i class="bi bi-currency-dollar fg-twitter"></i></span>
-                   <div class="mini-stat-info text-end">
-                      <span>$580</span>
-                      Total Billed
-                   </div>
-                </div>
-             </div>
-          </div>
-       </div>
-    </div>
- </section>
+   <div class="container mt-4">
+      <div class="row">
+         <div class="col-md-4 col-sm-6 col-xs-12">
+            <div class="mini-stat shadow-sm clearfix bg-facebook rounded hover-effect">
+               <span class="mini-stat-icon">
+                  <i class="bi bi-people-fill fg-facebook"></i> 
+               </span>
+               <div class="mini-stat-info text-end">
+                  <span class="stat-number">{{ stats?.totalCustomers }}</span>
+                  <span class="stat-label">Total Customers</span>
+               </div>
+            </div>
+         </div>
+         <div class="col-md-4 col-sm-6 col-xs-12">
+            <div class="mini-stat shadow-sm clearfix bg-googleplus rounded hover-effect">
+               <span class="mini-stat-icon">
+                  <i class="bi bi-receipt-cutoff fg-googleplus"></i>
+               </span>
+               <div class="mini-stat-info text-end">
+                  <span class="stat-number">{{ stats?.totalInvoices }}</span>
+                  <span class="stat-label">Total Invoices</span>
+               </div>
+            </div>
+         </div>
+         <div class="col-md-4 col-sm-6 col-xs-12">
+            <div class="mini-stat shadow-sm clearfix bg-twitter rounded hover-effect">
+               <span class="mini-stat-icon">
+                  <i class="bi bi-currency-dollar fg-twitter"></i>
+               </span>
+               <div class="mini-stat-info text-end">
+                  <span class="stat-number">${{ stats?.totalBilled }}</span>
+                  <span class="stat-label">Total Billed</span>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</section>

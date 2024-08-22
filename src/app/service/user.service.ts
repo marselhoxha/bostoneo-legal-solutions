@@ -11,6 +11,7 @@ import { Key } from '../enum/key.enum';
   providedIn: 'root'
 })
 export class UserService {
+  
   private readonly server: string = 'http://localhost:8080';
   private jwtHelper =  new JwtHelperService();
 
@@ -100,9 +101,14 @@ export class UserService {
       .pipe(
         tap(console.log),
         catchError(this.handleError)
-      );   
+      );
+  
+  logOut() {
+    localStorage.removeItem(Key.TOKEN);
+    localStorage.removeItem(Key.REFRESH_TOKEN);
+  }    
       
-  isAuthenticated = (): boolean => (this.jwtHelper.decodeToken<string>(localStorage.getItem(Key.TOKEN)) && this.jwtHelper.isTokenExpired(localStorage.getItem(Key.TOKEN) )) ? true : false;   
+  isAuthenticated = (): boolean => (this.jwtHelper.decodeToken<string>(localStorage.getItem(Key.TOKEN)) && !this.jwtHelper.isTokenExpired(localStorage.getItem(Key.TOKEN) )) ? true : false;   
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.log(error);
