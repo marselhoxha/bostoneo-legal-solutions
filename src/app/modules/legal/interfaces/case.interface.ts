@@ -21,13 +21,8 @@ export enum PaymentStatus {
   OVERDUE = 'OVERDUE'
 }
 
-export enum DocumentType {
-  CONTRACT = 'CONTRACT',
-  PLEADING = 'PLEADING',
-  EVIDENCE = 'EVIDENCE',
-  CORRESPONDENCE = 'CORRESPONDENCE',
-  OTHER = 'OTHER'
-}
+export type DocumentType = 'PLEADING' | 'MOTION' | 'ORDER' | 'EVIDENCE' | 'CONTRACT' | 'OTHER';
+export type DocumentCategory = 'LEGAL' | 'FINANCIAL' | 'CORRESPONDENCE' | 'REPORT' | 'OTHER';
 
 export interface CourtInfo {
   courtName: string;
@@ -106,16 +101,27 @@ export interface LegalCase {
   updatedAt: Date;
 }
 
-export interface CaseDocument {
+export interface DocumentVersion {
   id: string;
-  title: string;
-  type: string;
+  versionNumber: number;
   fileName: string;
   fileUrl: string;
   uploadedAt: Date;
-  uploadedBy: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  uploadedBy: User;
+  changes: string;
+}
+
+export interface CaseDocument {
+  id: string;
+  title: string;
+  type: DocumentType;
+  category: DocumentCategory;
+  fileName: string;
+  fileUrl: string;
+  description?: string;
+  tags: string[];
+  uploadedAt: Date;
+  uploadedBy: User;
+  currentVersion: number;
+  versions: DocumentVersion[];
 } 
