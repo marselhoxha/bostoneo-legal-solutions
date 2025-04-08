@@ -9,6 +9,7 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FlatpickrModule } from 'angularx-flatpickr';
 import flatpickr from 'flatpickr';
+import { CaseNotesComponent } from '../case-notes/case-notes.component';
 
 @Component({
   selector: 'app-case-detail',
@@ -19,7 +20,8 @@ import flatpickr from 'flatpickr';
     CommonModule,
     RouterModule,
     ReactiveFormsModule,
-    FlatpickrModule
+    FlatpickrModule,
+    CaseNotesComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit {
