@@ -1,39 +1,33 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { LoginComponent } from './component/login/login.component';
-import { RegisterComponent } from './component/register/register.component';
-import { ResetpasswordComponent } from './component/resetpassword/resetpassword.component';
-import { VerifyComponent } from './component/verify/verify.component';
-import { CustomerComponent } from './component/customer/customer.component';
-import { ProfileComponent } from './component/profile/profile.component';
-import { CustomersComponent } from './component/customers/customers.component';
-import { HomeComponent } from './component/home/home.component';
+import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { HomeComponent } from './component/home/home/home.component';
 import { AuthenticationGuard } from './guard/authentication.guard';
-import { NewcustomerComponent } from './component/newcustomer/newcustomer.component';
-import { NewinvoiceComponent } from './component/newinvoice/newinvoice.component';
-import { InvoicesComponent } from './component/invoices/invoices.component';
-import { InvoiceComponent } from './component/invoice/invoice.component';
+import { LayoutComponent } from './component/layouts/layout.component';
+import { InvoiceAnalyticsComponent } from './component/invoice-analytics/invoice-analytics.component';
+import { FaqsComponent } from './component/faqs/faqs.component';
 
 const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
-  { path: 'resetpassword', component: ResetpasswordComponent },
-  { path: 'user/verify/account/:key', component: VerifyComponent },
-  { path: 'user/verify/password/:key', component: VerifyComponent },
-  { path: 'profile', component: ProfileComponent, canActivate: [AuthenticationGuard] },
-  { path: 'customers', component: CustomersComponent, canActivate: [AuthenticationGuard] },
-  { path: 'customers/new', component: NewcustomerComponent, canActivate: [AuthenticationGuard] },
-  { path: 'invoices/new', component: NewinvoiceComponent, canActivate: [AuthenticationGuard] },
-  { path: 'invoices', component: InvoicesComponent, canActivate: [AuthenticationGuard] },
-  { path: 'customers/:id', component: CustomerComponent, canActivate: [AuthenticationGuard] },
-  { path: 'invoices/:id/:invoiceNumber', component: InvoiceComponent, canActivate: [AuthenticationGuard] },
-  { path: '', component: HomeComponent, canActivate: [AuthenticationGuard] },
-  { path: '', redirectTo: '/', pathMatch: 'full' },
-  { path: '**', component: HomeComponent }
+  {
+    path: '',
+    component: LayoutComponent,  // Wrap all routes with the layout
+    children: [
+      { path: 'dashboard', loadChildren: () => import('./component/home/home.module').then(m => m.HomeModule), canActivate: [AuthenticationGuard] },
+      { path: 'customers', loadChildren: () => import('./component/customer/customer.module').then(m => m.CustomerModule), canActivate: [AuthenticationGuard] },
+      { path: 'invoices', loadChildren: () => import('./component/invoice/invoice.module').then(m => m.InvoiceModule), canActivate: [AuthenticationGuard] },
+      { path: 'profile', loadChildren: () => import('./component/profile/user.module').then(m => m.UserModule), canActivate: [AuthenticationGuard] },
+      { path: 'analytics', component: InvoiceAnalyticsComponent },
+      { path: 'faq', component: FaqsComponent },
+      // Add other routes inside this children array, as needed
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, // Redirect to 'dashboard' by default within the layout
+    ]
+  },
+  { path: '**', redirectTo: '', pathMatch: 'full' }, // Fallback for unmatched routes
 ];
 
+
+
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })],
   exports: [RouterModule]
 })
 export class AppRoutingModule { }

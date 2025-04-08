@@ -1,0 +1,232 @@
+<ng-container *ngIf="(customersState$ | async) as state" [ngSwitch]="state.dataState">
+    <ng-container *ngSwitchCase="DataState.LOADED">
+       <app-layout [user]="state?.appData?.data?.user"></app-layout>
+       <section>
+          <div class="container">
+             <nav aria-label="breadcrumb" style="margin-top: 8px;">
+                <ol class="breadcrumb">
+                   <li class="breadcrumb-item">
+                      <a [routerLink]="['/']">Home</a>
+                   </li>
+                   <li class="breadcrumb-item active"> Customers </li>
+                </ol>
+             </nav>
+             <div class="row"  style="margin-bottom:60px;">
+                <div class="col-lg-12">
+                    <div class="card" id="customerList">
+                        <div class="card-header border-bottom-dashed">
+            
+                            <div class="row g-4 align-items-center">
+                                <div class="col-sm">
+                                    <div>
+                                        <h5 class="card-title mb-0">Customer List</h5>
+                                    </div>
+                                </div>
+                                <div class="col-xl-6">
+                                    <div class="search-box">
+                                      <form #searchForm="ngForm" (ngSubmit)="searchCustomers(searchForm)" class="row g-3">
+                                        <div class="col">
+                                          <label for="name" class="form-label visually-hidden"></label>
+                                          <div class="input-group">
+                                            <input type="text" ngModel name="name" #name id="name" class="form-control" placeholder="Search by customer name" aria-label="Search">
+                                            <button type="submit" class="btn btn-soft-info waves-effect">
+                                              <i class="ri-search-line align-middle"></i>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </form>
+                                    </div>
+                                </div>
+                                <div class="col-sm-auto">
+                                    <div class="d-flex flex-wrap align-items-start gap-2">
+                                      <button type="button" class="btn btn-success add-btn" (click)="openNewCustomerModal()" id="create-btn">
+                                        <i class="ri-add-line align-bottom me-1"></i> Add Customer
+                                      </button>
+                                        <button type="button" class="btn btn-info" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-4">
+                                
+                                <!--end col-->
+                                <div class="col-xl-6">
+                                    <div class="row g-3">
+                                        <div class="col-sm-4">
+                                            <div class="">
+                                            </div>
+                                        </div>
+                                        <!--end col-->
+                                       
+                                        <!--end col-->
+            
+                                       
+                                        <!--end col-->
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end row-->
+                        </div>
+                        <div class="card-body">
+                            <div>
+                                <div class="table-responsive table-card mb-1 align-middle">
+                                    <table class="table">
+                                        <thead class="table-light">
+                                            <tr>
+                                              <th scope="col" class="text-center" style="width: 50px;">ID</th>
+                                              <th scope="col">Photo</th>
+                                              <th scope="col">Name</th>
+                                              <th scope="col">Email</th>
+                                              <th scope="col">Phone</th>
+                                              <th scope="col">Status</th>
+                                              <th scope="col">Type</th>
+                                              <th scope="col">Action</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody class="list form-check-all">
+                                            <tr *ngFor="let customer of state?.appData?.data?.page.content">
+                                              <td class="text-center">{{ customer.id }}</td>
+                                              <td><img [src]="customer.imageUrl" width="42" height="42" class="rounded-circle" [alt]="customer.name"></td>
+                                              <td>{{ customer.name }}</td>
+                                              <td>{{ customer.email }}</td>
+                                              <td>{{ customer.phone }}</td>
+                                              <td>
+                                                <span class="badge text-uppercase"
+                                                  [ngClass]="{
+                                                    'bg-success-subtle text-success': customer.status === 'ACTIVE',
+                                                    'bg-primary-subtle text-primary': customer.status === 'PENDING',
+                                                    'bg-danger-subtle text-danger': customer.status === 'BANNED',
+                                                    'bg-info-subtle text-info': customer.status === 'INACTIVE'
+                                                  }">
+                                                  {{ customer.status }}
+                                                </span>
+                                              </td>
+                                              <td>{{ customer.type }}</td>
+                                              <td>
+                                                <div class="btn-group" role="group">
+                                                  <button type="button" [routerLink]="['/customers', customer.id]" class="btn btn-sm btn-soft-info me-2">
+                                                    <i class="ri-eye-line align-middle"></i> View
+                                                  </button>
+                                                  <button type="button" (click)="deleteCustomer(customer.id)" class="btn btn-sm btn-soft-danger">
+                                                    <i class="ri-delete-bin-line align-middle"></i> Delete
+                                                  </button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                    </table>
+                                </div>
+                                <div class="row justify-content-md-between align-items-md-center">
+                                    <div class="col col-sm-5">
+                                        <div class="dataTables_info mb-2" id="tickets-table_info" role="status" aria-live="polite">
+                                           
+                                        </div>
+                                    </div>
+                                
+                                     <!-- Pagination -->
+                                    <div class="col-12">
+                                        <nav *ngIf="state?.appData?.data?.page.content.length > 0" aria-label="Page navigation example">
+                                        <ul class="pagination justify-content-end mb-0">
+                                            <li [ngClass]="0 == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
+                                            <a (click)="goToNextOrPreviousPage('backward')" class="page-link">&laquo; Prev</a>
+                                            </li>
+                                            <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page.totalPages); let i = index;" class="page-item">
+                                            <a (click)="goToPage(i)" [ngClass]="i == (currentPage$ | async) ? ' active' : ''" class="page-link">
+                                                {{ i + 1 }}
+                                            </a>
+                                            </li>
+                                            <li [ngClass]="(state?.appData?.data?.page.totalPages - 1) == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
+                                            <a (click)="goToNextOrPreviousPage('forward')" class="page-link">Next &raquo;</a>
+                                            </li>
+                                        </ul>
+                                        </nav>
+                                    </div>
+                                    <!-- End Pagination -->
+                                </div>
+                            </div>
+            
+                           <!-- Modal Template -->
+ <!-- Customer Create Modal -->
+ <ng-template #content role="document" let-modal>
+  <div class="modal-header bg-light p-3">
+    <h5 class="modal-title" id="exampleModalLabel">Add Customer</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <form (ngSubmit)="createCustomer(newCustomerForm)" [formGroup]="customerForm" class="tablelist-form" #newCustomerForm="ngForm" autocomplete="off">
+    <div class="modal-body">
+      <input type="hidden" name="id" formControlName="_id" />
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Customer Name</label>
+        <input type="text" id="name" name="name" ngModel formControlName="customer" class="form-control" placeholder="Enter Name" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['customer'].invalid }" />
+        <div class="invalid-feedback">Please enter a customer name.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" id="email" name="email" ngModel formControlName="email" class="form-control" placeholder="Enter Email" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['email'].invalid }" />
+        <div class="invalid-feedback">Please enter an email.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="phone" class="form-label">Phone</label>
+        <input type="text" id="phone" name="phone" ngModel formControlName="phone" class="form-control" placeholder="Enter Phone no." mask="000-000-0000" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['phone'].invalid }" />
+        <div class="invalid-feedback">Please enter a phone number.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="date" class="form-label">Joining Date</label>
+        <input class="form-control flatpickr-input" type="text" mwlFlatpickr [altInput]="true" [convertModelValue]="true" formControlName="date" placeholder="Select Date" [ngClass]="{ 'is-invalid': submitted && customerForm.controls['date'].invalid }">
+        <div class="invalid-feedback">Please select a joining date.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="status" class="form-label">Status</label>
+        <select class="form-select" id="status" name="status" ngModel formControlName="status" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['status'].invalid }">
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="BANNED">BANNED</option>
+          <option value="PENDING">PENDING</option>
+          <option value="INACTIVE">INACTIVE</option>
+        </select>
+        <div class="invalid-feedback">Please select a status.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="imageUrl" class="form-label">Image URL</label>
+        <input type="text" id="imageUrl" name="imageUrl" ngModel formControlName="imageUrl" class="form-control" placeholder="Enter Image URL" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['imageUrl'].invalid }">
+        <div class="invalid-feedback">Please provide an image URL.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="hstack gap-2 justify-content-end">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal" (click)="modal.close('Close click')">Close</button>
+        <button type="submit" class="btn btn-success" id="add-btn" [disabled]="state.dataState === DataState.LOADING || customerForm.invalid">
+          <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <span *ngIf="state.dataState !== DataState.LOADING">Add Customer</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</ng-template>
+<!-- End Modal -->
+
+                            
+                        </div>
+                    </div>
+            
+                </div>
+                <!--end col-->
+            </div>
+          </div>
+       </section>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="DataState.LOADING">
+        <div>Loading...</div>
+     </ng-container>
+
+     <ng-container *ngSwitchCase="DataState.ERROR">
+        <div>{{ state.error }}</div>
+     </ng-container>
+ </ng-container>

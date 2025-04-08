@@ -1,0 +1,163 @@
+<section *ngIf="(registerState$ | async) as state" [ngSwitch]="state.dataState">
+
+
+  <!-- Success State -->
+  <ng-container *ngIf="state.registerSuccess">
+    <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+      <div class="bg-overlay"></div>
+      <div class="auth-page-content overflow-hidden pt-lg-5">
+        <div class="container">
+          <div class="row justify-content-center my-5">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body text-center">
+                  <img src="assets/images/bostoneo-logo-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                  <h5 class="card-title mt-4 mb-4">{{ state.message }}</h5>
+                  <i class="bi bi-check-circle-fill" style="font-size: 80px; color: green;"></i>
+                  <p class="mt-2" style="font-size: 20px;">Please check your email to confirm your account.</p>
+                </div>
+                <div class="row mb-4">
+                  <div class="col d-flex justify-content-center">
+                    <a routerLink="/login" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account
+                      Login</a>
+                  </div>
+                  <div class="col">
+                    <a routerLink="/register"
+                      style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create another account</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Registration Form State -->
+  <ng-container *ngIf="!state.registerSuccess">
+    <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+      <div class="bg-overlay"></div>
+      <div class="auth-page-content overflow-hidden pt-lg-5">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="card overflow-hidden card-bg-fill galaxy-border-none">
+                <div class="row g-0">
+                  <div class="col-lg-6">
+                    <div class="p-lg-5 p-4 auth-one-bg h-100">
+                      <div class="bg-overlay"></div>
+                      <div class="position-relative h-100 d-flex flex-column">
+                        <div class="text-center mb-4">
+                          <img src="assets/images/bostoneo-logo-white-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                        </div>
+                        <div class="mt-auto">
+                          <div class="mb-3">
+                            <i class="ri-double-quotes-l display-4 text-success"></i>
+                          </div>
+                          <p class="fs-15 fst-italic text-white">“Empowering organizations with intelligent, scalable solutions tailored for sustainable growth in a future-focused marketplace.”</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="p-lg-5 p-4">
+                      <div>
+                        <h5 class="text-primary">Create Your Account</h5>
+                        <p class="text-muted">Get started with Bostoneo Solutions.</p>
+                      </div>
+
+                      <!-- Registration Form -->
+                      <div>
+                        <form #registerForm="ngForm" (ngSubmit)="register(registerForm)">
+                          <!-- Error Message -->
+                          <div *ngIf="state.error"
+                            class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show"
+                            role="alert">
+                            {{ state.error }}
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"
+                              aria-label="Close"></button>
+                          </div>
+
+                          <!-- First Name Field -->
+                          <div class="mb-3">
+                            <label for="firstname" class="form-label">First Name</label>
+                            <input ngModel name="firstName" type="text" class="form-control" id="firstname"
+                              placeholder="Enter your first name" required minlength="2"
+                              [disabled]="state.dataState === DataState.LOADING">
+                          </div>
+
+                          <!-- Last Name Field -->
+                          <div class="mb-3">
+                            <label for="lastname" class="form-label">Last Name</label>
+                            <input ngModel name="lastName" type="text" class="form-control" id="lastname"
+                              placeholder="Enter your last name" required minlength="2"
+                              [disabled]="state.dataState === DataState.LOADING">
+                          </div>
+
+                          <!-- Email Field -->
+                          <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input 
+                              ngModel 
+                              name="email" 
+                              type="email" 
+                              class="form-control" 
+                              id="email"
+                              placeholder="Enter your email" 
+                              required 
+                              minlength="3"
+                              email
+                              #emailInput="ngModel"
+                              [disabled]="state.dataState === DataState.LOADING">
+                            
+                            <!-- Error message for invalid email -->
+                            <div *ngIf="emailInput.invalid && emailInput.touched">
+                              <small class="text-danger" *ngIf="emailInput.errors?.['required']">Email is required.</small>
+                              <small class="text-danger" *ngIf="emailInput.errors?.['email']">Please enter a valid email address.</small>
+                              <small class="text-danger" *ngIf="emailInput.errors?.['minlength']">Email must be at least 3 characters long.</small>
+                            </div>
+                          </div>
+
+                          <!-- Password Field -->
+                          <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input ngModel name="password" type="password" class="form-control" id="password"
+                              placeholder="Enter password" required minlength="4"
+                              [disabled]="state.dataState === DataState.LOADING">
+                          </div>
+
+                          <!-- Sign Up Button -->
+                          <div class="mt-4">
+                            <button
+                              [disabled]="state.dataState === DataState.LOADING || registerForm.invalid || registerForm.pristine"
+                              type="submit" class="btn btn-success w-100">
+                              <span *ngIf="state.dataState === DataState.LOADING"
+                                class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                                style="margin-right: 5px;"></span>
+                              <span *ngIf="state.dataState === DataState.LOADING">Creating Account...</span>
+                              <span *ngIf="!(state.dataState === DataState.LOADING)">Sign Up</span>
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                      <div class="mt-5 text-center">
+                        <p class="mb-0">Already have an account? <a routerLink="/login" class="fw-semibold text-primary text-decoration-underline">Login</a> </p>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- end card -->
+            </div>
+            <!-- end col -->
+          </div>
+          <!-- end row -->
+        </div>
+        <!-- end container -->
+      </div>
+    </div>
+  </ng-container>
+
+</section>

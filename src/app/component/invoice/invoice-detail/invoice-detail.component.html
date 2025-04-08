@@ -1,0 +1,147 @@
+<ng-container *ngIf="(invoiceState$ | async) as state" [ngSwitch]="state.dataState">
+   <ng-container *ngSwitchCase="DataState.LOADED">
+    <app-layout [user]="state?.appData?.data?.user"></app-layout>
+      <!-- Start Breadcrumbs -->
+<app-breadcrumbs title="Invoice Details" [breadcrumbItems]="breadCrumbItems"></app-breadcrumbs>
+<!-- End Breadcrumbs -->
+
+<div class="row justify-content-center" style="margin-bottom: 60px; margin-top: 20px;">
+   <div class="col-xxl-9">
+       <div class="card" id="invoice">
+           <div class="row">
+               <!-- Invoice Header -->
+               <div class="col-lg-12">
+                 <div class="card-header border-bottom-dashed p-4">
+                    <div class="d-flex flex-wrap">
+                        <div class="flex-grow-1">
+                            <img src="assets/images/bostoneo-logo-1.svg" class="card-logo card-logo-dark" style="margin-top: 20px;" alt="logo dark" height="90">
+                            <img src="assets/images/bostoneo-logo-white-1.svg" class="card-logo card-logo-light" style="margin-top: 20px;" alt="logo light" height="90">
+                            
+                        </div>
+                        <div class="flex-shrink-0 mt-sm-3 me-5">
+                          <h6><span class="text-muted fw-normal">EIN No: </span>12345678 </h6>
+                         <h6><span class="text-muted fw-normal">Email: </span>info&#64;bostoneo.com</h6>
+                          <h6><span class="text-muted fw-normal">Website: </span>bostoneo.com </h6>
+                          <h6 class="mb-0"><span class="text-muted fw-normal">Phone: </span>(123) 456-7890</h6>
+                      </div>
+                      
+                        
+                    </div>
+                </div>
+                   <!--end card-header-->
+               </div>
+               <!-- Invoice Info Cards -->
+               <div class="col-lg-12">
+                   <div class="card-body p-4">
+                       <div class="row g-3">
+                           <div class="col-lg-3 col-6">
+                               <p class="text-muted mb-2 text-uppercase fw-semibold">Invoice No</p>
+                               <h5 class="fs-14 mb-0">#{{ state?.appData?.data?.invoice.invoiceNumber }}</h5>
+                           </div>
+                           <div class="col-lg-3 col-6">
+                               <p class="text-muted mb-2 text-uppercase fw-semibold">Date</p>
+                               <h5 class="fs-14 mb-0">{{ state?.appData?.data?.invoice.date | date: 'mediumDate' }}</h5>
+                           </div>
+                           <div class="col-lg-3 col-6">
+                               <p class="text-muted mb-2 text-uppercase fw-semibold">Payment Status</p>
+                               <span class="badge fs-11" [ngClass]="[
+                                state?.appData?.data?.invoice.status === 'PAID' ? 'bg-success-subtle text-success' : '',
+                                state?.appData?.data?.invoice.status === 'OVERDUE' ? 'bg-info-subtle text-info' : '',
+                                state?.appData?.data?.invoice.status === 'CANCELED' ? 'bg-danger-subtle text-danger' : '',
+                                state?.appData?.data?.invoice.status === 'PENDING' ? 'bg-warning-subtle text-warning' : ''
+                                ]" >
+                             {{ state?.appData?.data?.invoice.status }}</span>
+                           </div>
+                           <div class="col-lg-3 col-6">
+                               <p class="text-muted mb-2 text-uppercase fw-semibold">Amount</p>
+                               <h5 class="fs-14 mb-0">${{ state?.appData?.data?.invoice.total | number: '.2-2' }}</h5>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+               <!-- Billing and Shipping Address -->
+               <div class="col-lg-12">
+                   <div class="card-body p-4 border-top border-top-dashed">
+                       <div class="row g-3">
+                           <div class="col-6">
+                               <h6 class="text-muted text-uppercase fw-semibold mb-3">Billing From: </h6>
+                               <p class="fw-medium mb-2">Bostoneo Solutions LLC</p>
+                               <p class="text-muted mb-1">68 Harrison Ave, Boston MA</p>
+                               <p class="text-muted mb-1">Phone: (123) 456-7890</p>
+                           </div>
+                           <div class="col-6">
+                               <h6 class="text-muted text-uppercase fw-semibold mb-3">Billing To: </h6>
+                               <p class="fw-medium mb-2">{{ state?.appData?.data?.customer.name }}</p>
+                               <p class="text-muted mb-1">{{ state?.appData?.data?.customer.address }}</p>
+                               <p class="text-muted mb-1">Phone: {{ state?.appData?.data?.customer.phone }}</p>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+               <!-- Invoice Items -->
+               <div class="col-lg-12">
+                   <div class="card-body p-4">
+                    <div class="table-responsive">
+                       <table class="table table-borderless text-center table-nowrap align-middle mb-0">
+                         <thead>
+                           <tr class="table-active">
+                             <th scope="col" style="width: 50px;">#</th>
+                             <th scope="col">Provided Services</th>
+                             <th scope="col">Rate</th>
+                             <th scope="col"></th>
+                             <th scope="col" class="text-end">Sub Total</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           <tr *ngFor="let service of state?.appData?.data?.invoice.services.split(',')">
+                                       <td class="text-center">{{ service.split(' ')[0] }}</td>
+                                          <td>
+                                             <span class="text-inverse">{{ service.split(' ')[1] }} {{ service.split(' ')[2] }}</span><br>
+                                          </td>
+                                          <td class="text-center">1</td>
+                                          <td class="text-right">{{ service.split(' ')[3] }}</td>
+                                          <th class="text-end">${{ state?.appData?.data?.invoice.total | number: '.2-2' }}</th>
+                                    </tr>
+                         </tbody>
+                       </table>
+                     </div>
+                       <!-- Pricing Details -->
+                       <div class="border-top border-top-dashed mt-2">
+                        <table class="table table-borderless table-nowrap align-middle mb-0 ms-auto" style="width:250px">
+                            <tbody>
+                               
+                                <tr>
+                                    <td>Tax (6.25%)</td>
+                                    <td class="text-end">${{ state?.appData?.data?.invoice.total * (6.25/100) | number: '.2-2'}}</td>
+                                </tr>
+                                <tr class="border-top border-top-dashed fs-14">
+                                    <th scope="row">Total Amount</th>
+                                    <th class="text-end">${{ state?.appData?.data?.invoice.total * (6.25/100) + state?.appData?.data?.invoice.total | number: '.2-2' }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                       
+                      
+                       <!-- Notes Section -->
+                       <div class="mt-5">
+                           <div class="alert alert-primary">
+                             <p class="mb-0"><span class="fw-semibold">NOTES:</span>
+                                <span>All accounts are to be paid within 7 days from receipt of invoice. To be paid by check or credit card or direct payment online. If the account is not paid within 7 days, the credit details supplied as confirmation of work undertaken will be charged the agreed quoted fee noted above.</span>
+                            </p>
+                           </div>
+                       </div>
+                       <!-- Print and Download -->
+                       <div class="hstack gap-2 justify-content-end d-print-none mt-4">
+                           <a href="javascript:window.print()" class="btn btn-success no-pdf"><i class="ri-printer-line align-bottom me-1"></i> Print</a>
+                           <a (click)="exportAsPDF()" class="btn btn-primary no-pdf"><i class="ri-download-2-line align-bottom me-1"></i> Download</a>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </div>
+</div>
+   </ng-container>
+</ng-container> 
+
