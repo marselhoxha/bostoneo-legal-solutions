@@ -441,16 +441,139 @@
   </div>
 </div>
 
-<!-- Case Notes Section -->
 <div class="row">
   <div class="col-12">
-    <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
-  </div>
-</div>
-
-<!-- Case Documents Section -->
-<div class="row mt-4">
-  <div class="col-12">
-    <app-case-documents [caseId]="case?.id || ''"></app-case-documents>
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab" aria-controls="documents" aria-selected="false">Documents</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false">Notes</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline" type="button" role="tab" aria-controls="timeline" aria-selected="false">Timeline</button>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+            <!-- Case overview content -->
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                  <div class="card-header bg-light-subtle py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-file-list-3-line align-middle me-2 text-primary"></i>
+                      Case Details
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table class="table table-borderless mb-0">
+                        <tbody>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Status</th>
+                            <td class="text-end py-3">
+                              <span class="badge text-uppercase fw-semibold"
+                                [ngClass]="{
+                                  'bg-success-subtle text-success': case?.status === 'OPEN',
+                                  'bg-warning-subtle text-warning': case?.status === 'IN_PROGRESS',
+                                  'bg-info-subtle text-info': case?.status === 'PENDING',
+                                  'bg-danger-subtle text-danger': case?.status === 'CLOSED',
+                                  'bg-secondary-subtle text-secondary': case?.status === 'ARCHIVED'
+                                }">
+                                {{case?.status}}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Type</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.type}}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Priority</th>
+                            <td class="text-end py-3">
+                              <span class="badge text-uppercase fw-semibold"
+                                [ngClass]="{
+                                  'bg-success-subtle text-success': case?.priority === 'LOW',
+                                  'bg-warning-subtle text-warning': case?.priority === 'MEDIUM',
+                                  'bg-danger-subtle text-danger': case?.priority === 'HIGH' || case?.priority === 'URGENT'
+                                }">
+                                {{case?.priority}}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Assigned To</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.assignedTo?.firstName}} {{case?.assignedTo?.lastName || 'Unassigned'}}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Created</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.createdAt | date:'medium'}}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Last Updated</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.updatedAt | date:'medium'}}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                  <div class="card-header bg-light-subtle py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-user-line align-middle me-2 text-primary"></i>
+                      Client Information
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table class="table table-borderless mb-0">
+                        <tbody>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Name</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.clientName}}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Email</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.clientEmail || 'N/A'}}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Phone</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.clientPhone || 'N/A'}}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Address</th>
+                            <td class="text-end py-3 text-white-dark">{{case?.clientAddress || 'N/A'}}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">
+            <app-case-documents [caseId]="case?.id || ''"></app-case-documents>
+          </div>
+          <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
+            <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
+          </div>
+          <div class="tab-pane fade" id="timeline" role="tabpanel" aria-labelledby="timeline-tab">
+            <app-case-timeline [caseId]="case?.id || ''"></app-case-timeline>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div> 
