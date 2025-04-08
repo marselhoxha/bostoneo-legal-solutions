@@ -1,26 +1,18 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { CaseListComponent } from './components/case/case-list/case-list.component';
-import { CaseDetailComponent } from './components/case/case-detail/case-detail.component';
 
 const routes: Routes = [
   {
-    path: '',
-    children: [
-      {
-        path: 'cases',
-        component: CaseListComponent
-      },
-      {
-        path: 'cases/:id',
-        component: CaseDetailComponent
-      },
-      {
-        path: '',
-        redirectTo: 'cases',
-        pathMatch: 'full'
-      }
-    ]
+    path: 'cases',
+    loadChildren: () => import('@app/modules/legal/components/case/case.module').then(m => m.CaseModule)
+  },
+  {
+    path: 'documents',
+    loadChildren: () => import('@app/modules/legal/components/document/document.module').then(m => m.DocumentModule)
+  },
+  {
+    path: 'calendar',
+    loadChildren: () => import('@app/modules/legal/components/calendar/calendar.module').then(m => m.CalendarModule)
   }
 ];
 
