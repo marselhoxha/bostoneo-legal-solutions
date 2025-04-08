@@ -1,0 +1,32 @@
+<div class="month-view">
+  <div class="calendar-header">
+    <button (click)="navigateMonth(-1)">&lt;</button>
+    <h2>{{ currentDate | date:'MMMM yyyy' }}</h2>
+    <button (click)="navigateMonth(1)">&gt;</button>
+  </div>
+
+  <div class="calendar-grid">
+    <!-- Week day headers -->
+    <div class="weekday-header">
+      <div class="weekday" *ngFor="let weekday of weekdays">{{ weekday }}</div>
+    </div>
+
+    <!-- Calendar days -->
+    <div class="week" *ngFor="let week of weeks">
+      <div class="day" 
+           *ngFor="let day of week"
+           [class.today]="isToday(day)"
+           [class.other-month]="isOtherMonth(day)">
+        <div class="date">{{ day | date:'d' }}</div>
+        <div class="events">
+          <div class="event" 
+               *ngFor="let event of getEventsForDay(day)"
+               [style.background-color]="event.color"
+               (click)="onEventClick(event)">
+            {{ event.title }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

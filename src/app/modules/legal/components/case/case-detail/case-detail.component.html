@@ -1,136 +1,381 @@
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box">
-        <div class="page-title-right">
-          <button class="btn btn-secondary me-2" routerLink="/legal/cases">
-            <i class="mdi mdi-arrow-left"></i> Back to Cases
-          </button>
-          <button *ngIf="!isEditing" class="btn btn-primary" (click)="toggleEdit()">
-            <i class="mdi mdi-pencil"></i> Edit Case
-          </button>
-          <button *ngIf="isEditing" class="btn btn-success" (click)="saveCase()">
-            <i class="mdi mdi-content-save"></i> Save Changes
-          </button>
-          <button *ngIf="isEditing" class="btn btn-danger ms-2" (click)="cancelEdit()">
-            <i class="mdi mdi-close"></i> Cancel
-          </button>
-        </div>
-        <h4 class="page-title">Case Details</h4>
-      </div>
-    </div>
-  </div>
+<div class="container">
+  <nav aria-label="breadcrumb" style="margin-top: 100px;">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/']">Home</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/legal/cases']">Legal Cases</a>
+      </li>
+      <li class="breadcrumb-item active">{{ isEditing ? 'Edit Case' : 'Case Details' }}</li>
+    </ol>
+  </nav>
 
-  <div class="row">
-    <div class="col-12">
+  <div class="row" style="margin-bottom:60px;">
+    <div class="col-xl-4">
       <div class="card">
         <div class="card-body">
-          <h4 class="card-title mb-4">{{ isNewCase ? 'New Case' : 'Edit Case' }}</h4>
-
-          <form [formGroup]="caseForm" (ngSubmit)="onSubmit()">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="caseNumber" class="form-label">Case Number</label>
-                  <input type="text" class="form-control" id="caseNumber" formControlName="caseNumber" placeholder="Enter case number">
-                  <div class="invalid-feedback" *ngIf="caseForm.get('caseNumber')?.invalid && caseForm.get('caseNumber')?.touched">
-                    Case number is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="title" class="form-label">Title</label>
-                  <input type="text" class="form-control" id="title" formControlName="title" placeholder="Enter case title">
-                  <div class="invalid-feedback" *ngIf="caseForm.get('title')?.invalid && caseForm.get('title')?.touched">
-                    Title is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="clientName" class="form-label">Client Name</label>
-                  <input type="text" class="form-control" id="clientName" formControlName="clientName" placeholder="Enter client name">
-                  <div class="invalid-feedback" *ngIf="caseForm.get('clientName')?.invalid && caseForm.get('clientName')?.touched">
-                    Client name is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="status" class="form-label">Status</label>
-                  <select class="form-select" id="status" formControlName="status">
-                    <option *ngFor="let status of caseStatuses" [value]="status">{{ status }}</option>
-                  </select>
-                  <div class="invalid-feedback" *ngIf="caseForm.get('status')?.invalid && caseForm.get('status')?.touched">
-                    Status is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="priority" class="form-label">Priority</label>
-                  <select class="form-select" id="priority" formControlName="priority">
-                    <option *ngFor="let priority of casePriorities" [value]="priority">{{ priority }}</option>
-                  </select>
-                  <div class="invalid-feedback" *ngIf="caseForm.get('priority')?.invalid && caseForm.get('priority')?.touched">
-                    Priority is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="filingDate" class="form-label">Filing Date</label>
-                  <input type="date" class="form-control" id="filingDate" formControlName="filingDate">
-                  <div class="invalid-feedback" *ngIf="caseForm.get('filingDate')?.invalid && caseForm.get('filingDate')?.touched">
-                    Filing date is required
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-12">
-                <div class="mb-3">
-                  <label for="description" class="form-label">Description</label>
-                  <textarea class="form-control" id="description" formControlName="description" rows="3" placeholder="Enter case description"></textarea>
-                </div>
-              </div>
-
-              <div class="col-12">
-                <div class="mb-3">
-                  <label for="notes" class="form-label">Notes</label>
-                  <textarea class="form-control" id="notes" formControlName="notes" rows="3" placeholder="Enter case notes"></textarea>
-                </div>
-              </div>
-
-              <div class="col-12">
-                <div class="mb-3">
-                  <label for="assignedTo" class="form-label">Assigned To</label>
-                  <select class="form-select" id="assignedTo" formControlName="assignedTo" multiple>
-                    <option value="John Doe">John Doe</option>
-                    <option value="Jane Smith">Jane Smith</option>
-                    <option value="Bob Johnson">Bob Johnson</option>
-                  </select>
-                </div>
+          <div class="d-flex align-items-start">
+            <div class="flex-shrink-0">
+              <div class="avatar-sm rounded-circle bg-primary bg-opacity-10">
+                <span class="avatar-title text-primary">
+                  <i class="ri-scales-3-line fs-4"></i>
+                </span>
               </div>
             </div>
-
-            <div class="text-end mt-3">
-              <button type="button" class="btn btn-secondary me-2" (click)="cancel()">Cancel</button>
-              <button type="submit" class="btn btn-primary" [disabled]="caseForm.invalid || loading">
-                <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-                {{ isNewCase ? 'Create' : 'Update' }} Case
-              </button>
+            <div class="flex-grow-1 ms-3">
+              <h4 class="my-0">{{ case?.title }}</h4>
+              <p class="text-muted mb-2">{{ case?.caseNumber }}</p>
+              <div class="d-flex gap-2">
+                <span class="badge text-uppercase"
+                  [ngClass]="{
+                    'bg-success-subtle text-success': case?.status === 'OPEN',
+                    'bg-warning-subtle text-warning': case?.status === 'IN_PROGRESS',
+                    'bg-info-subtle text-info': case?.status === 'PENDING',
+                    'bg-danger-subtle text-danger': case?.status === 'CLOSED',
+                    'bg-secondary-subtle text-secondary': case?.status === 'ARCHIVED'
+                  }">
+                  {{ case?.status }}
+                </span>
+                <span class="badge text-uppercase"
+                  [ngClass]="{
+                    'bg-success-subtle text-success': case?.priority === 'LOW',
+                    'bg-warning-subtle text-warning': case?.priority === 'MEDIUM',
+                    'bg-danger-subtle text-danger': case?.priority === 'HIGH' || case?.priority === 'URGENT'
+                  }">
+                  {{ case?.priority }}
+                </span>
+              </div>
             </div>
-          </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header border-bottom-dashed">
+          <h5 class="card-title mb-0">Client Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-borderless mb-0">
+              <tbody>
+                <tr>
+                  <th scope="row" class="ps-0" style="width: 45%;">Client Name :</th>
+                  <td class="text-end">{{ case?.clientName }}</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="ps-0">Email :</th>
+                  <td class="text-end">{{ case?.clientEmail || 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="ps-0">Phone :</th>
+                  <td class="text-end">{{ case?.clientPhone || 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="ps-0">Address :</th>
+                  <td class="text-end">{{ case?.clientAddress || 'N/A' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header border-bottom-dashed">
+          <h5 class="card-title mb-0">Important Dates</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-borderless mb-0">
+              <tbody>
+                <tr>
+                  <th scope="row" class="ps-0" style="width: 45%;">Filing Date :</th>
+                  <td class="text-end">
+                    <span class="badge bg-info-subtle text-info">
+                      {{ case?.importantDates.filingDate | date:'mediumDate' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" class="ps-0">Next Hearing :</th>
+                  <td class="text-end">
+                    <span class="badge bg-warning-subtle text-warning">
+                      {{ case?.importantDates.nextHearing | date:'mediumDate' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" class="ps-0">Trial Date :</th>
+                  <td class="text-end">
+                    <span class="badge bg-danger-subtle text-danger">
+                      {{ case?.importantDates.trialDate | date:'mediumDate' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-8">
+      <div class="card">
+        <div class="card-header border-bottom-dashed">
+          <div class="d-flex flex-wrap align-items-center">
+            <div class="flex-grow-1">
+              <h5 class="card-title mb-0">Case Details</h5>
+            </div>
+            <div class="flex-shrink-0 mt-sm-3 me-5">
+              <div class="d-flex flex-wrap align-items-start gap-2">
+                <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="toggleEdit()">
+                  <i class="ri-edit-line align-bottom me-1"></i>
+                  {{ isEditing ? 'Cancel' : 'Edit' }}
+                </button>
+                <button class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="deleteCase()">
+                  <i class="ri-delete-bin-line align-bottom me-1"></i>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="text-center" *ngIf="isLoading">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
 
-          <div *ngIf="error" class="alert alert-danger mt-3">
+          <div class="alert alert-danger" *ngIf="error" role="alert">
+            <i class="ri-error-warning-line align-middle me-2"></i>
             {{ error }}
           </div>
+
+          <div *ngIf="!isLoading && !error && case && !isEditing">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Case Number</label>
+                  <p class="mb-0">{{ case.caseNumber }}</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Status</label>
+                  <p class="mb-0">
+                    <span class="badge text-uppercase"
+                      [ngClass]="{
+                        'bg-success-subtle text-success': case.status === 'OPEN',
+                        'bg-warning-subtle text-warning': case.status === 'IN_PROGRESS',
+                        'bg-info-subtle text-info': case.status === 'PENDING',
+                        'bg-danger-subtle text-danger': case.status === 'CLOSED',
+                        'bg-secondary-subtle text-secondary': case.status === 'ARCHIVED'
+                      }">
+                      {{ case.status }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Title</label>
+                  <p class="mb-0">{{ case.title }}</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Client</label>
+                  <p class="mb-0">{{ case.clientName }}</p>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Description</label>
+                  <p class="mb-0">{{ case.description }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row mt-4">
+              <div class="col-12">
+                <h5 class="card-title">Court Information</h5>
+                <div class="table-responsive">
+                  <table class="table table-borderless mb-0">
+                    <tbody>
+                      <tr>
+                        <th scope="row" style="width: 200px;">Court Name</th>
+                        <td>{{ case.courtInfo.courtName }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Judge</th>
+                        <td>{{ case.courtInfo.judgeName }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Courtroom</th>
+                        <td>{{ case.courtInfo.courtroom }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form [formGroup]="editForm" (ngSubmit)="saveCase(editForm.value)" *ngIf="isEditing">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Case Number</label>
+                  <input type="text" class="form-control" formControlName="caseNumber" placeholder="Enter case number">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" formControlName="status">
+                    <option *ngFor="let status of caseStatuses" [value]="status">{{ status }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" class="form-control" formControlName="title" placeholder="Enter case title">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Client</label>
+                  <input type="text" class="form-control" formControlName="clientName" placeholder="Enter client name">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Client Email</label>
+                  <input type="email" class="form-control" formControlName="clientEmail" placeholder="Enter client email">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Client Phone</label>
+                  <input type="text" class="form-control" formControlName="clientPhone" placeholder="Enter client phone">
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Client Address</label>
+                  <textarea class="form-control" rows="2" formControlName="clientAddress" placeholder="Enter client address"></textarea>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Description</label>
+                  <textarea class="form-control" rows="3" formControlName="description" placeholder="Enter case description"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row mt-4">
+              <div class="col-12">
+                <h5 class="card-title">Court Information</h5>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Court Name</label>
+                      <input type="text" class="form-control" formControlName="courtInfo.courtName" placeholder="Enter court name">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Judge</label>
+                      <input type="text" class="form-control" formControlName="courtInfo.judgeName" placeholder="Enter judge name">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Courtroom</label>
+                      <input type="text" class="form-control" formControlName="courtInfo.courtroom" placeholder="Enter courtroom">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row mt-4">
+              <div class="col-12">
+                <h5 class="card-title">Important Dates</h5>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Filing Date</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                          <i class="ri-calendar-line align-middle"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0 flatpickr-input" 
+                               formControlName="filingDate"
+                               placeholder="Select filing date"
+                               #filingDate
+                               id="filingDate"
+                               (click)="initDatePicker($event, 'filingDate')">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Next Hearing</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                          <i class="ri-calendar-line align-middle"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0 flatpickr-input" 
+                               formControlName="nextHearing"
+                               placeholder="Select next hearing date"
+                               #nextHearing
+                               id="nextHearing"
+                               (click)="initDatePicker($event, 'nextHearing')">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Trial Date</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                          <i class="ri-calendar-line align-middle"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0 flatpickr-input" 
+                               formControlName="trialDate"
+                               placeholder="Select trial date"
+                               #trialDate
+                               id="trialDate"
+                               (click)="initDatePicker($event, 'trialDate')">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-end mt-4">
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-soft-light btn-animation waves-effect waves-light" (click)="onCancel()">
+                  <i class="ri-close-line align-bottom me-1"></i>
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-soft-primary btn-animation waves-effect waves-light" [disabled]="!editForm.valid">
+                  <i class="ri-save-line align-bottom me-1"></i>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
