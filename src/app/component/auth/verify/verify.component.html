@@ -1,0 +1,187 @@
+<section *ngIf="(verifyState$ | async) as state" [ngSwitch]="state.dataState">
+  <!-- Loading State -->
+  <ng-container *ngSwitchCase="DataState.LOADING">
+      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+          <div class="bg-overlay"></div>
+          <div class="auth-page-content overflow-hidden pt-lg-5">
+              <div class="container">
+                  <div class="row justify-content-center my-5">
+                      <div class="col-md-6">
+                          <div class="card">
+                              <div class="card-body text-center">
+                                  <img src="assets/images/***REMOVED***-logo-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                                  <h5 class="card-title mt-4 mb-4">{{ state.title }}</h5>
+                                  <div class="spinner-border text-secondary" role="status" style="font-size: 30px;">
+                                      <span class="visually-hidden">Loading...</span>
+                                  </div>
+                                  <p class="mt-4" style="font-size: 20px;">{{ state.message }}</p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </ng-container>
+
+  <!-- Loaded State -->
+  <ng-container *ngSwitchCase="DataState.LOADED">
+    <div *ngIf="state.type === 'account'">
+      
+        <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+          <div class="bg-overlay"></div>
+          <div class="auth-page-content overflow-hidden pt-lg-5">
+            <div class="container">
+              <div class="row justify-content-center my-5">
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <img src="assets/images/***REMOVED***-logo-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                      <h5 class="card-title mt-4 mb-4"></h5>
+                      <i class="bi bi-check-circle-fill" style="font-size: 80px; color: green;"></i>
+                      <p class="mt-2" style="font-size: 20px;">{{ state.message }}</p>
+                    </div>
+                    <div class="row mb-4">
+                      <div class="col d-flex justify-content-center">
+                        <a routerLink="/login" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account
+                          Login</a>
+                      </div>
+                      <div class="col">
+                        <a routerLink="/register"
+                          style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create another account</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      
+    
+    </div>
+
+    <div *ngIf="state.type === 'password'">
+      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+        <div class="bg-overlay"></div>
+        <div class="auth-page-content overflow-hidden pt-lg-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="card overflow-hidden">
+                            <div class="row justify-content-center g-0">
+                                <div class="col-lg-6">
+                                    <div class="p-lg-5 p-4 auth-one-bg h-100">
+                                        <div class="bg-overlay"></div>
+                                        <div class="position-relative h-100 d-flex flex-column">
+                                            <div class="mb-4 text-center">
+                                                <a routerLink="/" class="d-block">
+                                                    <img src="assets/images/***REMOVED***-logo-white-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                                                </a>
+                                            </div>
+                                            <div class="mt-auto">
+                                              <div class="mb-3">
+                                                  <i class="ri-double-quotes-l display-4 text-success"></i>
+                                              </div>
+                                              <p class="fs-15 fst-italic text-white">“Empowering organizations with intelligent, scalable solutions tailored for sustainable growth in a future-focused marketplace.”</p>
+                                          </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- end col -->
+
+                                <div class="col-lg-6">
+                                    <div class="p-lg-5 p-4">
+                                        <div class="mb-4 text-center">
+                                            <div class="avatar-lg mx-auto">
+                                                <div class="avatar-title bg-light text-primary display-5 rounded-circle">
+                                                    <i class="ri-lock-password-line"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted text-center mx-lg-3">
+                                            <h4 class="">Enter New Password</h4>
+                                            <p>Please enter your new password below.</p>
+                                        </div>
+
+                                        <div *ngIf="state.error" class="alert alert-danger text-center" role="alert">
+                                            {{ state.error }}
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <form #resetPasswordForm="ngForm" (ngSubmit)="renewPassword(resetPasswordForm)">
+                                                <div class="row twostep-input">
+                                                    <div class="form-outline mb-4">
+                                                        <label class="form-label" for="password">New Password</label>
+                                                        <input type="password" ngModel name="password" [disabled]="(isLoading$ | async)" class="form-control" required minlength="2">
+                                                    </div>
+                                                    <div class="form-outline mb-4">
+                                                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                                        <input type="password" ngModel name="confirmPassword" [disabled]="(isLoading$ | async)" class="form-control" required minlength="2">
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-3">
+                                                    <button type="submit" class="btn btn-success w-100" [disabled]="(isLoading$ | async) || resetPasswordForm.invalid || resetPasswordForm.pristine">
+                                                        <span *ngIf="(isLoading$ | async)" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
+                                                        <span *ngIf="(isLoading$ | async)">Loading...</span>
+                                                        <span *ngIf="!(isLoading$ | async)">Update Password</span>
+                                                    </button>
+                                                </div>
+
+                                            </form>
+                                        </div>
+
+                                        <div class="mt-5 text-center">
+                                            <p class="mb-0">Remember your password? <a routerLink="/login" class="fw-semibold text-primary text-decoration-underline">Login</a> </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- end col -->
+                            </div>
+                            <!-- end row -->
+                        </div>
+                        <!-- end card -->
+                    </div>
+                    <!-- end col -->
+                </div>
+                <!-- end row -->
+            </div>
+            <!-- end container -->
+        </div>
+        <!-- end auth page content -->
+    </div>
+    </div>  
+  </ng-container>
+
+  <!-- Error State -->
+  <ng-container *ngSwitchCase="DataState.ERROR">
+      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+          <div class="bg-overlay"></div>
+          <div class="auth-page-content overflow-hidden pt-lg-5">
+              <div class="container">
+                  <div class="row justify-content-center my-5">
+                      <div class="col-md-6">
+                          <div class="card">
+                              <div class="card-body text-center">
+                                  <img src="assets/images/***REMOVED***-logo-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                                  <h5 class="card-title mt-4 mb-4"></h5>
+                                  <i class="bi bi-exclamation-circle-fill" style="font-size: 80px; color: red;"></i>
+                                  <p class="mt-2" style="font-size: 20px;">{{ state.message }}</p>
+                              </div>
+                              <div class="row mb-4">
+                                  <div class="col d-flex justify-content-center">
+                                    <a routerLink="/login" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account Login</a>
+                                  </div>
+                                  <div class="col">
+                                      <a routerLink="/register" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create another account</a>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </ng-container>
+</section>

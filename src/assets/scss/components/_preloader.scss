@@ -1,0 +1,136 @@
+#skeleton-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: var(--skeleton-background);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 2s ease-in-out, visibility 0s linear 2s;
+  }
+  
+  /* Hide skeleton loader smoothly */
+#skeleton-loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+  /* Topbar section */
+  .skeleton-topbar {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 20px;
+    background-color: var(--skeleton-topbar-background);
+  }
+  
+  .skeleton-logo {
+    width: 170px;
+    height: 45px;
+    margin-left: 55px;
+    background-color: var(--skeleton-element);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    animation: shimmer 1.6s linear infinite;
+  }
+  
+  .skeleton-profile {
+    width: 50px;
+    height: 50px;
+    background-color: var(--skeleton-element);
+    border-radius: 50%;
+    margin-right: 50px;
+    position: relative;
+    overflow: hidden;
+    animation: shimmer 1.6s linear infinite;
+  }
+  
+  /* Navigation bar section */
+  .skeleton-navbar {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    background-color: var(--skeleton-navbar-background);
+    padding: 15px;
+  }
+  
+  .skeleton-nav-item {
+    width: 120px;
+    height: 25px;
+    background-color: var(--skeleton-element);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    animation: shimmer 1.6s linear infinite;
+  }
+  
+  /* Content block section */
+  .skeleton-content {
+    width: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .skeleton-content-block {
+    width: 100%;
+    height: 500px;
+    background-color: var(--skeleton-element);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    animation: shimmer 1.6s linear infinite;
+  }
+  
+  /* Shimmer animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -200%;
+    }
+    100% {
+      background-position: 200%;
+    }
+  }
+  
+  /* Shimmer gradient applied to all skeleton elements */
+  .skeleton-logo,
+  .skeleton-profile,
+  .skeleton-nav-item,
+  .skeleton-content-block {
+    background-image: linear-gradient(
+      to right,
+      var(--skeleton-gradient-start) 0%,
+      var(--skeleton-gradient-middle) 50%,
+      var(--skeleton-gradient-start) 100%
+    );
+    background-size: 200% 100%;
+  }
+  
+  /* CSS Variables for Light/Dark Mode */
+  :root {
+    --skeleton-background: #f7f8fa;
+    --skeleton-topbar-background: #ffffff;
+    --skeleton-navbar-background: #ffffff;
+    --skeleton-element: #e3e7ed;
+    --skeleton-gradient-start: #e0e0e0;
+    --skeleton-gradient-middle: #f6f7f8;
+  }
+  
+  [data-bs-theme="dark"] {
+    --skeleton-background: #1a1d21;
+    --skeleton-topbar-background: #292e32;
+    --skeleton-navbar-background: #2e3438;
+    --skeleton-element: #1a1d21;
+    --skeleton-gradient-start: #212529;
+    --skeleton-gradient-middle: #16181c;
+  }
+  

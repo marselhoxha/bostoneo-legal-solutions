@@ -1,0 +1,119 @@
+<ng-container *ngIf="(invoicesState$ | async) as state" [ngSwitch]="state.dataState">
+   <ng-container *ngSwitchCase="DataState.LOADED">
+     <app-layout [user]="state?.appData?.data?.user"></app-layout>
+     <section>
+      <div class="container">
+         <nav aria-label="breadcrumb" style="margin-top: 8px;">
+            <ol class="breadcrumb">
+               <li class="breadcrumb-item">
+                  <a [routerLink]="['/']">Home</a>
+               </li>
+               <li class="breadcrumb-item active"> Invoices </li>
+            </ol>
+         </nav>
+         <div class="row"  style="margin-bottom:60px;">
+            <div class="col-lg-12">
+                <div class="card" id="customerList">
+                    <div class="card-header border-bottom-dashed">
+        
+                        <div class="row g-4 align-items-center">
+                            <div class="col-sm">
+                                <div>
+                                    <h5 class="card-title mb-0">Invoice List</h5>
+                                </div>
+                            </div>
+                           
+                            <div class="col-sm-auto">
+                                <div class="d-flex flex-wrap align-items-start gap-2">
+                                  <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn" (click)="openNewInvoiceModal()" id="create-btn">
+                                    <i class="ri-add-line align-bottom me-1"></i> Create Invoice
+                                  </button>
+                                    <button type="button" class="btn btn-info" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                   
+                      <div class="card-body">
+                        <div>
+                            <div class="table-responsive table-card mb-1 align-middle">
+                                <table class="table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Invoice Number</th>
+                                            <th scope="col">Service</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Total</th>
+                                            <th scope="col">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="list form-check-all">
+                                        <tr *ngFor="let invoice of state?.appData?.data?.page.content">
+                                            <td>{{ invoice.invoiceNumber }}</td>
+                                            <td>{{ invoice.services }}</td>
+                                            <td>
+                                                <span class="badge text-uppercase"
+                                                    [ngClass]="{
+                                                        'bg-success-subtle text-success': invoice.status === 'PAID',
+                                                        'bg-warning-subtle text-warning': invoice.status === 'PENDING',
+                                                        'bg-danger-subtle text-danger': invoice.status === 'CANCELED',
+                                                        'bg-info-subtle text-info': invoice.status === 'OVERDUE'
+                                                    }">{{ invoice.status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ invoice.date | date: 'mediumDate' }}</td>
+                                            <td>${{ invoice.total }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]" class="btn btn-sm btn-soft-info me-2">
+                                                        <i class="ri-eye-line align-middle"></i> View
+                                                    </button>
+                                                    <button type="button" (click)="deleteInvoice(invoice.id)" class="btn btn-sm btn-soft-danger">
+                                                        <i class="ri-delete-bin-line align-middle"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="row justify-content-md-between align-items-md-center">
+                                <div class="col col-sm-5">
+                                    <div class="dataTables_info mb-2" id="tickets-table_info" role="status" aria-live="polite">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Pagination -->
+                        <nav *ngIf="state?.appData?.data?.page.content.length > 0" aria-label="Page navigation example">
+                           <ul class="pagination justify-content-end mb-0">
+                              <li [ngClass]="0 == (currentPage$ | async) ? 'disabled' : ''" class="page-item">
+                                 <a (click)="goToNextOrPreviousPage('backward')" class="page-link">&laquo; Prev</a>
+                              </li>
+                              <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page.totalPages); let i = index;"
+                                 class="page-item">
+                                 <a (click)="goToPage(i)" [ngClass]="i == (currentPage$ | async) ? 'active' : ''" class="page-link">
+                                    {{ i + 1 }}
+                                 </a>
+                              </li>
+                              <li [ngClass]="(state?.appData?.data?.page.totalPages - 1) == (currentPage$ | async) ? 'disabled' : ''"
+                                 class="page-item">
+                                 <a (click)="goToNextOrPreviousPage('forward')" class="page-link">Next &raquo;</a>
+                              </li>
+                           </ul>
+                        </nav>
+                      </div>
+                      
+                </div>
+                
+            </div>
+            <!--end col-->
+        </div>
+      </div>
+   </section>
+   </ng-container>
+ </ng-container>
+ 

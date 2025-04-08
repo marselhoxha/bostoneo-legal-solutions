@@ -1,25 +1,71 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError,tap } from 'rxjs/operators';
+import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
 import { JwtHelperService } from '@auth0/angular-jwt';
-import { CustomHttpResponse, Profile } from '../interface/appstates';
+import { AccountType, CustomHttpResponse, Profile } from '../interface/appstates';
 import { User } from '../interface/user';
 import { Key } from '../enum/key.enum';
+import { HttpCacheService } from './http.cache.service';
+import { Router } from '@angular/router';
+import { PreloaderService } from './preloader.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  
-  private readonly server: string = 'http://localhost:8080';
-  private jwtHelper =  new JwtHelperService();
+  private readonly server: string = 'http://localhost:8085';
+  private jwtHelper = new JwtHelperService();
+  private userDataSubject = new BehaviorSubject<User | null>(null);
+  userData$ = this.userDataSubject.asObservable();
+  private currentUser: User | null = null;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private httpCache: HttpCacheService,
+     private router: Router, private preloaderService: PreloaderService) { }
+
+  setUserData(user: User) {
+    if (user) {
+      this.currentUser = user;
+      this.userDataSubject.next(user);
+    }
+  }
+
+  getUserData(): Observable<User> {
+    return this.userData$;
+  }
+
+  // Method to clear cached user data
+  clearUserCache(): void {
+    this.currentUser = null;
+    this.userDataSubject.next(null);
+  }
 
   login$ = (email: string, password: string) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.post<CustomHttpResponse<Profile>>(
+      `${this.server}/user/login`,
+      { email, password }
+    )
+      .pipe(
+        tap(response => {
+          if (response && response.data) {
+            localStorage.setItem(Key.TOKEN, response.data.access_token);
+            localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
+            this.setUserData(response.data.user);
+          }
+        }),
+        catchError(this.handleError)
+      );
+
+  save$ = (user: User) => <Observable<CustomHttpResponse<Profile>>>
     this.http.post<CustomHttpResponse<Profile>>
-      (`${this.server}/user/login`, { email, password })
+      (`${this.server}/user/register`, user)
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );
+
+  requestPasswordReset$ = (email: string) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.get<CustomHttpResponse<Profile>>
+      (`${this.server}/user/resetpassword/${email}`)
       .pipe(
         tap(console.log),
         catchError(this.handleError)
@@ -33,11 +79,31 @@ export class UserService {
         catchError(this.handleError)
       );
 
+  verify$ = (key: string, type: AccountType) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.get<CustomHttpResponse<Profile>>
+      (`${this.server}/user/verify/${type}/${key}`)
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );
+
+  renewPassword$ = (form: { userId: number, password: string, confirmPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.put<CustomHttpResponse<Profile>>
+      (`${this.server}/user/new/password`, form)
+      .pipe(
+        tap(console.log),
+        catchError(this.handleError)
+      );
+
   profile$ = () => <Observable<CustomHttpResponse<Profile>>>
     this.http.get<CustomHttpResponse<Profile>>
       (`${this.server}/user/profile`)
       .pipe(
-        tap(console.log),
+        tap(response => {
+          if (response && response.data && response.data.user) {
+            this.setUserData(response.data.user);
+          }
+        }),
         catchError(this.handleError)
       );
 
@@ -72,12 +138,19 @@ export class UserService {
       );
 
   updateRoles$ = (roleName: string) => <Observable<CustomHttpResponse<Profile>>>
-    this.http.patch<CustomHttpResponse<Profile>>
-      (`${this.server}/user/update/role/${roleName}`, {})
+    this.http.patch<CustomHttpResponse<Profile>>(`${this.server}/user/update/role/${roleName}`, {})
       .pipe(
-        tap(console.log),
+        tap(response => {
+          console.log('Roles updated', response);
+
+          // Force a token refresh after the role is updated
+          this.refreshToken$().subscribe(() => {
+            console.log('Token refreshed after role change');
+          });
+        }),
         catchError(this.handleError)
       );
+    
 
   updateAccountSettings$ = (settings: { enabled: boolean, notLocked: boolean }) => <Observable<CustomHttpResponse<Profile>>>
     this.http.patch<CustomHttpResponse<Profile>>
@@ -93,36 +166,59 @@ export class UserService {
       .pipe(
         tap(console.log),
         catchError(this.handleError)
-      );  
-  
+      );
+
   updateImage$ = (formData: FormData) => <Observable<CustomHttpResponse<Profile>>>
     this.http.patch<CustomHttpResponse<Profile>>
       (`${this.server}/user/update/image`, formData)
       .pipe(
-        tap(console.log),
+        tap(response => {
+          if (response && response.data && response.data.user) {
+            this.setUserData(response.data.user);
+          }
+        }),
         catchError(this.handleError)
       );
-  
+
   logOut() {
+    this.httpCache.evictAll();
+    this.clearUserCache();
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
-  }    
-      
-  isAuthenticated = (): boolean => (this.jwtHelper.decodeToken<string>(localStorage.getItem(Key.TOKEN)) && !this.jwtHelper.isTokenExpired(localStorage.getItem(Key.TOKEN) )) ? true : false;   
+    this.preloaderService.hide();
+    this.router.navigate(['/login']);
+  }
+
+  isAuthenticated = (): boolean => {
+    const token = localStorage.getItem(Key.TOKEN);
+    return token ? (this.jwtHelper.decodeToken<string>(token) && !this.jwtHelper.isTokenExpired(token)) : false;
+  }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    console.log(error);
     let errorMessage: string;
     if (error.error instanceof ErrorEvent) {
       errorMessage = `A client error occurred - ${error.error.message}`;
     } else {
-      if (error.error.reason) {
+      if (error.error && error.error.reason) {
         errorMessage = error.error.reason;
-        console.log(errorMessage);
       } else {
         errorMessage = `An error occurred - Error status ${error.status}`;
       }
     }
-    return throwError(errorMessage);
+    return throwError(() => errorMessage);
+  }
+
+  // Add a method to force refresh user data
+  refreshUserData() {
+    if (this.isAuthenticated()) {
+      this.profile$().subscribe();
+    }
+  }
+
+  // Update the router navigation to refresh user data
+  navigateTo(route: string) {
+    this.router.navigate([route]).then(() => {
+      this.refreshUserData();
+    });
   }
 }

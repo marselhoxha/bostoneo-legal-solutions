@@ -1,39 +1,102 @@
-<section>
-   <div class="container mt-4">
-      <div class="row">
-         <div class="col-md-4 col-sm-6 col-xs-12">
-            <div class="mini-stat shadow-sm clearfix bg-facebook rounded hover-effect">
-               <span class="mini-stat-icon">
-                  <i class="bi bi-people-fill fg-facebook"></i> 
-               </span>
-               <div class="mini-stat-info text-end">
-                  <span class="stat-number">{{ stats?.totalCustomers }}</span>
-                  <span class="stat-label">Total Customers</span>
+<section style="margin-top: 135px;">
+   <div>
+     <div class="row">
+       <!-- Total Customers Card -->
+       <div class="col-xl-4 col-md-6 col-sm-12">
+         <div class="card card-animate">
+           <div class="card-body">
+             <div class="d-flex align-items-center">
+               <div class="flex-grow-1">
+                 <p class="text-uppercase fw-semibold text-muted mb-0">Total Customers</p>
                </div>
-            </div>
-         </div>
-         <div class="col-md-4 col-sm-6 col-xs-12">
-            <div class="mini-stat shadow-sm clearfix bg-googleplus rounded hover-effect">
-               <span class="mini-stat-icon">
-                  <i class="bi bi-receipt-cutoff fg-googleplus"></i>
-               </span>
-               <div class="mini-stat-info text-end">
-                  <span class="stat-number">{{ stats?.totalInvoices }}</span>
-                  <span class="stat-label">Total Invoices</span>
+               <div class="flex-shrink-0">
+                 <h5 class="text-success fs-14 mb-0">
+                   <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +5%
+                 </h5>
                </div>
-            </div>
-         </div>
-         <div class="col-md-4 col-sm-6 col-xs-12">
-            <div class="mini-stat shadow-sm clearfix bg-twitter rounded hover-effect">
-               <span class="mini-stat-icon">
-                  <i class="bi bi-currency-dollar fg-twitter"></i>
-               </span>
-               <div class="mini-stat-info text-end">
-                  <span class="stat-number">${{ stats?.totalBilled }}</span>
-                  <span class="stat-label">Total Billed</span>
+             </div>
+             <div class="d-flex align-items-end justify-content-between mt-4">
+               <div>
+                 <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                   <span class="odometer odometer-customers"></span>
+                 </h4>
+                 <span class="badge bg-success me-1">{{ stats?.totalCustomers }}</span>
+                 <span class="text-muted">Customers</span>
                </div>
-            </div>
+               <div class="avatar-sm flex-shrink-0">
+                 <span class="avatar-title bg-light rounded fs-3">
+                   <i class="ri-user-3-line text-success"></i>
+                 </span>
+               </div>
+             </div>
+           </div>
          </div>
-      </div>
+       </div>
+ 
+       <!-- Total Invoices Card -->
+       <div class="col-xl-4 col-md-6 col-sm-12">
+         <div class="card card-animate">
+           <div class="card-body">
+             <div class="d-flex align-items-center">
+               <div class="flex-grow-1">
+                 <p class="text-uppercase fw-semibold text-muted mb-0">Total Invoices</p>
+               </div>
+               <div class="flex-shrink-0">
+                 <h5 class="text-danger fs-14 mb-0">
+                   <i class="ri-arrow-right-down-line fs-13 align-middle"></i> -2%
+                 </h5>
+               </div>
+             </div>
+             <div class="d-flex align-items-end justify-content-between mt-4">
+               <div>
+                 <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                   <span class="odometer odometer-invoices"></span>
+                 </h4>
+                 <span class="badge bg-danger me-1">{{ stats?.totalInvoices }}</span>
+                 <span class="text-muted">Invoices</span>
+               </div>
+               <div class="avatar-sm flex-shrink-0">
+                 <span class="avatar-title bg-light rounded fs-3">
+                   <i class="ri-file-list-line text-primary"></i>
+                 </span>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+ 
+       <!-- Total Billed Card -->
+       <div class="col-xl-4 col-md-6 col-sm-12">
+         <div class="card card-animate">
+           <div class="card-body">
+             <div class="d-flex align-items-center">
+               <div class="flex-grow-1">
+                 <p class="text-uppercase fw-semibold text-muted mb-0">Total Billed</p>
+               </div>
+               <div class="flex-shrink-0">
+                 <h5 class="text-success fs-14 mb-0">
+                   <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +10%
+                 </h5>
+               </div>
+             </div>
+             <div class="d-flex align-items-end justify-content-between mt-4">
+               <div>
+                 <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                   $<span class="odometer odometer-billed"></span>
+                 </h4>
+                 <span class="badge bg-success me-1">${{ stats?.totalBilled }}</span>
+                 <span class="text-muted">Billed</span>
+               </div>
+               <div class="avatar-sm flex-shrink-0">
+                 <span class="avatar-title bg-light rounded fs-3">
+                   <i class="ri-money-dollar-box-line text-info"></i>
+                 </span>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
    </div>
-</section>
+ </section>
+ 

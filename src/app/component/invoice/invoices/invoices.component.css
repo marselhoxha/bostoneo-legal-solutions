@@ -1,0 +1,12 @@
+/* Slide-in from the left */
+.modal.fade .modal-dialog {
+    transform: translateX(-100%);
+    transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+    opacity: 0;
+  }
+  
+  .modal.fade.show .modal-dialog {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  

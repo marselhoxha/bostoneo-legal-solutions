@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { catchError, Observable, tap, throwError } from 'rxjs';
 import { CustomHttpResponse, CustomerState, Page, Profile } from '../interface/appstates';
 import { User } from '../interface/user';
@@ -10,7 +10,8 @@ import { Invoice } from '../interface/invoice';
 
 @Injectable({ providedIn: 'root' })
 export class CustomerService {
-    private readonly server: string = 'http://localhost:8080';
+    
+    private readonly server: string = 'http://localhost:8085';
 
     constructor(private http: HttpClient) { }
 
@@ -46,13 +47,22 @@ export class CustomerService {
                 catchError(this.handleError)
             );
 
-    newCustomers$ = (customer: Customer) => <Observable<CustomHttpResponse<Customer & User>>>
+    newCustomer$ = (customer: Customer) => <Observable<CustomHttpResponse<Customer & User>>>
         this.http.post<CustomHttpResponse<Customer & User>>
             (`${this.server}/customer/create`, customer)
             .pipe(
                 tap(console.log),
                 catchError(this.handleError)
             );
+
+    deleteCustomer$ = (customerId: number): Observable<void> =>
+        this.http.delete<void>(`${this.server}/customer/delete/${customerId}`, {
+        })
+            .pipe(
+                tap(() => console.log(`Customer ${customerId} deleted`)),
+                catchError(this.handleError)
+            );
+                
 
     newInvoice$ = () => <Observable<CustomHttpResponse<Customer[] & User>>>
         this.http.get<CustomHttpResponse<Customer[] & User>>
@@ -85,6 +95,30 @@ export class CustomerService {
                 tap(console.log),
                 catchError(this.handleError)
             );
+
+     deleteInvoice$ = (invoiceId: number): Observable<void> => 
+                this.http.delete<void>(`${this.server}/customer/invoice/get/${invoiceId}`)
+                  .pipe(
+                    tap(() => console.log(`Invoice ${invoiceId} deleted`)),
+                    catchError(this.handleError)
+                  );
+                  
+
+    downloadReport$ = () => <Observable<HttpEvent<Blob>>>
+        this.http.get
+            (`${this.server}/customer/download/report`, {reportProgress: true, observe: 'events', responseType: 'blob'})
+            .pipe(
+                tap(console.log),
+                catchError(this.handleError)
+            );
+            
+    downloadInvoiceReport$ = () => <Observable<HttpEvent<Blob>>>
+        this.http.get
+            (`${this.server}/customer/invoice/download/invoice-report`, { reportProgress: true, observe: 'events', responseType: 'blob' })
+            .pipe(
+                tap(console.log),
+                catchError(this.handleError)
+            ); 
 
     private handleError(error: HttpErrorResponse): Observable<never> {
         console.log(error);

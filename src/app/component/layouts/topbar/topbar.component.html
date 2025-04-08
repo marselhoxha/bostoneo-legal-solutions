@@ -1,0 +1,192 @@
+<header id="page-topbar" data-scroll-header >
+    <div class="layout-width">
+        <div class="navbar-header">
+            <div class="d-flex">
+                <!-- LOGO -->
+                <div class="navbar-brand-box horizontal-logo">
+                    <a href="javascript:void(0);" class="logo logo-dark">
+                        <span class="logo-sm">
+                            <img src="assets/images/***REMOVED***-logo-1.svg" alt="" height="60">
+                        </span>
+                        <span class="logo-lg">
+                            <img src="assets/images/***REMOVED***-logo-1.svg" alt="" height="60">
+                        </span>
+                    </a>
+
+                    <a href="javascript:void(0);" class="logo logo-light">
+                        <span class="logo-sm">
+                            <img src="assets/images/***REMOVED***-logo-white-1.svg" alt="" height="60">
+                        </span>
+                        <span class="logo-lg">
+                            <img src="assets/images/***REMOVED***-logo-white-1.svg" alt="" height="60">
+                        </span>
+                    </a>
+                </div>
+
+                <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger material-shadow-none" id="topnav-hamburger-icon" (click)="toggleMobileMenu($event)">
+                    <span class="hamburger-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </button>
+
+               
+            </div>
+
+            <div class="d-flex align-items-center">
+
+                <div class="dropdown d-md-none topbar-head-dropdown header-item" ngbDropdown>
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" id="page-header-search-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <i class="bx bx-search fs-22"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0" aria-labelledby="page-header-search-dropdown" ngbDropdownMenu>
+                        <form class="p-3">
+                            <div class="form-group m-0">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search ..." aria-label="Recipient's username">
+                                    <button class="btn btn-primary" type="submit"><i class="mdi mdi-magnify"></i></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+           
+                <div class="dropdown topbar-head-dropdown ms-1 header-item" ngbDropdown>
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <i class='bx bx-category-alt fs-22'></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-lg p-0 dropdown-menu-end" ngbDropdownMenu>
+                        <div class="p-3 border-top-0 border-start-0 border-end-0 border-dashed border">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="m-0 fw-semibold fs-15"> Web Apps </h6>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="javascript:void(0);" class="btn btn-sm btn-soft-info"> View All Apps
+                                        <i class="ri-arrow-right-s-line align-middle"></i></a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-2">
+                            <div class="row g-0">
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/github.png" alt="Github">
+                                        <span>GitHub</span>
+                                    </a>
+                                </div>
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/bitbucket.png" alt="bitbucket">
+                                        <span>Bitbucket</span>
+                                    </a>
+                                </div>
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/dribbble.png" alt="dribbble">
+                                        <span>Dribbble</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="row g-0">
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/dropbox.png" alt="dropbox">
+                                        <span>Dropbox</span>
+                                    </a>
+                                </div>
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/mail_chimp.png" alt="mail_chimp">
+                                        <span>Mail Chimp</span>
+                                    </a>
+                                </div>
+                                <div class="col">
+                                    <a class="dropdown-icon-item" href="javascript:void(0);">
+                                        <img src="assets/images/brands/slack.png" alt="slack">
+                                        <span>Slack</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+              
+
+                <div class="ms-1 header-item d-none d-sm-flex">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" data-toggle="fullscreen" (click)="fullscreen()">
+                        <i class='bx bx-fullscreen fs-22'></i>
+                    </button>
+                </div>
+
+                <div class="ms-1 header-item d-none d-sm-flex">
+                    <button
+                      type="button"
+                      class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle light-dark-mode"
+                      (click)="toggleTheme()" 
+                    >
+                      <i class='bx bx-moon fs-22'></i>
+                      <i class='bx bx-sun fs-22'></i>
+                    </button>
+                  </div>
+                  
+
+                
+
+                <div *ngIf="user$ | async as user" class="dropdown ms-sm-3 header-item topbar-user" ngbDropdown>
+                    <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="d-flex align-items-center">
+                            <img class="rounded-circle header-profile-user" [src]="user?.imageUrl" alt="Header Avatar">                            <span class="text-start ms-xl-2">
+                                <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ user.firstName }} {{ user.lastName }}
+                                   </span>
+                                <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">{{ user.title }}
+                                   </span>
+                            </span>
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <!-- item-->
+                        <a class="dropdown-item" routerLink="/profile"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
+                        <a class="dropdown-item" routerLink="/"><i class="mdi mdi-calendar-check-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Taskboard</span></a>
+                        <a class="dropdown-item" routerLink="/"><i class="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Help</span></a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" routerLink="/"><i class="mdi mdi-wallet text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Balance : <b>$5971.67</b></span></a>
+                        <a class="dropdown-item" routerLink="/"><span class="badge bg-success-subtle text-success mt-1 float-end">New</span><i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Settings</span></a>
+                        <a class="dropdown-item" routerLink="/"><i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Lock screen</span></a>
+                        <a class="dropdown-item" href="javascript: void(0);" (click)="logOut()"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Logout</span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- removeNotificationModal -->
+<ng-template #removenotification let-modal>
+    <!-- <div class="modal-dialog modal-dialog-centered"> -->
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="NotificationModalbtn-close" (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mt-2 text-center">
+                <!-- <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop" colors="primary:#f7b84b,secondary:#f06548" style="width:100px;height:100px"></lord-icon> -->
+                <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
+                    <h4>Are you sure ?</h4>
+                    <p class="text-muted mx-4 mb-0">Are you sure you want to remove this Notification ?</p>
+                </div>
+            </div>
+            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+                <button type="button" class="btn w-sm btn-light" data-bs-dismiss="modal" (click)="modal.dismiss('Cross click')">Close</button>
+                <button type="button" class="btn w-sm btn-danger" id="delete-notification" (click)="notificationDelete()">Yes, Delete It!</button>
+            </div>
+        </div>
+
+    </div><!-- /.modal-content -->
+
+</ng-template>

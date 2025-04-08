@@ -1,0 +1,177 @@
+<ng-container *ngIf="(loginState$ | async) as state" [ngSwitch]="state.dataState">
+    <!-- Login Form State -->
+    <div *ngIf="!state.loginSuccess && !state.isUsingMfa" class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+      <div class="bg-overlay"></div>
+      <div class="auth-page-content overflow-hidden pt-lg-5">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="card overflow-hidden card-bg-fill galaxy-border-none">
+                <div class="row g-0">
+                  <div class="col-lg-6">
+                    <div class="p-lg-5 p-4 auth-one-bg h-100">
+                      <div class="bg-overlay"></div>
+                      <div class="position-relative h-100 d-flex flex-column">
+                        <div class="text-center mb-4">
+                          <img src="assets/images/***REMOVED***-logo-white-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                        </div>
+                        <div class="mt-auto">
+                          <div class="mb-3">
+                            <i class="ri-double-quotes-l display-4 text-success"></i>
+                          </div>
+                          <p class="fs-15 fst-italic text-white">“Empowering organizations with intelligent, scalable solutions tailored for sustainable growth in a future-focused marketplace.”</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="p-lg-5 p-4">
+                      <div>
+                        <h5 class="text-primary">Welcome Back!</h5>
+                        <p class="text-muted">Sign in to continue to Bostoneo Solutions.</p>
+                      </div>
+  
+                      <!-- Error Handling -->
+                      <div *ngIf="state.dataState === DataState.ERROR" class="alert alert-danger text-center" role="alert">
+                        {{ state.error }}
+                      </div>
+  
+                      <!-- Login Form -->
+                      <form #loginForm="ngForm" (ngSubmit)="login(loginForm)">
+                        <!-- Email Field -->
+                        <div class="mb-3">
+                          <label for="email" class="form-label">Email Address</label>
+                          <input [disabled]="state.dataState === DataState.LOADING" ngModel type="email" name="email" id="email" class="form-control" placeholder="Enter email" required>
+                        </div>
+  
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                          <div class="float-end">
+                            <a routerLink="/resetpassword" class="text-muted">Forgot password?</a>
+                          </div>
+                          <label class="form-label" for="password-input">Password</label>
+                          <div class="position-relative auth-pass-inputgroup mb-3">
+                            <input [type]="fieldTextType ? 'text' : 'password'" class="form-control pe-5 password-input" placeholder="Enter password" id="password-input" name="password" ngModel [disabled]="state.dataState === DataState.LOADING" required>
+                            <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon" (click)="toggleFieldTextType()">
+                              <i class="mdi align-middle" [ngClass]="{'mdi-eye-off-outline': !fieldTextType, 'mdi-eye-outline': fieldTextType }"></i>
+                            </button>
+                          </div>
+                        </div>
+  
+                        <!-- Remember Me Checkbox -->
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" value="" id="auth-remember-check">
+                          <label class="form-check-label" for="auth-remember-check">Remember me</label>
+                        </div>
+  
+                        <!-- Sign In Button -->
+                        <div class="mt-4">
+                          <button [disabled]="state.dataState === DataState.LOADING || loginForm.invalid || loginForm.pristine" type="submit" class="btn btn-success w-100">
+                            <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
+                            <span *ngIf="state.dataState === DataState.LOADING">Loading...</span>
+                            <span *ngIf="!(state.dataState === DataState.LOADING)">Sign In</span>
+                          </button>
+                        </div>
+                      </form>
+  
+                      <div class="mt-5 text-center">
+                        <p class="mb-0">Don't have an account? <a routerLink="/register" class="fw-semibold text-primary text-decoration-underline"> Signup</a></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- end row -->
+              </div>
+              <!-- end card -->
+            </div>
+            <!-- end col -->
+          </div>
+          <!-- end row -->
+        </div>
+        <!-- end container -->
+      </div>
+    </div>
+  
+    <!-- MFA Verification State -->
+    <div *ngIf="state.isUsingMfa" class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
+        <div class="bg-overlay"></div>
+        <div class="auth-page-content overflow-hidden pt-lg-5">
+          <div class="container">
+            <div class="row justify-content-center my-5">
+              <div class="col-lg-12">
+                <div class="card overflow-hidden card-bg-fill galaxy-border-none">
+                  <div class="row g-0">
+                    <div class="col-lg-6">
+                      <div class="p-lg-5 p-4 auth-one-bg h-100">
+                        <div class="bg-overlay"></div>
+                        <div class="position-relative h-100 d-flex flex-column">
+                          <div class="text-center mb-4">
+                            <img src="assets/images/***REMOVED***-logo-white-1.svg" alt="Bostoneo Solutions Logo" height="60">
+                          </div>
+                          <div class="mt-auto">
+                            <div class="mb-3">
+                              <i class="ri-double-quotes-l display-4 text-success"></i>
+                            </div>
+                            <p class="fs-15 fst-italic text-white">“Empowering organizations with intelligent, scalable solutions tailored for sustainable growth in a future-focused marketplace.”</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                      <div class="p-lg-5 p-4">
+                        <div class="text-center">
+                          <h5 class="text-primary mb-4">MFA Verification</h5>
+                          <div class="avatar-lg mx-auto mt-2">
+                            <div class="avatar-title bg-light text-primary display-3 rounded-circle">
+                                <i class="ri-lock-password-line"></i>
+                            </div>
+                          </div>
+                          <p class="mt-4" style="font-size: medium;">Verification code sent to ...{{ state.phone }}. Please enter the code below.</p>
+                        </div>
+      
+                        <!-- Error Message -->
+                        <div *ngIf="state.dataState === DataState.ERROR" class="alert alert-danger text-center" role="alert">
+                          {{ state.error }}
+                        </div>
+      
+                        <!-- MFA Verification Form -->
+                        <form #verifyCodeForm="ngForm" (ngSubmit)="verifyCode(verifyCodeForm)">
+                          <div class="form-group">
+                            <input ngModel name="code" id="code" type="text" class="form-control form-control-lg text-center" placeholder="Enter verification code" required minlength="2" [disabled]="state.dataState === DataState.LOADING">
+                          </div>
+      
+                          <!-- Submit Button -->
+                          <div class="mt-4 d-flex justify-content-center">
+                            <button [disabled]="state.dataState === DataState.LOADING || verifyCodeForm.invalid || verifyCodeForm.pristine" type="submit" class="btn btn-success w-100">
+                              <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
+                              <span *ngIf="state.dataState === DataState.LOADING">Verifying...</span>
+                              <span *ngIf="!(state.dataState === DataState.LOADING)">Verify</span>
+                            </button>
+                          </div>
+                        </form>
+      
+                        <!-- Links -->
+                        <div class="row mt-4">
+                          <div class="col d-flex justify-content-center">
+                            <a (click)="loginPage()" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account Login</a>
+                          </div>
+                          <div class="col">
+                            <a [routerLink]="['/register']" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create an account</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- end row -->
+                </div>
+                <!-- end card -->
+              </div>
+              <!-- end col -->
+            </div>
+            <!-- end row -->
+          </div>
+          <!-- end container -->
+        </div>
+      </div>
+  </ng-container>

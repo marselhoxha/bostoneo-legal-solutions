@@ -1,0 +1,62 @@
+/* You can add global styles to this file, and also import other style files */
+// Swiper
+.coverflowslide .slide {
+    position: relative;
+    transition: transform 0.3s;
+}
+
+.coverflowslide .slick-list {
+    overflow: hidden !important;
+}
+
+.coverflowslide .slick-center {
+    transform: scale(1.2); // Adjust the scale factor for the "Coverflow" effect
+    z-index: 1;
+}
+
+.coverflowslide .carousel {
+    width: 100%;
+    max-width: 600px; // Adjust the carousel width as needed
+    margin: 0 auto;
+}
+
+.space .slick-slide {
+    margin: 10px;
+}
+
+#notificationItemsTabContent {
+    .avatar-title {
+        height: 30px !important;
+        width: 30px !important;
+    }
+}
+
+[data-bs-theme="dark"] {
+    .fc {
+        .fc-multimonth-daygrid {
+            background: #212529 !important;
+
+        }
+
+        .fc-day-disabled {
+            background: #282b2e !important;
+        }
+
+        .fc-multimonth {
+            border-color: #32383e !important;
+        }
+    }
+}
+
+/* Make customer modal wider at 1377px and above */
+.customer-modal {
+    max-width: 1000px;
+}
+
+@media (min-width: 1377px) {
+    .customer-modal {
+        max-width: 1600px !important;
+    }
+}
+
+  
