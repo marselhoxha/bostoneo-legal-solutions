@@ -381,12 +381,7 @@
       
       <!-- Case Notes Section -->
       <div class="card mt-4">
-        <div class="card-header border-bottom-dashed">
-          <h5 class="card-title mb-0">Case Notes</h5>
-        </div>
-        <div class="card-body">
-          <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
-        </div>
+        <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
       </div>
     </div>
   </div>
