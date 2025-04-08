@@ -38,21 +38,9 @@ export class UserComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    // Load user data immediately if available in the service
-    const currentUser = this.userService.getCurrentUser();
-    if (currentUser) {
-      this.dataSubject.next({
-        data: { user: currentUser },
-        appData: { user: currentUser },
-        timestamp: new Date(),
-        statusCode: 200,
-        status: 'OK',
-        message: 'User data loaded from cache'
-      });
-      this.updateProfileCompletion(currentUser);
-      this.cdr.detectChanges();
-    }
-
+    // Force a fresh profile data load
+    this.userService.refreshUserData();
+    
     // Initialize the observable to fetch profile data
     this.profileState$ = this.userService.profile$()
       .pipe(
@@ -104,13 +92,7 @@ export class UserComponent implements OnInit, OnDestroy {
     ).subscribe(event => {
       if (event instanceof NavigationEnd) {
         // Force a refresh of user data when navigating to this component
-        this.userService.profile$().pipe(takeUntil(this.destroy$)).subscribe(response => {
-          if (response && response.data && response.data.user) {
-            this.dataSubject.next(response);
-            this.updateProfileCompletion(response.data.user);
-            this.cdr.detectChanges();
-          }
-        });
+        this.userService.refreshUserData();
       }
     });
   }
