@@ -14,6 +14,7 @@ export interface LoginState {
 }
 
 export interface CustomHttpResponse<T> {
+    appData: any;
     timestamp: Date;
     statusCode: number;
     status: string;
@@ -43,4 +44,22 @@ export interface Page<T> {
 export interface CustomerState {
     user: User;
     customer: Customer;
+}
+
+export interface RegisterState {
+    dataState: DataState;
+    registerSuccess?: boolean;
+    error?: string;
+    message?: string;
+}
+
+export type AccountType = 'account' | 'password';
+
+export interface VerifyState {
+    dataState: DataState;
+    verifySuccess?: boolean;
+    error?: string;
+    message?: string;
+    title?: string;
+    type?: AccountType;
 }

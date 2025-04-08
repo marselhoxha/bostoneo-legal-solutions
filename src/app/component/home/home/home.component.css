@@ -1,0 +1,35 @@
+.project-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .card {
+    width: 100%;
+  }
+  
+  @media (min-width: 992px) {
+    .project-wrapper .col-xxl-8,
+    .project-wrapper .col-xxl-4 {
+      flex: 0 0 50%;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .project-wrapper .col-xxl-8,
+    .project-wrapper .col-xxl-4 {
+      flex: 0 0 100%;
+    }
+  }
+  
+  .table-card {
+    overflow-x: auto;
+  }
+  
+  .table {
+    width: 100%;
+  }
+  
+  .card-header .btn {
+    margin-right: 5px;
+  }
+  

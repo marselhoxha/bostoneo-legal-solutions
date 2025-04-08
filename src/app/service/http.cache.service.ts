@@ -25,6 +25,7 @@ export class HttpCacheService {
      logCache = (): void => {
         console.log('Cache:', this.httpResponseCache);
      }
+     
 
     
 }
