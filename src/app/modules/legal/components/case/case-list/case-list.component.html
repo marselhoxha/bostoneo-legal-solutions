@@ -1,0 +1,115 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Legal Cases</h5>
+          <button class="btn btn-primary" (click)="createCase()">
+            <i class="fas fa-plus"></i> New Case
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Search and Filter Controls -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Search cases..."
+                  [(ngModel)]="searchTerm"
+                  (ngModelChange)="filterCases()"
+                >
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select
+                class="form-select"
+                [(ngModel)]="selectedStatus"
+                (ngModelChange)="filterCases()"
+              >
+                <option value="">All Statuses</option>
+                <option *ngFor="let status of caseStatuses" [value]="status">
+                  {{status}}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select
+                class="form-select"
+                [(ngModel)]="selectedPriority"
+                (ngModelChange)="filterCases()"
+              >
+                <option value="">All Priorities</option>
+                <option *ngFor="let priority of casePriorities" [value]="priority">
+                  {{priority}}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div *ngIf="loading" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="error" class="alert alert-danger" role="alert">
+            {{error}}
+          </div>
+
+          <!-- Cases Table -->
+          <div class="table-responsive" *ngIf="!loading && !error">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Case Number</th>
+                  <th>Title</th>
+                  <th>Client</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Assigned To</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let case of filteredCases">
+                  <td>{{case.caseNumber}}</td>
+                  <td>{{case.title}}</td>
+                  <td>{{case.clientName}}</td>
+                  <td>
+                    <span [class]="getStatusClass(case.status)">
+                      {{case.status}}
+                    </span>
+                  </td>
+                  <td>
+                    <span [class]="getPriorityClass(case.priority)">
+                      {{case.priority}}
+                    </span>
+                  </td>
+                  <td>{{case.assignedTo?.join(', ')}}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info me-2" (click)="viewCase(case.id)">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" (click)="deleteCase(case.id)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="filteredCases.length === 0">
+                  <td colspan="7" class="text-center">No cases found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

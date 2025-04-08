@@ -1,0 +1,138 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box">
+        <div class="page-title-right">
+          <button class="btn btn-secondary me-2" routerLink="/legal/cases">
+            <i class="mdi mdi-arrow-left"></i> Back to Cases
+          </button>
+          <button *ngIf="!isEditing" class="btn btn-primary" (click)="toggleEdit()">
+            <i class="mdi mdi-pencil"></i> Edit Case
+          </button>
+          <button *ngIf="isEditing" class="btn btn-success" (click)="saveCase()">
+            <i class="mdi mdi-content-save"></i> Save Changes
+          </button>
+          <button *ngIf="isEditing" class="btn btn-danger ms-2" (click)="cancelEdit()">
+            <i class="mdi mdi-close"></i> Cancel
+          </button>
+        </div>
+        <h4 class="page-title">Case Details</h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="card-title mb-4">{{ isNewCase ? 'New Case' : 'Edit Case' }}</h4>
+
+          <form [formGroup]="caseForm" (ngSubmit)="onSubmit()">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="caseNumber" class="form-label">Case Number</label>
+                  <input type="text" class="form-control" id="caseNumber" formControlName="caseNumber" placeholder="Enter case number">
+                  <div class="invalid-feedback" *ngIf="caseForm.get('caseNumber')?.invalid && caseForm.get('caseNumber')?.touched">
+                    Case number is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="title" class="form-label">Title</label>
+                  <input type="text" class="form-control" id="title" formControlName="title" placeholder="Enter case title">
+                  <div class="invalid-feedback" *ngIf="caseForm.get('title')?.invalid && caseForm.get('title')?.touched">
+                    Title is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="clientName" class="form-label">Client Name</label>
+                  <input type="text" class="form-control" id="clientName" formControlName="clientName" placeholder="Enter client name">
+                  <div class="invalid-feedback" *ngIf="caseForm.get('clientName')?.invalid && caseForm.get('clientName')?.touched">
+                    Client name is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="status" class="form-label">Status</label>
+                  <select class="form-select" id="status" formControlName="status">
+                    <option *ngFor="let status of caseStatuses" [value]="status">{{ status }}</option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="caseForm.get('status')?.invalid && caseForm.get('status')?.touched">
+                    Status is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="priority" class="form-label">Priority</label>
+                  <select class="form-select" id="priority" formControlName="priority">
+                    <option *ngFor="let priority of casePriorities" [value]="priority">{{ priority }}</option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="caseForm.get('priority')?.invalid && caseForm.get('priority')?.touched">
+                    Priority is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="filingDate" class="form-label">Filing Date</label>
+                  <input type="date" class="form-control" id="filingDate" formControlName="filingDate">
+                  <div class="invalid-feedback" *ngIf="caseForm.get('filingDate')?.invalid && caseForm.get('filingDate')?.touched">
+                    Filing date is required
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="description" class="form-label">Description</label>
+                  <textarea class="form-control" id="description" formControlName="description" rows="3" placeholder="Enter case description"></textarea>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="notes" class="form-label">Notes</label>
+                  <textarea class="form-control" id="notes" formControlName="notes" rows="3" placeholder="Enter case notes"></textarea>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="assignedTo" class="form-label">Assigned To</label>
+                  <select class="form-select" id="assignedTo" formControlName="assignedTo" multiple>
+                    <option value="John Doe">John Doe</option>
+                    <option value="Jane Smith">Jane Smith</option>
+                    <option value="Bob Johnson">Bob Johnson</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-end mt-3">
+              <button type="button" class="btn btn-secondary me-2" (click)="cancel()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="caseForm.invalid || loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isNewCase ? 'Create' : 'Update' }} Case
+              </button>
+            </div>
+          </form>
+
+          <div *ngIf="error" class="alert alert-danger mt-3">
+            {{ error }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
