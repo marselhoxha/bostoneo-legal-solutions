@@ -54,6 +54,16 @@ export interface Note {
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  updatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export interface BillingInfo {
