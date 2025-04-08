@@ -1,4 +1,4 @@
-<div class="container">
+<div class="row">
   <nav aria-label="breadcrumb" style="margin-top: 100px;">
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
@@ -13,21 +13,21 @@
 
   <div class="row" style="margin-bottom:60px;">
     <div class="col-xl-4">
-      <div class="card">
-        <div class="card-body">
+      <div class="card shadow-sm mb-4" style="width: 100%;">
+        <div class="card-body p-4">
           <div class="d-flex align-items-start">
             <div class="flex-shrink-0">
-              <div class="avatar-sm rounded-circle bg-primary bg-opacity-10">
+              <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 p-2">
                 <span class="avatar-title text-primary">
                   <i class="ri-scales-3-line fs-4"></i>
                 </span>
               </div>
             </div>
             <div class="flex-grow-1 ms-3">
-              <h4 class="my-0">{{ case?.title }}</h4>
-              <p class="text-muted mb-2">{{ case?.caseNumber }}</p>
+              <h4 class="my-0 fw-semibold">{{ case?.title }}</h4>
+              <p class="text-muted mb-2 font-monospace">{{ case?.caseNumber }}</p>
               <div class="d-flex gap-2">
-                <span class="badge text-uppercase"
+                <span class="badge text-uppercase fw-semibold"
                   [ngClass]="{
                     'bg-success-subtle text-success': case?.status === 'OPEN',
                     'bg-warning-subtle text-warning': case?.status === 'IN_PROGRESS',
@@ -37,7 +37,7 @@
                   }">
                   {{ case?.status }}
                 </span>
-                <span class="badge text-uppercase"
+                <span class="badge text-uppercase fw-semibold"
                   [ngClass]="{
                     'bg-success-subtle text-success': case?.priority === 'LOW',
                     'bg-warning-subtle text-warning': case?.priority === 'MEDIUM',
@@ -51,29 +51,32 @@
         </div>
       </div>
       
-      <div class="card">
-        <div class="card-header border-bottom-dashed">
-          <h5 class="card-title mb-0">Client Information</h5>
+      <div class="card shadow-sm mb-4" style="width: 100%;">
+        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
+          <h5 class="card-title mb-0 text-white-dark">
+            <i class="ri-user-line align-middle me-2 text-primary"></i>
+            Client Information
+          </h5>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
           <div class="table-responsive">
             <table class="table table-borderless mb-0">
               <tbody>
-                <tr>
-                  <th scope="row" class="ps-0" style="width: 45%;">Client Name :</th>
-                  <td class="text-end">{{ case?.clientName }}</td>
+                <tr class="border-bottom">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Client Name</th>
+                  <td class="text-end py-3 fw-semibold">{{ case?.clientName }}</td>
+                </tr>
+                <tr class="border-bottom">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Email</th>
+                  <td class="text-end py-3 text-white-dark">{{ case?.clientEmail || 'N/A' }}</td>
+                </tr>
+                <tr class="border-bottom">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Phone</th>
+                  <td class="text-end py-3 text-white-dark">{{ case?.clientPhone || 'N/A' }}</td>
                 </tr>
                 <tr>
-                  <th scope="row" class="ps-0">Email :</th>
-                  <td class="text-end">{{ case?.clientEmail || 'N/A' }}</td>
-                </tr>
-                <tr>
-                  <th scope="row" class="ps-0">Phone :</th>
-                  <td class="text-end">{{ case?.clientPhone || 'N/A' }}</td>
-                </tr>
-                <tr>
-                  <th scope="row" class="ps-0">Address :</th>
-                  <td class="text-end">{{ case?.clientAddress || 'N/A' }}</td>
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Address</th>
+                  <td class="text-end py-3 text-white-dark">{{ case?.clientAddress || 'N/A' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -81,34 +84,37 @@
         </div>
       </div>
       
-      <div class="card">
-        <div class="card-header border-bottom-dashed">
-          <h5 class="card-title mb-0">Important Dates</h5>
+      <div class="card shadow-sm" style="width: 100%;">
+        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
+          <h5 class="card-title mb-0 text-white-dark">
+            <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
+            Important Dates
+          </h5>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
           <div class="table-responsive">
             <table class="table table-borderless mb-0">
               <tbody>
-                <tr>
-                  <th scope="row" class="ps-0" style="width: 45%;">Filing Date :</th>
-                  <td class="text-end">
-                    <span class="badge bg-info-subtle text-info">
+                <tr class="border-bottom">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Filing Date</th>
+                  <td class="text-end py-3">
+                    <span class="badge bg-info-subtle text-info fw-semibold">
                       {{ case?.importantDates.filingDate | date:'mediumDate' }}
                     </span>
                   </td>
                 </tr>
-                <tr>
-                  <th scope="row" class="ps-0">Next Hearing :</th>
-                  <td class="text-end">
-                    <span class="badge bg-warning-subtle text-warning">
+                <tr class="border-bottom">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Next Hearing</th>
+                  <td class="text-end py-3">
+                    <span class="badge bg-warning-subtle text-warning fw-semibold">
                       {{ case?.importantDates.nextHearing | date:'mediumDate' }}
                     </span>
                   </td>
                 </tr>
                 <tr>
-                  <th scope="row" class="ps-0">Trial Date :</th>
-                  <td class="text-end">
-                    <span class="badge bg-danger-subtle text-danger">
+                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Trial Date</th>
+                  <td class="text-end py-3">
+                    <span class="badge bg-danger-subtle text-danger fw-semibold">
                       {{ case?.importantDates.trialDate | date:'mediumDate' }}
                     </span>
                   </td>
@@ -121,29 +127,30 @@
     </div>
     
     <div class="col-xl-8">
-      <div class="card">
-        <div class="card-header border-bottom-dashed">
-          <div class="d-flex flex-wrap align-items-center">
-            <div class="flex-grow-1">
-              <h5 class="card-title mb-0">Case Details</h5>
+      <div class="card h-100 shadow-sm" style="height: 95%; width: 100%;">
+        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
+          <div class="d-flex flex-wrap align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <h5 class="card-title mb-0 text-white-dark fs-4 fw-bold">
+                <i class="ri-file-list-3-line align-middle me-2 text-primary fs-4"></i>
+                Case Details
+              </h5>
             </div>
-            <div class="flex-shrink-0 mt-sm-3 me-5">
-              <div class="d-flex flex-wrap align-items-start gap-2">
-                <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="toggleEdit()">
-                  <i class="ri-edit-line align-bottom me-1"></i>
-                  {{ isEditing ? 'Cancel' : 'Edit' }}
-                </button>
-                <button class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="deleteCase()">
-                  <i class="ri-delete-bin-line align-bottom me-1"></i>
-                  Delete
-                </button>
-              </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="toggleEdit()">
+                <i class="ri-edit-line align-bottom me-1"></i>
+                {{ isEditing ? 'Cancel' : 'Edit' }}
+              </button>
+              <button class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="deleteCase()">
+                <i class="ri-delete-bin-line align-bottom me-1"></i>
+                Delete
+              </button>
             </div>
           </div>
         </div>
         
-        <div class="card-body">
-          <div class="text-center" *ngIf="isLoading">
+        <div class="card-body p-4">
+          <div class="text-center py-5" *ngIf="isLoading">
             <div class="spinner-border text-primary" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
@@ -154,19 +161,29 @@
             {{ error }}
           </div>
 
-          <div *ngIf="!isLoading && !error && case && !isEditing">
-            <div class="row g-3">
+          <div *ngIf="!isLoading && !error && case && !isEditing" class="case-details-view">
+            <div class="row g-4">
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">Case Number</label>
-                  <p class="mb-0">{{ case.caseNumber }}</p>
+                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="ri-hashtag text-primary fs-5"></i>
+                    </div>
+                    <label class="form-label fw-semibold text-white-dark mb-0">Case Number</label>
+                  </div>
+                  <p class="mb-0 fs-5 fw-normal font-monospace ps-4">{{ case.caseNumber }}</p>
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">Status</label>
-                  <p class="mb-0">
-                    <span class="badge text-uppercase"
+                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="ri-flag-line text-primary fs-5"></i>
+                    </div>
+                    <label class="form-label fw-semibold text-white-dark mb-0">Status</label>
+                  </div>
+                  <p class="mb-0 ps-4">
+                    <span class="badge text-uppercase fs-6 fw-normal"
                       [ngClass]="{
                         'bg-success-subtle text-success': case.status === 'OPEN',
                         'bg-warning-subtle text-warning': case.status === 'IN_PROGRESS',
@@ -180,61 +197,85 @@
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">Title</label>
-                  <p class="mb-0">{{ case.title }}</p>
+                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="ri-file-text-line text-primary fs-5"></i>
+                    </div>
+                    <label class="form-label fw-semibold text-white-dark mb-0">Title</label>
+                  </div>
+                  <p class="mb-0 fs-5 fw-normal ps-4">{{ case.title }}</p>
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">Client</label>
-                  <p class="mb-0">{{ case.clientName }}</p>
+                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="ri-user-line text-primary fs-5"></i>
+                    </div>
+                    <label class="form-label fw-semibold text-white-dark mb-0">Client</label>
+                  </div>
+                  <p class="mb-0 fs-5 fw-normal ps-4">{{ case.clientName }}</p>
                 </div>
               </div>
               <div class="col-12">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">Description</label>
-                  <p class="mb-0">{{ case.description }}</p>
+                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="ri-file-list-line text-primary fs-5"></i>
+                    </div>
+                    <label class="form-label fw-semibold text-white-dark mb-0">Description</label>
+                  </div>
+                  <p class="mb-0 fw-normal ps-4">{{ case.description }}</p>
                 </div>
               </div>
             </div>
             
             <div class="row mt-4">
               <div class="col-12">
-                <h5 class="card-title">Court Information</h5>
-                <div class="table-responsive">
-                  <table class="table table-borderless mb-0">
-                    <tbody>
-                      <tr>
-                        <th scope="row" style="width: 200px;">Court Name</th>
-                        <td>{{ case.courtInfo.courtName }}</td>
-                      </tr>
-                      <tr>
-                        <th scope="row">Judge</th>
-                        <td>{{ case.courtInfo.judgeName }}</td>
-                      </tr>
-                      <tr>
-                        <th scope="row">Courtroom</th>
-                        <td>{{ case.courtInfo.courtroom }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="card border shadow-none">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-building-2-line align-middle me-2 text-primary"></i>
+                      Court Information
+                    </h5>
+                  </div>
+                  <div class="card-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-borderless mb-0">
+                        <tbody>
+                          <tr class="border-bottom">
+                            <th scope="row" style="width: 200px;" class="ps-4 py-3 fw-semibold text-white-dark">Court Name</th>
+                            <td class="py-3 fw-normal">{{ case.courtInfo.courtName }}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Judge</th>
+                            <td class="py-3 fw-normal">{{ case.courtInfo.judgeName }}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Courtroom</th>
+                            <td class="py-3 fw-normal">{{ case.courtInfo.courtroom }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <form [formGroup]="editForm" (ngSubmit)="saveCase(editForm.value)" *ngIf="isEditing">
-            <div class="row g-3">
+          <form [formGroup]="editForm" (ngSubmit)="saveCase(editForm.value)" *ngIf="isEditing" class="case-details-edit">
+            <div class="row g-4">
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Case Number</label>
+                  <label class="form-label fw-semibold text-white-dark">Case Number</label>
                   <input type="text" class="form-control" formControlName="caseNumber" placeholder="Enter case number">
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Status</label>
+                  <label class="form-label fw-semibold text-white-dark">Status</label>
                   <select class="form-select" formControlName="status">
                     <option *ngFor="let status of caseStatuses" [value]="status">{{ status }}</option>
                   </select>
@@ -242,37 +283,37 @@
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Title</label>
+                  <label class="form-label fw-semibold text-white-dark">Title</label>
                   <input type="text" class="form-control" formControlName="title" placeholder="Enter case title">
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Client</label>
+                  <label class="form-label fw-semibold text-white-dark">Client</label>
                   <input type="text" class="form-control" formControlName="clientName" placeholder="Enter client name">
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Client Email</label>
+                  <label class="form-label fw-semibold text-white-dark">Client Email</label>
                   <input type="email" class="form-control" formControlName="clientEmail" placeholder="Enter client email">
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label">Client Phone</label>
+                  <label class="form-label fw-semibold text-white-dark">Client Phone</label>
                   <input type="text" class="form-control" formControlName="clientPhone" placeholder="Enter client phone">
                 </div>
               </div>
               <div class="col-12">
                 <div class="mb-3">
-                  <label class="form-label">Client Address</label>
+                  <label class="form-label fw-semibold text-white-dark">Client Address</label>
                   <textarea class="form-control" rows="2" formControlName="clientAddress" placeholder="Enter client address"></textarea>
                 </div>
               </div>
               <div class="col-12">
                 <div class="mb-3">
-                  <label class="form-label">Description</label>
+                  <label class="form-label fw-semibold text-white-dark">Description</label>
                   <textarea class="form-control" rows="3" formControlName="description" placeholder="Enter case description"></textarea>
                 </div>
               </div>
@@ -280,24 +321,33 @@
             
             <div class="row mt-4">
               <div class="col-12">
-                <h5 class="card-title">Court Information</h5>
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Court Name</label>
-                      <input type="text" class="form-control" formControlName="courtInfo.courtName" placeholder="Enter court name">
-                    </div>
+                <div class="card border shadow-none">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-building-2-line align-middle me-2 text-primary"></i>
+                      Court Information
+                    </h5>
                   </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Judge</label>
-                      <input type="text" class="form-control" formControlName="courtInfo.judgeName" placeholder="Enter judge name">
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Courtroom</label>
-                      <input type="text" class="form-control" formControlName="courtInfo.courtroom" placeholder="Enter courtroom">
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Court Name</label>
+                          <input type="text" class="form-control" formControlName="courtInfo.courtName" placeholder="Enter court name">
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Judge</label>
+                          <input type="text" class="form-control" formControlName="courtInfo.judgeName" placeholder="Enter judge name">
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Courtroom</label>
+                          <input type="text" class="form-control" formControlName="courtInfo.courtroom" placeholder="Enter courtroom">
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -306,56 +356,65 @@
             
             <div class="row mt-4">
               <div class="col-12">
-                <h5 class="card-title">Important Dates</h5>
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Filing Date</label>
-                      <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">
-                          <i class="ri-calendar-line align-middle"></i>
-                        </span>
-                        <input type="text" 
-                               class="form-control border-start-0 flatpickr-input" 
-                               formControlName="filingDate"
-                               placeholder="Select filing date"
-                               #filingDate
-                               id="filingDate"
-                               (click)="initDatePicker($event, 'filingDate')">
-                      </div>
-                    </div>
+                <div class="card border shadow-none">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
+                      Important Dates
+                    </h5>
                   </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Next Hearing</label>
-                      <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">
-                          <i class="ri-calendar-line align-middle"></i>
-                        </span>
-                        <input type="text" 
-                               class="form-control border-start-0 flatpickr-input" 
-                               formControlName="nextHearing"
-                               placeholder="Select next hearing date"
-                               #nextHearing
-                               id="nextHearing"
-                               (click)="initDatePicker($event, 'nextHearing')">
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Filing Date</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                              <i class="ri-calendar-line align-middle"></i>
+                            </span>
+                            <input type="text" 
+                                  class="form-control border-start-0 flatpickr-input" 
+                                  formControlName="filingDate"
+                                  placeholder="Select filing date"
+                                  #filingDate
+                                  id="filingDate"
+                                  (click)="initDatePicker($event, 'filingDate')">
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Trial Date</label>
-                      <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">
-                          <i class="ri-calendar-line align-middle"></i>
-                        </span>
-                        <input type="text" 
-                               class="form-control border-start-0 flatpickr-input" 
-                               formControlName="trialDate"
-                               placeholder="Select trial date"
-                               #trialDate
-                               id="trialDate"
-                               (click)="initDatePicker($event, 'trialDate')">
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Next Hearing</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                              <i class="ri-calendar-line align-middle"></i>
+                            </span>
+                            <input type="text" 
+                                  class="form-control border-start-0 flatpickr-input" 
+                                  formControlName="nextHearing"
+                                  placeholder="Select next hearing date"
+                                  #nextHearing
+                                  id="nextHearing"
+                                  (click)="initDatePicker($event, 'nextHearing')">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Trial Date</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                              <i class="ri-calendar-line align-middle"></i>
+                            </span>
+                            <input type="text" 
+                                  class="form-control border-start-0 flatpickr-input" 
+                                  formControlName="trialDate"
+                                  placeholder="Select trial date"
+                                  #trialDate
+                                  id="trialDate"
+                                  (click)="initDatePicker($event, 'trialDate')">
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -365,7 +424,7 @@
             
             <div class="text-end mt-4">
               <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-soft-light btn-animation waves-effect waves-light" (click)="onCancel()">
+                <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="onCancel()">
                   <i class="ri-close-line align-bottom me-1"></i>
                   Cancel
                 </button>
@@ -378,11 +437,20 @@
           </form>
         </div>
       </div>
-      
-      <!-- Case Notes Section -->
-      <div class="card mt-4">
-        <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
-      </div>
     </div>
+  </div>
+</div>
+
+<!-- Case Notes Section -->
+<div class="row">
+  <div class="col-12">
+    <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
+  </div>
+</div>
+
+<!-- Case Documents Section -->
+<div class="row mt-4">
+  <div class="col-12">
+    <app-case-documents [caseId]="case?.id || ''"></app-case-documents>
   </div>
 </div> 
