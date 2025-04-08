@@ -2,8 +2,8 @@
     <ng-container *ngSwitchCase="DataState.LOADED">
        <app-layout [user]="state?.appData?.data?.user"></app-layout>
        <section>
-          <div class="container">
-             <nav aria-label="breadcrumb" style="margin-top: 8px;">
+          <div class="px-5">
+             <nav aria-label="breadcrumb" style="margin-top: 12px;">
                 <ol class="breadcrumb">
                    <li class="breadcrumb-item">
                       <a [routerLink]="['/']">Home</a>
@@ -11,11 +11,10 @@
                    <li class="breadcrumb-item active"> Customers </li>
                 </ol>
              </nav>
-             <div class="row"  style="margin-bottom:60px;">
+             <div class="row" style="margin-bottom:60px;">
                 <div class="col-lg-12">
                     <div class="card" id="customerList">
                         <div class="card-header border-bottom-dashed">
-            
                             <div class="row g-4 align-items-center">
                                 <div class="col-sm">
                                     <div>
@@ -74,24 +73,24 @@
                                     <table class="table">
                                         <thead class="table-light">
                                             <tr>
-                                              <th scope="col" class="text-center" style="width: 50px;">ID</th>
-                                              <th scope="col">Photo</th>
-                                              <th scope="col">Name</th>
-                                              <th scope="col">Email</th>
-                                              <th scope="col">Phone</th>
-                                              <th scope="col">Status</th>
-                                              <th scope="col">Type</th>
-                                              <th scope="col">Action</th>
+                                              <th scope="col" class="text-center px-4" style="width: 50px;">ID</th>
+                                              <th scope="col" class="px-4">Photo</th>
+                                              <th scope="col" class="px-4">Name</th>
+                                              <th scope="col" class="px-4">Email</th>
+                                              <th scope="col" class="px-4">Phone</th>
+                                              <th scope="col" class="px-4">Status</th>
+                                              <th scope="col" class="px-4">Type</th>
+                                              <th scope="col" class="px-4">Action</th>
                                             </tr>
                                           </thead>
                                           <tbody class="list form-check-all">
                                             <tr *ngFor="let customer of state?.appData?.data?.page.content">
-                                              <td class="text-center">{{ customer.id }}</td>
-                                              <td><img [src]="customer.imageUrl" width="42" height="42" class="rounded-circle" [alt]="customer.name"></td>
-                                              <td>{{ customer.name }}</td>
-                                              <td>{{ customer.email }}</td>
-                                              <td>{{ customer.phone }}</td>
-                                              <td>
+                                              <td class="text-center px-4">{{ customer.id }}</td>
+                                              <td class="px-4"><img [src]="customer.imageUrl" width="42" height="42" class="rounded-circle" [alt]="customer.name"></td>
+                                              <td class="px-4">{{ customer.name }}</td>
+                                              <td class="px-4">{{ customer.email }}</td>
+                                              <td class="px-4">{{ customer.phone }}</td>
+                                              <td class="px-4">
                                                 <span class="badge text-uppercase"
                                                   [ngClass]="{
                                                     'bg-success-subtle text-success': customer.status === 'ACTIVE',
@@ -102,8 +101,8 @@
                                                   {{ customer.status }}
                                                 </span>
                                               </td>
-                                              <td>{{ customer.type }}</td>
-                                              <td>
+                                              <td class="px-4">{{ customer.type }}</td>
+                                              <td class="px-4">
                                                 <div class="btn-group" role="group">
                                                   <button type="button" [routerLink]="['/customers', customer.id]" class="btn btn-sm btn-soft-info me-2">
                                                     <i class="ri-eye-line align-middle"></i> View
@@ -117,7 +116,7 @@
                                           </tbody>
                                     </table>
                                 </div>
-                                <div class="row justify-content-md-between align-items-md-center">
+                                <div class="row justify-content-md-between align-items-md-center mt-4">
                                     <div class="col col-sm-5">
                                         <div class="dataTables_info mb-2" id="tickets-table_info" role="status" aria-live="polite">
                                            

@@ -10,6 +10,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { FlatpickrModule } from 'angularx-flatpickr';
 import flatpickr from 'flatpickr';
 import { CaseNotesComponent } from '../case-notes/case-notes.component';
+import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
 
 @Component({
   selector: 'app-case-detail',
@@ -21,7 +22,8 @@ import { CaseNotesComponent } from '../case-notes/case-notes.component';
     RouterModule,
     ReactiveFormsModule,
     FlatpickrModule,
-    CaseNotesComponent
+    CaseNotesComponent,
+    CaseDocumentsComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit {
@@ -30,6 +32,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   error: string | null = null;
   isEditing = false;
   editForm: FormGroup;
+  caseForm: FormGroup;
 
   @ViewChildren('filingDate, nextHearing, trialDate') dateInputs: QueryList<ElementRef>;
 
@@ -261,6 +264,19 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
       nextHearing: [null],
       trialDate: [null]
     });
+
+    this.caseForm = this.fb.group({
+      caseNumber: [''],
+      status: [''],
+      filingDate: [''],
+      nextHearing: [''],
+      trialDate: [''],
+      judge: [''],
+      court: [''],
+      jurisdiction: [''],
+      description: [''],
+      notes: ['']
+    });
   }
 
   ngOnInit(): void {
@@ -372,29 +388,30 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
 
   updateFormWithCaseData(): void {
     if (this.case) {
-      // Get current date values or use defaults
-      const filingDate = this.case.importantDates?.filingDate || new Date();
-      const nextHearing = this.case.importantDates?.nextHearing || new Date();
-      const trialDate = this.case.importantDates?.trialDate || new Date();
-      
       this.editForm.patchValue({
         caseNumber: this.case.caseNumber,
-        title: this.case.title,
-        clientName: this.case.clientName,
-        clientEmail: this.case.clientEmail || '',
-        clientPhone: this.case.clientPhone || '',
-        clientAddress: this.case.clientAddress || '',
         status: this.case.status,
-        priority: this.case.priority,
+        filingDate: this.case.importantDates.filingDate ? new Date(this.case.importantDates.filingDate) : null,
+        nextHearing: this.case.importantDates.nextHearing ? new Date(this.case.importantDates.nextHearing) : null,
+        trialDate: this.case.importantDates.trialDate ? new Date(this.case.importantDates.trialDate) : null,
+        judge: this.case.courtInfo.judgeName,
+        court: this.case.courtInfo.courtName,
+        jurisdiction: this.case.courtInfo.courtroom,
         description: this.case.description,
-        courtInfo: {
-          courtName: this.case.courtInfo.courtName,
-          judgeName: this.case.courtInfo.judgeName,
-          courtroom: this.case.courtInfo.courtroom
-        },
-        filingDate: filingDate,
-        nextHearing: nextHearing,
-        trialDate: trialDate
+        notes: this.case.notes
+      });
+
+      this.caseForm.patchValue({
+        caseNumber: this.case.caseNumber,
+        status: this.case.status,
+        filingDate: this.case.importantDates.filingDate ? new Date(this.case.importantDates.filingDate) : null,
+        nextHearing: this.case.importantDates.nextHearing ? new Date(this.case.importantDates.nextHearing) : null,
+        trialDate: this.case.importantDates.trialDate ? new Date(this.case.importantDates.trialDate) : null,
+        judge: this.case.courtInfo.judgeName,
+        court: this.case.courtInfo.courtName,
+        jurisdiction: this.case.courtInfo.courtroom,
+        description: this.case.description,
+        notes: this.case.notes
       });
     }
   }
@@ -493,5 +510,33 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
 
   getPriorityClass(priority: CasePriority): string {
     return `priority-${priority.toLowerCase()}`;
+  }
+
+  startEdit(): void {
+    this.isEditing = true;
+  }
+
+  cancelEdit(): void {
+    this.isEditing = false;
+    this.updateFormWithCaseData();
+  }
+
+  onSubmit(): void {
+    if (this.caseForm.valid && this.case) {
+      const updatedCase = {
+        ...this.case,
+        ...this.caseForm.value
+      };
+      
+      this.caseService.updateCase(this.case.id, updatedCase).subscribe(
+        (result) => {
+          this.case = result;
+          this.isEditing = false;
+        },
+        (error) => {
+          console.error('Error updating case:', error);
+        }
+      );
+    }
   }
 }

@@ -2,7 +2,7 @@
    <ng-container *ngSwitchCase="DataState.LOADED">
       <app-layout [user]="state?.appData?.data?.user"></app-layout>
       <section>
-       <div class="container">
+       <div class="row">
           <nav aria-label="breadcrumb" style="margin-top: 8px;">
              <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>

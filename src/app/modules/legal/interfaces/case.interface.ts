@@ -104,4 +104,18 @@ export interface LegalCase {
   };
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CaseDocument {
+  id: string;
+  title: string;
+  type: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: Date;
+  uploadedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
 } 
