@@ -11,6 +11,7 @@ import { FlatpickrModule } from 'angularx-flatpickr';
 import flatpickr from 'flatpickr';
 import { CaseNotesComponent } from '../case-notes/case-notes.component';
 import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
+import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
 
 @Component({
   selector: 'app-case-detail',
@@ -23,7 +24,8 @@ import { CaseDocumentsComponent } from '../case-documents/case-documents.compone
     ReactiveFormsModule,
     FlatpickrModule,
     CaseNotesComponent,
-    CaseDocumentsComponent
+    CaseDocumentsComponent,
+    CaseTimelineComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit {
@@ -43,21 +45,22 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
       caseNumber: 'CASE-2024-001',
       title: 'Smith vs. Johnson',
       clientName: 'John Smith',
-      clientEmail: 'john.smith@example.com',
+      clientEmail: 'john.smith@email.com',
       clientPhone: '(555) 123-4567',
       clientAddress: '123 Main St, Anytown, USA',
       status: CaseStatus.OPEN,
       priority: CasePriority.HIGH,
-      description: 'Contract dispute regarding software development services',
+      type: 'CIVIL_LITIGATION',
+      description: 'Contract dispute between parties',
       courtInfo: {
-        courtName: 'District Court',
-        judgeName: 'Judge Williams',
-        courtroom: 'Room 101'
+        courtName: 'Superior Court of California',
+        judgeName: 'Hon. Sarah Wilson',
+        courtroom: 'Courtroom 3B'
       },
       importantDates: {
         filingDate: new Date('2024-01-15'),
-        nextHearing: new Date('2024-06-10'),
-        trialDate: new Date('2024-08-20')
+        nextHearing: new Date('2024-05-20'),
+        trialDate: new Date('2024-08-10')
       },
       documents: [],
       notes: [],
@@ -73,162 +76,157 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     {
       id: '2',
       caseNumber: 'CASE-2024-002',
-      title: 'Acme Corp vs. TechStart',
-      clientName: 'Acme Corporation',
-      clientEmail: 'legal@acmecorp.com',
-      clientPhone: '(555) 987-6543',
-      clientAddress: '456 Corporate Ave, Metropolis, USA',
+      title: 'Brown Estate Planning',
+      clientName: 'Mary Brown',
+      clientEmail: 'mary.brown@email.com',
+      clientPhone: '(555) 234-5678',
+      clientAddress: '456 Oak Ave, Somewhere, USA',
       status: CaseStatus.IN_PROGRESS,
       priority: CasePriority.MEDIUM,
-      description: 'Intellectual property infringement case',
+      type: 'ESTATE_PLANNING',
+      description: 'Estate planning and trust formation',
       courtInfo: {
-        courtName: 'Federal Court',
-        judgeName: 'Judge Rodriguez',
-        courtroom: 'Room 205'
+        courtName: 'Probate Court',
+        judgeName: 'Hon. Robert Chen',
+        courtroom: 'Courtroom 2A'
       },
       importantDates: {
-        filingDate: new Date('2024-02-05'),
+        filingDate: new Date('2024-02-01'),
         nextHearing: new Date('2024-05-15'),
         trialDate: new Date('2024-07-30')
       },
-      documents: [],
-      notes: [],
       billingInfo: {
         hourlyRate: 300,
-        totalHours: 75,
-        totalAmount: 22500,
+        totalHours: 25,
+        totalAmount: 7500,
         paymentStatus: PaymentStatus.PAID
       },
-      createdAt: new Date('2024-02-01'),
-      updatedAt: new Date('2024-04-08')
+      createdAt: new Date('2024-01-25'),
+      updatedAt: new Date('2024-04-03')
     },
     {
       id: '3',
       caseNumber: 'CASE-2024-003',
-      title: 'Williams Estate',
-      clientName: 'Sarah Williams',
-      clientEmail: 'sarah.williams@example.com',
-      clientPhone: '(555) 456-7890',
-      clientAddress: '789 Oak Lane, Springfield, USA',
+      title: 'Davis Corporate Merger',
+      clientName: 'Robert Davis',
+      clientEmail: 'robert.davis@email.com',
+      clientPhone: '(555) 345-6789',
+      clientAddress: '789 Pine St, Business District, USA',
       status: CaseStatus.PENDING,
       priority: CasePriority.LOW,
-      description: 'Estate planning and distribution',
+      type: 'CORPORATE_MERGER',
+      description: 'Corporate merger and acquisition',
       courtInfo: {
-        courtName: 'Probate Court',
-        judgeName: 'Judge Thompson',
-        courtroom: 'Room 103'
+        courtName: 'Business Court',
+        judgeName: 'Hon. Michael Thompson',
+        courtroom: 'Courtroom 4C'
       },
       importantDates: {
-        filingDate: new Date('2024-03-10'),
-        nextHearing: new Date('2024-04-25'),
-        trialDate: new Date('2024-05-15')
+        filingDate: new Date('2024-02-15'),
+        nextHearing: new Date('2024-06-01'),
+        trialDate: new Date('2024-09-15')
       },
-      documents: [],
-      notes: [],
       billingInfo: {
-        hourlyRate: 200,
-        totalHours: 30,
-        totalAmount: 6000,
-        paymentStatus: PaymentStatus.PENDING
+        hourlyRate: 400,
+        totalHours: 60,
+        totalAmount: 24000,
+        paymentStatus: PaymentStatus.OVERDUE
       },
-      createdAt: new Date('2024-03-05'),
-      updatedAt: new Date('2024-04-10')
+      createdAt: new Date('2024-02-10'),
+      updatedAt: new Date('2024-04-01')
     },
     {
       id: '4',
       caseNumber: 'CASE-2024-004',
-      title: 'Johnson Divorce',
-      clientName: 'Michael Johnson',
-      clientEmail: 'michael.johnson@example.com',
-      clientPhone: '(555) 234-5678',
-      clientAddress: '321 Pine St, Rivertown, USA',
+      title: 'Wilson Employment Dispute',
+      clientName: 'Sarah Wilson',
+      clientEmail: 'sarah.wilson@email.com',
+      clientPhone: '(555) 456-7890',
+      clientAddress: '321 Elm St, Downtown, USA',
       status: CaseStatus.CLOSED,
       priority: CasePriority.MEDIUM,
-      description: 'Divorce proceedings and asset division',
+      type: 'EMPLOYMENT_LITIGATION',
+      description: 'Employment discrimination case',
       courtInfo: {
-        courtName: 'Family Court',
-        judgeName: 'Judge Martinez',
-        courtroom: 'Room 302'
+        courtName: 'Employment Court',
+        judgeName: 'Hon. Lisa Martinez',
+        courtroom: 'Courtroom 1D'
       },
       importantDates: {
-        filingDate: new Date('2023-11-20'),
-        nextHearing: new Date('2024-01-15'),
-        trialDate: new Date('2024-02-10')
+        filingDate: new Date('2024-01-20'),
+        nextHearing: new Date('2024-04-10'),
+        trialDate: new Date('2024-07-20')
       },
-      documents: [],
-      notes: [],
       billingInfo: {
         hourlyRate: 275,
-        totalHours: 60,
-        totalAmount: 16500,
+        totalHours: 80,
+        totalAmount: 22000,
         paymentStatus: PaymentStatus.PAID
       },
-      createdAt: new Date('2023-11-15'),
-      updatedAt: new Date('2024-02-15')
+      createdAt: new Date('2024-01-15'),
+      updatedAt: new Date('2024-03-25')
     },
     {
       id: '5',
       caseNumber: 'CASE-2024-005',
-      title: 'TechStart Patent',
-      clientName: 'TechStart Inc.',
-      clientEmail: 'legal@techstart.com',
-      clientPhone: '(555) 876-5432',
-      clientAddress: '555 Innovation Blvd, Tech City, USA',
+      title: 'Taylor Immigration Case',
+      clientName: 'James Taylor',
+      clientEmail: 'james.taylor@email.com',
+      clientPhone: '(555) 567-8901',
+      clientAddress: '654 Maple Dr, Uptown, USA',
       status: CaseStatus.OPEN,
       priority: CasePriority.URGENT,
-      description: 'Patent infringement lawsuit',
+      type: 'IMMIGRATION',
+      description: 'Immigration visa application',
       courtInfo: {
-        courtName: 'Federal Court',
-        judgeName: 'Judge Anderson',
-        courtroom: 'Room 401'
+        courtName: 'Immigration Court',
+        judgeName: 'Hon. David Kim',
+        courtroom: 'Courtroom 5E'
       },
       importantDates: {
-        filingDate: new Date('2024-03-25'),
-        nextHearing: new Date('2024-04-30'),
-        trialDate: new Date('2024-06-15')
+        filingDate: new Date('2024-03-01'),
+        nextHearing: new Date('2024-05-25'),
+        trialDate: new Date('2024-08-15')
       },
-      documents: [],
-      notes: [],
       billingInfo: {
         hourlyRate: 350,
-        totalHours: 120,
-        totalAmount: 42000,
+        totalHours: 30,
+        totalAmount: 10500,
         paymentStatus: PaymentStatus.PENDING
       },
-      createdAt: new Date('2024-03-20'),
-      updatedAt: new Date('2024-04-12')
+      createdAt: new Date('2024-02-25'),
+      updatedAt: new Date('2024-04-02')
     },
     {
       id: '6',
-      caseNumber: 'CASE-2023-012',
-      title: 'Brown Bankruptcy',
-      clientName: 'Robert Brown',
-      clientEmail: 'robert.brown@example.com',
-      clientPhone: '(555) 345-6789',
-      clientAddress: '777 Debt Lane, Financial District, USA',
+      caseNumber: 'CASE-2024-006',
+      title: 'Anderson Patent Dispute',
+      clientName: 'Patricia Anderson',
+      clientEmail: 'patricia.anderson@email.com',
+      clientPhone: '(555) 678-9012',
+      clientAddress: '987 Cedar Ln, Tech Park, USA',
       status: CaseStatus.ARCHIVED,
       priority: CasePriority.LOW,
-      description: 'Chapter 7 bankruptcy filing',
+      type: 'INTELLECTUAL_PROPERTY',
+      description: 'Patent infringement lawsuit',
       courtInfo: {
-        courtName: 'Bankruptcy Court',
-        judgeName: 'Judge Wilson',
-        courtroom: 'Room 201'
+        courtName: 'Federal Court',
+        judgeName: 'Hon. William Harris',
+        courtroom: 'Courtroom 6F'
       },
       importantDates: {
-        filingDate: new Date('2023-09-10'),
-        nextHearing: new Date('2023-10-05'),
-        trialDate: new Date('2023-11-20')
+        filingDate: new Date('2024-02-05'),
+        nextHearing: new Date('2024-05-30'),
+        trialDate: new Date('2024-09-01')
       },
-      documents: [],
-      notes: [],
       billingInfo: {
-        hourlyRate: 225,
-        totalHours: 40,
-        totalAmount: 9000,
+        hourlyRate: 450,
+        totalHours: 100,
+        totalAmount: 45000,
         paymentStatus: PaymentStatus.PAID
       },
-      createdAt: new Date('2023-09-05'),
-      updatedAt: new Date('2023-12-01')
+      createdAt: new Date('2024-01-30'),
+      updatedAt: new Date('2024-03-20')
     }
   ];
 

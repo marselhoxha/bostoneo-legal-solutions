@@ -1,4 +1,5 @@
 import { User } from 'src/app/interface/user';
+import { CaseNote } from './case-note.interface';
 
 export enum CaseStatus {
   OPEN = 'OPEN',
@@ -70,35 +71,33 @@ export interface BillingInfo {
 
 export interface LegalCase {
   id: string;
-  caseNumber: string;
   title: string;
-  clientName: string;
+  caseNumber: string;
+  description: string;
+  status: CaseStatus;
+  priority: CasePriority;
+  type: string;
+  createdAt: Date;
+  updatedAt: Date;
+  assignedTo?: User;
+  client?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+  };
+  clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
   clientAddress?: string;
-  status: CaseStatus;
-  priority: CasePriority;
-  description: string;
-  courtInfo: {
-    courtName: string;
-    judgeName: string;
-    courtroom: string;
-  };
-  importantDates: {
-    filingDate: Date;
-    nextHearing: Date;
-    trialDate: Date;
-  };
-  documents: string[];
-  notes: string[];
-  billingInfo: {
-    hourlyRate: number;
-    totalHours: number;
-    totalAmount: number;
-    paymentStatus: PaymentStatus;
-  };
-  createdAt: Date;
-  updatedAt: Date;
+  courtInfo?: CourtInfo;
+  importantDates?: ImportantDates;
+  billingInfo?: BillingInfo;
+  documents?: CaseDocument[];
+  notes?: CaseNote[];
+  activities?: CaseActivity[];
 }
 
 export interface DocumentVersion {
@@ -124,4 +123,41 @@ export interface CaseDocument {
   uploadedBy: User;
   currentVersion: number;
   versions: DocumentVersion[];
+}
+
+export interface CaseActivity {
+  id: string;
+  caseId: string;
+  type: ActivityType;
+  description: string;
+  timestamp: Date;
+  userId: string;
+  user?: User;
+  metadata?: {
+    [key: string]: any;
+  };
+}
+
+export enum ActivityType {
+  CASE_CREATED = 'CASE_CREATED',
+  CASE_UPDATED = 'CASE_UPDATED',
+  DOCUMENT_UPLOADED = 'DOCUMENT_UPLOADED',
+  DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
+  DOCUMENT_VERSION_ADDED = 'DOCUMENT_VERSION_ADDED',
+  NOTE_ADDED = 'NOTE_ADDED',
+  NOTE_UPDATED = 'NOTE_UPDATED',
+  NOTE_DELETED = 'NOTE_DELETED',
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  ASSIGNMENT_CHANGED = 'ASSIGNMENT_CHANGED',
+  DEADLINE_SET = 'DEADLINE_SET',
+  DEADLINE_UPDATED = 'DEADLINE_UPDATED',
+  DEADLINE_MET = 'DEADLINE_MET',
+  DEADLINE_MISSED = 'DEADLINE_MISSED',
+  PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
+  PAYMENT_SCHEDULED = 'PAYMENT_SCHEDULED',
+  PAYMENT_MISSED = 'PAYMENT_MISSED',
+  HEARING_SCHEDULED = 'HEARING_SCHEDULED',
+  HEARING_COMPLETED = 'HEARING_COMPLETED',
+  HEARING_CANCELLED = 'HEARING_CANCELLED',
+  OTHER = 'OTHER'
 } 
