@@ -1,0 +1,291 @@
+<div class="page-content">
+  <div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row">
+      <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+          <h4 class="mb-0">Create New Case</h4>
+          <div class="page-title-right">
+            <ol class="breadcrumb m-0">
+              <li class="breadcrumb-item"><a href="/legal/cases">Cases</a></li>
+              <li class="breadcrumb-item active">Create Case</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case Form -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header border-bottom-dashed">
+            <div class="d-flex align-items-center">
+              <h5 class="card-title mb-0 flex-grow-1">Case Information</h5>
+              <div class="flex-shrink-0">
+                <button type="button" class="btn btn-soft-secondary btn-sm" (click)="cancel()">
+                  <i class="ri-arrow-left-line align-middle me-1"></i> Back to Cases
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="caseForm" (ngSubmit)="onSubmit()">
+              <!-- Client Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-light">
+                      <h5 class="card-title mb-0">Client Information</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="clientName" class="form-label">Client Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="clientName" formControlName="clientName"
+                              [ngClass]="{'is-invalid': hasError('clientName')}" placeholder="Enter client name">
+                            <div class="invalid-feedback" *ngIf="hasError('clientName')">
+                              {{ getErrorMessage('clientName') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="clientEmail" class="form-label">Client Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="clientEmail" formControlName="clientEmail"
+                              [ngClass]="{'is-invalid': hasError('clientEmail')}" placeholder="Enter client email">
+                            <div class="invalid-feedback" *ngIf="hasError('clientEmail')">
+                              {{ getErrorMessage('clientEmail') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="clientPhone" class="form-label">Client Phone <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="clientPhone" formControlName="clientPhone"
+                              [ngClass]="{'is-invalid': hasError('clientPhone')}" placeholder="Enter client phone">
+                            <div class="invalid-feedback" *ngIf="hasError('clientPhone')">
+                              {{ getErrorMessage('clientPhone') }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Case Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-light">
+                      <h5 class="card-title mb-0">Case Details</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="caseNumber" class="form-label">Case Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="caseNumber" formControlName="caseNumber"
+                              [ngClass]="{'is-invalid': hasError('caseNumber')}" placeholder="Enter case number">
+                            <div class="invalid-feedback" *ngIf="hasError('caseNumber')">
+                              {{ getErrorMessage('caseNumber') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="title" class="form-label">Case Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" formControlName="title"
+                              [ngClass]="{'is-invalid': hasError('title')}" placeholder="Enter case title">
+                            <div class="invalid-feedback" *ngIf="hasError('title')">
+                              {{ getErrorMessage('title') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" formControlName="status"
+                              [ngClass]="{'is-invalid': hasError('status')}">
+                              <option *ngFor="let status of CaseStatus | keyvalue" [value]="status.value">
+                                {{status.value}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('status')">
+                              {{ getErrorMessage('status') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            <select class="form-select" id="priority" formControlName="priority"
+                              [ngClass]="{'is-invalid': hasError('priority')}">
+                              <option *ngFor="let priority of CasePriority | keyvalue" [value]="priority.value">
+                                {{priority.value}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('priority')">
+                              {{ getErrorMessage('priority') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="mb-3">
+                            <label for="description" class="form-label">Case Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" rows="4" formControlName="description"
+                              [ngClass]="{'is-invalid': hasError('description')}" placeholder="Enter case description"></textarea>
+                            <div class="invalid-feedback" *ngIf="hasError('description')">
+                              {{ getErrorMessage('description') }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Court Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-light">
+                      <h5 class="card-title mb-0">Court Information</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="courtName" class="form-label">Court Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="courtName" formControlName="courtName"
+                              [ngClass]="{'is-invalid': hasError('courtName')}" placeholder="Enter court name">
+                            <div class="invalid-feedback" *ngIf="hasError('courtName')">
+                              {{ getErrorMessage('courtName') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="judgeName" class="form-label">Judge Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="judgeName" formControlName="judgeName"
+                              [ngClass]="{'is-invalid': hasError('judgeName')}" placeholder="Enter judge name">
+                            <div class="invalid-feedback" *ngIf="hasError('judgeName')">
+                              {{ getErrorMessage('judgeName') }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Important Dates -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-light">
+                      <h5 class="card-title mb-0">Important Dates</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="filingDate" class="form-label">Filing Date <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-calendar-line align-middle"></i>
+                              </span>
+                              <input type="text" 
+                                     class="form-control border-start-0 flatpickr-input" 
+                                     id="filingDate" 
+                                     formControlName="filingDate"
+                                     [ngClass]="{'is-invalid': hasError('filingDate')}"
+                                     placeholder="Select filing date"
+                                     #filingDate>
+                            </div>
+                            <div class="invalid-feedback" *ngIf="hasError('filingDate')">
+                              {{ getErrorMessage('filingDate') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="nextHearingDate" class="form-label">Next Hearing Date <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-calendar-line align-middle"></i>
+                              </span>
+                              <input type="text" 
+                                     class="form-control border-start-0 flatpickr-input" 
+                                     id="nextHearingDate" 
+                                     formControlName="nextHearingDate"
+                                     [ngClass]="{'is-invalid': hasError('nextHearingDate')}"
+                                     placeholder="Select next hearing date"
+                                     #nextHearingDate>
+                            </div>
+                            <div class="invalid-feedback" *ngIf="hasError('nextHearingDate')">
+                              {{ getErrorMessage('nextHearingDate') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="estimatedCompletionDate" class="form-label">Estimated Completion Date <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-calendar-line align-middle"></i>
+                              </span>
+                              <input type="text" 
+                                     class="form-control border-start-0 flatpickr-input" 
+                                     id="estimatedCompletionDate" 
+                                     formControlName="estimatedCompletionDate"
+                                     [ngClass]="{'is-invalid': hasError('estimatedCompletionDate')}"
+                                     placeholder="Select estimated completion date"
+                                     #estimatedCompletionDate>
+                            </div>
+                            <div class="invalid-feedback" *ngIf="hasError('estimatedCompletionDate')">
+                              {{ getErrorMessage('estimatedCompletionDate') }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-soft-secondary btn-lg px-4" (click)="cancel()">
+                      Cancel
+                    </button>
+                    <button type="submit" class="btn btn-soft-primary btn-lg px-4" [disabled]="isLoading">
+                      <span class="spinner-border spinner-border-sm me-1" *ngIf="isLoading"></span>
+                      <i class="ri-save-line align-middle me-1" *ngIf="!isLoading"></i> Create Case
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Error Message -->
+              <div class="row mt-3" *ngIf="errorMessage">
+                <div class="col-12">
+                  <div class="alert alert-danger" role="alert">
+                    <i class="ri-error-warning-line align-middle me-2"></i> {{ errorMessage }}
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

@@ -1,21 +1,29 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { SharedModule } from 'src/app/shared/shared.module';
 import { LegalRoutingModule } from './legal-routing.module';
-import { SharedModule } from '../../shared/shared.module';
-import { CaseListComponent } from './components/case/case-list/case-list.component';
-import { CaseDetailComponent } from './components/case/case-detail/case-detail.component';
+import { CaseService } from './services/case.service';
+import { FlatpickrModule } from 'angularx-flatpickr';
+import { CaseCreateComponent } from './components/case/case-create/case-create.component';
 
 @NgModule({
   declarations: [
-    CaseListComponent,
-    CaseDetailComponent
+    // Components will be added here
   ],
   imports: [
     CommonModule,
-    LegalRoutingModule,
+    HttpClientModule,
+    RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
     SharedModule,
-    ReactiveFormsModule
-  ]
+    LegalRoutingModule,
+    FlatpickrModule.forRoot(),
+    CaseCreateComponent
+  ],
+  providers: [CaseService]
 })
 export class LegalModule { }

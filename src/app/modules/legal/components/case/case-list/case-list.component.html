@@ -1,109 +1,110 @@
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="card-title mb-0">Legal Cases</h5>
-          <button class="btn btn-primary" (click)="createCase()">
-            <i class="fas fa-plus"></i> New Case
-          </button>
-        </div>
-        <div class="card-body">
-          <!-- Search and Filter Controls -->
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <div class="input-group">
-                <span class="input-group-text">
-                  <i class="fas fa-search"></i>
-                </span>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Search cases..."
-                  [(ngModel)]="searchTerm"
-                  (ngModelChange)="filterCases()"
-                >
+<!-- Page Header -->
+<div class="container">
+  <nav aria-label="breadcrumb" style="margin-top: 100px;">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/']">Home</a>
+      </li>
+      <li class="breadcrumb-item active">Legal Cases</li>
+    </ol>
+  </nav>
+  
+  <div class="row" style="margin-bottom:60px;">
+    <div class="col-lg-12">
+      <div class="card" id="caseList">
+        <div class="card-header border-bottom-dashed">
+          <div class="row g-4 align-items-center">
+            <div class="col-sm">
+              <div>
+                <h5 class="card-title mb-0">Legal Cases</h5>
               </div>
             </div>
-            <div class="col-md-3">
-              <select
-                class="form-select"
-                [(ngModel)]="selectedStatus"
-                (ngModelChange)="filterCases()"
-              >
-                <option value="">All Statuses</option>
-                <option *ngFor="let status of caseStatuses" [value]="status">
-                  {{status}}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <select
-                class="form-select"
-                [(ngModel)]="selectedPriority"
-                (ngModelChange)="filterCases()"
-              >
-                <option value="">All Priorities</option>
-                <option *ngFor="let priority of casePriorities" [value]="priority">
-                  {{priority}}
-                </option>
-              </select>
+            <div class="col-sm-auto">
+              <div class="d-flex flex-wrap align-items-start gap-2">
+                <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn" (click)="createCase()" id="create-btn">
+                  <i class="ri-add-line align-bottom me-1"></i> New Case
+                </button>
+                <button type="button" class="btn btn-soft-info btn-animation waves-effect waves-light">
+                  <i class="ri-file-download-line align-bottom me-1"></i> Export
+                </button>
+              </div>
             </div>
           </div>
-
+        </div>
+        
+        <div class="card-body">
           <!-- Loading Spinner -->
-          <div *ngIf="loading" class="text-center">
+          <div class="text-center" *ngIf="isLoading">
             <div class="spinner-border text-primary" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
           </div>
 
           <!-- Error Message -->
-          <div *ngIf="error" class="alert alert-danger" role="alert">
-            {{error}}
+          <div class="alert alert-danger" *ngIf="error" role="alert">
+            {{ error }}
           </div>
 
-          <!-- Cases Table -->
-          <div class="table-responsive" *ngIf="!loading && !error">
-            <table class="table table-hover">
-              <thead>
+          <!-- Cases List -->
+          <div class="table-responsive table-card mb-1 align-middle" *ngIf="!isLoading && !error">
+            <table class="table">
+              <thead class="table-light">
                 <tr>
-                  <th>Case Number</th>
-                  <th>Title</th>
-                  <th>Client</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                  <th>Assigned To</th>
-                  <th>Actions</th>
+                  <th scope="col">Case Number</th>
+                  <th scope="col">Title</th>
+                  <th scope="col">Client</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Priority</th>
+                  <th scope="col">Next Hearing</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr *ngFor="let case of filteredCases">
-                  <td>{{case.caseNumber}}</td>
-                  <td>{{case.title}}</td>
-                  <td>{{case.clientName}}</td>
+              <tbody class="list form-check-all">
+                <tr *ngFor="let case of cases">
+                  <td>{{ case.caseNumber }}</td>
+                  <td>{{ case.title }}</td>
+                  <td>{{ case.clientName }}</td>
                   <td>
-                    <span [class]="getStatusClass(case.status)">
-                      {{case.status}}
+                    <span class="badge text-uppercase"
+                      [ngClass]="{
+                        'bg-success-subtle text-success': case.status === 'OPEN',
+                        'bg-warning-subtle text-warning': case.status === 'IN_PROGRESS',
+                        'bg-info-subtle text-info': case.status === 'PENDING',
+                        'bg-danger-subtle text-danger': case.status === 'CLOSED',
+                        'bg-secondary-subtle text-secondary': case.status === 'ARCHIVED'
+                      }">
+                      {{ case.status }}
                     </span>
                   </td>
                   <td>
-                    <span [class]="getPriorityClass(case.priority)">
-                      {{case.priority}}
+                    <span class="badge text-uppercase"
+                      [ngClass]="{
+                        'bg-success-subtle text-success': case.priority === 'LOW',
+                        'bg-warning-subtle text-warning': case.priority === 'MEDIUM',
+                        'bg-danger-subtle text-danger': case.priority === 'HIGH' || case.priority === 'URGENT'
+                      }">
+                      {{ case.priority }}
                     </span>
                   </td>
-                  <td>{{case.assignedTo?.join(', ')}}</td>
+                  <td>{{ case.importantDates.nextHearing | date:'mediumDate' }}</td>
                   <td>
-                    <button class="btn btn-sm btn-info me-2" (click)="viewCase(case.id)">
-                      <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" (click)="deleteCase(case.id)">
-                      <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="btn-group" role="group">
+                      <button type="button" (click)="viewCase(case.id)" class="btn btn-soft-info btn-animation waves-effect waves-light me-2">
+                        <i class="ri-eye-line align-bottom me-1"></i> View
+                      </button>
+                      <button type="button" (click)="editCase(case.id)" class="btn btn-soft-primary btn-animation waves-effect waves-light">
+                        <i class="ri-edit-line align-bottom me-1"></i> Edit
+                      </button>
+                    </div>
                   </td>
                 </tr>
-                <tr *ngIf="filteredCases.length === 0">
-                  <td colspan="7" class="text-center">No cases found</td>
+                <tr *ngIf="cases.length === 0">
+                  <td colspan="7" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                      <i class="ri-folder-line fs-1 text-muted mb-2"></i>
+                      <p class="text-muted mb-0">No cases found</p>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>

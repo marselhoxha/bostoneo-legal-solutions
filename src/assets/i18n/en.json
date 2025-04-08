@@ -287,5 +287,9 @@
         }
       }
     }
-  }
+  },
+  "t-legal": "Legal",
+  "t-cases": "Cases",
+  "t-documents": "Documents",
+  "t-calendar": "Calendar"
 }

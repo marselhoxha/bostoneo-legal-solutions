@@ -37,7 +37,7 @@
                 <li class="nav-item">
                     @if(hasItems(item)){
                     <a href="javascript:void(0);" class="is-parent nav-link menu-link" [ngClass]="{'has-arrow': !item.badge, 'has-dropdown': item.badge}" data-bs-toggle="collapse" aria-expanded="false" (click)="toggleItem($event)">
-                        <i class="{{ item.icon }} icon nav-icon" class=""></i>
+                        @if(item.icon){<i class="bx {{ item.icon }} icon nav-icon"></i>}
                         <span class=""> {{ item.label  }}</span>
                         @if(item.badge){<span class="badge badge-pill {{item.badge.variant}}">{{item.badge.text
                             }}</span>}

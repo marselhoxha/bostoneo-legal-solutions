@@ -36,16 +36,41 @@ export const MENU: MenuItem[] = [
     link: '/invoices',
     
   },
- 
   {
     id: 4,
+    label: 'Legal',
+    icon: 'ri-scales-3-line',
+    link: '/legal/cases',
+    subItems: [
+      {
+        id: 'cases',
+        label: 'Cases',
+        link: '/legal/cases',
+        parentId: 4
+      },
+      {
+        id: 'documents',
+        label: 'Documents',
+        link: '/legal/documents',
+        parentId: 4
+      },
+      {
+        id: 'calendar',
+        label: 'Calendar',
+        link: '/legal/calendar',
+        parentId: 4
+      }
+    ]
+  },
+  {
+    id: 5,
     label: 'Settings',
     icon: 'ri-settings-3-line',
     link: '/profile',
     
   },
   {
-    id: 5,
+    id: 6,
     label: 'FAQ',
     icon: 'ri-question-answer-line',
     link: '/faq',

@@ -17,14 +17,13 @@ const routes: Routes = [
       { path: 'profile', loadChildren: () => import('./component/profile/user.module').then(m => m.UserModule), canActivate: [AuthenticationGuard] },
       { path: 'analytics', component: InvoiceAnalyticsComponent },
       { path: 'faq', component: FaqsComponent },
+      { path: 'legal', loadChildren: () => import('./modules/legal/legal.module').then(m => m.LegalModule), canActivate: [AuthenticationGuard] },
       // Add other routes inside this children array, as needed
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, // Redirect to 'dashboard' by default within the layout
     ]
   },
   { path: '**', redirectTo: '', pathMatch: 'full' }, // Fallback for unmatched routes
 ];
-
-
 
 @NgModule({
   imports: [RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })],
