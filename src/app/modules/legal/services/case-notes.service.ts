@@ -9,6 +9,13 @@ import { Note } from '../interfaces/case.interface';
 export class CaseNotesService {
   // TODO: Replace with actual API endpoint
   private apiUrl = '/api/cases';
+  
+  // Dummy user for demonstration
+  private currentUser = {
+    id: '1',
+    name: 'John Doe',
+    email: 'john.doe@example.com'
+  };
 
   constructor(private http: HttpClient) {}
 
@@ -23,7 +30,9 @@ export class CaseNotesService {
       id: Date.now().toString(),
       content,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      createdBy: this.currentUser,
+      updatedBy: this.currentUser
     };
     
     // TODO: Replace with actual API call
@@ -35,7 +44,9 @@ export class CaseNotesService {
       id: noteId,
       content,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      createdBy: this.currentUser,
+      updatedBy: this.currentUser
     };
     
     // TODO: Replace with actual API call
