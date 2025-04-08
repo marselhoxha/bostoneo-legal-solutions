@@ -211,6 +211,11 @@ export class UserService {
   // Add a method to force refresh user data
   refreshUserData() {
     if (this.isAuthenticated()) {
+      // Clear the HTTP cache for profile endpoint
+      this.httpCache.evict(`${this.server}/user/profile`);
+      // Clear the current user data
+      this.clearUserCache();
+      // Fetch fresh data
       this.profile$().subscribe();
     }
   }
@@ -220,5 +225,15 @@ export class UserService {
     this.router.navigate([route]).then(() => {
       this.refreshUserData();
     });
+  }
+
+  getCurrentUser(): User | null {
+    return this.currentUser;
+  }
+
+  preloadUserData(): void {
+    if (this.isAuthenticated() && !this.currentUser) {
+      this.profile$().subscribe();
+    }
   }
 }
