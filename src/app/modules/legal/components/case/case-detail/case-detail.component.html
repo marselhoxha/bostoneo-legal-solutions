@@ -583,8 +583,8 @@
                 <div class="card shadow-sm mb-4">
                   <div class="card-header bg-light-subtle py-3">
                     <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-user-line align-middle me-2 text-primary"></i>
-                      Client Information
+                      <i class="ri-money-dollar-circle-line align-middle me-2 text-primary"></i>
+                      Billing Information
                     </h5>
                   </div>
                   <div class="card-body">
@@ -592,20 +592,29 @@
                       <table class="table table-borderless mb-0">
                         <tbody>
                           <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Name</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.clientName}}</td>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Hourly Rate</th>
+                            <td class="text-end py-3 text-white-dark">${{ case?.billingInfo?.hourlyRate || 0 }}</td>
                           </tr>
                           <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Email</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.clientEmail || 'N/A'}}</td>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Total Hours</th>
+                            <td class="text-end py-3 text-white-dark">{{ case?.billingInfo?.totalHours || 0 }}</td>
                           </tr>
                           <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Phone</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.clientPhone || 'N/A'}}</td>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Total Amount</th>
+                            <td class="text-end py-3 text-white-dark">${{ case?.billingInfo?.totalAmount || 0 }}</td>
                           </tr>
                           <tr>
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Address</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.clientAddress || 'N/A'}}</td>
+                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Payment Status</th>
+                            <td class="text-end py-3">
+                              <span class="badge text-uppercase fw-semibold"
+                                [ngClass]="{
+                                  'bg-success-subtle text-success': case?.billingInfo?.paymentStatus === 'PAID',
+                                  'bg-warning-subtle text-warning': case?.billingInfo?.paymentStatus === 'PENDING',
+                                  'bg-danger-subtle text-danger': case?.billingInfo?.paymentStatus === 'OVERDUE'
+                                }">
+                                {{ case?.billingInfo?.paymentStatus }}
+                              </span>
+                            </td>
                           </tr>
                         </tbody>
                       </table>
