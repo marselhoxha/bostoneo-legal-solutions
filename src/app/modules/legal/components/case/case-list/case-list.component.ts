@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { LegalCase, CaseStatus, CasePriority, PaymentStatus } from '../../../interfaces/case.interface';
 import { CaseService } from '../../../services/case.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-case-list',
@@ -212,34 +213,29 @@ export class CaseListComponent implements OnInit {
     this.error = null;
     this.cdr.detectChanges();
     
-    // Use dummy data instead of service call
-    setTimeout(() => {
-      try {
-        this.cases = [...this.dummyCases]; // Create a new array to trigger change detection
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      } catch (err) {
-        console.error('Error loading cases:', err);
-        this.error = 'Failed to load cases. Please try again later.';
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    }, 500);
-    
-    // Commented out actual service call
-    /*
+    // Use real data from the API
     this.caseService.getCases().subscribe({
-      next: (cases) => {
-        this.cases = cases;
+      next: (response) => {
+        console.log('Cases response:', response);
+        // The backend returns data in a wrapper object
+        if (response && response.data && response.data.page) {
+          this.cases = response.data.page.content || [];
+        } else if (Array.isArray(response)) {
+          this.cases = response;
+        } else {
+          console.warn('Unexpected response format:', response);
+          this.cases = [];
+        }
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading cases:', err);
         this.error = 'Failed to load cases. Please try again later.';
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
-    */
   }
 
   viewCase(id: string): void {
@@ -247,11 +243,55 @@ export class CaseListComponent implements OnInit {
   }
 
   editCase(id: string): void {
-    this.router.navigate(['/legal/cases', id, 'edit']);
+    this.router.navigate(['/legal/cases/edit', id]);
   }
 
   createCase(): void {
     this.router.navigate(['/legal/cases/new']);
+  }
+  
+  deleteCase(caseItem: LegalCase): void {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `You are about to delete case "${caseItem.title}". This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isLoading = true;
+        this.cdr.detectChanges();
+        
+        this.caseService.deleteCase(caseItem.id).subscribe({
+          next: () => {
+            this.isLoading = false;
+            Swal.fire({
+              title: 'Deleted!',
+              text: 'Case has been successfully deleted.',
+              icon: 'success',
+              confirmButtonColor: '#3085d6'
+            }).then(() => {
+              // Reload the cases list after deletion
+              this.loadCases();
+            });
+          },
+          error: (error) => {
+            this.isLoading = false;
+            console.error('Error deleting case:', error);
+            Swal.fire({
+              title: 'Error!',
+              text: 'Failed to delete case: ' + (error.error?.message || 'Please try again later.'),
+              icon: 'error',
+              confirmButtonColor: '#3085d6'
+            });
+            this.cdr.detectChanges();
+          }
+        });
+      }
+    });
   }
 
   getStatusClass(status: CaseStatus): string {

@@ -70,6 +70,13 @@
                             </div>
                           </div>
                         </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="clientAddress" class="form-label">Client Address</label>
+                            <input type="text" class="form-control" id="clientAddress" formControlName="clientAddress"
+                              placeholder="Enter client address">
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -133,6 +140,20 @@
                             </div>
                           </div>
                         </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="type" class="form-label">Case Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="type" formControlName="type"
+                              [ngClass]="{'is-invalid': hasError('type')}">
+                              <option *ngFor="let type of caseTypes" [value]="type">
+                                {{type.replace('_', ' ')}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('type')">
+                              {{ getErrorMessage('type') }}
+                            </div>
+                          </div>
+                        </div>
                         <div class="col-12">
                           <div class="mb-3">
                             <label for="description" class="form-label">Case Description <span class="text-danger">*</span></label>
@@ -176,6 +197,13 @@
                             <div class="invalid-feedback" *ngIf="hasError('judgeName')">
                               {{ getErrorMessage('judgeName') }}
                             </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="courtroom" class="form-label">Courtroom</label>
+                            <input type="text" class="form-control" id="courtroom" formControlName="courtroom"
+                              placeholder="Enter courtroom">
                           </div>
                         </div>
                       </div>
@@ -251,6 +279,62 @@
                             <div class="invalid-feedback" *ngIf="hasError('estimatedCompletionDate')">
                               {{ getErrorMessage('estimatedCompletionDate') }}
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Billing Information Section -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-light">
+                      <h5 class="card-title mb-0">Billing Information</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="hourlyRate" class="form-label">Hourly Rate</label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-money-dollar-circle-line align-middle"></i>
+                              </span>
+                              <input type="number" class="form-control border-start-0" id="hourlyRate" formControlName="hourlyRate"
+                                placeholder="Enter hourly rate">
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="totalHours" class="form-label">Total Hours</label>
+                            <input type="number" class="form-control" id="totalHours" formControlName="totalHours"
+                              placeholder="Enter total hours">
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="mb-3">
+                            <label for="totalAmount" class="form-label">Total Amount</label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-money-dollar-circle-line align-middle"></i>
+                              </span>
+                              <input type="number" class="form-control border-start-0" id="totalAmount" formControlName="totalAmount"
+                                placeholder="Enter total amount">
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="paymentStatus" class="form-label">Payment Status</label>
+                            <select class="form-select" id="paymentStatus" formControlName="paymentStatus">
+                              <option *ngFor="let status of PaymentStatus | keyvalue" [value]="status.value">
+                                {{status.value}}
+                              </option>
+                            </select>
                           </div>
                         </div>
                       </div>
