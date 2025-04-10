@@ -18,9 +18,9 @@
           <div class="d-flex align-items-start">
             <div class="flex-shrink-0">
               <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 p-2">
-                <span class="avatar-title text-primary">
-                  <i class="ri-scales-3-line fs-4"></i>
-                </span>
+                <div class="avatar-title text-primary rounded-circle bg-transparent">
+                  <i class="ri-briefcase-4-line fs-2"></i>
+                </div>
               </div>
             </div>
             <div class="flex-grow-1 ms-3">
@@ -99,7 +99,7 @@
                   <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Filing Date</th>
                   <td class="text-end py-3">
                     <span class="badge bg-info-subtle text-info fw-semibold">
-                      {{ case?.importantDates.filingDate | date:'mediumDate' }}
+                      {{ case?.importantDates?.filingDate | date:'mediumDate' }}
                     </span>
                   </td>
                 </tr>
@@ -107,7 +107,7 @@
                   <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Next Hearing</th>
                   <td class="text-end py-3">
                     <span class="badge bg-warning-subtle text-warning fw-semibold">
-                      {{ case?.importantDates.nextHearing | date:'mediumDate' }}
+                      {{ case?.importantDates?.nextHearing | date:'mediumDate' }}
                     </span>
                   </td>
                 </tr>
@@ -115,7 +115,7 @@
                   <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Trial Date</th>
                   <td class="text-end py-3">
                     <span class="badge bg-danger-subtle text-danger fw-semibold">
-                      {{ case?.importantDates.trialDate | date:'mediumDate' }}
+                      {{ case?.importantDates?.trialDate | date:'mediumDate' }}
                     </span>
                   </td>
                 </tr>
@@ -246,15 +246,15 @@
                         <tbody>
                           <tr class="border-bottom">
                             <th scope="row" style="width: 200px;" class="ps-4 py-3 fw-semibold text-white-dark">Court Name</th>
-                            <td class="py-3 fw-normal">{{ case.courtInfo.courtName }}</td>
+                            <td class="py-3 fw-normal">{{ case?.courtInfo?.courtName }}</td>
                           </tr>
                           <tr class="border-bottom">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Judge</th>
-                            <td class="py-3 fw-normal">{{ case.courtInfo.judgeName }}</td>
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Judge Name</th>
+                            <td class="py-3 fw-normal">{{ case?.courtInfo?.judgeName }}</td>
                           </tr>
                           <tr>
                             <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Courtroom</th>
-                            <td class="py-3 fw-normal">{{ case.courtInfo.courtroom }}</td>
+                            <td class="py-3 fw-normal">{{ case?.courtInfo?.courtroom }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -265,7 +265,7 @@
             </div>
           </div>
 
-          <form [formGroup]="editForm" (ngSubmit)="saveCase(editForm.value)" *ngIf="isEditing" class="case-details-edit">
+          <form [formGroup]="editForm" (ngSubmit)="saveCase()" *ngIf="isEditing" class="case-details-edit">
             <div class="row g-4">
               <div class="col-md-6">
                 <div class="mb-3">
@@ -277,7 +277,7 @@
                 <div class="mb-3">
                   <label class="form-label fw-semibold text-white-dark">Status</label>
                   <select class="form-select" formControlName="status">
-                    <option *ngFor="let status of caseStatuses" [value]="status">{{ status }}</option>
+                    <option *ngFor="let status of caseStatuses" [ngValue]="status">{{ status }}</option>
                   </select>
                 </div>
               </div>
@@ -333,19 +333,19 @@
                       <div class="col-md-6">
                         <div class="mb-3">
                           <label class="form-label fw-semibold text-white-dark">Court Name</label>
-                          <input type="text" class="form-control" formControlName="courtInfo.courtName" placeholder="Enter court name">
+                          <input type="text" class="form-control" formControlName="courtName" placeholder="Enter court name">
                         </div>
                       </div>
                       <div class="col-md-6">
                         <div class="mb-3">
                           <label class="form-label fw-semibold text-white-dark">Judge</label>
-                          <input type="text" class="form-control" formControlName="courtInfo.judgeName" placeholder="Enter judge name">
+                          <input type="text" class="form-control" formControlName="judgeName" placeholder="Enter judge name">
                         </div>
                       </div>
                       <div class="col-md-6">
                         <div class="mb-3">
                           <label class="form-label fw-semibold text-white-dark">Courtroom</label>
-                          <input type="text" class="form-control" formControlName="courtInfo.courtroom" placeholder="Enter courtroom">
+                          <input type="text" class="form-control" formControlName="courtroom" placeholder="Enter courtroom">
                         </div>
                       </div>
                     </div>
@@ -372,30 +372,26 @@
                             <span class="input-group-text bg-light border-end-0">
                               <i class="ri-calendar-line align-middle"></i>
                             </span>
-                            <input type="text" 
-                                  class="form-control border-start-0 flatpickr-input" 
+                            <input type="text" class="form-control border-start-0 flatpickr-input" 
+                                  id="filingDate" 
                                   formControlName="filingDate"
                                   placeholder="Select filing date"
-                                  #filingDate
-                                  id="filingDate"
-                                  (click)="initDatePicker($event, 'filingDate')">
+                                  #filingDate>
                           </div>
                         </div>
                       </div>
                       <div class="col-md-4">
                         <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Next Hearing</label>
+                          <label class="form-label fw-semibold text-white-dark">Next Hearing Date</label>
                           <div class="input-group">
                             <span class="input-group-text bg-light border-end-0">
                               <i class="ri-calendar-line align-middle"></i>
                             </span>
-                            <input type="text" 
-                                  class="form-control border-start-0 flatpickr-input" 
+                            <input type="text" class="form-control border-start-0 flatpickr-input" 
+                                  id="nextHearing" 
                                   formControlName="nextHearing"
                                   placeholder="Select next hearing date"
-                                  #nextHearing
-                                  id="nextHearing"
-                                  (click)="initDatePicker($event, 'nextHearing')">
+                                  #nextHearing>
                           </div>
                         </div>
                       </div>
@@ -406,14 +402,70 @@
                             <span class="input-group-text bg-light border-end-0">
                               <i class="ri-calendar-line align-middle"></i>
                             </span>
-                            <input type="text" 
-                                  class="form-control border-start-0 flatpickr-input" 
+                            <input type="text" class="form-control border-start-0 flatpickr-input" 
+                                  id="trialDate" 
                                   formControlName="trialDate"
                                   placeholder="Select trial date"
-                                  #trialDate
-                                  id="trialDate"
-                                  (click)="initDatePicker($event, 'trialDate')">
+                                  #trialDate>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Billing Information Section -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="card border shadow-none">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-money-dollar-circle-line align-middle me-2 text-primary"></i>
+                      Billing Information
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-3">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Hourly Rate</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">$</span>
+                            <input type="number" class="form-control border-start-0" 
+                                   formControlName="hourlyRate"
+                                   placeholder="Enter hourly rate">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Total Hours</label>
+                          <input type="number" class="form-control" 
+                                 formControlName="totalHours"
+                                 placeholder="Enter total hours">
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Total Amount</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">$</span>
+                            <input type="number" class="form-control border-start-0" 
+                                   formControlName="totalAmount"
+                                   placeholder="Enter total amount">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-white-dark">Payment Status</label>
+                          <select class="form-select" formControlName="paymentStatus">
+                            <option *ngFor="let status of paymentStatuses" [ngValue]="status">
+                              {{ status }}
+                            </option>
+                          </select>
                         </div>
                       </div>
                     </div>

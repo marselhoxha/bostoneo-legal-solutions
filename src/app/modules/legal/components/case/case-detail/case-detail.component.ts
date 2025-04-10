@@ -12,6 +12,7 @@ import flatpickr from 'flatpickr';
 import { CaseNotesComponent } from '../case-notes/case-notes.component';
 import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
 import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-case-detail',
@@ -38,201 +39,14 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
 
   @ViewChildren('filingDate, nextHearing, trialDate') dateInputs: QueryList<ElementRef>;
 
-  // Dummy data for demonstration
-  dummyCases: LegalCase[] = [
-    {
-      id: '1',
-      caseNumber: 'CASE-2024-001',
-      title: 'Smith vs. Johnson',
-      clientName: 'John Smith',
-      clientEmail: 'john.smith@email.com',
-      clientPhone: '(555) 123-4567',
-      clientAddress: '123 Main St, Anytown, USA',
-      status: CaseStatus.OPEN,
-      priority: CasePriority.HIGH,
-      type: 'CIVIL_LITIGATION',
-      description: 'Contract dispute between parties',
-      courtInfo: {
-        courtName: 'Superior Court of California',
-        judgeName: 'Hon. Sarah Wilson',
-        courtroom: 'Courtroom 3B'
-      },
-      importantDates: {
-        filingDate: new Date('2024-01-15'),
-        nextHearing: new Date('2024-05-20'),
-        trialDate: new Date('2024-08-10')
-      },
-      documents: [],
-      notes: [],
-      billingInfo: {
-        hourlyRate: 250,
-        totalHours: 45,
-        totalAmount: 11250,
-        paymentStatus: PaymentStatus.PENDING
-      },
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-04-05')
-    },
-    {
-      id: '2',
-      caseNumber: 'CASE-2024-002',
-      title: 'Brown Estate Planning',
-      clientName: 'Mary Brown',
-      clientEmail: 'mary.brown@email.com',
-      clientPhone: '(555) 234-5678',
-      clientAddress: '456 Oak Ave, Somewhere, USA',
-      status: CaseStatus.IN_PROGRESS,
-      priority: CasePriority.MEDIUM,
-      type: 'ESTATE_PLANNING',
-      description: 'Estate planning and trust formation',
-      courtInfo: {
-        courtName: 'Probate Court',
-        judgeName: 'Hon. Robert Chen',
-        courtroom: 'Courtroom 2A'
-      },
-      importantDates: {
-        filingDate: new Date('2024-02-01'),
-        nextHearing: new Date('2024-05-15'),
-        trialDate: new Date('2024-07-30')
-      },
-      billingInfo: {
-        hourlyRate: 300,
-        totalHours: 25,
-        totalAmount: 7500,
-        paymentStatus: PaymentStatus.PAID
-      },
-      createdAt: new Date('2024-01-25'),
-      updatedAt: new Date('2024-04-03')
-    },
-    {
-      id: '3',
-      caseNumber: 'CASE-2024-003',
-      title: 'Davis Corporate Merger',
-      clientName: 'Robert Davis',
-      clientEmail: 'robert.davis@email.com',
-      clientPhone: '(555) 345-6789',
-      clientAddress: '789 Pine St, Business District, USA',
-      status: CaseStatus.PENDING,
-      priority: CasePriority.LOW,
-      type: 'CORPORATE_MERGER',
-      description: 'Corporate merger and acquisition',
-      courtInfo: {
-        courtName: 'Business Court',
-        judgeName: 'Hon. Michael Thompson',
-        courtroom: 'Courtroom 4C'
-      },
-      importantDates: {
-        filingDate: new Date('2024-02-15'),
-        nextHearing: new Date('2024-06-01'),
-        trialDate: new Date('2024-09-15')
-      },
-      billingInfo: {
-        hourlyRate: 400,
-        totalHours: 60,
-        totalAmount: 24000,
-        paymentStatus: PaymentStatus.OVERDUE
-      },
-      createdAt: new Date('2024-02-10'),
-      updatedAt: new Date('2024-04-01')
-    },
-    {
-      id: '4',
-      caseNumber: 'CASE-2024-004',
-      title: 'Wilson Employment Dispute',
-      clientName: 'Sarah Wilson',
-      clientEmail: 'sarah.wilson@email.com',
-      clientPhone: '(555) 456-7890',
-      clientAddress: '321 Elm St, Downtown, USA',
-      status: CaseStatus.CLOSED,
-      priority: CasePriority.MEDIUM,
-      type: 'EMPLOYMENT_LITIGATION',
-      description: 'Employment discrimination case',
-      courtInfo: {
-        courtName: 'Employment Court',
-        judgeName: 'Hon. Lisa Martinez',
-        courtroom: 'Courtroom 1D'
-      },
-      importantDates: {
-        filingDate: new Date('2024-01-20'),
-        nextHearing: new Date('2024-04-10'),
-        trialDate: new Date('2024-07-20')
-      },
-      billingInfo: {
-        hourlyRate: 275,
-        totalHours: 80,
-        totalAmount: 22000,
-        paymentStatus: PaymentStatus.PAID
-      },
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-03-25')
-    },
-    {
-      id: '5',
-      caseNumber: 'CASE-2024-005',
-      title: 'Taylor Immigration Case',
-      clientName: 'James Taylor',
-      clientEmail: 'james.taylor@email.com',
-      clientPhone: '(555) 567-8901',
-      clientAddress: '654 Maple Dr, Uptown, USA',
-      status: CaseStatus.OPEN,
-      priority: CasePriority.URGENT,
-      type: 'IMMIGRATION',
-      description: 'Immigration visa application',
-      courtInfo: {
-        courtName: 'Immigration Court',
-        judgeName: 'Hon. David Kim',
-        courtroom: 'Courtroom 5E'
-      },
-      importantDates: {
-        filingDate: new Date('2024-03-01'),
-        nextHearing: new Date('2024-05-25'),
-        trialDate: new Date('2024-08-15')
-      },
-      billingInfo: {
-        hourlyRate: 350,
-        totalHours: 30,
-        totalAmount: 10500,
-        paymentStatus: PaymentStatus.PENDING
-      },
-      createdAt: new Date('2024-02-25'),
-      updatedAt: new Date('2024-04-02')
-    },
-    {
-      id: '6',
-      caseNumber: 'CASE-2024-006',
-      title: 'Anderson Patent Dispute',
-      clientName: 'Patricia Anderson',
-      clientEmail: 'patricia.anderson@email.com',
-      clientPhone: '(555) 678-9012',
-      clientAddress: '987 Cedar Ln, Tech Park, USA',
-      status: CaseStatus.ARCHIVED,
-      priority: CasePriority.LOW,
-      type: 'INTELLECTUAL_PROPERTY',
-      description: 'Patent infringement lawsuit',
-      courtInfo: {
-        courtName: 'Federal Court',
-        judgeName: 'Hon. William Harris',
-        courtroom: 'Courtroom 6F'
-      },
-      importantDates: {
-        filingDate: new Date('2024-02-05'),
-        nextHearing: new Date('2024-05-30'),
-        trialDate: new Date('2024-09-01')
-      },
-      billingInfo: {
-        hourlyRate: 450,
-        totalHours: 100,
-        totalAmount: 45000,
-        paymentStatus: PaymentStatus.PAID
-      },
-      createdAt: new Date('2024-01-30'),
-      updatedAt: new Date('2024-03-20')
-    }
-  ];
-
+  // Status and priority values for dropdowns
   caseStatuses = Object.values(CaseStatus);
   casePriorities = Object.values(CasePriority);
-
+  paymentStatuses = Object.values(PaymentStatus);
+  
+  // Case types
+  caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
+  
   private flatpickrInstances: any[] = [];
 
   constructor(
@@ -252,15 +66,18 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
       clientAddress: [''],
       status: [CaseStatus.OPEN, Validators.required],
       priority: [CasePriority.MEDIUM, Validators.required],
+      type: [''],
       description: ['', Validators.required],
-      courtInfo: this.fb.group({
-        courtName: ['', Validators.required],
-        judgeName: ['', Validators.required],
-        courtroom: ['', Validators.required]
-      }),
+      courtName: [''],
+      judgeName: [''],
+      courtroom: [''],
       filingDate: [null],
       nextHearing: [null],
-      trialDate: [null]
+      trialDate: [null],
+      hourlyRate: [0],
+      totalHours: [0],
+      totalAmount: [0],
+      paymentStatus: [PaymentStatus.PENDING]
     });
 
     this.caseForm = this.fb.group({
@@ -272,8 +89,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
       judge: [''],
       court: [''],
       jurisdiction: [''],
-      description: [''],
-      notes: ['']
+      description: ['']
     });
   }
 
@@ -287,9 +103,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Initialize flatpickr for date inputs when in edit mode
-    if (this.isEditing) {
-      this.initializeFlatpickr();
+    // Initialize flatpickr when in edit mode
+    if (this.dateInputs && this.dateInputs.length > 0) {
+      this.dateInputs.forEach(input => {
+        this.initDatePicker(null, input.nativeElement.id);
+      });
     }
   }
 
@@ -386,30 +204,55 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
 
   updateFormWithCaseData(): void {
     if (this.case) {
+      // Access importantDates safely
+      const filingDate = this.case.importantDates?.filingDate;
+      const nextHearing = this.case.importantDates?.nextHearing;
+      const trialDate = this.case.importantDates?.trialDate;
+      
+      // Access courtInfo safely
+      const courtName = this.case.courtInfo?.courtName;
+      const judgeName = this.case.courtInfo?.judgeName;
+      const courtroom = this.case.courtInfo?.courtroom;
+      
+      // Access billing info safely
+      const hourlyRate = this.case.billingInfo?.hourlyRate;
+      const totalHours = this.case.billingInfo?.totalHours;
+      const totalAmount = this.case.billingInfo?.totalAmount;
+      const paymentStatus = this.case.billingInfo?.paymentStatus;
+      
       this.editForm.patchValue({
         caseNumber: this.case.caseNumber,
+        title: this.case.title,
+        clientName: this.case.clientName,
+        clientEmail: this.case.clientEmail,
+        clientPhone: this.case.clientPhone,
+        clientAddress: this.case.clientAddress,
         status: this.case.status,
-        filingDate: this.case.importantDates.filingDate ? new Date(this.case.importantDates.filingDate) : null,
-        nextHearing: this.case.importantDates.nextHearing ? new Date(this.case.importantDates.nextHearing) : null,
-        trialDate: this.case.importantDates.trialDate ? new Date(this.case.importantDates.trialDate) : null,
-        judge: this.case.courtInfo.judgeName,
-        court: this.case.courtInfo.courtName,
-        jurisdiction: this.case.courtInfo.courtroom,
+        priority: this.case.priority,
+        type: this.case.type,
         description: this.case.description,
-        notes: this.case.notes
+        courtName: courtName,
+        judgeName: judgeName,
+        courtroom: courtroom,
+        filingDate: filingDate ? new Date(filingDate) : null,
+        nextHearing: nextHearing ? new Date(nextHearing) : null,
+        trialDate: trialDate ? new Date(trialDate) : null,
+        hourlyRate: hourlyRate,
+        totalHours: totalHours,
+        totalAmount: totalAmount,
+        paymentStatus: paymentStatus
       });
 
       this.caseForm.patchValue({
         caseNumber: this.case.caseNumber,
         status: this.case.status,
-        filingDate: this.case.importantDates.filingDate ? new Date(this.case.importantDates.filingDate) : null,
-        nextHearing: this.case.importantDates.nextHearing ? new Date(this.case.importantDates.nextHearing) : null,
-        trialDate: this.case.importantDates.trialDate ? new Date(this.case.importantDates.trialDate) : null,
-        judge: this.case.courtInfo.judgeName,
-        court: this.case.courtInfo.courtName,
-        jurisdiction: this.case.courtInfo.courtroom,
-        description: this.case.description,
-        notes: this.case.notes
+        filingDate: filingDate ? new Date(filingDate) : null,
+        nextHearing: nextHearing ? new Date(nextHearing) : null,
+        trialDate: trialDate ? new Date(trialDate) : null,
+        judge: judgeName,
+        court: courtName,
+        jurisdiction: courtroom,
+        description: this.case.description
       });
     }
   }
@@ -419,62 +262,112 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     this.error = null;
     this.cdr.detectChanges();
     
-    // Use dummy data instead of service call
-    setTimeout(() => {
-      try {
-        const foundCase = this.dummyCases.find(c => c.id === id);
-        if (foundCase) {
-          this.case = foundCase;
-          this.isLoading = false;
-          this.cdr.detectChanges();
+    // Use the service to get real data from the API
+    this.caseService.getCaseById(id).subscribe({
+      next: (response) => {
+        console.log('Case detail response:', response);
+        // The backend returns data in a wrapper object
+        if (response && response.data && response.data.case) {
+          // Create the importantDates object if it doesn't exist
+          const caseData = response.data.case;
+          
+          // Ensure importantDates exists
+          if (!caseData.importantDates) {
+            caseData.importantDates = {
+              filingDate: caseData.filingDate || null,
+              nextHearing: caseData.nextHearing || null,
+              trialDate: caseData.trialDate || null
+            };
+          }
+          
+          // Ensure courtInfo exists
+          if (!caseData.courtInfo) {
+            caseData.courtInfo = {
+              courtName: caseData.courtName || '',
+              judgeName: caseData.judgeName || '',
+              courtroom: caseData.courtroom || ''
+            };
+          }
+          
+          this.case = caseData;
         } else {
-          this.error = 'Case not found';
-          this.isLoading = false;
-          this.cdr.detectChanges();
+          this.error = 'Case data not found or in unexpected format';
+          console.warn('Unexpected response format:', response);
         }
-      } catch (err) {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
         console.error('Error loading case:', err);
-        this.error = 'Failed to load case. Please try again later.';
+        if (err.status === 401) {
+          this.error = 'Authentication required. Please log in to view case details.';
+        } else if (err.status === 404) {
+          this.error = 'Case not found.';
+        } else {
+          this.error = 'Failed to load case. ' + (err.error?.reason || err.error?.message || 'Please try again later.');
+        }
         this.isLoading = false;
         this.cdr.detectChanges();
       }
-    }, 500);
+    });
   }
 
-  saveCase(formData: any): void {
+  saveCase(): void {
     if (this.editForm.valid && this.case) {
       this.isLoading = true;
+      this.error = null;
       this.cdr.detectChanges();
       
-      // Format dates
-      const formattedData = {
-        ...formData,
-        importantDates: {
-          filingDate: new Date(formData.importantDates.filingDate),
-          nextHearing: new Date(formData.importantDates.nextHearing),
-          trialDate: new Date(formData.importantDates.trialDate)
-        }
+      // Extract form values
+      const formValues = this.editForm.value;
+      
+      // Create properly formatted update data
+      const updateData = {
+        id: this.case.id,
+        caseNumber: formValues.caseNumber,
+        title: formValues.title,
+        clientName: formValues.clientName,
+        clientEmail: formValues.clientEmail,
+        clientPhone: formValues.clientPhone,
+        clientAddress: formValues.clientAddress,
+        status: formValues.status,
+        priority: formValues.priority,
+        type: formValues.type,
+        description: formValues.description,
+        courtName: formValues.courtName,
+        judgeName: formValues.judgeName,
+        courtroom: formValues.courtroom,
+        filingDate: formValues.filingDate ? new Date(formValues.filingDate) : null,
+        nextHearing: formValues.nextHearing ? new Date(formValues.nextHearing) : null,
+        trialDate: formValues.trialDate ? new Date(formValues.trialDate) : null,
+        hourlyRate: parseFloat(formValues.hourlyRate) || 0,
+        totalHours: parseFloat(formValues.totalHours) || 0,
+        totalAmount: parseFloat(formValues.totalAmount) || 0,
+        paymentStatus: formValues.paymentStatus
       };
       
-      // Update existing case
-      setTimeout(() => {
-        const updatedCase = {
-          ...this.case,
-          ...formattedData,
-          updatedAt: new Date()
-        };
-        
-        const index = this.dummyCases.findIndex(c => c.id === this.case?.id);
-        if (index !== -1) {
-          this.dummyCases[index] = updatedCase;
+      console.log('Updating case with data:', updateData);
+      
+      // Call the API to update the case
+      this.caseService.updateCase(this.case.id, updateData).subscribe({
+        next: (response) => {
+          console.log('Case updated successfully:', response);
+          // Reload the case data after update
+          this.loadCase(this.case!.id);
+          this.isEditing = false;
+          this.snackBar.open('Case updated successfully', 'Close', { duration: 3000 });
+        },
+        error: (error) => {
+          console.error('Error updating case:', error);
+          this.error = 'Failed to update case: ' + (error.error?.reason || error.error?.message || 'Please try again later.');
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        complete: () => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
         }
-        
-        this.case = updatedCase;
-        this.isEditing = false;
-        this.isLoading = false;
-        this.snackBar.open('Case updated successfully', 'Close', { duration: 3000 });
-        this.cdr.detectChanges();
-      }, 500);
+      });
     }
   }
 
@@ -484,21 +377,47 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   }
 
   deleteCase(): void {
-    if (this.case && confirm('Are you sure you want to delete this case?')) {
-      this.isLoading = true;
-      this.cdr.detectChanges();
-      
-      setTimeout(() => {
-        const index = this.dummyCases.findIndex(c => c.id === this.case?.id);
-        if (index !== -1) {
-          this.dummyCases.splice(index, 1);
+    if (this.case) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete case "${this.case.title}". This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.isLoading = true;
+          this.cdr.detectChanges();
+          
+          this.caseService.deleteCase(this.case!.id).subscribe({
+            next: () => {
+              this.isLoading = false;
+              Swal.fire({
+                title: 'Deleted!',
+                text: 'Case has been successfully deleted.',
+                icon: 'success',
+                confirmButtonColor: '#3085d6'
+              }).then(() => {
+                this.router.navigate(['/legal/cases']);
+              });
+            },
+            error: (error) => {
+              this.isLoading = false;
+              console.error('Error deleting case:', error);
+              Swal.fire({
+                title: 'Error!',
+                text: 'Failed to delete case: ' + (error.error?.message || 'Please try again later.'),
+                icon: 'error',
+                confirmButtonColor: '#3085d6'
+              });
+              this.cdr.detectChanges();
+            }
+          });
         }
-        
-        this.isLoading = false;
-        this.snackBar.open('Case deleted successfully', 'Close', { duration: 3000 });
-        this.router.navigate(['/legal/cases']);
-        this.cdr.detectChanges();
-      }, 500);
+      });
     }
   }
 
@@ -517,24 +436,5 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   cancelEdit(): void {
     this.isEditing = false;
     this.updateFormWithCaseData();
-  }
-
-  onSubmit(): void {
-    if (this.caseForm.valid && this.case) {
-      const updatedCase = {
-        ...this.case,
-        ...this.caseForm.value
-      };
-      
-      this.caseService.updateCase(this.case.id, updatedCase).subscribe(
-        (result) => {
-          this.case = result;
-          this.isEditing = false;
-        },
-        (error) => {
-          console.error('Error updating case:', error);
-        }
-      );
-    }
   }
 }
