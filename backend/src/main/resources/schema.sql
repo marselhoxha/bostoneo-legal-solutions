@@ -130,3 +130,29 @@ CREATE TABLE TwoFactorVerifications
     CONSTRAINT UQ_TwoFactorVerifications_User_Id UNIQUE (user_id),
     CONSTRAINT UQ_TwoFactorVerifications_Code UNIQUE (code)
 );
+
+CREATE TABLE IF NOT EXISTS legal_cases (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    case_number VARCHAR(255) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    client_name VARCHAR(255) NOT NULL,
+    client_email VARCHAR(255),
+    client_phone VARCHAR(20),
+    client_address TEXT,
+    status VARCHAR(20) NOT NULL,
+    priority VARCHAR(20) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    description TEXT,
+    court_name VARCHAR(255),
+    courtroom VARCHAR(255),
+    judge_name VARCHAR(255),
+    filing_date DATETIME(6),
+    next_hearing DATETIME(6),
+    trial_date DATETIME(6),
+    hourly_rate DECIMAL(10,2),
+    total_hours DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    payment_status ENUM('PENDING', 'PAID', 'OVERDUE'),
+    created_at DATETIME(6),
+    updated_at DATETIME(6)
+);

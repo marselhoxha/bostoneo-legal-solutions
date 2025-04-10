@@ -48,7 +48,8 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.34</version>
+			<version>1.18.30</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -69,6 +70,12 @@
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio</artifactId>
 			<version>9.2.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.json</groupId>
+					<artifactId>json</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.auth0</groupId>
@@ -83,12 +90,11 @@
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
-			<version>5.2.3</version>
+			<version>5.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
@@ -96,24 +102,31 @@
 		</dependency>
 
 		<dependency>
-			<groupId>nl.basjes.parse.useragent</groupId>
-			<artifactId>yauaa</artifactId>
-			<version>7.16.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.poi</groupId>
-			<artifactId>poi</artifactId>
-			<version>5.3.0</version>
-		</dependency>
-
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
-
-
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
 
 	</dependencies>
 
@@ -140,7 +153,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>${parent.version}</version>
+				<version>${project.parent.version}</version>
 				<configuration>
 					<excludes>
 						<exclude>
@@ -148,6 +161,30 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.13.0</version>
+				<configuration>
+					<source>17</source>
+					<target>17</target>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>1.18.30</version>
+						</path>
+						<path>
+							<groupId>org.hibernate</groupId>
+							<artifactId>hibernate-jpamodelgen</artifactId>
+							<version>6.4.4.Final</version>
+						</path>
+					</annotationProcessorPaths>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 				</configuration>
 			</plugin>
 		</plugins>
