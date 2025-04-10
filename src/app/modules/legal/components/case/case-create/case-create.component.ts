@@ -34,7 +34,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
   CasePriority = CasePriority;
   PaymentStatus = PaymentStatus;
   
-  // Case types
+  // Case types array for dropdown
   caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
 
   @ViewChildren('filingDate, nextHearingDate, estimatedCompletionDate') dateInputs: QueryList<ElementRef>;
@@ -46,7 +46,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
     private caseService: CaseService
   ) {
     this.caseForm = this.fb.group({
-      // Basic Information
       caseNumber: ['', [Validators.required]],
       title: ['', [Validators.required]],
       status: [CaseStatus.OPEN, [Validators.required]],
@@ -86,11 +85,34 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
     const threeMonths = new Date();
     threeMonths.setMonth(threeMonths.getMonth() + 3);
 
+    // Generate a unique case number
+    const uniqueCaseNumber = this.generateUniqueCaseNumber();
+
     this.caseForm.patchValue({
+      caseNumber: uniqueCaseNumber,
       filingDate: today,
       nextHearingDate: nextMonth,
       estimatedCompletionDate: threeMonths
     });
+  }
+
+  /**
+   * Generates a unique case number using current date and random values
+   * Format: CASE-YYYY-MM-[5 random alphanumeric characters]
+   */
+  generateUniqueCaseNumber(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    // Generate 5 random alphanumeric characters
+    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars like I, O, 0, 1
+    let randomPart = '';
+    for (let i = 0; i < 5; i++) {
+      randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+
+    return `CASE-${year}-${month}-${randomPart}`;
   }
 
   ngAfterViewInit(): void {
@@ -125,17 +147,39 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
       clientName: this.caseForm.value.clientName,
       clientEmail: this.caseForm.value.clientEmail,
       clientPhone: phoneNumber,
-      clientAddress: this.caseForm.value.clientAddress,
+      clientAddress: this.caseForm.value.clientAddress || '',
       status: this.caseForm.value.status,
       priority: this.caseForm.value.priority,
       type: this.caseForm.value.type,
       description: this.caseForm.value.description,
+      
+      // Include both nested and flat properties for maximum compatibility
+      courtInfo: {
+        courtName: this.caseForm.value.courtName,
+        judgeName: this.caseForm.value.judgeName,
+        courtroom: this.caseForm.value.courtroom || ''
+      },
       courtName: this.caseForm.value.courtName,
       judgeName: this.caseForm.value.judgeName,
-      courtroom: this.caseForm.value.courtroom,
+      courtroom: this.caseForm.value.courtroom || '',
+      
+      // Structured dates and flat date fields
+      importantDates: {
+        filingDate: new Date(this.caseForm.value.filingDate),
+        nextHearing: new Date(this.caseForm.value.nextHearingDate),
+        trialDate: new Date(this.caseForm.value.estimatedCompletionDate)
+      },
       filingDate: new Date(this.caseForm.value.filingDate),
       nextHearing: new Date(this.caseForm.value.nextHearingDate),
       trialDate: new Date(this.caseForm.value.estimatedCompletionDate),
+      
+      // Structured billing and flat billing fields
+      billingInfo: {
+        hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
+        totalHours: parseFloat(this.caseForm.value.totalHours) || 0,
+        totalAmount: parseFloat(this.caseForm.value.totalAmount) || 0,
+        paymentStatus: this.caseForm.value.paymentStatus
+      },
       hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
       totalHours: parseFloat(this.caseForm.value.totalHours) || 0,
       totalAmount: parseFloat(this.caseForm.value.totalAmount) || 0,
@@ -157,7 +201,21 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
       },
       error: (error) => {
         console.error('API error:', error);
-        this.errorMessage = 'Failed to create case: ' + (error.error?.message || error.message || 'Unknown error');
+        let errorMsg = 'Unknown error';
+        
+        if (error.error) {
+          if (error.error.message) {
+            errorMsg = error.error.message;
+          } else if (error.error.reason) {
+            errorMsg = error.error.reason;
+          } else if (typeof error.error === 'string') {
+            errorMsg = error.error;
+          }
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        
+        this.errorMessage = 'Failed to create case: ' + errorMsg;
         console.error('Error creating case:', error);
         this.isLoading = false;
       },

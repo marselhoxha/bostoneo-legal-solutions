@@ -2,7 +2,7 @@
    <ng-container *ngSwitchCase="DataState.LOADED">
      <app-layout [user]="state?.appData?.data?.user"></app-layout>
      <section>
-      <div class="px-5">
+      <div class="container-fluid">
          <nav aria-label="breadcrumb" style="margin-top: 12px;">
             <ol class="breadcrumb">
                <li class="breadcrumb-item">
@@ -14,7 +14,7 @@
          <div class="row" style="margin-bottom:60px;">
             <div class="col-lg-12">
                 <div class="card" id="customerList">
-                    <div class="card-header border-bottom-dashed py-4">
+                    <div class="card-header border-bottom-dashed">
                         <div class="row g-4 align-items-center">
                             <div class="col-sm">
                                 <div>
@@ -34,66 +34,68 @@
                     </div>
                    
                       <div class="card-body">
-                        <table class="table table-responsive align-middle table-nowrap">
-                          <thead class="table-light">
-                            <tr>
-                              <th scope="col" class="px-4">Invoice Number</th>
-                              <th scope="col" class="px-4">Service</th>
-                              <th scope="col" class="px-4">Status</th>
-                              <th scope="col" class="px-4">Date</th>
-                              <th scope="col" class="px-4">Total</th>
-                              <th scope="col" class="text-center px-4">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr *ngFor="let invoice of state?.appData?.data?.page.content">
-                              <td class="px-4">{{ invoice.invoiceNumber }}</td>
-                              <td class="px-4">{{ invoice.services }}</td>
-                              <td class="px-4">
-                                <span class="badge"
-                                  [ngClass]="{
-                                    'bg-success-subtle text-success': invoice.status === 'PAID',
-                                    'bg-warning-subtle text-warning': invoice.status === 'PENDING',
-                                    'bg-danger-subtle text-danger': invoice.status === 'CANCELED',
-                                    'bg-info-subtle text-info': invoice.status === 'OVERDUE'
-                                  }">{{ invoice.status }}
-                                </span>
-                              </td>
-                              <td class="px-4">{{ invoice.date | date: 'mediumDate' }}</td>
-                              <td class="px-4">${{ invoice.total }}</td>
-                              <td class="text-center px-4">
-                                <div class="dropdown">
-                                  <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                                    aria-expanded="false">
-                                    Actions
-                                  </button>
-                                  <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                      <a [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]" class="dropdown-item">
-                                        <i class="ri-printer-line align-bottom me-2"></i> Print
-                                      </a>
-                                    </li>
-                                    <li>
-                                      <a href="#" class="dropdown-item">
-                                        <i class="ri-download-line align-bottom me-2"></i> Download
-                                      </a>
-                                    </li>
-                                    <li>
-                                      <a href="#" class="dropdown-item">
-                                        <i class="ri-edit-2-line align-bottom me-2"></i> Edit
-                                      </a>
-                                    </li>
-                                    <li>
-                                      <a (click)="deleteInvoice(invoice.id)" class="dropdown-item text-danger">
-                                        <i class="ri-delete-bin-5-line align-bottom me-2"></i> Delete
-                                      </a>
-                                    </li>
-                                  </ul>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                        <div class="table-responsive">
+                          <table class="table align-middle table-nowrap">
+                            <thead class="table-light">
+                              <tr>
+                                <th scope="col" class="px-4">Invoice #</th>
+                                <th scope="col" class="px-4">Service</th>
+                                <th scope="col" class="px-4">Status</th>
+                                <th scope="col" class="px-4">Date</th>
+                                <th scope="col" class="px-4">Total</th>
+                                <th scope="col" class="text-center px-4">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let invoice of state?.appData?.data?.page.content">
+                                <td class="px-4">{{ invoice.invoiceNumber }}</td>
+                                <td class="px-4">{{ invoice.services }}</td>
+                                <td class="px-4">
+                                  <span class="badge"
+                                    [ngClass]="{
+                                      'bg-success-subtle text-success': invoice.status === 'PAID',
+                                      'bg-warning-subtle text-warning': invoice.status === 'PENDING',
+                                      'bg-danger-subtle text-danger': invoice.status === 'CANCELED',
+                                      'bg-info-subtle text-info': invoice.status === 'OVERDUE'
+                                    }">{{ invoice.status }}
+                                  </span>
+                                </td>
+                                <td class="px-4">{{ invoice.date | date: 'mediumDate' }}</td>
+                                <td class="px-4">${{ invoice.total }}</td>
+                                <td class="text-center px-4">
+                                  <div class="dropdown">
+                                    <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                                      aria-expanded="false">
+                                      Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                      <li>
+                                        <a [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]" class="dropdown-item">
+                                          <i class="ri-printer-line align-bottom me-2"></i> Print
+                                        </a>
+                                      </li>
+                                      <li>
+                                        <a href="#" class="dropdown-item">
+                                          <i class="ri-download-line align-bottom me-2"></i> Download
+                                        </a>
+                                      </li>
+                                      <li>
+                                        <a href="#" class="dropdown-item">
+                                          <i class="ri-edit-2-line align-bottom me-2"></i> Edit
+                                        </a>
+                                      </li>
+                                      <li>
+                                        <a (click)="deleteInvoice(invoice.id)" class="dropdown-item text-danger">
+                                          <i class="ri-delete-bin-5-line align-bottom me-2"></i> Delete
+                                        </a>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
 
                          <!-- Pagination -->
                         <nav *ngIf="state?.appData?.data?.page.content.length > 0" aria-label="Page navigation example" class="mt-4">
