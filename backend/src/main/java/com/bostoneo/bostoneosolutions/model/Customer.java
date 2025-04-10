@@ -20,6 +20,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @AllArgsConstructor
 @JsonInclude(NON_DEFAULT)
 @Entity
+@Table(name = "Customer")
 public class Customer {
 
     @Id

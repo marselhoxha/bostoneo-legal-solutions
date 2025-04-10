@@ -194,6 +194,11 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 , BAD_REQUEST);
     }
 
+    @ExceptionHandler(LegalCaseException.class)
+    public ResponseEntity<HttpResponse> legalCaseException(LegalCaseException exception) {
+        return createErrorHttpResponse(NOT_FOUND, exception.getMessage(), exception);
+    }
+
     private ResponseEntity<HttpResponse> createErrorHttpResponse(HttpStatus httpStatus, String reason, Exception exception) {
         return new ResponseEntity<>(
                 HttpResponse.builder()
