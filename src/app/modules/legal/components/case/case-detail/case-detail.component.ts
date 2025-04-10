@@ -204,22 +204,24 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
 
   updateFormWithCaseData(): void {
     if (this.case) {
-      // Access importantDates safely
-      const filingDate = this.case.importantDates?.filingDate;
-      const nextHearing = this.case.importantDates?.nextHearing;
-      const trialDate = this.case.importantDates?.trialDate;
+      // Extract values with proper null checks
+      const filingDate = this.case.importantDates?.filingDate || (this.case as any).filingDate;
+      const nextHearing = this.case.importantDates?.nextHearing || (this.case as any).nextHearing;
+      const trialDate = this.case.importantDates?.trialDate || (this.case as any).trialDate;
       
-      // Access courtInfo safely
-      const courtName = this.case.courtInfo?.courtName;
-      const judgeName = this.case.courtInfo?.judgeName;
-      const courtroom = this.case.courtInfo?.courtroom;
+      const courtName = this.case.courtInfo?.courtName || (this.case as any).courtName;
+      const judgeName = this.case.courtInfo?.judgeName || (this.case as any).judgeName;
+      const courtroom = this.case.courtInfo?.courtroom || (this.case as any).courtroom;
       
-      // Access billing info safely
-      const hourlyRate = this.case.billingInfo?.hourlyRate;
-      const totalHours = this.case.billingInfo?.totalHours;
-      const totalAmount = this.case.billingInfo?.totalAmount;
-      const paymentStatus = this.case.billingInfo?.paymentStatus;
+      const hourlyRate = this.case.billingInfo?.hourlyRate || (this.case as any).hourlyRate || 0;
+      const totalHours = this.case.billingInfo?.totalHours || (this.case as any).totalHours || 0;
+      const totalAmount = this.case.billingInfo?.totalAmount || (this.case as any).totalAmount || 0;
+      const paymentStatus = this.case.billingInfo?.paymentStatus || (this.case as any).paymentStatus || 'PENDING';
       
+      console.log('Billing info before form update:', {
+        hourlyRate, totalHours, totalAmount, paymentStatus
+      });
+
       this.editForm.patchValue({
         caseNumber: this.case.caseNumber,
         title: this.case.title,
@@ -231,16 +233,16 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         priority: this.case.priority,
         type: this.case.type,
         description: this.case.description,
-        courtName: courtName,
-        judgeName: judgeName,
-        courtroom: courtroom,
+        courtName,
+        judgeName,
+        courtroom,
         filingDate: filingDate ? new Date(filingDate) : null,
         nextHearing: nextHearing ? new Date(nextHearing) : null,
         trialDate: trialDate ? new Date(trialDate) : null,
-        hourlyRate: hourlyRate,
-        totalHours: totalHours,
-        totalAmount: totalAmount,
-        paymentStatus: paymentStatus
+        hourlyRate,
+        totalHours,
+        totalAmount,
+        paymentStatus
       });
 
       this.caseForm.patchValue({
@@ -265,7 +267,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     // Use the service to get real data from the API
     this.caseService.getCaseById(id).subscribe({
       next: (response) => {
-        console.log('Case detail response:', response);
+        console.log('Raw API response:', response);
+        console.log('Case data structure:', response?.data?.case);
+        
         // The backend returns data in a wrapper object
         if (response && response.data && response.data.case) {
           // Create the importantDates object if it doesn't exist
@@ -286,6 +290,16 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
               courtName: caseData.courtName || '',
               judgeName: caseData.judgeName || '',
               courtroom: caseData.courtroom || ''
+            };
+          }
+          
+          // Ensure billingInfo exists
+          if (!caseData.billingInfo) {
+            caseData.billingInfo = {
+              hourlyRate: caseData.hourlyRate || 0,
+              totalHours: caseData.totalHours || 0,
+              totalAmount: caseData.totalAmount || 0,
+              paymentStatus: caseData.paymentStatus || 'PENDING'
             };
           }
           
@@ -334,12 +348,32 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         priority: formValues.priority,
         type: formValues.type,
         description: formValues.description,
+        
+        // Include both nested and flat fields for maximum compatibility
+        courtInfo: {
+          courtName: formValues.courtName,
+          judgeName: formValues.judgeName,
+          courtroom: formValues.courtroom
+        },
         courtName: formValues.courtName,
         judgeName: formValues.judgeName,
         courtroom: formValues.courtroom,
+        
+        importantDates: {
+          filingDate: formValues.filingDate ? new Date(formValues.filingDate) : null,
+          nextHearing: formValues.nextHearing ? new Date(formValues.nextHearing) : null,
+          trialDate: formValues.trialDate ? new Date(formValues.trialDate) : null
+        },
         filingDate: formValues.filingDate ? new Date(formValues.filingDate) : null,
         nextHearing: formValues.nextHearing ? new Date(formValues.nextHearing) : null,
         trialDate: formValues.trialDate ? new Date(formValues.trialDate) : null,
+        
+        billingInfo: {
+          hourlyRate: parseFloat(formValues.hourlyRate) || 0,
+          totalHours: parseFloat(formValues.totalHours) || 0,
+          totalAmount: parseFloat(formValues.totalAmount) || 0,
+          paymentStatus: formValues.paymentStatus
+        },
         hourlyRate: parseFloat(formValues.hourlyRate) || 0,
         totalHours: parseFloat(formValues.totalHours) || 0,
         totalAmount: parseFloat(formValues.totalAmount) || 0,
