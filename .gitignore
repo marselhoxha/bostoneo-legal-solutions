@@ -24,3 +24,8 @@ build/
 target/
 .angular/
 backend/src/main/resources/application.yml
+
+# Spring Boot Configuration Files
+backend/src/main/resources/application.yml
+backend/src/main/resources/application-*.yml
+backend/src/main/resources/*.properties
