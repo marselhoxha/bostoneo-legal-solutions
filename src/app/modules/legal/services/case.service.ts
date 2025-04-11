@@ -30,9 +30,9 @@ export class CaseService {
     });
   }
 
-  getCases(): Observable<any> {
+  getCases(page: number = 0, size: number = 10): Observable<any> {
     return this.http.get<ApiResponse<{ page: { content: LegalCase[] } }>>(
-      `${this.apiUrl}/list`,
+      `${this.apiUrl}/list?page=${page}&size=${size}`,
       { headers: this.getAuthHeaders() }
     );
   }

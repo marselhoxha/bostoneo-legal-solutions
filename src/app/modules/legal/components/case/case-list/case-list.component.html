@@ -112,6 +112,27 @@
               </tbody>
             </table>
           </div>
+          
+          <!-- Pagination -->
+          <div class="col-12">
+              <nav *ngIf="state?.appData?.data?.page.content.length > 0" aria-label="Page navigation example">
+              <ul class="pagination justify-content-end mb-0">
+                  <li [ngClass]="0 == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
+                  <a (click)="goToNextOrPreviousPage('backward')" class="page-link">&laquo; Prev</a>
+                  </li>
+                  <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page.totalPages); let i = index;" class="page-item">
+                  <a (click)="goToPage(i)" [ngClass]="i == (currentPage$ | async) ? ' active' : ''" class="page-link">
+                      {{ i + 1 }}
+                  </a>
+                  </li>
+                  <li [ngClass]="(state?.appData?.data?.page.totalPages - 1) == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
+                  <a (click)="goToNextOrPreviousPage('forward')" class="page-link">Next &raquo;</a>
+                  </li>
+              </ul>
+              </nav>
+          </div>
+          <!-- End Pagination -->
+          
         </div>
       </div>
     </div>
