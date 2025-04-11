@@ -53,11 +53,11 @@ export class TokenInterceptor implements HttpInterceptor {
         })
       );
     } else {
-      this.refreshTokenSubject.pipe(
+      return this.refreshTokenSubject.pipe(
         switchMap((response) => {
           return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
         })
-        )
+      );
     }
   }
 
