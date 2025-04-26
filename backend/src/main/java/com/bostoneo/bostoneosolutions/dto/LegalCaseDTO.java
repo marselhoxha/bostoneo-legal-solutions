@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
 import com.bostoneo.bostoneosolutions.validation.ValidEnum;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -12,11 +13,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.Map;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LegalCaseDTO {
     private Long id;
 
@@ -50,6 +53,11 @@ public class LegalCaseDTO {
     private String courtName;
     private String courtroom;
     private String judgeName;
+    
+    // Added to handle frontend nested structure
+    private Map<String, Object> courtInfo;
+    private Map<String, Object> importantDates;
+    private Map<String, Object> billingInfo;
     
     // Important Dates
     private Date filingDate;
