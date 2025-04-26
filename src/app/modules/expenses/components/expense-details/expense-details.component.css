@@ -1,0 +1,304 @@
+.expense-details {
+  .card {
+    margin-top: 1rem;
+  }
+  
+  .receipt-preview {
+    max-width: 100%;
+    height: auto;
+    margin-top: 1rem;
+  }
+  
+  .btn-group {
+    margin-top: 1rem;
+  }
+}
+
+/* Ensure theme variables are applied correctly, overriding potential global styles */
+.expense-details-table th {
+  /* Use the theme variable for darker text in light/dark mode */
+  color: var(--vz-body-color); 
+  /* If you specifically want the darker text: color: var(--vz-text-white-dark); */ 
+  font-weight: 600; /* or var(--vz-font-weight-semibold) */
+}
+
+.expense-details-table td {
+  /* Use the theme variable for body text color */
+  color: var(--vz-body-color);
+}
+
+/* Optional: If rows need a subtle background like the list component */
+/* 
+.expense-details-table tr {
+  background-color: var(--vz-light-subtle); 
+}
+*/
+
+/* Optional: Style specific cells like the amount */
+.expense-details-table .amount-cell {
+  font-weight: 600; /* or var(--vz-font-weight-semibold) */
+  font-size: 1.1rem; /* Example */
+}
+
+/* Card styling */
+.card {
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+}
+
+.card-widgets {
+  float: right;
+  margin-top: -0.5rem;
+}
+
+.card-widgets .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Background colors */
+.bg-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.18) !important;
+}
+
+.bg-soft-light {
+  background-color: rgba(var(--vz-light-rgb), 0.25) !important;
+}
+
+.badge-soft-success {
+  color: var(--vz-success);
+  background-color: rgba(var(--vz-success-rgb), 0.18);
+}
+
+.badge-soft-info {
+  color: var(--vz-info);
+  background-color: rgba(var(--vz-info-rgb), 0.18);
+}
+
+.badge-soft-dark {
+  color: var(--vz-dark);
+  background-color: rgba(var(--vz-dark-rgb), 0.18);
+}
+
+/* Text colors */
+.text-primary {
+  color: var(--vz-primary) !important;
+}
+
+/* Font sizes */
+.fs-12 {
+  font-size: 0.75rem !important;
+}
+
+.fs-14 {
+  font-size: 0.875rem !important;
+}
+
+.fs-15 {
+  font-size: 0.9375rem !important;
+}
+
+.fs-16 {
+  font-size: 1rem !important;
+}
+
+.fs-18 {
+  font-size: 1.125rem !important;
+}
+
+/* Avatar styling */
+.avatar-xs {
+  height: 2rem;
+  width: 2rem;
+}
+
+.avatar-title {
+  align-items: center;
+  display: flex;
+  font-weight: 500;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.rounded-circle {
+  border-radius: 50% !important;
+}
+
+.rounded {
+  border-radius: 0.25rem !important;
+}
+
+/* Minimum height for loading container */
+.min-vh-30 {
+  min-height: 30vh;
+}
+
+/* List group styling */
+.list-group-item {
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  border-bottom: 1px solid var(--vz-border-color);
+}
+
+.list-group-flush > .list-group-item:last-child {
+  border-bottom-width: 0;
+}
+
+/* Button styling */
+.btn-primary {
+  background-color: var(--vz-primary);
+  border-color: var(--vz-primary);
+}
+
+.btn-primary:hover {
+  background-color: rgba(var(--vz-primary-rgb), 0.9);
+  border-color: rgba(var(--vz-primary-rgb), 0.9);
+}
+
+.btn-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+  border-color: transparent;
+}
+
+.btn-soft-primary:hover {
+  background-color: var(--vz-primary);
+  color: #fff;
+}
+
+.btn-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+  border-color: transparent;
+}
+
+.btn-soft-secondary:hover {
+  background-color: var(--vz-secondary);
+  color: #fff;
+}
+
+.btn-soft-success {
+  background-color: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--vz-success);
+  border-color: transparent;
+}
+
+.btn-soft-success:hover {
+  background-color: var(--vz-success);
+  color: #fff;
+}
+
+/* Shadows */
+.shadow-none {
+  box-shadow: none !important;
+}
+
+/* Receipt preview */
+.img-fluid {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Alert styling */
+.alert-label-icon {
+  position: relative;
+  padding-left: 2.75rem;
+}
+
+.alert-label-icon .label-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.5rem;
+  height: 100%;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.alert-label-icon.label-arrow:after {
+  content: "";
+  position: absolute;
+  border-width: 0.5rem 0 0.5rem 0.5rem;
+  border-style: solid;
+  border-color: transparent transparent transparent var(--vz-primary-bg-subtle);
+  left: 2.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.alert-danger {
+  background-color: var(--vz-danger-bg-subtle);
+  border-color: var(--vz-danger-border-subtle);
+  color: var(--vz-danger-text-emphasis);
+}
+
+.alert-danger.label-arrow:after {
+  border-color: transparent transparent transparent var(--vz-danger-bg-subtle);
+}
+
+.alert-warning {
+  background-color: var(--vz-warning-bg-subtle);
+  border-color: var(--vz-warning-border-subtle);
+  color: var(--vz-warning-text-emphasis);
+}
+
+.alert-warning.label-arrow:after {
+  border-color: transparent transparent transparent var(--vz-warning-bg-subtle);
+}
+
+.alert-info {
+  background-color: var(--vz-info-bg-subtle);
+  border-color: var(--vz-info-border-subtle);
+  color: var(--vz-info-text-emphasis);
+}
+
+.alert-info.label-arrow:after {
+  border-color: transparent transparent transparent var(--vz-info-bg-subtle);
+}
+
+/* Table styling */
+.table-borderless tbody + tbody, 
+.table-borderless td, 
+.table-borderless th, 
+.table-borderless thead th {
+  border: 0;
+}
+
+.table-nowrap td, 
+.table-nowrap th {
+  white-space: nowrap;
+}
+
+/* Make the details page responsive on mobile */
+@media (max-width: 767.98px) {
+  .card-widgets {
+    float: none;
+    margin-top: 0.5rem;
+    text-align: left;
+  }
+  
+  .page-title-box {
+    display: block !important;
+  }
+  
+  .page-title-right {
+    margin-top: 0.5rem;
+  }
+  
+  .text-end {
+    text-align: left !important;
+  }
+  
+  .card-header {
+    display: block;
+  }
+} 

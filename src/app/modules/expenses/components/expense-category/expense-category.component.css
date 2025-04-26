@@ -1,0 +1,220 @@
+
+
+/* Card styling with Velzon theme variables */
+.card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--vz-box-shadow);
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--vz-box-shadow-lg);
+}
+
+.card-header {
+  border-bottom: 1px dashed var(--vz-border-color);
+  background-color: var(--vz-card-bg);
+  padding: 1rem 1.5rem;
+}
+
+.card-title {
+  color: var(--vz-body-color);
+  font-weight: 600;
+  margin-bottom: 0;
+  font-size: 1rem;
+}
+
+.bg-light-subtle {
+  background-color: var(--vz-light-subtle);
+}
+
+.bg-soft-info {
+  background-color: var(--vz-info-subtle);
+  color: var(--vz-info);
+}
+
+/* Table styling */
+.table-responsive {
+  overflow-x: auto;
+  border-radius: 0.25rem;
+}
+
+.table {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--vz-body-color);
+  padding: 0.75rem 1rem;
+  background-color: var(--vz-light-subtle);
+  border-bottom: 1px solid var(--vz-border-color);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  color: var(--vz-body-color);
+  vertical-align: middle;
+  border-top: 1px solid var(--vz-border-color);
+}
+
+.table tbody tr:hover {
+  background-color: var(--vz-light-subtle);
+}
+
+/* Color indicator */
+.color-dot {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--vz-border-color);
+  vertical-align: middle;
+}
+
+/* Color picker */
+.form-control[type="color"] {
+  height: 40px;
+  padding: 2px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+
+
+
+
+/* Form controls */
+.form-control, .form-select {
+  border-color: var(--vz-border-color);
+  color: var(--vz-body-color);
+  background-color: var(--vz-input-bg);
+  padding: 0.5rem 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--vz-primary);
+  box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+}
+
+.form-label {
+  color: var(--vz-body-color);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.input-group-text {
+  background-color: var(--vz-light-subtle);
+  border-color: var(--vz-border-color);
+  color: var(--vz-gray-600);
+}
+
+.form-text {
+  color: var(--vz-gray-600);
+  font-size: 0.8125rem;
+}
+
+/* Alert styling */
+.alert {
+  border-radius: 0.25rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.alert-info {
+  background-color: var(--vz-info-subtle);
+  color: var(--vz-info);
+  border-color: var(--vz-info-border-subtle);
+}
+
+.alert-warning {
+  background-color: var(--vz-warning-subtle);
+  color: var(--vz-warning);
+  border-color: var(--vz-warning-border-subtle);
+}
+
+.alert-danger {
+  background-color: var(--vz-danger-subtle);
+  color: var(--vz-danger);
+  border-color: var(--vz-danger-border-subtle);
+}
+
+.alert-heading {
+  color: inherit;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+/* Breadcrumb styling */
+.breadcrumb {
+  margin-bottom: 1.5rem;
+  background-color: transparent;
+}
+
+.breadcrumb-item a {
+  color: var(--vz-primary);
+  text-decoration: none;
+}
+
+.breadcrumb-item.active {
+  color: var(--vz-gray-600);
+}
+
+/* Font utilities */
+.fs-13 {
+  font-size: 13px;
+}
+
+.fs-14 {
+  font-size: 14px;
+}
+
+.fs-20 {
+  font-size: 20px;
+}
+
+.fw-medium {
+  font-weight: 500;
+}
+
+.text-muted {
+  color: var(--vz-gray-600) !important;
+}
+
+/* Tips Card */
+.card .list-unstyled li {
+  position: relative;
+  padding-left: 0;
+  margin-bottom: 0.5rem;
+  color: var(--vz-body-color);
+}
+
+/* Add styles for the cancel edit button */
+.btn-outline-secondary {
+  color: var(--vz-secondary);
+  background-color: transparent;
+  border: 1px solid var(--vz-secondary);
+}
+
+.btn-outline-secondary:hover {
+  color: #fff;
+  background-color: var(--vz-secondary);
+  border-color: var(--vz-secondary);
+}
+
+/* Fix for the hover state on buttons that might cause issues */
+.btn:active, .btn:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* For specificity to prevent issues */
+.card-header .btn.btn-outline-secondary {
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+} 
