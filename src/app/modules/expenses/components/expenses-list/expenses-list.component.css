@@ -1,0 +1,183 @@
+.expenses-list {
+  margin-top: 1rem;
+}
+
+/* Card styling with Velzon theme variables */
+.card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--vz-box-shadow);
+}
+
+.card-header {
+  border-bottom: 1px dashed var(--vz-border-color);
+  background-color: var(--vz-card-bg);
+  padding: 1rem 1.5rem;
+}
+
+.card-title {
+  color: var(--vz-body-color);
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.card-body {
+  padding: 1.5rem;
+  background-color: var(--vz-card-bg);
+}
+
+/* Table styling */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.table th {
+  font-weight: 500;
+  border-top: none;
+  color: var(--vz-body-color);
+  background-color: var(--vz-light-subtle);
+  padding: 0.75rem 1rem;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+  color: var(--vz-body-color);
+}
+
+/* Button styling */
+.btn-soft-success,
+.btn-soft-primary,
+.btn-soft-secondary,
+.btn-soft-info,
+.btn-soft-danger,
+.btn-soft-warning {
+  color: var(--vz-body-color);
+  border: 1px solid transparent;
+}
+
+.btn-soft-success {
+  background-color: var(--vz-success-subtle);
+  color: var(--vz-success);
+}
+
+.btn-soft-primary {
+  background-color: var(--vz-primary-subtle);
+  color: var(--vz-primary);
+}
+
+.btn-soft-secondary {
+  background-color: var(--vz-secondary-subtle);
+  color: var(--vz-secondary);
+}
+
+.btn-soft-info {
+  background-color: var(--vz-info-subtle);
+  color: var(--vz-info);
+}
+
+.btn-soft-danger {
+  background-color: var(--vz-danger-subtle);
+  color: var(--vz-danger);
+}
+
+.btn-animation {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+.btn-animation:hover {
+  transform: translateY(-2px);
+}
+
+/* Status badges */
+.badge {
+  padding: 0.5em 0.75em;
+  font-weight: 500;
+}
+
+.bg-success-subtle {
+  background-color: var(--vz-success-subtle) !important;
+}
+
+.text-success {
+  color: var(--vz-success) !important;
+}
+
+.bg-warning-subtle {
+  background-color: var(--vz-warning-subtle) !important;
+}
+
+.text-warning {
+  color: var(--vz-warning) !important;
+}
+
+.bg-danger-subtle {
+  background-color: var(--vz-danger-subtle) !important;
+}
+
+.text-danger {
+  color: var(--vz-danger) !important;
+}
+
+.bg-info-subtle {
+  background-color: var(--vz-info-subtle) !important;
+}
+
+.text-info {
+  color: var(--vz-info) !important;
+}
+
+/* Pagination styling */
+.pagination {
+  margin-bottom: 0;
+}
+
+.page-link {
+  color: var(--vz-primary);
+  border-color: var(--vz-border-color);
+  background-color: var(--vz-card-bg);
+}
+
+.page-item.active .page-link {
+  background-color: var(--vz-primary);
+  border-color: var(--vz-primary);
+  color: #fff;
+}
+
+.page-item.disabled .page-link {
+  color: var(--vz-text-muted);
+  background-color: var(--vz-light-subtle);
+}
+
+/* Loading spinner */
+.spinner-border.text-primary {
+  color: var(--vz-primary) !important;
+}
+
+/* Action buttons styling */
+.d-flex.justify-content-center.gap-2 .btn {
+  min-width: auto;
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+}
+
+.d-flex.justify-content-center.gap-2 .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--vz-box-shadow-sm);
+}
+
+.d-flex.justify-content-center.gap-2 .btn i {
+  font-size: 1rem;
+} 

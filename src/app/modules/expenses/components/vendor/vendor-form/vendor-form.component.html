@@ -1,0 +1,81 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row mt-4">
+    <div class="col-lg-8 col-md-12 mx-auto">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0 py-3">
+          <h5 class="card-title mb-0 d-flex align-items-center fs-4">
+            <i class="ri-store-2-line me-2"></i>{{ isEdit ? 'Edit' : 'New' }} Vendor
+          </h5>
+        </div>
+        
+        <div class="card-body p-4">
+          <div *ngIf="loading" class="text-center mb-3">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <div *ngIf="errorMessage" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
+            <i class="ri-error-warning-line me-2"></i>{{ errorMessage }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+
+          <form [formGroup]="vendorForm" (ngSubmit)="onSubmit()" *ngIf="!loading">
+            <div class="row g-3">
+              <!-- Vendor Name -->
+              <div class="col-md-12">
+                <label for="name" class="form-label mb-2">Vendor Name*</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light dark:bg-dark border-end-0">
+                    <i class="ri-store-2-line"></i>
+                  </span>
+                  <input type="text" class="form-control border-start-0" id="name" formControlName="name"
+                    [class.is-invalid]="vendorForm.get('name')?.invalid && vendorForm.get('name')?.touched"
+                    placeholder="Enter vendor name">
+                </div>
+                <div class="invalid-feedback" *ngIf="vendorForm.get('name')?.errors?.['required']">
+                  Vendor name is required
+                </div>
+              </div>
+
+              <!-- Contact Person -->
+              <div class="col-md-12">
+                <label for="contact" class="form-label mb-2">Contact Person</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light dark:bg-dark border-end-0">
+                    <i class="ri-user-3-line"></i>
+                  </span>
+                  <input type="text" class="form-control border-start-0" id="contact" formControlName="contact"
+                    placeholder="Enter contact person name">
+                </div>
+              </div>
+
+              <!-- Tax ID -->
+              <div class="col-md-12">
+                <label for="taxId" class="form-label mb-2">Tax ID</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light dark:bg-dark border-end-0">
+                    <i class="ri-bank-card-line"></i>
+                  </span>
+                  <input type="text" class="form-control border-start-0" id="taxId" formControlName="taxId"
+                    placeholder="Enter tax identification number">
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button type="button" class="btn btn-light px-4" (click)="cancel()">
+                <i class="ri-close-circle-line me-1 align-bottom"></i>Cancel
+              </button>
+              <button type="submit" class="btn btn-primary px-4" [disabled]="vendorForm.invalid || submitting">
+                <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                {{ submitting ? 'Saving...' : (isEdit ? 'Update' : 'Save') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

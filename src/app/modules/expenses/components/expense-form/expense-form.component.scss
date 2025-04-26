@@ -1,0 +1,17 @@
+.expense-form {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .btn-group {
+    margin-top: 1rem;
+  }
+
+  .invalid-feedback {
+    display: block;
+  }
+} 

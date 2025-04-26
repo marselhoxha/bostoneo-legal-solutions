@@ -1,0 +1,56 @@
+.expenses-header {
+  margin-bottom: 1.5rem;
+  
+  h2 {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+  }
+}
+
+.table {
+  vertical-align: middle;
+  
+  th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  td {
+    vertical-align: middle;
+  }
+}
+
+.pagination {
+  margin-bottom: 0;
+  
+  .page-link {
+    color: #495057;
+    border-color: #dee2e6;
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+  
+  .active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+  }
+}
+
+// Button styles
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.actions {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    
+    i {
+      margin-right: 0.25rem;
+    }
+  }
+} 
