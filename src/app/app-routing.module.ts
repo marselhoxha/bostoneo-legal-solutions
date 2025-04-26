@@ -5,6 +5,7 @@ import { AuthenticationGuard } from './guard/authentication.guard';
 import { LayoutComponent } from './component/layouts/layout.component';
 import { InvoiceAnalyticsComponent } from './component/invoice-analytics/invoice-analytics.component';
 import { FaqsComponent } from './component/faqs/faqs.component';
+import { AuthGuard } from './guard/auth.guard';
 
 const routes: Routes = [
   {
@@ -18,8 +19,8 @@ const routes: Routes = [
       { path: 'analytics', component: InvoiceAnalyticsComponent },
       { path: 'faq', component: FaqsComponent },
       { path: 'legal', loadChildren: () => import('./modules/legal/legal.module').then(m => m.LegalModule), canActivate: [AuthenticationGuard] },
-      // Add other routes inside this children array, as needed
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, // Redirect to 'dashboard' by default within the layout
+      { path: 'expenses', loadChildren: () => import('./modules/expenses/expenses.module').then(m => m.ExpensesModule), canActivate: [AuthenticationGuard] },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
   { path: '**', redirectTo: '', pathMatch: 'full' }, // Fallback for unmatched routes

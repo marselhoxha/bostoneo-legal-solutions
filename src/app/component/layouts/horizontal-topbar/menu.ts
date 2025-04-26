@@ -64,13 +64,39 @@ export const MENU: MenuItem[] = [
   },
   {
     id: 5,
+    label: 'Expenses',
+    icon: 'ri-money-dollar-circle-line',
+    link: '/expenses',
+    subItems: [
+      {
+        id: 'list',
+        label: 'Expenses',
+        link: '/expenses',
+        parentId: 5
+      },
+      {
+        id: 'categories',
+        label: 'Categories',
+        link: '/expenses/categories',
+        parentId: 5
+      },
+      {
+        id: 'vendors',
+        label: 'Vendors',
+        link: '/expenses/vendors',
+        parentId: 5
+      }
+    ]
+  },
+  {
+    id: 6,
     label: 'Settings',
     icon: 'ri-settings-3-line',
     link: '/profile',
     
   },
   {
-    id: 6,
+    id: 7,
     label: 'FAQ',
     icon: 'ri-question-answer-line',
     link: '/faq',
