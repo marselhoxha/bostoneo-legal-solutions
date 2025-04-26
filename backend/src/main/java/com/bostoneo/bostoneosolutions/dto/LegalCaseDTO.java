@@ -3,53 +3,53 @@ package com.bostoneo.bostoneosolutions.dto;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
-import jakarta.validation.constraints.Email;
+import com.bostoneo.bostoneosolutions.validation.ValidEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
-@Setter
-@Getter
-@AllArgsConstructor
+@Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class LegalCaseDTO {
     private Long id;
-    
+
     @NotBlank(message = "Case number is required")
     private String caseNumber;
-    
+
     @NotBlank(message = "Title is required")
     private String title;
-    
+
     @NotBlank(message = "Client name is required")
     private String clientName;
-    
-    @Email(message = "Invalid email format")
+
     private String clientEmail;
-    
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Invalid phone number format")
     private String clientPhone;
-    
     private String clientAddress;
-    
+
     @NotNull(message = "Status is required")
+    @ValidEnum(enumClass = CaseStatus.class)
     private CaseStatus status;
-    
+
     @NotNull(message = "Priority is required")
+    @ValidEnum(enumClass = CasePriority.class)
     private CasePriority priority;
-    
-    @NotBlank(message = "Case type is required")
+
+    @NotBlank(message = "Type is required")
     private String type;
-    
+
     private String description;
     
     // Court Information
     private String courtName;
-    private String judgeName;
     private String courtroom;
+    private String judgeName;
     
     // Important Dates
     private Date filingDate;
@@ -60,6 +60,9 @@ public class LegalCaseDTO {
     private Double hourlyRate;
     private Double totalHours;
     private Double totalAmount;
+
+    @NotNull(message = "Payment status is required")
+    @ValidEnum(enumClass = PaymentStatus.class)
     private PaymentStatus paymentStatus;
     
     private Date createdAt;
