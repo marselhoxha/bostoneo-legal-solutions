@@ -1,0 +1,218 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/']">Home</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/expenses']">Expenses</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Categories</li>
+    </ol>
+  </nav>
+
+  <!-- Page Title & Description -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="page-title-box">
+        <h4 class="mb-0 fw-bold">Expense Categories</h4>
+        <p class="text-muted fs-14 mt-1">Organize your expenses by creating custom categories with color coding.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom: 60px;">
+    <!-- Categories List -->
+    <div class="col-lg-8">
+      <div class="card"  id="categoryList">
+        <div class="card-header  border-bottom-dashed">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title mb-0">Category List</h5>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <!-- Loading, Error states -->
+          <div class="text-center my-4" *ngIf="loading">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <div class="alert alert-danger" *ngIf="error">
+            <i class="ri-error-warning-line align-middle me-2"></i>
+            {{ error }}
+          </div>
+
+          <div class="alert alert-info border-0" *ngIf="!loading && !error && categories.length === 0">
+            <div class="d-flex">
+              <i class="ri-information-line fs-20 align-middle me-2"></i>
+              <div>
+                <h5 class="alert-heading">No categories found</h5>
+                <p class="mb-0">Get started by creating your first expense category using the form.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categories Table -->
+          <div class="table-responsive" *ngIf="!loading && !error && categories.length > 0">
+            <table class="table align-middle table-nowrap mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col" class="ps-4" style="width: 40%">Name</th>
+                  <th scope="col" style="width: 20%">Color</th>
+                  <th scope="col" style="width: 20%">Parent Category</th>
+                  <th scope="col" class="text-end pe-4" style="width: 20%">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let category of categories">
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                      <div class="color-dot me-2" [style.background-color]="category.color"></div>
+                      <span class="fw-medium">{{ category.name }}</span>
+                      <span class="badge bg-soft-primary text-primary ms-2" *ngIf="category.parentId">
+                        <i class="ri-link-m me-1"></i>Child of {{ getParentCategoryName(category.parentId) }}
+                      </span>
+                      <span class="badge bg-soft-info text-info ms-2" *ngIf="!canDeleteCategory(category.id!)">
+                        <i class="ri-folder-line me-1"></i>Parent category
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="text-muted">{{ category.color }}</span>
+                  </td>
+                  <td>
+                    <span class="text-muted">{{ getParentCategoryName(category.parentId) }}</span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <div class="d-flex justify-content-end gap-2">
+                      <button class="btn btn-sm btn-soft-primary" (click)="editCategory(category)">
+                        <i class="ri-pencil-line align-middle me-1"></i>Edit
+                      </button>
+                      <button class="btn btn-sm btn-soft-danger" 
+                              (click)="deleteCategory(category.id!)"
+                              [disabled]="!canDeleteCategory(category.id!)"
+                              [title]="canDeleteCategory(category.id!) ? 'Delete this category' : 'Cannot delete categories with subcategories'">
+                        <i class="ri-delete-bin-line align-middle me-1"></i>Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Form -->
+    <div class="col-lg-4">
+      <div class="card" id="categoryForm">
+        <div class="card-header border-bottom-dashed" [ngClass]="{'bg-light-subtle': !editingCategory, 'bg-soft-warning': editingCategory}">
+          <div class="row align-items-center">
+            <div class="col">
+              <div>
+                <h5 class="card-title mb-0">
+                  <span *ngIf="editingCategory" class="badge bg-soft-warning text-warning me-2">
+                    <i class="ri-edit-2-fill me-1"></i>Editing
+                  </span>
+                  {{ editingCategory ? 'Edit Category' : 'Add New Category' }}
+                </h5>
+              </div>
+            </div>
+            <div class="col-auto" *ngIf="editingCategory">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cancelEdit()">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+            <div class="alert alert-danger" *ngIf="error">
+              <i class="ri-error-warning-line align-middle me-2"></i>
+              {{ error }}
+            </div>
+            
+            <div class="mb-3">
+              <label for="name" class="form-label">Category Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="ri-price-tag-3-line"></i>
+                </span>
+                <input type="text" class="form-control" id="name" formControlName="name" 
+                    placeholder="Enter category name"
+                    [class.is-invalid]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+              </div>
+              <div class="invalid-feedback d-block" *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+                Category name is required
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="color" class="form-label">Color</label>
+              <input type="color" class="form-control form-control-color w-100" id="color" formControlName="color">
+            </div>
+
+            <div class="mb-4">
+              <label for="parentId" class="form-label">Parent Category <small class="text-muted">(Optional)</small></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="ri-node-tree"></i>
+                </span>
+                <select class="form-select" id="parentId" formControlName="parentId">
+                  <option [ngValue]="null">None (Top Level)</option>
+                  <option *ngFor="let category of categories" [ngValue]="category.id" 
+                          [disabled]="editingCategory && editingCategory.id === category.id">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-text mt-1">
+                <i class="ri-information-line me-1"></i> Creating a hierarchy helps organize related categories
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary" 
+                     [disabled]="categoryForm.invalid || submitting">
+                <i class="ri-save-line align-middle me-1"></i>
+                {{ editingCategory ? 'Update Category' : 'Create Category' }}
+                <span class="spinner-border spinner-border-sm ms-1" *ngIf="submitting"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Helpful Tips Card -->
+      <div class="card mt-4">
+        <div class="card-header bg-soft-info">
+          <h5 class="card-title mb-0">
+            <i class="ri-lightbulb-line me-1"></i> Tips for Categories
+          </h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2"><i class="ri-check-line text-success me-2"></i> Use distinct colors for easy identification</li>
+            <li class="mb-2"><i class="ri-check-line text-success me-2"></i> Create parent-child relationships for better organization</li>
+            <li><i class="ri-check-line text-success me-2"></i> Categories with subcategories cannot be deleted</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+</style> 
