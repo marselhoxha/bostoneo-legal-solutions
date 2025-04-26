@@ -1,0 +1,440 @@
+<div class="container-fluid">
+  <!-- Page Title & Breadcrumb -->
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between" style="margin-top: 120px;">
+        <h4 class="mb-sm-0">Expense Details</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+            <li class="breadcrumb-item"><a [routerLink]="['/expenses']">Expenses</a></li>
+            <li class="breadcrumb-item active">Details</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row">
+    <div class="col-xl-9">
+      <!-- Primary Card -->
+      <div class="card border border-0 overflow-hidden" id="expenseDetailCard">
+        <div class="card-header bg-soft-primary border-0 position-relative">
+          <div class="card-widgets">
+            <button type="button" class="btn btn-sm btn-soft-secondary shadow-none" (click)="goBack()">
+              <i class="ri-arrow-left-line align-middle"></i> Back
+            </button>
+            <button type="button" class="btn btn-sm btn-soft-primary shadow-none ms-2" *ngIf="expense" (click)="editExpense()">
+              <i class="ri-pencil-line align-middle"></i> Edit
+            </button>
+          </div>
+          <h5 class="card-title mb-0 text-primary">Expense #{{ expense?.id || '...' }}</h5>
+        </div>
+
+        <!-- Loading State -->
+        <div class="card-body d-flex justify-content-center align-items-center min-vh-30" *ngIf="loading">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div class="card-body" *ngIf="error">
+          <div class="alert alert-danger alert-dismissible alert-label-icon label-arrow fade show" role="alert">
+            <i class="ri-error-warning-line label-icon"></i>
+            {{ error }}
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="card-body" *ngIf="!loading && !error && expense">
+          <!-- Key Info Card -->
+          <div class="row g-3 mb-4">
+            <div class="col-xl-12">
+              <div class="card bg-soft-light shadow-none border mb-0">
+                <div class="card-body p-4">
+                  <div class="row gy-3">
+                    <div class="col-md-3 col-6">
+                      <div>
+                        <p class="text-muted mb-1 text-uppercase fw-medium fs-12">Date</p>
+                        <h5 class="fs-16 mb-0">{{ expense.date | date:'mediumDate' }}</h5>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div>
+                        <p class="text-muted mb-1 text-uppercase fw-medium fs-12">Amount</p>
+                        <h5 class="fs-16 mb-0 text-primary">{{ expense.amount | currency:expense.currency:'symbol':'1.2-2' }}</h5>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div>
+                        <p class="text-muted mb-1 text-uppercase fw-medium fs-12">Category</p>
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0 me-1">
+                            <i class="ri-price-tag-3-line text-primary fs-18"></i>
+                          </div>
+                          <div class="flex-grow-1">
+                            <h5 class="fs-16 mb-0">{{ expense.category?.name || 'N/A' }}</h5>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div>
+                        <p class="text-muted mb-1 text-uppercase fw-medium fs-12">Status</p>
+                        <span class="badge badge-soft-success fs-12">Completed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description, Vendor, Customer Row -->
+          <div class="row mb-4">
+            <div class="col-xl-4" *ngIf="expense.description">
+              <div class="card border shadow-none h-100">
+                <div class="card-header bg-soft-light">
+                  <h5 class="card-title mb-0">Description</h5>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-16">
+                          <i class="ri-file-text-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="fs-15 mb-0">{{ expense.description }}</h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-4" *ngIf="expense.vendor">
+              <div class="card border shadow-none h-100">
+                <div class="card-header bg-soft-light">
+                  <h5 class="card-title mb-0">Vendor</h5>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-16">
+                          <i class="ri-building-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="fs-15 mb-0">{{ expense.vendor?.name }}</h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-4" *ngIf="expense.customer">
+              <div class="card border shadow-none h-100">
+                <div class="card-header bg-soft-light">
+                  <h5 class="card-title mb-0">Customer</h5>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-16">
+                          <i class="ri-user-3-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="fs-15 mb-0">{{ expense.customer?.name }}</h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Details -->
+          <div class="row mb-4">
+            <div class="col-lg-12">
+              <div class="card border shadow-none">
+                <div class="card-header bg-soft-light">
+                  <h5 class="card-title mb-0">Details</h5>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-borderless table-nowrap mb-0">
+                      <tbody>
+                        <tr *ngIf="expense.tax > 0">
+                          <th scope="row" class="text-start" style="width: 30%;">Tax</th>
+                          <td class="text-end">{{ expense.tax | currency:expense.currency:'symbol':'1.2-2' }}</td>
+                        </tr>
+                        <tr *ngIf="expense.invoice?.invoiceNumber">
+                          <th scope="row" class="text-start">Invoice #</th>
+                          <td class="text-end"><span class="badge bg-soft-info text-info">{{ expense.invoice.invoiceNumber }}</span></td>
+                        </tr>
+                        <tr *ngIf="expense.legalCase?.caseNumber">
+                          <th scope="row" class="text-start">Legal Case #</th>
+                          <td class="text-end"><span class="badge bg-soft-dark text-dark">{{ expense.legalCase.caseNumber }}</span></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" class="text-start">Created At</th>
+                          <td class="text-end">{{ expense.createdAt | date:'medium' }}</td>
+                        </tr>
+                        <tr>
+                          <th scope="row" class="text-start">Last Updated</th>
+                          <td class="text-end">{{ expense.updatedAt | date:'medium' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Receipt Preview if available -->
+          <div class="row" *ngIf="expense?.receipt || expense?.receiptId">
+            <div class="col-lg-12">
+              <div class="card border shadow-sm mb-4 overflow-hidden">
+                <div class="card-header bg-gradient-primary text-white d-flex align-items-center py-3">
+                  <h5 class="card-title mb-0 flex-grow-1 ">
+                    <i class=" me-2"></i>Expense Receipt
+                  </h5>
+                  <button type="button" class="btn btn-sm btn-light" (click)="downloadReceipt()" title="Download Receipt">
+                    <i class="ri-download-line align-bottom me-1"></i> Download
+                  </button>
+                </div>
+                
+                <div class="card-body">
+                  <div class="row">
+                    <!-- Left side: Receipt metadata -->
+                    <div class="col-md-4 border-end border-light-subtle">
+                      <div class="receipt-info p-2">
+                        <h6 class="text-uppercase fw-semibold text-muted fs-12 mb-3">Receipt Information</h6>
+                        
+                        <div class="mb-3">
+                          <div class="d-flex align-items-center mb-2">
+                            <div class="avatar-xs me-2">
+                              <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-15">
+                                <i class="ri-file-line"></i>
+                              </div>
+                            </div>
+                            <div>
+                              <h6 class="mb-0 fs-14">{{ expense.receipt?.fileName || expense.receiptFileName || 'Receipt File' }}</h6>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                          <p class="text-muted mb-1 fs-13"><i class="ri-calendar-line me-1 align-bottom"></i> Date Added</p>
+                          <h6 class="fs-14">{{ expense.date | date:'mediumDate' }}</h6>
+                        </div>
+                        
+                        <!-- Receipt metadata -->
+                        <div *ngIf="expense.receipt?.contentType" class="mb-3">
+                          <p class="text-muted mb-1 fs-13"><i class="ri-file-type-line me-1 align-bottom"></i> File Type</p>
+                          <h6 class="fs-14">{{ expense.receipt?.contentType }}</h6>
+                        </div>
+                        
+                        <div *ngIf="expense.receipt?.fileSize" class="mb-3">
+                          <p class="text-muted mb-1 fs-13"><i class="ri-file-copy-line me-1 align-bottom"></i> File Size</p>
+                          <h6 class="fs-14">{{ (expense.receipt?.fileSize / 1024).toFixed(2) }} KB</h6>
+                        </div>
+                        
+                        <div *ngIf="expense.vendor?.name" class="mb-3">
+                          <p class="text-muted mb-1 fs-13"><i class="ri-store-2-line me-1 align-bottom"></i> Vendor</p>
+                          <h6 class="fs-14">{{ expense.vendor?.name }}</h6>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Right side: Receipt preview -->
+                    <div class="col-md-8">
+                      <div class="receipt-preview p-2 text-center">
+                        <!-- Document Preview -->
+                        <div *ngIf="receiptUrl" class="position-relative receipt-viewer bg-light rounded shadow p-4" style="min-height: 250px;">
+                            <img [src]="receiptUrl" alt="Receipt Image" class="img-fluid rounded" style="max-width: 100%;">
+                        </div>
+                        
+                        <!-- Loading/Missing Preview -->
+                        <div *ngIf="!receiptUrl" class="bg-light p-4 rounded text-center" style="min-height: 250px;">
+                          <div class="document-placeholder d-flex flex-column justify-content-center align-items-center h-100">
+                            <div class="mb-3">
+                              <div class="avatar-md">
+                                <div class="avatar-title bg-soft-primary text-primary rounded">
+                                  <i class="ri-file-search-line fs-1"></i>
+                                </div>
+                              </div>
+                            </div>
+                            <h5 class="text-muted">Receipt Preview Unavailable</h5>
+                            <p class="text-muted mb-3">The receipt preview is loading or unavailable.</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- File label -->
+                      <div class="mt-2 text-center">
+                        <span class="badge bg-light text-secondary" *ngIf="expense.receipt?.fileName || expense.receiptFileName">
+                          <i class="ri-file-line me-1"></i>{{ expense.receipt?.fileName || expense.receiptFileName }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fallback if no expense -->
+        <div *ngIf="!loading && !error && !expense" class="card-body">
+          <div class="alert alert-warning alert-dismissible alert-label-icon label-arrow fade show mb-0" role="alert">
+            <i class="ri-alert-line label-icon"></i>
+            Expense not found
+          </div>
+        </div>
+        
+       
+      </div>
+    </div>
+
+    <!-- Sidebar Card -->
+    <div class="col-xl-3">
+     
+
+      <!-- Budget Impact Card -->
+      <div class="card border-0 overflow-hidden" *ngIf="!loading && !error && expense">
+        <div class="card-header bg-soft-light">
+          <h5 class="card-title mb-0">Budget Impact</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h6 class="text-muted text-uppercase fs-12 mb-2">Department Budget</h6>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fs-13">Legal Department</span>
+              <span class="fw-semibold">75%</span>
+            </div>
+            <div class="progress animated-progress progress-sm">
+              <div class="progress-bar bg-success" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="text-muted mt-1 fs-12 text-end">
+              $6,590 of $8,800
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <h6 class="text-muted text-uppercase fs-12 mb-2">Category Usage</h6>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fs-13">{{ expense.category?.name || 'General' }}</span>
+              <span class="fw-semibold">40%</span>
+            </div>
+            <div class="progress animated-progress progress-sm">
+              <div class="progress-bar bg-info" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="text-muted mt-1 fs-12 text-end">
+              $1,250 of $3,100
+            </div>
+          </div>
+          
+          <div class="mb-0">
+            <h6 class="text-muted text-uppercase fs-12 mb-2">Monthly Trend</h6>
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                <div class="mt-1">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                      <i class="ri-arrow-up-line fs-16 text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-2">
+                      <h6 class="mb-0">12% Higher</h6>
+                      <p class="text-muted mb-0 fs-12">than last month</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Expenses Card -->
+      <div class="card border-0 overflow-hidden" *ngIf="!loading && !error && expense">
+        <div class="card-header bg-soft-light d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1">Related Expenses</h5>
+          <a href="javascript:void(0);" class="text-muted fs-13">View All</a>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush border-dashed">
+            <a href="javascript:void(0);" class="list-group-item list-group-item-action">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <i class="ri-file-list-line text-muted fs-16"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fs-14 mb-1">Office Supplies</h6>
+                    <span class="text-muted fs-12">EXP-249</span>
+                  </div>
+                  <p class="text-muted mb-0 fs-12">
+                    <i class="ri-calendar-line me-1 align-bottom"></i> July 15, 2023
+                  </p>
+                </div>
+                <div class="flex-shrink-0 ms-2">
+                  <div class="badge bg-soft-primary text-primary fs-12 fw-medium">$125.00</div>
+                </div>
+              </div>
+            </a>
+            <a href="javascript:void(0);" class="list-group-item list-group-item-action">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <i class="ri-file-list-line text-muted fs-16"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fs-14 mb-1">Client Meeting</h6>
+                    <span class="text-muted fs-12">EXP-183</span>
+                  </div>
+                  <p class="text-muted mb-0 fs-12">
+                    <i class="ri-calendar-line me-1 align-bottom"></i> May 22, 2023
+                  </p>
+                </div>
+                <div class="flex-shrink-0 ms-2">
+                  <div class="badge bg-soft-primary text-primary fs-12 fw-medium">$78.50</div>
+                </div>
+              </div>
+            </a>
+            <a href="javascript:void(0);" class="list-group-item list-group-item-action">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <i class="ri-file-list-line text-muted fs-16"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fs-14 mb-1">Legal Research</h6>
+                    <span class="text-muted fs-12">EXP-105</span>
+                  </div>
+                  <p class="text-muted mb-0 fs-12">
+                    <i class="ri-calendar-line me-1 align-bottom"></i> Apr 10, 2023
+                  </p>
+                </div>
+                <div class="flex-shrink-0 ms-2">
+                  <div class="badge bg-soft-primary text-primary fs-12 fw-medium">$350.00</div>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
