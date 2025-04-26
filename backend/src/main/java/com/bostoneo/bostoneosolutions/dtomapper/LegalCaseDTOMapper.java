@@ -2,6 +2,10 @@ package com.***REMOVED***.***REMOVED***solutions.dtomapper;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
 import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.PaymentStatus;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,39 +16,31 @@ public class LegalCaseDTOMapper {
             return null;
         }
         
-        LegalCaseDTO dto = new LegalCaseDTO();
-        dto.setId(entity.getId());
-        dto.setCaseNumber(entity.getCaseNumber());
-        dto.setTitle(entity.getTitle());
-        dto.setClientName(entity.getClientName());
-        dto.setClientEmail(entity.getClientEmail());
-        dto.setClientPhone(entity.getClientPhone());
-        dto.setClientAddress(entity.getClientAddress());
-        dto.setStatus(entity.getStatus());
-        dto.setPriority(entity.getPriority());
-        dto.setType(entity.getType());
-        dto.setDescription(entity.getDescription());
-        
-        // Map court info
-        dto.setCourtName(entity.getCourtName());
-        dto.setJudgeName(entity.getJudgeName());
-        dto.setCourtroom(entity.getCourtroom());
-        
-        // Map important dates
-        dto.setFilingDate(entity.getFilingDate());
-        dto.setNextHearing(entity.getNextHearing());
-        dto.setTrialDate(entity.getTrialDate());
-        
-        // Map billing info
-        dto.setHourlyRate(entity.getHourlyRate());
-        dto.setTotalHours(entity.getTotalHours());
-        dto.setTotalAmount(entity.getTotalAmount());
-        dto.setPaymentStatus(entity.getPaymentStatus());
-        
-        dto.setCreatedAt(entity.getCreatedAt());
-        dto.setUpdatedAt(entity.getUpdatedAt());
-        
-        return dto;
+        return LegalCaseDTO.builder()
+            .id(entity.getId())
+            .caseNumber(entity.getCaseNumber())
+            .title(entity.getTitle())
+            .clientName(entity.getClientName())
+            .clientEmail(entity.getClientEmail())
+            .clientPhone(entity.getClientPhone())
+            .clientAddress(entity.getClientAddress())
+            .type(entity.getType())
+            .description(entity.getDescription())
+            .courtName(entity.getCourtName())
+            .courtroom(entity.getCourtroom())
+            .judgeName(entity.getJudgeName())
+            .filingDate(entity.getFilingDate())
+            .nextHearing(entity.getNextHearing())
+            .trialDate(entity.getTrialDate())
+            .hourlyRate(entity.getHourlyRate())
+            .totalHours(entity.getTotalHours())
+            .totalAmount(entity.getTotalAmount())
+            .status(entity.getStatus())
+            .priority(entity.getPriority())
+            .paymentStatus(entity.getPaymentStatus())
+            .createdAt(entity.getCreatedAt())
+            .updatedAt(entity.getUpdatedAt())
+            .build();
     }
     
     public LegalCase toEntity(LegalCaseDTO dto) {
@@ -64,23 +60,61 @@ public class LegalCaseDTOMapper {
         entity.setPriority(dto.getPriority());
         entity.setType(dto.getType());
         entity.setDescription(dto.getDescription());
-        
-        // Set court info
         entity.setCourtName(dto.getCourtName());
         entity.setJudgeName(dto.getJudgeName());
         entity.setCourtroom(dto.getCourtroom());
-        
-        // Set important dates
         entity.setFilingDate(dto.getFilingDate());
         entity.setNextHearing(dto.getNextHearing());
         entity.setTrialDate(dto.getTrialDate());
-        
-        // Set billing info
         entity.setHourlyRate(dto.getHourlyRate());
         entity.setTotalHours(dto.getTotalHours());
         entity.setTotalAmount(dto.getTotalAmount());
         entity.setPaymentStatus(dto.getPaymentStatus());
+        entity.setCreatedAt(dto.getCreatedAt());
+        entity.setUpdatedAt(dto.getUpdatedAt());
         
+        return entity;
+    }
+
+    public static LegalCaseDTO fromLegalCase(LegalCase legalCase) {
+        LegalCaseDTO legalCaseDTO = new LegalCaseDTO();
+        BeanUtils.copyProperties(legalCase, legalCaseDTO);
+        return legalCaseDTO;
+    }
+    
+    public static LegalCase toLegalCase(LegalCaseDTO legalCaseDTO) {
+        LegalCase legalCase = new LegalCase();
+        BeanUtils.copyProperties(legalCaseDTO, legalCase);
+        return legalCase;
+    }
+
+    public LegalCase fromDTO(LegalCaseDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        
+        LegalCase entity = new LegalCase();
+        entity.setId(dto.getId());
+        entity.setCaseNumber(dto.getCaseNumber());
+        entity.setTitle(dto.getTitle());
+        entity.setClientName(dto.getClientName());
+        entity.setClientEmail(dto.getClientEmail());
+        entity.setClientPhone(dto.getClientPhone());
+        entity.setClientAddress(dto.getClientAddress());
+        entity.setType(dto.getType());
+        entity.setDescription(dto.getDescription());
+        entity.setCourtName(dto.getCourtName());
+        entity.setCourtroom(dto.getCourtroom());
+        entity.setJudgeName(dto.getJudgeName());
+        entity.setFilingDate(dto.getFilingDate());
+        entity.setNextHearing(dto.getNextHearing());
+        entity.setTrialDate(dto.getTrialDate());
+        entity.setHourlyRate(dto.getHourlyRate());
+        entity.setTotalHours(dto.getTotalHours());
+        entity.setTotalAmount(dto.getTotalAmount());
+        entity.setStatus(dto.getStatus());
+        entity.setPriority(dto.getPriority());
+        entity.setPaymentStatus(dto.getPaymentStatus());
         entity.setCreatedAt(dto.getCreatedAt());
         entity.setUpdatedAt(dto.getUpdatedAt());
         
