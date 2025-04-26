@@ -88,6 +88,14 @@ export class CustomerService {
                 catchError(this.handleError)
             );
 
+    allInvoices$ = (page: number = 0, size: number = 100) => <Observable<CustomHttpResponse<Page<Invoice> & User>>>
+        this.http.get<CustomHttpResponse<Page<Invoice> & User>>
+            (`${this.server}/customer/invoice/list?page=${page}&size=${size}`)
+            .pipe(
+                tap(console.log),
+                catchError(this.handleError)
+            );
+
     invoice$ = (invoiceId: number) => <Observable<CustomHttpResponse<Customer & Invoice & User>>>
         this.http.get<CustomHttpResponse<Customer & Invoice & User>>
             (`${this.server}/customer/invoice/get/${invoiceId}`)

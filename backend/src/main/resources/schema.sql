@@ -139,8 +139,8 @@ CREATE TABLE IF NOT EXISTS legal_cases (
     client_email VARCHAR(255),
     client_phone VARCHAR(20),
     client_address TEXT,
-    status VARCHAR(20) NOT NULL,
-    priority VARCHAR(20) NOT NULL,
+    status ENUM('OPEN', 'IN_PROGRESS', 'PENDING', 'CLOSED', 'ARCHIVED') NOT NULL,
+    priority ENUM('LOW', 'MEDIUM', 'HIGH', 'URGENT') NOT NULL,
     type VARCHAR(20) NOT NULL,
     description TEXT,
     court_name VARCHAR(255),
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS legal_cases (
     hourly_rate DECIMAL(10,2),
     total_hours DECIMAL(10,2),
     total_amount DECIMAL(10,2),
-    payment_status ENUM('PENDING', 'PAID', 'OVERDUE'),
-    created_at DATETIME(6),
+    payment_status ENUM('PENDING', 'PAID', 'OVERDUE', 'CANCELLED') NOT NULL,
+    created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6)
 );

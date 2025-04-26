@@ -3,79 +3,116 @@ package com.bostoneo.bostoneosolutions.model;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.Date;
+import java.util.Collection;
 
-@Entity
-@Table(name = "legal_cases")
-@Data
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
+import static jakarta.persistence.CascadeType.ALL;
+import static jakarta.persistence.FetchType.EAGER;
+import static jakarta.persistence.GenerationType.IDENTITY;
+
+@Getter
+@Setter
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(NON_DEFAULT)
+@Entity
+@Table(name = "legal_cases")
 public class LegalCase {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = IDENTITY)
+    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "case_number", nullable = false, unique = true)
     private String caseNumber;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column(name = "client_name", nullable = false)
     private String clientName;
 
+    @Column(name = "client_email", nullable = false)
     private String clientEmail;
+    
+    @Column(name = "client_phone")
     private String clientPhone;
+    
+    @Column(name = "client_address")
     private String clientAddress;
 
+    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private CaseStatus status;
 
+    @Column(name = "priority")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private CasePriority priority;
 
-    @Column(nullable = false)
+    @Column(name = "type")
     private String type;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(name = "description")
+    @Lob
     private String description;
 
     // Court Information
+    @Column(name = "court_name")
     private String courtName;
+    
+    @Column(name = "courtroom")
     private String courtroom;
+    
+    @Column(name = "judge_name")
     private String judgeName;
 
     // Important Dates
-    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "filing_date")
+    @Temporal(TemporalType.DATE)
     private Date filingDate;
 
-    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "next_hearing")
+    @Temporal(TemporalType.DATE)
     private Date nextHearing;
 
-    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "trial_date")
+    @Temporal(TemporalType.DATE)
     private Date trialDate;
 
     // Billing Information
+    @Column(name = "hourly_rate")
     private Double hourlyRate;
+    
+    @Column(name = "total_hours")
     private Double totalHours;
+    
+    @Column(name = "total_amount")
     private Double totalAmount;
 
+    @Column(name = "payment_status")
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
 
+    @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
+
+    @OneToMany(mappedBy = "legalCase", fetch = FetchType.LAZY)
+    @JsonIgnoreProperties("legalCase")
+    private Collection<Expense> expenses;
 
     @PrePersist
     protected void onCreate() {
