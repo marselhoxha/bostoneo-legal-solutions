@@ -1,0 +1,194 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/']">Home</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a [routerLink]="['/expenses']">Expenses</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Vendors</li>
+    </ol>
+  </nav>
+
+  <!-- Page Title & Description -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="page-title-box">
+        <h4 class="mb-0 fw-bold">Vendor Management</h4>
+        <p class="text-muted fs-14 mt-1">Create and manage your vendors for expense tracking.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom: 60px;">
+    <!-- Vendor List -->
+    <div class="col-lg-8">
+      <div class="card" id="vendorList">
+        <div class="card-header border-bottom-dashed">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title mb-0">Vendor List</h5>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <!-- Loading, Error states -->
+          <div class="text-center my-4" *ngIf="loading">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <div class="alert alert-danger" *ngIf="error">
+            <i class="ri-error-warning-line align-middle me-2"></i>
+            {{ error }}
+          </div>
+
+          <div class="alert alert-info border-0" *ngIf="!loading && !error && vendors.length === 0">
+            <div class="d-flex">
+              <i class="ri-information-line fs-20 align-middle me-2"></i>
+              <div>
+                <h5 class="alert-heading">No vendors found</h5>
+                <p class="mb-0">Get started by creating your first vendor using the form.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Vendors Table -->
+          <div class="table-responsive" *ngIf="!loading && !error && vendors.length > 0">
+            <table class="table align-middle table-nowrap mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col" class="ps-4" style="width: 30%">Name</th>
+                  <th scope="col" style="width: 25%">Contact</th>
+                  <th scope="col" style="width: 25%">Tax ID</th>
+                  <th scope="col" class="text-end pe-4" style="width: 20%">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let vendor of vendors">
+                  <td class="ps-4">
+                    <span class="fw-medium">{{ vendor.name }}</span>
+                  </td>
+                  <td>
+                    <span class="text-muted">{{ vendor.contact || 'N/A' }}</span>
+                  </td>
+                  <td>
+                    <span class="text-muted">{{ vendor.taxId || 'N/A' }}</span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <div class="d-flex justify-content-end gap-2">
+                      <button class="btn btn-sm btn-soft-primary" (click)="editVendor(vendor)">
+                        <i class="ri-pencil-line align-middle me-1"></i>Edit
+                      </button>
+                      <button class="btn btn-sm btn-soft-danger" (click)="deleteVendor(vendor.id!)">
+                        <i class="ri-delete-bin-line align-middle me-1"></i>Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vendor Form -->
+    <div class="col-lg-4">
+      <div class="card" id="vendorForm">
+        <div class="card-header border-bottom-dashed" [ngClass]="{'bg-light-subtle': !editingVendor, 'bg-soft-warning': editingVendor}">
+          <div class="row align-items-center">
+            <div class="col">
+              <div>
+                <h5 class="card-title mb-0">
+                  <span *ngIf="editingVendor" class="badge bg-soft-warning text-warning me-2">
+                    <i class="ri-edit-2-fill me-1"></i>Editing
+                  </span>
+                  {{ editingVendor ? 'Edit Vendor' : 'Add New Vendor' }}
+                </h5>
+              </div>
+            </div>
+            <div class="col-auto" *ngIf="editingVendor">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cancelEdit()">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <form [formGroup]="vendorForm" (ngSubmit)="onSubmit()">
+            <div class="alert alert-danger" *ngIf="error">
+              <i class="ri-error-warning-line align-middle me-2"></i>
+              {{ error }}
+            </div>
+            
+            <div class="mb-3">
+              <label for="name" class="form-label">Vendor Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="ri-store-2-line"></i>
+                </span>
+                <input type="text" class="form-control" id="name" formControlName="name" 
+                    placeholder="Enter vendor name"
+                    [class.is-invalid]="vendorForm.get('name')?.invalid && vendorForm.get('name')?.touched">
+              </div>
+              <div class="invalid-feedback d-block" *ngIf="vendorForm.get('name')?.invalid && vendorForm.get('name')?.touched">
+                Vendor name is required
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="contact" class="form-label">Contact Person</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="ri-user-3-line"></i>
+                </span>
+                <input type="text" class="form-control" id="contact" formControlName="contact" 
+                    placeholder="Enter contact person name">
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="taxId" class="form-label">Tax ID</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="ri-bank-card-line"></i>
+                </span>
+                <input type="text" class="form-control" id="taxId" formControlName="taxId" 
+                    placeholder="Enter tax identification number">
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary" 
+                     [disabled]="vendorForm.invalid || submitting">
+                <i class="ri-save-line align-middle me-1"></i>
+                {{ editingVendor ? 'Update Vendor' : 'Create Vendor' }}
+                <span class="spinner-border spinner-border-sm ms-1" *ngIf="submitting"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Helpful Tips Card -->
+      <div class="card mt-4">
+        <div class="card-header bg-soft-info">
+          <h5 class="card-title mb-0">
+            <i class="ri-lightbulb-line me-1"></i> Tips for Vendors
+          </h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2"><i class="ri-check-line text-success me-2"></i> Add complete vendor details for better tracking</li>
+            <li class="mb-2"><i class="ri-check-line text-success me-2"></i> Include tax ID if you need it for accounting purposes</li>
+            <li><i class="ri-check-line text-success me-2"></i> Use the same vendor name consistently across your expenses</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
