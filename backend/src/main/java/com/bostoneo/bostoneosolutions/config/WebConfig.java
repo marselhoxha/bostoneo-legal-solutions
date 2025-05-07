@@ -20,7 +20,12 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins("http://localhost:4200")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowedHeaders("Origin", "Access-Control-Allow-Origin", "Content-Type", 
+                               "Accept", "Authorization", "X-Requested-With", 
+                               "Access-Control-Request-Method", "Access-Control-Request-Headers")
+                .exposedHeaders("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", 
+                              "Authorization", "Content-Disposition")
+                .allowCredentials(true)
+                .maxAge(3600); // 1 hour max age
     }
 } 

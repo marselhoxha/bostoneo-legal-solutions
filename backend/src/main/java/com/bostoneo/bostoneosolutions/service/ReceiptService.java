@@ -9,3 +9,4 @@ public interface ReceiptService {
     CustomHttpResponse<Receipt> getReceiptById(Long id);
     CustomHttpResponse<Void> deleteReceipt(Long id);
 } 
+ 

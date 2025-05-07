@@ -1,0 +1,113 @@
+/* Document Version Component Styles */
+
+/* Card styling with Velzon theme variables */
+.card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--vz-box-shadow);
+  transition: all 0.3s ease;
+  background-color: var(--vz-card-bg);
+}
+
+.card-header {
+  background-color: var(--vz-card-cap-bg);
+  border-bottom: 1px solid var(--vz-card-border-color);
+  padding: 1rem 1.25rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Form styling */
+.form-control, .form-select {
+  background-color: var(--vz-input-bg);
+  border-color: var(--vz-border-color);
+  color: var(--vz-body-color);
+  padding: 0.5rem 0.75rem;
+  
+  &:focus {
+    border-color: var(--vz-primary);
+    box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+  }
+
+  &:disabled {
+    background-color: var(--vz-input-disabled-bg);
+    opacity: 0.6;
+  }
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--vz-body-color);
+}
+
+.form-text {
+  color: var(--vz-text-muted);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+/* Alert styling */
+.alert-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  border-color: rgba(var(--vz-info-rgb), 0.2);
+  color: var(--vz-body-color);
+}
+
+/* Progress bar styling */
+.progress {
+  height: 1rem;
+  background-color: var(--vz-light-bg-subtle);
+  border-radius: 0.375rem;
+  margin: 1rem 0;
+}
+
+.progress-bar {
+  background-color: var(--vz-primary);
+}
+
+/* Button styling */
+.btn-primary {
+  background-color: var(--vz-primary);
+  border-color: var(--vz-primary);
+  
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.9);
+    border-color: rgba(var(--vz-primary-rgb), 0.9);
+  }
+  
+  &:disabled {
+    background-color: var(--vz-primary);
+    border-color: var(--vz-primary);
+    opacity: 0.65;
+  }
+}
+
+.btn-light {
+  background-color: var(--vz-light);
+  border-color: var(--vz-light);
+  color: var(--vz-dark);
+  
+  &:hover {
+    background-color: rgba(var(--vz-light-rgb), 0.85);
+    border-color: rgba(var(--vz-light-rgb), 0.85);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .col-lg-8.mx-auto {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .card-body {
+    padding: 1.25rem 1rem;
+  }
+  
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+  }
+} 

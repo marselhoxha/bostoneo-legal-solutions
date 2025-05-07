@@ -1,16 +1,20 @@
 package com.bostoneo.bostoneosolutions.util;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomHttpResponse<T> {
     private int statusCode;
     private String message;
     private T data;
+    
+    public CustomHttpResponse(String message, T data) {
+        this.statusCode = 200;
+        this.message = message;
+        this.data = data;
+    }
 } 

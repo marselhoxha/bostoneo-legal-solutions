@@ -192,6 +192,19 @@ export class UserService {
   isAuthenticated = (): boolean => {
     const token = localStorage.getItem(Key.TOKEN);
     return token ? (this.jwtHelper.decodeToken<string>(token) && !this.jwtHelper.isTokenExpired(token)) : false;
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return false;
+      
+      // Check if token has valid JWT format (should have 3 parts separated by dots)
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) return false;
+      
+      return !this.jwtHelper.isTokenExpired(token);
+    } catch (error) {
+      console.error('Error validating token:', error);
+      return false;
+    }
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

@@ -218,3 +218,4 @@ export class VendorListComponent implements OnInit {
     this.editingVendor = null;
   }
 } 
+ 

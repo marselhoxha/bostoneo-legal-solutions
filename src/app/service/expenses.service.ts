@@ -112,10 +112,10 @@ export class ExpensesService {
           // Handle both direct array response or wrapped response
           const vendors = Array.isArray(response) ? response : (response.data || []);
           return {
-            data: vendors,
-            message: 'Vendors loaded successfully',
-            status: 'OK',
-            statusCode: 200
+          data: vendors,
+          message: 'Vendors loaded successfully',
+          status: 'OK',
+          statusCode: 200
           } as CustomHttpResponse<Vendor[]>;
         }),
         tap(response => console.log('Vendors loaded:', response)),
@@ -255,7 +255,7 @@ export class ExpensesService {
           message: 'Failed to upload receipt: ' + (error.error?.message || error.message || 'Server error')
         }));
       })
-    );
+      );
   }
 
   getReceipt(id: number): Observable<CustomHttpResponse<Receipt>> {
@@ -318,6 +318,6 @@ export class ExpensesService {
         console.error('Error attaching receipt to expense:', error);
         return throwError(() => error);
       })
-    );
+      );
   }
 } 
