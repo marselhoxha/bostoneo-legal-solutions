@@ -1,0 +1,121 @@
+.document-detail-container {
+  padding: 1.5rem;
+  
+  .page-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    
+    .action-buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+  }
+  
+  .document-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      
+      .document-title {
+        margin: 0;
+      }
+      
+      .document-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 500;
+        
+        &.DRAFT {
+          background-color: #fff9c4;
+        }
+        
+        &.FINAL {
+          background-color: #c8e6c9;
+        }
+        
+        &.ARCHIVED {
+          background-color: #e0e0e0;
+        }
+      }
+    }
+    
+    .document-metadata {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      
+      .metadata-item {
+        .label {
+          font-size: 0.8rem;
+          color: #757575;
+          margin-bottom: 0.25rem;
+        }
+        
+        .value {
+          font-weight: 500;
+        }
+      }
+    }
+    
+    .document-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .form-control {
+      width: 100%;
+    }
+    
+    .error-message {
+      color: #d32f2f;
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+}
+
+.error-alert {
+  padding: 1rem;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+} 
+ 
+ 
+ 

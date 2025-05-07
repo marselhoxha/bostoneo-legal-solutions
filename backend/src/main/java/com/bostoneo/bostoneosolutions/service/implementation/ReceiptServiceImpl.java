@@ -70,3 +70,6 @@ public class ReceiptServiceImpl implements ReceiptService {
         return new CustomHttpResponse<>(200, "Receipt deleted successfully", null);
     }
 } 
+ 
+ 
+ 

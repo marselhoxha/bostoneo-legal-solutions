@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.resource;
 
 import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.service.LegalCaseService;
@@ -11,6 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.util.Optional;
 
@@ -191,5 +196,183 @@ public class LegalCaseResource {
     public ResponseEntity<Void> deleteCase(@PathVariable Long id) {
         legalCaseService.deleteCase(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Document Management Endpoints
+    
+    @GetMapping("/{id}/documents")
+    public ResponseEntity<HttpResponse> getCaseDocuments(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id) {
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("documents", legalCaseService.getCaseDocuments(id)))
+                        .message("Case documents retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @PostMapping("/{id}/documents")
+    public ResponseEntity<HttpResponse> uploadDocument(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "tags", required = false) String tags) {
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "document", legalCaseService.uploadDocument(id, file, title, type, category, description, tags, user)))
+                        .message("Document uploaded successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @GetMapping("/{caseId}/documents/{documentId}")
+    public ResponseEntity<HttpResponse> getDocument(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId) {
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "document", legalCaseService.getDocument(caseId, documentId)))
+                        .message("Document retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @DeleteMapping("/{caseId}/documents/{documentId}")
+    public ResponseEntity<HttpResponse> deleteDocument(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId) {
+        
+        legalCaseService.deleteDocument(caseId, documentId);
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail())))
+                        .message("Document deleted successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @GetMapping("/{caseId}/documents/{documentId}/download")
+    public ResponseEntity<Resource> downloadDocument(
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId) {
+        
+        Resource resource = legalCaseService.downloadDocument(caseId, documentId);
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+        
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+                .body(resource);
+    }
+    
+    @PostMapping("/{caseId}/documents/{documentId}/versions")
+    public ResponseEntity<HttpResponse> uploadNewVersion(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "notes", required = false) String notes) {
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "version", legalCaseService.uploadNewDocumentVersion(caseId, documentId, file, notes)))
+                        .message("New document version uploaded successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @GetMapping("/{caseId}/documents/{documentId}/versions")
+    public ResponseEntity<HttpResponse> getDocumentVersions(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId) {
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "versions", legalCaseService.getDocumentVersions(caseId, documentId)))
+                        .message("Document versions retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @GetMapping("/{caseId}/documents/{documentId}/versions/{versionId}/download")
+    public ResponseEntity<Resource> downloadDocumentVersion(
+            @PathVariable("caseId") Long caseId,
+            @PathVariable("documentId") Long documentId,
+            @PathVariable("versionId") Long versionId) {
+        
+        Resource resource = legalCaseService.downloadDocumentVersion(caseId, documentId, versionId);
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+        
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+                .body(resource);
+    }
+    
+    // Case Activities Endpoints
+    
+    @GetMapping("/{id}/activities")
+    public ResponseEntity<HttpResponse> getCaseActivities(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id) {
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "activities", legalCaseService.getCaseActivities(id)))
+                        .message("Case activities retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+    
+    @PostMapping("/{id}/activities")
+    public ResponseEntity<HttpResponse> logCaseActivity(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id,
+            @RequestBody CaseActivityDTO activityDTO) {
+        
+        activityDTO.setCaseId(id);
+        activityDTO.setUserId(user.getId());
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "activity", legalCaseService.logCaseActivity(activityDTO)))
+                        .message("Activity logged successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
     }
 } 

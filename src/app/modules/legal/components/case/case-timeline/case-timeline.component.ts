@@ -1,9 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CaseActivitiesService } from '../../../services/case-activities.service';
-import { CaseActivity, ActivityType } from '../../../interfaces/case.interface';
+import { CaseActivity } from '../../../models/case-activity.model';
+import { ActivityType } from '../../../models/case-activity.model';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { Subscription, catchError, finalize, of } from 'rxjs';
 import { 
   faFileUpload, 
   faFileDownload, 
@@ -28,59 +30,122 @@ import {
   imports: [CommonModule, RouterModule, FontAwesomeModule],
   template: `
     <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle py-3">
+      <div class="card-header bg-light-subtle py-3 d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 text-white-dark">
-          <i class="fas fa-history me-2 text-primary"></i> Case Timeline
+          <i class="ri-history-line me-2 text-primary"></i> Case Timeline
         </h5>
+        <button *ngIf="!isLoading" class="btn btn-sm btn-soft-primary" (click)="refreshTimeline()" [disabled]="isLoading">
+          <i class="ri-refresh-line align-middle" [class.ri-loader-4-line]="isLoading" [class.animate-spin]="isLoading"></i> 
+          {{isLoading ? 'Loading...' : 'Refresh'}}
+        </button>
       </div>
-      <div class="card-body">
-        <div class="timeline">
-          @for (activity of activities; track activity.id) {
-            <div class="timeline-item">
-              <div class="timeline-marker" [ngClass]="getActivityClass(activity.type)">
-                <fa-icon [icon]="getActivityIcon(activity.type)" class="timeline-icon"></fa-icon>
+      <div class="card-body p-0">
+        <!-- Loading state -->
+        <div *ngIf="isLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading timeline...</span>
+          </div>
+          <p class="mt-3 text-muted">Loading case activity...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div *ngIf="!isLoading && error" class="alert alert-danger m-3">
+          <i class="ri-error-warning-line me-2"></i> {{error}}
+          <button class="btn btn-sm btn-link ms-2" (click)="loadActivities()">Try Again</button>
+        </div>
+        
+        <!-- Empty state -->
+        <div *ngIf="!isLoading && !error && (!activities || activities.length === 0)" class="text-center py-5">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-soft-secondary text-secondary rounded-circle fs-1">
+              <i class="ri-history-line"></i>
+            </div>
+          </div>
+          <h5>No Activity Found</h5>
+          <p class="text-muted">No activity has been recorded for this case yet.</p>
+        </div>
+
+        <!-- Timeline content - Now with max-height and scrolling -->
+        <div class="timeline-container" *ngIf="!isLoading && !error && activities && activities.length > 0">
+          <div class="timeline" >
+          <div *ngFor="let activity of activities; trackBy: trackByActivityId" class="timeline-item">
+              <div class="timeline-marker" [ngClass]="getActivityClass(activity.activityType)">
+                <fa-icon [icon]="getActivityIcon(activity.activityType)" class="timeline-icon"></fa-icon>
+            </div>
+            <div class="timeline-content">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-white-dark">{{activity.description}}</h6>
+                  <small class="text-muted">{{formatDate(activity.createdAt)}}</small>
               </div>
-              <div class="timeline-content">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0 text-white-dark">{{activity.description}}</h6>
-                  <small class="text-muted">{{activity.timestamp | date:'medium'}}</small>
+              <div class="d-flex align-items-center mb-2">
+                <div *ngIf="activity.user" class="user-avatar me-2" [style.backgroundColor]="getAvatarColor(activity.user)">
+                  {{activity.user?.firstName?.charAt(0) || '?'}}{{activity.user?.lastName?.charAt(0) || ''}}
                 </div>
-                <div class="d-flex align-items-center mb-2">
-                  <div class="user-avatar me-2">
-                    {{activity.user?.firstName?.charAt(0)}}{{activity.user?.lastName?.charAt(0)}}
-                  </div>
-                  <div>
-                    <small class="d-block">
-                      <strong class="text-white-dark">{{activity.user?.firstName}} {{activity.user?.lastName}}</strong>
-                      <span class="badge ms-2" [ngClass]="getBadgeClass(activity.type)">
-                        {{formatActivityType(activity.type)}}
-                      </span>
-                    </small>
-                  </div>
+                  <div *ngIf="!activity.user && activity.userId" class="user-avatar system-avatar me-2">
+                    <i class="ri-user-line"></i>
                 </div>
-                @if (activity.metadata) {
-                  <div class="timeline-metadata">
-                    <small class="text-muted">
-                      @for (key of getMetadataKeys(activity.metadata); track key) {
-                        <div class="metadata-item">
-                          <span class="metadata-label">{{formatMetadataKey(key)}}:</span>
-                          <span class="metadata-value">{{formatMetadataValue(activity.metadata[key])}}</span>
-                        </div>
-                      }
-                    </small>
+                <div>
+                  <small class="d-block">
+                    <strong class="text-white-dark">
+                        {{activity.user ? (activity.user.firstName + ' ' + activity.user.lastName) : 
+                         (activity.userId ? 'User #' + activity.userId : 'System')}}
+                    </strong>
+                      <span class="badge ms-2" [ngClass]="getBadgeClass(activity.activityType)">
+                        {{formatActivityType(activity.activityType)}}
+                    </span>
+                  </small>
+                </div>
+              </div>
+              <div *ngIf="activity.metadata" class="timeline-metadata">
+                <small class="text-muted">
+                  <div *ngFor="let key of getMetadataKeys(activity.metadata)" class="metadata-item">
+                    <span class="metadata-label">{{formatMetadataKey(key)}}:</span>
+                    <span class="metadata-value">{{formatMetadataValue(activity.metadata[key])}}</span>
                   </div>
-                }
+                </small>
+                </div>
               </div>
             </div>
-          }
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="!isLoading && !error && activities && activities.length > 0" class="card-footer bg-light-subtle py-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted">Showing {{activities.length}} activities</small>
+          <small class="text-muted">Last updated: {{lastUpdated | date:'medium'}}</small>
         </div>
       </div>
     </div>
   `,
   styles: [`
+    .timeline-container {
+      max-height: 500px;
+      overflow-y: auto;
+      padding: 20px 15px;
+      scrollbar-width: thin;
+    }
+
+    .timeline-container::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .timeline-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .timeline-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    .timeline-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
     .timeline {
       position: relative;
-      padding: 20px 0;
+      padding: 0;
     }
 
     .timeline::before {
@@ -144,12 +209,17 @@ import {
       justify-content: center;
       font-weight: bold;
       font-size: 12px;
+      text-transform: uppercase;
+    }
+    
+    .system-avatar {
+      background: #6c757d;
     }
 
     .timeline-metadata {
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px dashed #dee2e6;
+      border-top: 1px dashed #607D8B
     }
 
     .metadata-item {
@@ -199,6 +269,34 @@ import {
     .marker-other { border-color: #6c757d; }
     .marker-other .timeline-icon { color: #6c757d; }
     .badge-other { background-color: #e9ecef; color: #495057; }
+
+    /* Avatar styles for empty state */
+    .avatar-lg {
+      height: 5rem;
+      width: 5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    
+    .avatar-title {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Enhanced timeline item styling */
+    .timeline-item:hover .timeline-marker {
+      transform: scale(1.2);
+      transition: transform 0.2s ease;
+    }
+
+    .timeline-item:last-child {
+      margin-bottom: 0;
+    }
 
     /* Dark mode styles */
     :host-context(.dark-mode) .card {
@@ -252,11 +350,25 @@ import {
     :host-context(.dark-mode) .badge-payment { background-color: #20c997; color: #ffffff; }
     :host-context(.dark-mode) .badge-hearing { background-color: #6610f2; color: #ffffff; }
     :host-context(.dark-mode) .badge-other { background-color: #6c757d; color: #ffffff; }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   `]
 })
-export class CaseTimelineComponent implements OnInit {
+export class CaseTimelineComponent implements OnInit, OnChanges, OnDestroy {
   @Input() caseId!: string;
   activities: CaseActivity[] = [];
+  isLoading = false;
+  error: string | null = null;
+  lastUpdated = new Date();
+  private subscription = new Subscription();
+  private _previousCaseId: string | null = null;
 
   // FontAwesome icons
   faFileUpload = faFileUpload;
@@ -275,112 +387,353 @@ export class CaseTimelineComponent implements OnInit {
   faTrashAlt = faTrashAlt;
   faQuestionCircle = faQuestionCircle;
 
-  constructor(private activitiesService: CaseActivitiesService) {}
+  constructor(
+    private activitiesService: CaseActivitiesService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
+    console.log(`Timeline initialized with case ID: ${this.caseId}`);
     this.loadActivities();
-  }
-
-  loadActivities(): void {
-    this.activitiesService.getActivities(this.caseId).subscribe({
-      next: (activities) => {
-        this.activities = activities;
-      },
-      error: (error) => {
-        console.error('Error loading activities:', error);
-        // Fallback to dummy data
-        this.activitiesService.getDummyActivities(this.caseId).subscribe(
-          activities => this.activities = activities
-        );
-      }
-    });
-  }
-
-  getMetadataKeys(metadata: any): string[] {
-    return Object.keys(metadata).filter(key => 
-      !['documentId', 'noteId'].includes(key) && 
-      typeof metadata[key] !== 'object'
+    
+    // Subscribe to refresh notifications
+    this.subscription.add(
+      this.activitiesService.getRefreshObservable().subscribe(refreshCaseId => {
+        console.log(`Received refresh notification for case ${refreshCaseId}, current case: ${this.caseId}`);
+        
+        // Stringify for safer comparison
+        if (String(refreshCaseId) === String(this.caseId)) {
+          console.log(`Refreshing timeline for case ${this.caseId}`);
+          
+          // Set a small delay to ensure backend has processed the new activity
+          setTimeout(() => {
+            this.loadActivities();
+          }, 500); // Small delay to ensure backend has processed the activity
+        }
+      })
     );
   }
 
-  getActivityIcon(type: ActivityType): any {
-    switch (type) {
-      case ActivityType.CASE_CREATED:
-        return this.faPlusCircle;
-      case ActivityType.CASE_UPDATED:
-        return this.faEdit;
-      case ActivityType.DOCUMENT_UPLOADED:
-        return this.faFileUpload;
-      case ActivityType.DOCUMENT_DOWNLOADED:
-        return this.faFileDownload;
-      case ActivityType.DOCUMENT_VERSION_ADDED:
-        return this.faFileAlt;
-      case ActivityType.NOTE_ADDED:
-      case ActivityType.NOTE_UPDATED:
-      case ActivityType.NOTE_DELETED:
-        return this.faStickyNote;
-      case ActivityType.STATUS_CHANGED:
-        return this.faExchangeAlt;
-      case ActivityType.ASSIGNMENT_CHANGED:
-        return this.faUserEdit;
-      case ActivityType.DEADLINE_SET:
-      case ActivityType.DEADLINE_UPDATED:
-        return this.faCalendarAlt;
-      case ActivityType.DEADLINE_MET:
-        return this.faCheckCircle;
-      case ActivityType.DEADLINE_MISSED:
-        return this.faTimesCircle;
-      case ActivityType.PAYMENT_RECEIVED:
-      case ActivityType.PAYMENT_SCHEDULED:
-      case ActivityType.PAYMENT_MISSED:
-        return this.faMoneyBillWave;
-      case ActivityType.HEARING_SCHEDULED:
-      case ActivityType.HEARING_COMPLETED:
-      case ActivityType.HEARING_CANCELLED:
-        return this.faGavel;
-      default:
-        return this.faQuestionCircle;
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['caseId'] && changes['caseId'].currentValue !== changes['caseId'].previousValue) {
+      this._previousCaseId = changes['caseId'].previousValue;
+      if (changes['caseId'].currentValue) {
+        console.log(`Case ID changed to ${changes['caseId'].currentValue}, reloading activities`);
+        this.loadActivities();
+      }
+    }
+  }
+  
+  ngOnDestroy(): void {
+      this.subscription.unsubscribe();
+  }
+
+  refreshTimeline(): void {
+    if (!this.isLoading) {
+      this.loadActivities();
     }
   }
 
-  getActivityClass(type: ActivityType): string {
-    if (type.includes('DOCUMENT')) return 'marker-document';
-    if (type.includes('NOTE')) return 'marker-note';
-    if (type.includes('STATUS')) return 'marker-status';
-    if (type.includes('ASSIGNMENT')) return 'marker-assignment';
-    if (type.includes('DEADLINE')) return 'marker-deadline';
-    if (type.includes('PAYMENT')) return 'marker-payment';
-    if (type.includes('HEARING')) return 'marker-hearing';
+  loadActivities(): void {
+    if (!this.caseId) {
+      this.error = 'No case ID provided';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+    this.activities = []; // Clear existing activities
+    this.cdr.detectChanges();
+    
+    console.log(`Loading activities for case ${this.caseId}`);
+    
+      this.activitiesService.getActivities(this.caseId)
+      .pipe(finalize(() => {
+            this.isLoading = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: (activitiesData) => {
+          console.log(`Received ${activitiesData?.length || 0} raw activities from API`);
+          console.log('Raw data:', JSON.stringify(activitiesData));
+          
+          if (!activitiesData || activitiesData.length === 0) {
+            console.log('No activities found');
+            this.activities = [];
+            this.cdr.detectChanges();
+            return;
+          }
+          
+          try {
+            // Map and normalize activity data
+            const processedActivities = this.processActivityData(activitiesData);
+            console.log(`Processed ${processedActivities.length} activities after mapping`);
+            
+            // Sort by createdAt, newest first
+            this.activities = processedActivities.sort((a, b) => {
+              // Ensure we have valid dates
+              const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
+              const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+              
+              // Sort newest first
+              return dateB.getTime() - dateA.getTime();
+            });
+              
+            console.log(`Displaying ${this.activities.length} activities in timeline`);
+            console.log('Final activities:', this.activities);
+            
+            this.lastUpdated = new Date();
+          } catch (err) {
+            console.error('Error processing activities:', err);
+            this.error = 'Error processing timeline data';
+            this.activities = [];
+          }
+          
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading activities:', err);
+          console.error('Error details:', err.message);
+          this.error = 'Failed to load timeline activities';
+          this.activities = [];
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Process activity data from API and convert to component format
+   */
+  private processActivityData(activitiesData: any[]): CaseActivity[] {
+    // Map each activity to our component model
+    return activitiesData.map(activity => {
+      // Skip invalid activities
+      if (!activity) return null;
+      
+      // Just for logging to help debug
+      console.log('Processing activity:', activity);
+      console.log('Activity ID:', activity.id);
+      console.log('Activity type:', activity.activityType);
+      console.log('Activity user:', activity.user?.firstName, activity.user?.lastName);
+      
+      // Normalize activity type for display purposes only
+      let normalizedType = this.normalizeActivityType(activity.activityType);
+      
+      // Match CaseActivity model structure
+                return {
+                  id: activity.id || `temp-${Math.random().toString(36).substring(2, 9)}`,
+        caseId: Number(activity.caseId) || Number(this.caseId),
+        userId: activity.userId ? Number(activity.userId) : null,
+        user: activity.user || null,
+        activityType: normalizedType,
+        referenceId: activity.referenceId,
+        referenceType: activity.referenceType,
+                  description: activity.description || 'Activity recorded',
+        metadata: this.parseMetadata(activity),
+        createdAt: activity.createdAt ? new Date(activity.createdAt) : new Date()
+      } as CaseActivity;
+    }).filter(activity => activity !== null) as CaseActivity[]; // Only filter out null values, not duplicates
+  }
+  
+  /**
+   * Normalize activity type from various formats
+   */
+  private normalizeActivityType(activityType: string): string {
+    if (!activityType) return 'OTHER';
+    
+    // Convert single character codes to full strings
+    switch (activityType) {
+      case 'N': return 'NOTE_ADDED';
+      case 'U': return 'NOTE_UPDATED';
+      case 'D': return 'NOTE_DELETED';
+      default: return activityType;
+    }
+  }
+
+  /**
+   * Parse metadata from various activity formats
+   */
+  private parseMetadata(activity: any): any {
+    if (!activity) return {};
+    
+    // Handle direct metadata object
+    if (activity.metadata && typeof activity.metadata === 'object') {
+      return activity.metadata;
+    }
+    
+    // Try JSON string in metadataJson field
+    if (activity.metadataJson) {
+      try {
+        return JSON.parse(activity.metadataJson);
+      } catch (e) {
+        console.error('Error parsing metadataJson:', e);
+      }
+    }
+    
+    // Try any string field that might be JSON
+    for (const key of ['metadata', 'metadataJson']) {
+      if (activity[key] && typeof activity[key] === 'string' && activity[key].startsWith('{')) {
+        try {
+          return JSON.parse(activity[key]);
+        } catch (e) {
+          console.error(`Error parsing ${key}:`, e);
+        }
+      }
+    }
+    
+    return {};
+  }
+
+  formatDate(date: Date | string): string {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    
+    // If today, show time only
+    const today = new Date();
+    if (d.getDate() === today.getDate() && 
+        d.getMonth() === today.getMonth() && 
+        d.getFullYear() === today.getFullYear()) {
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // If this year, show date without year
+    if (d.getFullYear() === today.getFullYear()) {
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + 
+             ' at ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Otherwise show full date
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  formatActivityType(type: string): string {
+    if (!type) return 'Other';
+    
+    // Convert to string for consistent handling
+    const typeStr = String(type);
+    
+    return typeStr
+      .replace(/_/g, ' ')
+      .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+      .replace(/Document |Note |Status |Assignment |Deadline |Payment |Hearing |Case /g, '');
+  }
+  
+  formatMetadataKey(key: string): string {
+    if (!key) return '';
+    
+    // Convert camelCase to Title Case
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase());
+  }
+  
+  formatMetadataValue(value: any): string {
+    if (value === null || value === undefined) return '';
+    
+    if (value instanceof Date || (typeof value === 'string' && !isNaN(Date.parse(value)))) {
+      return this.formatDate(value);
+    }
+    
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    
+    return String(value);
+  }
+  
+  getMetadataKeys(metadata: any): string[] {
+    if (!metadata || typeof metadata !== 'object') return [];
+    return Object.keys(metadata).filter(key => {
+      // Filter out nullish values and empty strings
+      const value = metadata[key];
+      return value !== null && value !== undefined && value !== '';
+    });
+  }
+
+  getActivityIcon(type: string): any {
+    switch (String(type)) {
+      case 'CASE_CREATED': return this.faPlusCircle;
+      case 'CASE_UPDATED': return this.faEdit;
+      case 'DOCUMENT_UPLOADED':
+      case 'DOCUMENT_ADDED': return this.faFileUpload;
+      case 'DOCUMENT_DOWNLOADED': return this.faFileDownload;
+      case 'DOCUMENT_VERSION_ADDED': return this.faFileAlt;
+      case 'NOTE_ADDED':
+      case 'NOTE_UPDATED':
+      case 'NOTE_DELETED': return this.faStickyNote;
+      case 'STATUS_CHANGED': return this.faExchangeAlt;
+      case 'ASSIGNMENT_CHANGED': return this.faUserEdit;
+      case 'DEADLINE_SET':
+      case 'DEADLINE_UPDATED': return this.faCalendarAlt;
+      case 'DEADLINE_MET': return this.faCheckCircle;
+      case 'DEADLINE_MISSED': return this.faTimesCircle;
+      case 'PAYMENT_RECEIVED':
+      case 'PAYMENT_SCHEDULED':
+      case 'PAYMENT_MISSED': return this.faMoneyBillWave;
+      case 'HEARING_SCHEDULED':
+      case 'HEARING_COMPLETED':
+      case 'HEARING_CANCELLED': return this.faGavel;
+      case 'TASK_CREATED':
+      case 'TASK_UPDATED':
+      case 'TASK_COMPLETED':
+      case 'TASK_DELETED': return this.faCalendarAlt;
+      default: return this.faQuestionCircle;
+    }
+  }
+
+  getActivityClass(type: string): string {
+    if (!type) return 'marker-other';
+    
+    const typeStr = String(type);
+    
+    if (typeStr.includes('DOCUMENT')) return 'marker-document';
+    if (typeStr.includes('NOTE')) return 'marker-note';
+    if (typeStr.includes('STATUS')) return 'marker-status';
+    if (typeStr.includes('ASSIGNMENT')) return 'marker-assignment';
+    if (typeStr.includes('DEADLINE')) return 'marker-deadline';
+    if (typeStr.includes('PAYMENT')) return 'marker-payment';
+    if (typeStr.includes('HEARING')) return 'marker-hearing';
+    if (typeStr.includes('TASK')) return 'marker-deadline';
     return 'marker-other';
   }
 
-  getBadgeClass(type: ActivityType): string {
-    if (type.includes('DOCUMENT')) return 'badge-document';
-    if (type.includes('NOTE')) return 'badge-note';
-    if (type.includes('STATUS')) return 'badge-status';
-    if (type.includes('ASSIGNMENT')) return 'badge-assignment';
-    if (type.includes('DEADLINE')) return 'badge-deadline';
-    if (type.includes('PAYMENT')) return 'badge-payment';
-    if (type.includes('HEARING')) return 'badge-hearing';
+  getBadgeClass(type: string): string {
+    if (!type) return 'badge-other';
+    
+    const typeStr = String(type);
+    
+    if (typeStr.includes('DOCUMENT')) return 'badge-document';
+    if (typeStr.includes('NOTE')) return 'badge-note';
+    if (typeStr.includes('STATUS')) return 'badge-status';
+    if (typeStr.includes('ASSIGNMENT')) return 'badge-assignment';
+    if (typeStr.includes('DEADLINE')) return 'badge-deadline';
+    if (typeStr.includes('PAYMENT')) return 'badge-payment';
+    if (typeStr.includes('HEARING')) return 'badge-hearing';
+    if (typeStr.includes('TASK')) return 'badge-deadline';
     return 'badge-other';
   }
-
-  formatActivityType(type: ActivityType): string {
-    return type.replace(/_/g, ' ').toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  
+  trackByActivityId(index: number, activity: CaseActivity): string {
+    return String(activity.id);
   }
-
-  formatMetadataKey(key: string): string {
-    return key.replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase());
-  }
-
-  formatMetadataValue(value: any): string {
-    if (value instanceof Date) {
-      return value.toLocaleDateString();
+  
+  getAvatarColor(user: any): string {
+    if (!user || !user.firstName) return '#0d6efd';
+    
+    const nameStr = `${user.firstName}${user.lastName || ''}`;
+    let hash = 0;
+    
+    for (let i = 0; i < nameStr.length; i++) {
+      hash = nameStr.charCodeAt(i) + ((hash << 5) - hash);
     }
-    return value;
+    
+    const colors = [
+      '#4e73df', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc',
+      '#6f42c1', '#fd7e14', '#20c997', '#6610f2'
+    ];
+    
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
   }
 } 

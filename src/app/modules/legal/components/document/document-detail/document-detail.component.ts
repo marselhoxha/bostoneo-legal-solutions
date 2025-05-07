@@ -1,186 +1,208 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Document, DocumentType, DocumentStatus } from '../../../interfaces/document.interface';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DocumentService } from '../../../services/document.service';
+import { CaseService } from '../../../services/case.service';
+import { Document, DocumentType, DocumentStatus } from '../../../interfaces/document.interface';
+import { LegalCase } from '../../../interfaces/case.interface';
 
 @Component({
   selector: 'app-document-detail',
-  standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule],
-  template: `
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header">
-              <h4 class="card-title">Document Details</h4>
-              <button class="btn btn-primary" (click)="saveDocument()">Save</button>
-            </div>
-            <div class="card-body">
-              <form [formGroup]="documentForm" (ngSubmit)="saveDocument()">
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="form-group">
-                      <label>Title</label>
-                      <input type="text" class="form-control" formControlName="title">
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="form-group">
-                      <label>Type</label>
-                      <select class="form-control" formControlName="type">
-                        <option *ngFor="let type of documentTypes" [value]="type">{{type}}</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div class="row mt-3">
-                  <div class="col-md-6">
-                    <div class="form-group">
-                      <label>Status</label>
-                      <select class="form-control" formControlName="status">
-                        <option *ngFor="let status of documentStatuses" [value]="status">{{status}}</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="form-group">
-                      <label>Case ID</label>
-                      <input type="text" class="form-control" formControlName="caseId">
-                    </div>
-                  </div>
-                </div>
-                <div class="row mt-3">
-                  <div class="col-12">
-                    <div class="form-group">
-                      <label>Description</label>
-                      <textarea class="form-control" rows="4" formControlName="description"></textarea>
-                    </div>
-                  </div>
-                </div>
-                <div class="row mt-3">
-                  <div class="col-12">
-                    <div class="form-group">
-                      <label>File</label>
-                      <input type="file" class="form-control" (change)="onFileSelected($event)">
-                    </div>
-                  </div>
-                </div>
-                <div class="row mt-3">
-                  <div class="col-12">
-                    <div class="form-group">
-                      <label>Tags</label>
-                      <input type="text" class="form-control" formControlName="tags" placeholder="Enter tags separated by commas">
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+  templateUrl: './document-detail.component.html',
+  styleUrls: ['./document-detail.component.scss']
 })
 export class DocumentDetailComponent implements OnInit {
+  documentId: string | null = null;
+  document: Document | null = null;
   documentForm: FormGroup;
+  loading = true;
+  isEditing = false;
+  isNew = false;
+  error: string | null = null;
+  availableCases: LegalCase[] = [];
+  showVersionModal = false;
+  
+  get isLoading(): boolean {
+    return this.loading;
+  }
+  
+  get isNewDocument(): boolean {
+    return this.isNew;
+  }
+  
   documentTypes = Object.values(DocumentType);
   documentStatuses = Object.values(DocumentStatus);
-  documentId: string | null = null;
-  selectedFile: File | null = null;
 
   constructor(
-    private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private documentService: DocumentService
+    private documentService: DocumentService,
+    private caseService: CaseService,
+    private fb: FormBuilder
   ) {
-    this.documentForm = this.fb.group({
-      title: ['', Validators.required],
-      type: [DocumentType.OTHER, Validators.required],
-      status: [DocumentStatus.DRAFT, Validators.required],
-      caseId: [''],
-      description: [''],
-      tags: ['']
-    });
+    this.documentForm = this.createForm();
   }
 
   ngOnInit(): void {
     this.documentId = this.route.snapshot.paramMap.get('id');
-    if (this.documentId) {
-      this.loadDocument();
+    
+    if (this.documentId === 'create') {
+      this.isNew = true;
+      this.isEditing = true;
+      this.loading = false;
+      this.loadCases();
+    } else if (this.documentId) {
+      this.loadDocument(this.documentId);
+      this.loadCases();
+    } else {
+      this.error = 'Invalid document ID';
+      this.loading = false;
     }
   }
 
-  loadDocument(): void {
-    if (this.documentId) {
-      this.documentService.getDocumentById(this.documentId).subscribe({
-        next: (document) => {
-          this.documentForm.patchValue({
-            title: document.title,
-            type: document.type,
-            status: document.status,
-            caseId: document.caseId,
-            description: document.description,
-            tags: document.tags?.join(', ')
-          });
-        },
-        error: (error) => {
-          console.error('Error loading document:', error);
-          // TODO: Show error notification
-        }
-      });
-    }
+  createForm(): FormGroup {
+    return this.fb.group({
+      title: ['', [Validators.required]],
+      type: [DocumentType.OTHER, [Validators.required]],
+      status: [DocumentStatus.DRAFT, [Validators.required]],
+      description: [''],
+      caseId: [''],
+      tags: [''],
+      url: ['', [Validators.required]]
+    });
   }
 
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.length) {
-      this.selectedFile = input.files[0];
-    }
-  }
-
-  saveDocument(): void {
-    if (this.documentForm.valid) {
-      const documentData = this.documentForm.value;
-      documentData.tags = documentData.tags ? documentData.tags.split(',').map((tag: string) => tag.trim()) : [];
-
-      if (this.selectedFile) {
-        this.documentService.uploadDocument(this.selectedFile, documentData).subscribe({
-          next: () => {
-            // TODO: Show success notification
-            this.router.navigate(['/legal/documents']);
-          },
-          error: (error) => {
-            console.error('Error uploading document:', error);
-            // TODO: Show error notification
-          }
-        });
-      } else if (this.documentId) {
-        this.documentService.updateDocument(this.documentId, documentData).subscribe({
-          next: () => {
-            // TODO: Show success notification
-            this.router.navigate(['/legal/documents']);
-          },
-          error: (error) => {
-            console.error('Error updating document:', error);
-            // TODO: Show error notification
-          }
-        });
-      } else {
-        this.documentService.createDocument(documentData).subscribe({
-          next: () => {
-            // TODO: Show success notification
-            this.router.navigate(['/legal/documents']);
-          },
-          error: (error) => {
-            console.error('Error creating document:', error);
-            // TODO: Show error notification
-          }
-        });
+  loadDocument(id: string): void {
+    this.loading = true;
+    this.documentService.getDocumentById(id).subscribe({
+      next: (data) => {
+        this.document = data;
+        this.populateForm(data);
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading document:', error);
+        this.error = 'Error loading document. Please try again.';
+        this.loading = false;
       }
+    });
+  }
+
+  populateForm(document: Document): void {
+    this.documentForm.patchValue({
+      title: document.title,
+      type: document.type,
+      status: document.status,
+      description: document.description || '',
+      caseId: document.caseId || '',
+      tags: document.tags ? document.tags.join(', ') : '',
+      url: document.url
+    });
+  }
+
+  toggleEdit(): void {
+    this.isEditing = !this.isEditing;
+    if (!this.isEditing && this.document) {
+      this.populateForm(this.document);
     }
+  }
+
+  onSubmit(): void {
+    if (this.documentForm.invalid) {
+      return;
+    }
+
+    const formData = this.documentForm.value;
+    const documentData: Partial<Document> = {
+      title: formData.title,
+      type: formData.type,
+      status: formData.status,
+      description: formData.description || undefined,
+      caseId: formData.caseId || undefined,
+      url: formData.url,
+      tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()) : undefined
+    };
+
+    if (this.isNew) {
+      this.createDocument(documentData);
+    } else if (this.documentId) {
+      this.updateDocument(this.documentId, documentData);
+    }
+  }
+
+  createDocument(documentData: Partial<Document>): void {
+    this.loading = true;
+    this.documentService.createDocument(documentData).subscribe({
+      next: (newDocument) => {
+        this.router.navigate(['/legal/documents', newDocument.id]);
+      },
+      error: (error) => {
+        console.error('Error creating document:', error);
+        this.error = 'Error creating document. Please try again.';
+        this.loading = false;
+      }
+    });
+  }
+
+  updateDocument(id: string, documentData: Partial<Document>): void {
+    this.loading = true;
+    this.documentService.updateDocument(id, documentData).subscribe({
+      next: (updatedDocument) => {
+        this.document = updatedDocument;
+        this.isEditing = false;
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error updating document:', error);
+        this.error = 'Error updating document. Please try again.';
+        this.loading = false;
+      }
+    });
+  }
+
+  downloadDocument(): void {
+    if (!this.documentId) return;
+    
+    this.loading = true;
+    this.documentService.downloadDocument(this.documentId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.document?.title || 'document';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error downloading document:', error);
+        this.error = 'Error downloading document. Please try again.';
+        this.loading = false;
+      }
+    });
+  }
+
+  toggleVersionModal(): void {
+    this.showVersionModal = !this.showVersionModal;
+  }
+
+  goBack(): void {
+    this.router.navigate(['/legal/documents']);
+  }
+
+  loadCases(): void {
+    this.caseService.getCases().subscribe({
+      next: (cases) => {
+        this.availableCases = cases;
+      },
+      error: (error) => {
+        console.error('Error loading cases:', error);
+      }
+    });
   }
 } 
+ 
+ 
+ 

@@ -1,0 +1,665 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Page title with improved styling -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 fw-semibold text-primary">Document Management</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Legal</a></li>
+            <li class="breadcrumb-item active text-primary">Documents</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats - Enhanced Cards -->
+  <div class="row mb-4">
+    <!-- Total Documents Card -->
+    <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+      <div class="card card-animate shadow-sm border-0 h-100">
+        <div class="card-body bg-soft-primary rounded">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-primary text-truncate mb-0 fs-12">Total Documents</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-3">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="documents.length">0</span></h4>
+              <a href="javascript:void(0);" class="text-decoration-underline text-primary fs-12">View all</a>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle rounded-circle fs-3">
+                <i class="ri-file-text-line text-primary"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Documents Card -->
+    <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+      <div class="card card-animate shadow-sm border-0 h-100">
+        <div class="card-body bg-soft-success rounded">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-success text-truncate mb-0 fs-12">Recent Documents</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-3">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="recentDocumentsCount">0</span></h4>
+              <span class="text-muted fs-12">Last 30 days</span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-success-subtle rounded-circle fs-3">
+                <i class="ri-file-upload-line text-success"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Review Card -->
+    <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+      <div class="card card-animate shadow-sm border-0 h-100">
+        <div class="card-body bg-soft-warning rounded">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-warning text-truncate mb-0 fs-12">Pending Review</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-3">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="pendingReviewCount">0</span></h4>
+              <a href="javascript:void(0);" class="text-decoration-underline text-warning fs-12">Review now</a>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-warning-subtle rounded-circle fs-3">
+                <i class="ri-time-line text-warning"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage Used Card -->
+    <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+      <div class="card card-animate shadow-sm border-0 h-100">
+        <div class="card-body bg-soft-info rounded">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-info text-truncate mb-0 fs-12">Storage Used</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-3">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2">{{storageUsed}}</h4>
+              <span class="text-muted fs-12">of 1 GB</span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-info-subtle rounded-circle fs-3">
+                <i class="ri-hard-drive-2-line text-info"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters & Actions Card - Enhanced with better layout -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-soft-light py-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <h5 class="card-title mb-0 flex-grow-1 text-primary">
+              <i class="ri-filter-2-line align-bottom me-1"></i> Filters & Actions
+            </h5>
+            <div class="flex-shrink-0 d-flex flex-wrap gap-2">
+              <button class="btn btn-soft-danger btn-sm" (click)="resetFilters()">
+                <i class="ri-refresh-line align-bottom me-1"></i> Reset
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" (click)="createDocument()">
+                <i class="ri-add-line align-bottom me-1"></i> Add Document
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-xl-3 col-lg-6 col-md-4 col-sm-6">
+              <div class="search-box">
+                <input type="text" class="form-control form-select-sm search-input" placeholder="Search title, description..."
+                  [(ngModel)]="searchTerm" (input)="applyFilters()">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-4 col-sm-6">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedType" (change)="applyFilters()">
+                <option value="">All Document Types</option>
+                <option *ngFor="let type of documentTypes" [value]="type">{{type}}</option>
+              </select>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-4 col-sm-6">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+                <option value="">All Statuses</option>
+                <option *ngFor="let status of documentStatuses" [value]="status">{{status}}</option>
+              </select>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-4 col-sm-6">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedCaseFilter" (change)="applyFilters()">
+                <option value="">All Cases</option>
+                <option *ngFor="let c of caseList" [value]="c.id">{{c.name || c.caseNumber}}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document List/Grid Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex align-items-center mb-3">
+        <div class="flex-grow-1">
+          <h5 class="mb-0 text-muted">
+            Documents 
+            <span class="badge rounded-pill bg-primary-subtle text-primary fs-12 ms-1">{{ filteredDocuments.length }}</span>
+          </h5>
+        </div>
+        <div class="flex-shrink-0">
+          <div class="btn-group" role="group" aria-label="View Mode Toggle">
+            <input type="radio" class="btn-check" name="viewMode" id="gridView" autocomplete="off" [checked]="viewMode === 'grid'" (change)="viewMode = 'grid'">
+            <label class="btn btn-sm btn-soft-primary" for="gridView"><i class="ri-grid-fill fs-15"></i></label>
+
+            <input type="radio" class="btn-check" name="viewMode" id="listView" autocomplete="off" [checked]="viewMode === 'list'" (change)="viewMode = 'list'">
+            <label class="btn btn-sm btn-soft-primary" for="listView"><i class="ri-list-check fs-15"></i></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents Grid View - Enhanced styling -->
+  <div class="row" *ngIf="!loading && filteredDocuments.length > 0 && viewMode === 'grid'">
+    <div class="col-xxl-3 col-xl-4 col-md-6 mb-4" *ngFor="let document of filteredDocuments">
+      <div class="card h-100 shadow-sm document-card border-0">
+        <!-- Card Header -->
+        <div class="card-header bg-soft-light border-0 position-relative py-2">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="avatar-sm">
+                <span class="avatar-title rounded" [ngClass]="getDocTypeClass(document.type)">
+                  <i [class]="getDocTypeIcon(document.type)"></i>
+                </span>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-2 overflow-hidden">
+              <h5 class="card-title mb-0 text-truncate fs-15">{{document.title || 'Untitled Document'}}</h5>
+              <span class="badge rounded-pill me-2 mt-1" 
+                [ngClass]="{
+                  'bg-success-subtle text-success': document.status === 'APPROVED' || document.status === 'FINAL',
+                  'bg-warning-subtle text-warning': document.status === 'PENDING',
+                  'bg-info-subtle text-info': document.status === 'DRAFT' || document.status === 'SUBMITTED',
+                  'bg-danger-subtle text-danger': document.status === 'REJECTED'
+                }">
+                {{document.status}}
+              </span>
+            </div>
+          </div>
+          <!-- Grid View Action Button -->
+          <div class="card-widgets position-absolute top-0 end-0 p-2">
+            <div class="dropdown">
+              <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.35rem 0.75rem; cursor: pointer;">
+                <i class="ri-more-2-fill" style="pointer-events: none;"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="javascript:void(0);" (click)="showVersionHistory(document)">
+                  <i class="ri-history-line fs-16 me-2 text-muted"></i>Version History
+                </a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" (click)="uploadNewVersion(document)">
+                  <i class="ri-upload-2-line fs-16 me-2 text-muted"></i>Upload New Version
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteDocument(document)">
+                  <i class="ri-delete-bin-line fs-16 me-2"></i>Delete
+                </a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <!-- Card Body -->
+        <div class="card-body p-3">
+          <!-- Document description with improved styling -->
+          <div class="document-description mb-1">
+            <div class="description-content p-2 rounded">
+              <div class="d-flex align-items-center">
+                <i class="ri-file-text-line me-2 text-primary fs-16"></i>
+                <p class="text-muted mb-0 fs-13 text-truncate-2" [title]="document.description">
+                  {{ document.description || 'No description provided' }}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Case Info -->
+          <div class="d-flex align-items-center mt-4">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar-xs flex-shrink-0">
+                  <div class="avatar-title bg-primary-subtle rounded-circle text-primary">
+                    <i class="ri-folder-line"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 overflow-hidden">
+                  <p class="mb-0 text-muted fs-13 text-truncate">
+                    {{ getCaseName(document.caseId) || 'No Case Associated' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="flex-shrink-0 ms-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar-xs flex-shrink-0">
+                  <div class="avatar-title bg-info-subtle rounded-circle text-info">
+                    <i class="ri-calendar-line"></i>
+                  </div>
+                </div>
+                <div>
+                  <p class="mb-0 text-muted fs-13">{{ document.uploadedAt | date:'shortDate' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Card Footer with Uploaded By and Actions -->
+        <div class="card-footer d-flex justify-content-between align-items-center py-2 px-3 bg-light border-top-dashed">
+          <div class="text-muted fs-11">
+            <i class="ri-user-3-line me-1"></i> {{ getUserDisplayName(document) }}
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-icon btn-sm btn-soft-primary" (click)="previewDocument(document)" title="Preview">
+              <i class="ri-eye-line"></i>
+            </button>
+            <button type="button" class="btn btn-icon btn-sm btn-soft-success" (click)="downloadDocument(document.id)" title="Download">
+              <i class="ri-download-2-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents List View - Enhanced with better styling -->
+  <div class="row" *ngIf="!loading && filteredDocuments.length > 0 && viewMode === 'list'">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table align-middle table-nowrap mb-0">
+              <thead>
+                <tr class="text-muted bg-soft-light">
+                  <th class="ps-3" style="width: 50px;">Type</th>
+                  <th>Document</th>
+                  <th>Status</th>
+                  <th>Case</th>
+                  <th>Size</th>
+                  <th>Uploaded By</th>
+                  <th>Date</th>
+                  <th class="text-end pe-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let document of filteredDocuments">
+                  <td class="ps-3">
+                    <div class="avatar-sm">
+                      <span class="avatar-title rounded" [ngClass]="getDocTypeClass(document.type)">
+                        <i [class]="getDocTypeIcon(document.type)"></i>
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <h5 class="fs-14 mb-1">
+                        <a href="javascript:void(0);" class="text-dark" (click)="previewDocument(document)">
+                          {{document.title || 'Untitled Document'}}
+                        </a>
+                      </h5>
+                      <p class="text-muted mb-0 fs-13 text-truncate" style="max-width: 250px;">
+                        <span class="text-dark fw-medium">Description:</span> {{document.description || 'No description provided'}}
+                      </p>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill fs-12" 
+                      [ngClass]="{
+                        'bg-success-subtle text-success': document.status === 'APPROVED' || document.status === 'FINAL',
+                        'bg-warning-subtle text-warning': document.status === 'PENDING',
+                        'bg-info-subtle text-info': document.status === 'DRAFT' || document.status === 'SUBMITTED',
+                        'bg-danger-subtle text-danger': document.status === 'REJECTED'
+                      }">
+                      {{document.status}}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fs-13">{{ getCaseName(document.caseId) }}</span>
+                  </td>
+                  <td>
+                    <span class="fs-13">{{ formatFileSize(document.fileSize || 0) }}</span>
+                  </td>
+                  <td>
+                    <span class="fs-11 text-muted">
+                      {{ getUserDisplayName(document) }}
+                    </span>
+                  </td>
+                  <td><span class="fs-13">{{ document.uploadedAt | date:'shortDate' }}</span></td>
+                  <td class="text-end pe-3">
+                    <div class="hstack gap-2 flex-wrap justify-content-end">
+                      <button type="button" class="btn btn-icon btn-sm btn-soft-primary" (click)="previewDocument(document)" title="Preview">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                      <button type="button" class="btn btn-icon btn-sm btn-soft-success" (click)="downloadDocument(document.id)" title="Download">
+                        <i class="ri-download-2-line"></i>
+                      </button>
+                      <!-- List View Action Button -->
+                      <div class="dropdown">
+                        <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.35rem 0.75rem; cursor: pointer;">
+                          <i class="ri-more-2-fill" style="pointer-events: none;"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                          <li><a class="dropdown-item" href="javascript:void(0);" (click)="showVersionHistory(document)">
+                            <i class="ri-history-line fs-16 me-2 text-muted"></i>Version History
+                          </a></li>
+                          <li><a class="dropdown-item" href="javascript:void(0);" (click)="uploadNewVersion(document)">
+                            <i class="ri-upload-2-line fs-16 me-2 text-muted"></i>Upload New Version
+                          </a></li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteDocument(document)">
+                            <i class="ri-delete-bin-line fs-16 me-2"></i>Delete
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Documents - Enhanced empty state -->
+  <div class="row mt-4" *ngIf="!loading && filteredDocuments.length === 0">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="text-center py-5">
+            <div class="avatar-lg mx-auto mb-4">
+              <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-1">
+                <i class="ri-file-search-line"></i>
+              </div>
+            </div>
+            <h5>No Documents Found</h5>
+            <p class="text-muted mb-4">No documents match your search criteria or no documents have been added yet.</p>
+            <button class="btn btn-primary btn-sm" (click)="createDocument()">
+                <i class="ri-add-line align-bottom me-1"></i> Add New Document
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State - Enhanced with spinner -->
+  <div class="row mt-4" *ngIf="loading">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="text-muted">Loading documents...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Preview Modal -->
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true" #documentPreviewModal>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="documentPreviewModalLabel">
+          <i class="ri-file-text-line me-1 text-primary"></i>
+          {{ selectedDocument?.title || 'Document Preview' }}
+          <span class="badge rounded-pill ms-2 bg-info-subtle text-info" *ngIf="selectedDocument?.versionId">Version Preview</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closePreview()"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div *ngIf="previewError" class="alert alert-danger m-3 mb-0" role="alert">
+          <i class="ri-error-warning-line me-2 align-middle"></i>
+          {{ previewError }}
+        </div>
+        <div *ngIf="!previewError && !previewUrl" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 text-muted">Loading document preview...</p>
+        </div>
+        <div *ngIf="previewUrl" class="document-preview">
+          <iframe [src]="previewUrl" width="100%" height="500px" frameborder="0" allowtransparency="true"></iframe>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <div class="d-flex justify-content-between w-100">
+          <div>
+            <button type="button" class="btn btn-soft-primary btn-sm" *ngIf="selectedDocument && !selectedDocument.versionId" (click)="downloadDocument(selectedDocument?.id)">
+              <i class="ri-download-2-line align-bottom me-1"></i> Download
+            </button>
+            <button type="button" class="btn btn-soft-primary btn-sm" *ngIf="selectedDocument && selectedDocument.versionId" (click)="downloadVersion(selectedDocument?.id, selectedDocument?.versionId)">
+              <i class="ri-download-2-line align-bottom me-1"></i> Download Version
+            </button>
+          </div>
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" (click)="closePreview()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Version History Modal -->
+<div class="modal fade" id="versionHistoryModal" tabindex="-1" aria-labelledby="versionHistoryModalLabel" aria-hidden="true" #versionHistoryModal>
+  <div class="modal-dialog modal-dialog-centered version-history-modal modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="versionHistoryModalLabel">
+          <i class="ri-history-line me-1 align-middle text-primary"></i>
+          Version History
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading state -->
+        <div *ngIf="!documentForVersionHistory?.versions" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 text-muted">Loading version history...</p>
+        </div>
+        
+        <!-- Document title -->
+        <div *ngIf="documentForVersionHistory?.versions" class="mb-3 pb-2 border-bottom">
+          <h6 class="text-truncate mb-1">{{ documentForVersionHistory.title || 'Untitled Document' }}</h6>
+          <div class="d-flex align-items-center text-muted">
+            <i class="ri-file-list-line me-1"></i>
+            <span class="fs-12">{{ documentForVersionHistory.type || 'Document' }}</span>
+            <i class="ri-circle-fill fs-8 mx-2" style="font-size: 4px;"></i>
+            <span class="fs-12">Last updated: {{ documentForVersionHistory.uploadedAt | date:'medium' }}</span>
+          </div>
+        </div>
+        
+        <!-- Version history content -->
+        <div *ngIf="documentForVersionHistory?.versions" class="timeline-2">
+          <!-- All versions -->
+          <div *ngIf="documentForVersionHistory.versions?.length > 0">
+            <div class="timeline-item" *ngFor="let version of documentForVersionHistory.versions; let i = index">
+              <div class="version-detail">
+                <div class="version-heading">
+                  <h6>Version {{ documentForVersionHistory.versions.length - i }}</h6>
+                  <span class="version-label ms-2" [ngClass]="{'version-current': i === 0}">
+                    {{ i === 0 ? 'Current' : 'Previous' }}
+                  </span>
+                </div>
+                
+                <div class="document-info mt-2 mb-2">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <div class="document-meta">
+                        <span class="meta-label">File name:</span>
+                        <span class="meta-value">{{ version.fileName || 'Unknown' }}</span>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="document-meta">
+                        <span class="meta-label">Size:</span>
+                        <span class="meta-value">{{ formatFileSize(version.fileSize || 0) }}</span>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="document-meta">
+                        <span class="meta-label">Uploaded by:</span>
+                        <span class="meta-value" *ngIf="version.userInfo?.firstName && version.userInfo?.lastName">
+                          {{ version.userInfo.firstName }} {{ version.userInfo.lastName }}
+                        </span>
+                        <span class="meta-value" *ngIf="version.userInfo?.displayName">
+                          {{ version.userInfo.displayName }}
+                        </span>
+                        <span class="meta-value" *ngIf="(!version.userInfo || (!version.userInfo.firstName && !version.userInfo.lastName && !version.userInfo.displayName))">
+                          {{ getUserDisplayName(version) || 'Unknown' }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="document-meta">
+                        <span class="meta-label">Uploaded on:</span>
+                        <span class="meta-value">{{ version.date | date:'MMM d, yyyy, h:mm a' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Changes info section -->
+                <div class="version-comment" *ngIf="version.changeInfo">
+                  <div class="meta-label mb-1">Changes:</div>
+                  <p class="p-2 bg-light-subtle rounded">{{ version.changeInfo }}</p>
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-between mt-2">
+                  <div>
+                    <button type="button" class="btn btn-sm btn-soft-primary me-2" 
+                            (click)="i === 0 ? previewDocument(documentForVersionHistory) : previewVersionDocument(documentForVersionHistory.id, version.id); versionHistoryModalInstance?.hide()">
+                      <i class="ri-eye-line me-1"></i> Preview
+                    </button>
+                    <button type="button" class="btn btn-sm btn-soft-primary" 
+                            (click)="i === 0 ? downloadDocument(documentForVersionHistory.id) : downloadVersion(documentForVersionHistory.id, version.id)">
+                      <i class="ri-download-2-line me-1"></i> Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Empty state if no history -->
+          <div *ngIf="documentForVersionHistory.versions.length === 0" class="alert alert-info mt-3" role="alert">
+            <i class="ri-information-line me-2 align-middle"></i>
+            No previous versions available for this document.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="uploadNewVersion(documentForVersionHistory); versionHistoryModalInstance?.hide()" *ngIf="documentForVersionHistory">
+          <i class="ri-upload-2-line align-bottom me-1"></i> Upload New Version
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add upload new version modal -->
+<div class="modal fade" id="uploadVersionModal" tabindex="-1" aria-labelledby="uploadVersionModalLabel" aria-hidden="true" #uploadVersionModal>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="uploadVersionModalLabel">
+          Upload New Version
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="documentForNewVersion" class="mb-3">
+          <div class="alert alert-info" role="alert">
+            <div class="d-flex">
+              <div class="flex-shrink-0">
+                <i class="ri-information-line fs-16 align-middle me-2"></i>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mt-0 mb-1">{{ documentForNewVersion.title || 'Document' }}</h6>
+                <p class="mb-0">You are uploading a new version of this document.</p>
+              </div>
+            </div>
+          </div>
+          
+          <form [formGroup]="versionForm">
+            <div class="mb-3">
+              <label for="versionFile" class="form-label">File <span class="text-danger">*</span></label>
+              <input type="file" id="versionFile" class="form-control" (change)="onVersionFileSelected($event)" [disabled]="versionUploading">
+              <div class="form-text text-muted">Select the new version file.</div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="versionComment" class="form-label">Version Notes</label>
+              <textarea id="versionComment" formControlName="comment" class="form-control" rows="3" placeholder="Describe what changed in this version" [disabled]="versionUploading"></textarea>
+            </div>
+            
+            <!-- Progress bar for upload -->
+            <div class="progress mb-3" *ngIf="versionUploading">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" 
+                   [style.width.%]="uploadVersionProgress" [attr.aria-valuenow]="uploadVersionProgress" 
+                   aria-valuemin="0" aria-valuemax="100">
+                   {{uploadVersionProgress}}%
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" [disabled]="versionUploading">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="submitNewVersion()" [disabled]="!versionFile || versionUploading">
+          <i class="ri-upload-2-line align-bottom me-1"></i>
+          <span *ngIf="!versionUploading">Upload Version</span>
+          <span *ngIf="versionUploading">Uploading...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 
+ 
+ 

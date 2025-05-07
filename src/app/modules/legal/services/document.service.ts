@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpEvent, HttpEventType } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Document } from '../interfaces/document.interface';
+import { map } from 'rxjs/operators';
+import { Document, DocumentVersion } from '../interfaces/document.interface';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({
@@ -11,6 +12,13 @@ export class DocumentService {
   private apiUrl = `${environment.apiUrl}/legal/documents`;
 
   constructor(private http: HttpClient) { }
+
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+  }
 
   getDocuments(): Observable<Document[]> {
     return this.http.get<Document[]>(this.apiUrl);
@@ -44,6 +52,62 @@ export class DocumentService {
   }
 
   downloadDocument(id: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/download`, { responseType: 'blob' });
+    return this.http.get(`${this.apiUrl}/${id}/download`, { responseType: 'blob', headers: this.getAuthHeaders() });
+  }
+
+  /**
+   * Get all versions of a document
+   */
+  getDocumentVersions(documentId: string): Observable<DocumentVersion[]> {
+    return this.http.get<DocumentVersion[]>(`${this.apiUrl}/${documentId}/versions`);
+  }
+
+  /**
+   * Download a specific version of a document
+   */
+  downloadVersion(documentId: string, versionId: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${documentId}/versions/${versionId}`, {
+      responseType: 'blob',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Get document by ID with simplified response format
+   */
+  getDocument(id: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Upload a new version of a document with progress tracking
+   */
+  uploadVersion(id: string, file: File, comment?: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (comment) {
+      formData.append('comment', comment);
+    }
+    
+    return this.http.post<any>(
+      `${this.apiUrl}/${id}/versions`, 
+      formData,
+      { 
+        reportProgress: true,
+        observe: 'events'
+      }
+    ).pipe(
+      map(event => {
+        switch (event.type) {
+          case HttpEventType.UploadProgress:
+            const progress = Math.round(100 * event.loaded / (event.total || event.loaded));
+            return { type: 'UploadProgress', loaded: event.loaded, total: event.total, progress };
+          case HttpEventType.Response:
+            return event.body;
+          default:
+            return event;
+        }
+      })
+    );
   }
 } 

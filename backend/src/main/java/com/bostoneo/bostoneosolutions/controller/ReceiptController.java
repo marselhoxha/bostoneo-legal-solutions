@@ -33,3 +33,6 @@ public class ReceiptController {
         return ResponseEntity.ok(receiptService.deleteReceipt(id));
     }
 } 
+ 
+ 
+ 

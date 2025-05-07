@@ -77,8 +77,8 @@
                   </span>
                   <textarea class="form-control border-start-0" id="description" formControlName="description" rows="3" 
                     placeholder="Enter expense description"></textarea>
-                </div>
-              </div>
+            </div>
+            </div>
 
               <!-- Vendor -->
               <div class="col-md-6">
@@ -88,10 +88,10 @@
                     <i class="bi bi-shop"></i>
                   </span>
                   <select class="form-select border-start-0" id="vendorId" formControlName="vendorId"
-                    [class.is-invalid]="expenseForm.get('vendorId')?.invalid && expenseForm.get('vendorId')?.touched">
+                  [class.is-invalid]="expenseForm.get('vendorId')?.invalid && expenseForm.get('vendorId')?.touched">
                     <option [ngValue]="''">Select a vendor</option>
                     <option *ngFor="let vendor of vendors" [ngValue]="vendor.id.toString()">{{ vendor.name }}</option>
-                  </select>
+                </select>
                 </div>
                 <div class="invalid-feedback">Vendor is required</div>
               </div>
@@ -104,13 +104,13 @@
                     <i class="bi bi-person"></i>
                   </span>
                   <select class="form-select border-start-0" id="customerId" formControlName="customerId"
-                    [class.is-invalid]="expenseForm.get('customerId')?.invalid && expenseForm.get('customerId')?.touched">
+                  [class.is-invalid]="expenseForm.get('customerId')?.invalid && expenseForm.get('customerId')?.touched">
                     <option [ngValue]="''">Select a customer</option>
                     <option *ngFor="let customer of customers" [ngValue]="customer.id.toString()">{{ customer.name }}</option>
-                  </select>
+                </select>
                 </div>
                 <div class="invalid-feedback">Customer is required</div>
-              </div>
+            </div>
 
               <!-- Category -->
               <div class="col-md-6">
@@ -120,10 +120,10 @@
                     <i class="bi bi-tag"></i>
                   </span>
                   <select class="form-select border-start-0" id="categoryId" formControlName="categoryId"
-                    [class.is-invalid]="expenseForm.get('categoryId')?.invalid && expenseForm.get('categoryId')?.touched">
+                  [class.is-invalid]="expenseForm.get('categoryId')?.invalid && expenseForm.get('categoryId')?.touched">
                     <option [ngValue]="''">Select a category</option>
                     <option *ngFor="let category of categories" [ngValue]="category.id.toString()">{{ category.name }}</option>
-                  </select>
+                </select>
                 </div>
                 <div class="invalid-feedback">Category is required</div>
               </div>
@@ -159,7 +159,7 @@
                   </select>
                 </div>
                 <div *ngIf="invoices.length === 0" class="text-muted small mt-1">No invoices available</div>
-              </div>
+            </div>
 
               <!-- Legal Case -->
               <div class="col-md-6">
@@ -173,7 +173,7 @@
                     <option *ngFor="let legalCase of legalCases" [ngValue]="legalCase.id.toString()">
                       {{ legalCase.caseNumber || 'Case #' + legalCase.id }} 
                     </option>
-                  </select>
+                </select>
                 </div>
                 <div *ngIf="legalCases.length === 0" class="text-muted small mt-1">No legal cases available</div>
               </div>

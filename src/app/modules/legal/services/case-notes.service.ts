@@ -1,123 +1,94 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { Note } from '../interfaces/case.interface';
+import { Observable, map } from 'rxjs';
+import { environment } from 'src/environments/environment';
+import { CaseNote, CreateCaseNoteRequest, UpdateCaseNoteRequest } from '../models/case-note.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CaseNotesService {
-  // TODO: Replace with actual API endpoint
-  private apiUrl = '/api/cases';
-  
-  // Dummy user for demonstration
-  private currentUser = {
-    id: '1',
-    name: 'John Doe',
-    email: 'john.doe@example.com'
-  };
+  private apiUrl = `${environment.apiUrl}/api/legal`;
 
-  // Dummy notes for demonstration
-  private dummyNotes: Note[] = [
-    {
-      id: '1',
-      content: 'Initial client consultation completed. Client provided all necessary documentation.',
-      createdAt: new Date('2024-04-01T10:30:00'),
-      updatedAt: new Date('2024-04-01T10:30:00'),
-      createdBy: {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      },
-      updatedBy: {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      }
-    },
-    {
-      id: '2',
-      content: 'Filed initial motion with the court. Awaiting response from opposing counsel.',
-      createdAt: new Date('2024-04-05T14:15:00'),
-      updatedAt: new Date('2024-04-05T14:15:00'),
-      createdBy: {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      },
-      updatedBy: {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      }
-    },
-    {
-      id: '3',
-      content: 'Received response from opposing counsel. They are requesting additional documentation.',
-      createdAt: new Date('2024-04-10T09:45:00'),
-      updatedAt: new Date('2024-04-10T11:20:00'),
-      createdBy: {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      },
-      updatedBy: {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com'
-      }
-    }
-  ];
+  constructor(private http: HttpClient) { }
 
-  constructor(private http: HttpClient) {}
-
-  getNotes(caseId: string): Observable<Note[]> {
-    // TODO: Replace with actual API call
-    // For now, return dummy data
-    return of(this.dummyNotes);
+  /**
+   * Get all notes for a specific case
+   * @param caseId The ID of the legal case
+   * @returns An observable of CaseNote array
+   */
+  getNotesByCaseId(caseId: string | number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/notes`)
+      .pipe(
+        map(response => {
+          console.log('Raw notes API response:', response);
+          return response;
+        })
+      );
   }
 
-  addNote(caseId: string, content: string): Observable<Note> {
-    const newNote: Note = {
-      id: Date.now().toString(),
-      content,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: this.currentUser,
-      updatedBy: this.currentUser
-    };
-    
-    // Add to dummy data
-    this.dummyNotes = [newNote, ...this.dummyNotes];
-    
-    // TODO: Replace with actual API call
-    return of(newNote);
+  /**
+   * Get a specific note by ID
+   * @param caseId The ID of the legal case
+   * @param noteId The ID of the note
+   * @returns An observable of CaseNote
+   */
+  getNoteById(caseId: string | number, noteId: string | number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/notes/${noteId}`)
+      .pipe(
+        map(response => {
+          if (response && response.data && response.data.note) {
+            return response.data.note;
+          }
+          return response;
+        })
+      );
   }
 
-  updateNote(caseId: string, noteId: string, content: string): Observable<Note> {
-    const updatedNote: Note = {
-      id: noteId,
-      content,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: this.currentUser,
-      updatedBy: this.currentUser
-    };
-    
-    // Update dummy data
-    this.dummyNotes = this.dummyNotes.map(note => 
-      note.id === noteId ? updatedNote : note
-    );
-    
-    // TODO: Replace with actual API call
-    return of(updatedNote);
+  /**
+   * Create a new note for a case
+   * @param data The note data to create
+   * @returns An observable of the created CaseNote
+   */
+  createNote(data: CreateCaseNoteRequest): Observable<any> {
+    console.log('Creating note with data:', data);
+    return this.http.post<any>(`${this.apiUrl}/cases/${data.caseId}/notes`, data)
+      .pipe(
+        map(response => {
+          if (response && response.data && response.data.note) {
+            return response.data.note;
+          }
+          return response;
+        })
+      );
   }
 
-  deleteNote(caseId: string, noteId: string): Observable<void> {
-    // Remove from dummy data
-    this.dummyNotes = this.dummyNotes.filter(note => note.id !== noteId);
-    
-    // TODO: Replace with actual API call
-    return of(void 0);
+  /**
+   * Update an existing note
+   * @param caseId The ID of the legal case
+   * @param noteId The ID of the note to update
+   * @param data The note data to update
+   * @returns An observable of the updated CaseNote
+   */
+  updateNote(caseId: string | number, noteId: string | number, data: UpdateCaseNoteRequest): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/cases/${caseId}/notes/${noteId}`, data)
+      .pipe(
+        map(response => {
+          if (response && response.data && response.data.note) {
+            return response.data.note;
+          }
+          return response;
+        })
+      );
+  }
+
+  /**
+   * Delete a note
+   * @param caseId The ID of the legal case
+   * @param noteId The ID of the note to delete
+   * @returns An observable of the operation result
+   */
+  deleteNote(caseId: string | number, noteId: string | number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/cases/${caseId}/notes/${noteId}`);
   }
 } 

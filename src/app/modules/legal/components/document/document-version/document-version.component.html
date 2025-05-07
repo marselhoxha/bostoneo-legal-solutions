@@ -1,0 +1,101 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Page title -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 fw-semibold text-primary">Upload New Version</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Legal</a></li>
+            <li class="breadcrumb-item"><a [routerLink]="['/legal/documents']" class="text-muted">Documents</a></li>
+            <li class="breadcrumb-item active text-primary">Upload Version</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Form Card -->
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-soft-light py-3">
+          <h5 class="card-title mb-0 text-primary">
+            <i class="ri-upload-2-line align-middle me-1"></i> Upload New Version
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Document Info -->
+          <div class="alert alert-info" *ngIf="document">
+            <div class="d-flex align-items-center">
+              <i class="ri-information-line me-3 fs-3"></i>
+              <div>
+                <h5 class="mb-1">{{document.title || 'Untitled Document'}}</h5>
+                <p class="mb-0 text-muted">You are uploading a new version for this document.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Form -->
+          <form [formGroup]="uploadForm" (ngSubmit)="uploadNewVersion()">
+            <!-- File Upload -->
+            <div class="mb-4">
+              <label for="fileUpload" class="form-label">New File <span class="text-danger">*</span></label>
+              <input 
+                type="file" 
+                class="form-control" 
+                id="fileUpload" 
+                (change)="onFileSelected($event)" 
+                [disabled]="uploading"
+                required>
+              <div class="form-text text-muted">Select the file for the new version.</div>
+            </div>
+
+            <!-- Version Comment -->
+            <div class="mb-4">
+              <label for="comment" class="form-label">Version Notes</label>
+              <textarea 
+                class="form-control" 
+                id="comment" 
+                rows="3" 
+                placeholder="Describe what changed in this version..."
+                formControlName="comment"
+                [disabled]="uploading"></textarea>
+              <div class="form-text text-muted">Optional. Add notes about what changed in this version.</div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress mb-4" *ngIf="uploading">
+              <div 
+                class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                role="progressbar" 
+                [style.width.%]="uploadProgress" 
+                [attr.aria-valuenow]="uploadProgress" 
+                aria-valuemin="0" 
+                aria-valuemax="100">{{uploadProgress}}%</div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="d-flex gap-2 justify-content-end">
+              <button 
+                type="button" 
+                class="btn btn-light" 
+                [disabled]="uploading"
+                (click)="cancelUpload()">
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                class="btn btn-primary" 
+                [disabled]="!selectedFile || uploading || uploadForm.invalid">
+                <i class="ri-upload-2-line align-bottom me-1"></i>
+                <span *ngIf="!uploading">Upload Version</span>
+                <span *ngIf="uploading">Uploading...</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
