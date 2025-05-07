@@ -1,17 +1,43 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectorRef, Inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CaseDocument, DocumentType, DocumentCategory } from '../../../interfaces/case.interface';
+import { CaseDocument } from '../../../interfaces/case.interface';
+import { DocumentType, DocumentCategory } from '../../../interfaces/document.interface';
 import { CaseDocumentsService } from '../../../services/case-documents.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ToastrService } from 'ngx-toastr';
 import { User } from 'src/app/interface/user';
+import Swal from 'sweetalert2';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { DOCUMENT } from '@angular/common';
+import { finalize } from 'rxjs/operators';
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'safe',
+  standalone: true
+})
+export class SafePipe implements PipeTransform {
+  constructor(private sanitizer: DomSanitizer) {}
+  
+  transform(url: string | null, type: string = 'resourceUrl'): SafeResourceUrl | null {
+    if (!url) return null;
+    
+    switch (type) {
+      case 'resourceUrl':
+        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+      default:
+        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    }
+  }
+}
 
 @Component({
   selector: 'app-case-documents',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SharedModule, SafePipe],
   template: `
     <div class="card">
       <div class="card-header border-bottom-dashed">
@@ -75,7 +101,7 @@ import { User } from 'src/app/interface/user';
                 <div class="mb-3">
                   <label class="form-label">Document Type</label>
                   <select class="form-select" [(ngModel)]="newDocument.type">
-                    <option value="">Select document type</option>
+                    <option [ngValue]="null" disabled hidden>Select document type</option>
                     @for(type of documentTypes; track type) {
                       <option [value]="type">{{type}}</option>
                     }
@@ -83,16 +109,18 @@ import { User } from 'src/app/interface/user';
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Category</label>
-                  <select class="form-select" [(ngModel)]="newDocument.category">
-                    <option value="">Select category</option>
-                    @for(category of categories; track category) {
-                      <option [value]="category">{{category}}</option>
-                    }
-                  </select>
-                </div>
-              </div>
+            <div class="mb-3">
+              <label class="form-label">Category</label>
+              <select class="form-select" [(ngModel)]="newDocument.category">
+                <option [ngValue]="null" disabled hidden>Select category</option>
+                <option *ngFor="let category of categories; trackBy: trackByCategory"
+                        [value]="category">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
+          </div>
+
             </div>
             <div class="mb-3">
               <label class="form-label">Description</label>
@@ -122,13 +150,13 @@ import { User } from 'src/app/interface/user';
             </div>
             <div class="d-flex justify-content-end gap-2">
               <button 
-                class="btn btn-soft-light btn-sm" 
+                class="btn btn-outline-secondary btn-sm" 
                 (click)="toggleUploadForm()"
               >
                 Cancel
               </button>
               <button 
-                class="btn btn-soft-primary btn-sm" 
+                class="btn btn-outline-primary btn-sm" 
                 (click)="uploadDocument()"
                 [disabled]="!isFormValid()"
               >
@@ -173,40 +201,28 @@ import { User } from 'src/app/interface/user';
                   <td>{{document.type}}</td>
                   <td>{{document.category}}</td>
                   <td>v{{document.currentVersion}}</td>
-                  <td>{{document.uploadedBy.firstName}} {{document.uploadedBy.lastName}}</td>
+                  <td>
+                    @if(document.uploadedBy) {
+                      {{document.uploadedBy.firstName}} {{document.uploadedBy.lastName}}
+                    } @else {
+                      <span class="text-muted">Unknown</span>
+                    }
+                  </td>
                   <td>{{document.uploadedAt | date:'mediumDate'}}</td>
                   <td class="text-end">
-                    <div class="dropdown">
-                      <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Actions
+                    <div class="d-flex justify-content-end gap-2">
+                      <button class="btn btn-icon btn-sm btn-soft-primary" 
+                              type="button" 
+                              (click)="openPreviewModal(document)" 
+                              title="Preview">
+                        <i class="ri-eye-line"></i>
                       </button>
-                      <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                          <a class="dropdown-item" (click)="previewDocument(document)">
-                            <i class="ri-eye-line align-bottom me-2"></i> Preview
-                          </a>
-                        </li>
-                        <li>
-                          <a class="dropdown-item" (click)="downloadDocument(document.id)">
-                            <i class="ri-download-line align-bottom me-2"></i> Download
-                          </a>
-                        </li>
-                        <li>
-                          <a class="dropdown-item" (click)="showVersionHistory(document)">
-                            <i class="ri-history-line align-bottom me-2"></i> Version History
-                          </a>
-                        </li>
-                        <li>
-                          <a class="dropdown-item" (click)="uploadNewVersion(document.id)">
-                            <i class="ri-upload-2-line align-bottom me-2"></i> Upload New Version
-                          </a>
-                        </li>
-                        <li>
-                          <a class="dropdown-item text-danger" (click)="deleteDocument(document)">
-                            <i class="ri-delete-bin-line align-bottom me-2"></i> Delete
-                          </a>
-                        </li>
-                      </ul>
+                      <button class="btn btn-icon btn-sm btn-soft-danger" 
+                              type="button" 
+                              (click)="deleteDocument(document)" 
+                              title="Delete">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -218,22 +234,49 @@ import { User } from 'src/app/interface/user';
     </div>
 
     <!-- Document Preview Modal -->
-    @if(selectedDocument) {
-      <div class="modal fade show" style="display: block;" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">{{selectedDocument.title}}</h5>
-              <button type="button" class="btn-close" (click)="closePreview()"></button>
+    <div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title" id="documentPreviewModalLabel">{{ selectedDocument?.title }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closePreview()"></button>
+          </div>
+          <div class="modal-body p-0 position-relative">
+            <!-- Loading spinner -->
+            <div *ngIf="isPreviewLoading" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="z-index: 2;">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading preview...</span>
+              </div>
             </div>
-            <div class="modal-body">
-              <iframe [src]="selectedDocument.fileUrl | safe:'resourceUrl'" width="100%" height="500px"></iframe>
+            
+            <!-- Document preview container -->
+            <div *ngIf="previewUrl && !previewError" class="document-preview-container border rounded" style="height: 70vh; overflow: auto;">
+              <iframe [src]="previewUrl" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
+            
+            <!-- Error state -->
+            <div *ngIf="previewError && !isPreviewLoading" class="text-center py-5">
+              <div class="avatar-lg mx-auto mb-4">
+                <div class="avatar-title bg-soft-warning text-warning rounded-circle fs-1">
+                  <i class="ri-error-warning-line"></i>
+                </div>
+              </div>
+              <h5>Preview Unavailable</h5>
+              <p class="text-muted">{{ previewError }}</p>
+              <button type="button" class="btn btn-primary btn-sm mt-2" (click)="downloadDocument(selectedDocument?.id)">
+                <i class="ri-download-line align-bottom me-1"></i> Download Document
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" (click)="closePreview()">Close</button>
+            <button type="button" class="btn btn-primary" (click)="downloadDocument(selectedDocument?.id)" [disabled]="!selectedDocument">
+              <i class="ri-download-line align-bottom me-1"></i> Download
+            </button>
           </div>
         </div>
       </div>
-      <div class="modal-backdrop fade show"></div>
-    }
+    </div>
 
     <!-- Version History Modal -->
     @if(documentForVersionHistory) {
@@ -261,7 +304,13 @@ import { User } from 'src/app/interface/user';
                       <tr>
                         <td>v{{version.versionNumber}}</td>
                         <td>{{version.changes}}</td>
-                        <td>{{version.uploadedBy.firstName}} {{version.uploadedBy.lastName}}</td>
+                        <td>
+                          @if(version.uploadedBy) {
+                            {{version.uploadedBy.firstName}} {{version.uploadedBy.lastName}}
+                          } @else {
+                            <span class="text-muted">Unknown</span>
+                          }
+                        </td>
                         <td>{{version.uploadedAt | date:'mediumDate'}}</td>
                         <td class="text-end">
                           <button class="btn btn-soft-primary btn-sm" (click)="downloadVersion(documentForVersionHistory.id, version.id)">
@@ -325,14 +374,93 @@ import { User } from 'src/app/interface/user';
     .bg-soft-primary {
       background-color: rgba(64, 81, 137, 0.18) !important;
     }
+    .avatar-lg {
+      height: 5rem;
+      width: 5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    
+    .avatar-title {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Fix for dropdown menu z-index */
+    .dropdown-menu {
+      z-index: 9999 !important; /* Much higher z-index to ensure it appears over everything */
+    }
+    
+    /* Modal animation */
+    .modal.fade .modal-dialog {
+      transition: transform .3s ease-out;
+      transform: translate(0, -25%);
+    }
+    
+    .modal.show .modal-dialog {
+      transform: translate(0, 0);
+    }
+    
+    .modal-backdrop.fade {
+      opacity: 0;
+      transition: opacity .15s linear;
+    }
+    
+    .modal-backdrop.show {
+      opacity: 0.5;
+    }
+
+    /* Action button styling */
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-soft-primary {
+      background-color: rgba(64, 81, 137, 0.1);
+      color: #405189;
+      border: none;
+    }
+
+    .btn-soft-danger {
+      background-color: rgba(239, 71, 111, 0.1);
+      color: #ef476f;
+      border: none;
+    }
+
+    .btn-soft-primary:hover {
+      background-color: #405189;
+      color: #fff;
+    }
+
+    .btn-soft-danger:hover {
+      background-color: #ef476f;
+      color: #fff;
+    }
   `]
 })
-export class CaseDocumentsComponent implements OnInit {
-  @Input() caseId!: string;
+export class CaseDocumentsComponent implements OnInit, OnDestroy {
+  @Input() caseId!: string | number;
 
   documents: CaseDocument[] = [];
   filteredDocuments: CaseDocument[] = [];
   isUploading: boolean = false;
+  isLoading: boolean = false;
   selectedFile: File | null = null;
   selectedDocument: CaseDocument | null = null;
   documentForVersionHistory: CaseDocument | null = null;
@@ -342,233 +470,389 @@ export class CaseDocumentsComponent implements OnInit {
   searchTerm: string = '';
   tagsInput: string = '';
   versionNotes: string = '';
+  selectedVersionFile: File | null = null;
+  versionFileName: string = '';
+  isUploadingVersion: boolean = false;
+  activeVersionDocument: any = null;
+  currentObjectUrl: string | null = null;
+  previewUrl: SafeResourceUrl | null = null;
+  previewError: string | null = null;
+  isPreviewLoading: boolean = false;
 
-  documentTypes = ['PLEADING', 'MOTION', 'ORDER', 'EVIDENCE', 'CONTRACT', 'OTHER'] as const;
-  categories = ['LEGAL', 'FINANCIAL', 'CORRESPONDENCE', 'REPORT', 'OTHER'] as const;
+  documentTypes = Object.values(DocumentType);
+  categories = Object.values(DocumentCategory);
 
   newDocument: Partial<CaseDocument> = {
     title: '',
-    type: this.documentTypes[0],
-    category: this.categories[0],
+    type: null as unknown as DocumentType,
+    category: null as unknown as DocumentCategory,
     description: '',
-    tags: [],
-    currentVersion: 1,
-    versions: []
+    tags: []
   };
 
   uploadForm: FormGroup;
-  previewUrl: string | null = null;
 
   constructor(
     private documentsService: CaseDocumentsService,
     private fb: FormBuilder,
     private modalService: NgbModal,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef,
+    @Inject(DOCUMENT) private document: Document
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
-      type: [this.documentTypes[0], Validators.required],
-      category: [this.categories[0], Validators.required],
+      type: [null, Validators.required],
+      category: [null, Validators.required],
       description: [''],
       tags: ['']
     });
   }
 
   ngOnInit(): void {
-    this.loadDocuments();
+    if (this.caseId) {
+      const caseIdStr = String(this.caseId);
+      console.log('Loading documents for case ID:', caseIdStr);
+      this.loadDocuments();
+    } else {
+      console.error('No case ID provided. Documents cannot be loaded.');
+      this.toastr.error('Unable to load documents - missing case ID');
+      this.documents = [];
+      this.filteredDocuments = [];
+    }
+    
+    // Initialize Bootstrap dropdowns
+    this.initDropdowns();
+  }
+  
+  ngOnDestroy(): void {
+    // Clean up any resources
+    this.revokeCurrentObjectUrl();
+    this.document.body.classList.remove('modal-open');
+  }
+  
+  // Initialize Bootstrap dropdowns
+  private initDropdowns(): void {
+    try {
+      // Check if we're in a browser environment with the proper Bootstrap JS
+      if (typeof window !== 'undefined' && (window as any).bootstrap) {
+        setTimeout(() => {
+          const dropdownElements = this.document.querySelectorAll('.dropdown-toggle');
+          dropdownElements.forEach(dropdownToggle => {
+            new (window as any).bootstrap.Dropdown(dropdownToggle);
+          });
+        }, 500);
+      }
+      
+      // Add global event listener for dropdown show events to fix z-index issues
+      document.addEventListener('shown.bs.dropdown', (event) => {
+        // Force higher z-index when dropdown is shown
+        const dropdown = (event.target as HTMLElement).querySelector('.dropdown-menu');
+        if (dropdown) {
+          (dropdown as HTMLElement).style.zIndex = '9999';
+        }
+      });
+      
+      // Add style directly to head to ensure it's applied globally
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .dropdown-menu.show {
+          z-index: 9999 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    } catch (error) {
+      console.error('Error initializing Bootstrap dropdowns:', error);
+    }
   }
 
   loadDocuments(): void {
-    this.documentsService.getDocuments(this.caseId).subscribe({
-      next: (documents) => {
-        this.documents = documents.length > 0 ? documents : this.getDummyDocuments();
-        this.filteredDocuments = [...this.documents];
-        this.filterDocuments();
+    this.isLoading = true;
+    const caseIdStr = String(this.caseId);
+    
+    console.log('Loading documents for case ID:', caseIdStr);
+    
+    // Show loading status to the user
+    this.toastr.info('Loading documents...', '', {
+      timeOut: 2000,
+      positionClass: 'toast-top-right',
+      closeButton: true
+    });
+    
+    this.documentsService.getDocuments(caseIdStr).subscribe({
+      next: (response) => {
+        console.log('Raw documents response:', response);
+        
+        try {
+          // Enhanced response processing
+          let docsArray: any[] = [];
+          
+          if (Array.isArray(response)) {
+            console.log('Response is an array with', response.length, 'documents');
+            docsArray = response;
+          } else if (response && response.data && Array.isArray(response.data)) {
+            console.log('Response has data array with', response.data.length, 'documents');
+            docsArray = response.data;
+          } else if (response && response.data && response.data.documents && Array.isArray(response.data.documents)) {
+            console.log('Response has nested documents array with', response.data.documents.length, 'documents');
+            docsArray = response.data.documents;
+          } else {
+            console.error('Unexpected response format:', response);
+            this.toastr.warning('Unexpected document format received. Contact support if documents are missing.');
+            docsArray = [];
+          }
+          
+          if (docsArray.length === 0) {
+            console.log('No documents found for case ID:', caseIdStr);
+            this.toastr.info('No documents found for this case.');
+          } else {
+            console.log(`Found ${docsArray.length} documents for case ID:`, caseIdStr);
+          }
+          
+          console.log('Extracted documents array:', docsArray);
+          
+          // Process and normalize each document
+          this.documents = docsArray.map(doc => {
+            if (!doc || typeof doc !== 'object') {
+              console.warn('Invalid document object:', doc);
+              return null;
+            }
+            
+            console.log('Processing document:', doc);
+            
+            // Normalize category from string to enum if needed
+            let normalizedCategory = doc.category || 'OTHER';
+            
+            // Create a normalized document object with default values
+            const normalizedDoc: any = {
+              id: doc.id,
+              title: doc.title || 'Untitled Document',
+              type: doc.type || DocumentType.OTHER,
+              category: normalizedCategory,
+              status: doc.status || 'FINAL',
+              description: doc.description || '',
+              fileName: doc.fileName || '',
+              fileUrl: doc.fileUrl || doc.url || '',
+              uploadedAt: doc.uploadedAt ? new Date(doc.uploadedAt) : new Date(),
+              uploadedBy: doc.uploadedBy || null,
+              tags: Array.isArray(doc.tags) ? doc.tags : [],
+              currentVersion: doc.currentVersion || 1,
+              versions: Array.isArray(doc.versions) ? doc.versions : []
+            };
+            
+            return normalizedDoc;
+          }).filter(doc => doc !== null);
+          
+          console.log('Normalized documents:', this.documents);
+          this.filterDocuments();
+        } catch (err) {
+          console.error('Error processing documents response:', err);
+          this.toastr.error('Error processing documents data. Please try again or contact support.');
+          this.documents = [];
+        }
+        
+        this.isLoading = false;
+        this.cdr.detectChanges();
+        
+        // Re-initialize dropdowns after data is loaded
+        this.initDropdowns();
       },
       error: (error) => {
         console.error('Error loading documents:', error);
-        this.documents = this.getDummyDocuments();
-        this.filteredDocuments = [...this.documents];
-        this.filterDocuments();
+        let errorMessage = 'Failed to load documents';
+        
+        if (error.status === 401) {
+          errorMessage = 'Authentication error. Please log in again.';
+        } else if (error.status === 403) {
+          errorMessage = 'You do not have permission to access these documents.';
+        } else if (error.status === 404) {
+          errorMessage = 'Case or documents not found.';
+        } else if (error.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        this.toastr.error(errorMessage);
+        this.documents = [];
+        this.filteredDocuments = [];
+        this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
-  }
-
-  private getDummyDocuments(): CaseDocument[] {
-    const dummyUser: User = {
-      id: 1,
-      firstName: 'John',
-      lastName: 'Smith',
-      email: 'john.smith@example.com',
-      enabled: true,
-      notLocked: true,
-      usingMFA: false,
-      roleName: 'ROLE_ADMIN',
-      permissions: 'READ,WRITE'
-    };
-
-    return [
-      {
-        id: '1',
-        title: 'Initial Complaint',
-        type: 'PLEADING',
-        category: 'LEGAL',
-        fileName: 'initial_complaint.pdf',
-        fileUrl: 'https://example.com/documents/initial_complaint.pdf',
-        description: 'Initial complaint filed with the court',
-        tags: ['complaint', 'filing'],
-        uploadedAt: new Date('2024-03-01'),
-        uploadedBy: dummyUser,
-        currentVersion: 2,
-        versions: [
-          {
-            id: '1-1',
-            versionNumber: 1,
-            fileName: 'initial_complaint_v1.pdf',
-            fileUrl: 'https://example.com/documents/initial_complaint_v1.pdf',
-            uploadedAt: new Date('2024-03-01'),
-            uploadedBy: dummyUser,
-            changes: 'Initial version'
-          },
-          {
-            id: '1-2',
-            versionNumber: 2,
-            fileName: 'initial_complaint_v2.pdf',
-            fileUrl: 'https://example.com/documents/initial_complaint_v2.pdf',
-            uploadedAt: new Date('2024-03-05'),
-            uploadedBy: dummyUser,
-            changes: 'Updated with client feedback'
-          }
-        ]
-      },
-      {
-        id: '2',
-        title: 'Evidence Package A',
-        type: 'EVIDENCE',
-        category: 'LEGAL',
-        fileName: 'evidence_package_a.pdf',
-        fileUrl: 'https://example.com/documents/evidence_package_a.pdf',
-        description: 'Collection of evidence supporting the case',
-        tags: ['evidence', 'exhibits'],
-        uploadedAt: new Date('2024-03-10'),
-        uploadedBy: dummyUser,
-        currentVersion: 1,
-        versions: [
-          {
-            id: '2-1',
-            versionNumber: 1,
-            fileName: 'evidence_package_a_v1.pdf',
-            fileUrl: 'https://example.com/documents/evidence_package_a_v1.pdf',
-            uploadedAt: new Date('2024-03-10'),
-            uploadedBy: dummyUser,
-            changes: 'Initial compilation of evidence'
-          }
-        ]
-      },
-      {
-        id: '3',
-        title: 'Motion for Summary Judgment',
-        type: 'MOTION',
-        category: 'LEGAL',
-        fileName: 'summary_judgment_motion.pdf',
-        fileUrl: 'https://example.com/documents/summary_judgment_motion.pdf',
-        description: 'Motion requesting summary judgment based on evidence',
-        tags: ['motion', 'summary judgment'],
-        uploadedAt: new Date('2024-03-15'),
-        uploadedBy: dummyUser,
-        currentVersion: 3,
-        versions: [
-          {
-            id: '3-1',
-            versionNumber: 1,
-            fileName: 'summary_judgment_motion_v1.pdf',
-            fileUrl: 'https://example.com/documents/summary_judgment_motion_v1.pdf',
-            uploadedAt: new Date('2024-03-15'),
-            uploadedBy: dummyUser,
-            changes: 'Initial draft'
-          },
-          {
-            id: '3-2',
-            versionNumber: 2,
-            fileName: 'summary_judgment_motion_v2.pdf',
-            fileUrl: 'https://example.com/documents/summary_judgment_motion_v2.pdf',
-            uploadedAt: new Date('2024-03-17'),
-            uploadedBy: dummyUser,
-            changes: 'Updated legal arguments'
-          },
-          {
-            id: '3-3',
-            versionNumber: 3,
-            fileName: 'summary_judgment_motion_v3.pdf',
-            fileUrl: 'https://example.com/documents/summary_judgment_motion_v3.pdf',
-            uploadedAt: new Date('2024-03-20'),
-            uploadedBy: dummyUser,
-            changes: 'Final version with citations'
-          }
-        ]
-      },
-      {
-        id: '4',
-        title: 'Client Contract',
-        type: 'CONTRACT',
-        category: 'FINANCIAL',
-        fileName: 'client_contract.pdf',
-        fileUrl: 'https://example.com/documents/client_contract.pdf',
-        description: 'Engagement agreement with client',
-        tags: ['contract', 'agreement'],
-        uploadedAt: new Date('2024-02-28'),
-        uploadedBy: dummyUser,
-        currentVersion: 1,
-        versions: [
-          {
-            id: '4-1',
-            versionNumber: 1,
-            fileName: 'client_contract_v1.pdf',
-            fileUrl: 'https://example.com/documents/client_contract_v1.pdf',
-            uploadedAt: new Date('2024-02-28'),
-            uploadedBy: dummyUser,
-            changes: 'Executed contract'
-          }
-        ]
-      },
-      {
-        id: '5',
-        title: 'Case Status Report',
-        type: 'OTHER',
-        category: 'REPORT',
-        fileName: 'status_report_march.pdf',
-        fileUrl: 'https://example.com/documents/status_report_march.pdf',
-        description: 'Monthly status report for March 2024',
-        tags: ['report', 'status'],
-        uploadedAt: new Date('2024-03-31'),
-        uploadedBy: dummyUser,
-        currentVersion: 1,
-        versions: [
-          {
-            id: '5-1',
-            versionNumber: 1,
-            fileName: 'status_report_march_v1.pdf',
-            fileUrl: 'https://example.com/documents/status_report_march_v1.pdf',
-            uploadedAt: new Date('2024-03-31'),
-            uploadedBy: dummyUser,
-            changes: 'March 2024 report'
-          }
-        ]
-      }
-    ];
   }
 
   filterDocuments(): void {
-    this.filteredDocuments = this.documents.filter(doc => {
-      const matchesCategory = !this.selectedCategory || doc.category === this.selectedCategory;
-      const matchesType = !this.selectedType || doc.type === this.selectedType;
-      const matchesSearch = !this.searchTerm || 
-        doc.title.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        doc.description?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        doc.tags.some(tag => tag.toLowerCase().includes(this.searchTerm.toLowerCase()));
+    try {
+      if (!Array.isArray(this.documents)) {
+        console.error('documents is not an array:', this.documents);
+        this.filteredDocuments = [];
+        return;
+      }
       
-      return matchesCategory && matchesType && matchesSearch;
-    });
+      this.filteredDocuments = this.documents.filter(doc => {
+        if (!doc) {
+          console.warn('Skipping null or undefined document during filtering');
+          return false;
+        }
+        
+        try {
+          // Convert values to string for comparison when needed
+          const docCategory = typeof doc.category === 'string' ? doc.category : String(doc.category || '');
+          const docType = typeof doc.type === 'string' ? doc.type : String(doc.type || '');
+          const selectedCategoryStr = this.selectedCategory;
+          const selectedTypeStr = this.selectedType;
+          
+          // Check if matches category filter
+          const matchesCategory = !selectedCategoryStr || docCategory === selectedCategoryStr;
+          
+          // Check if matches type filter
+          const matchesType = !selectedTypeStr || docType === selectedTypeStr;
+          
+          // Check if matches search term
+          const matchesSearch = !this.searchTerm || 
+            (doc.title || '').toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            (doc.description || '').toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            (Array.isArray(doc.tags) && doc.tags.some(tag => 
+              tag && tag.toLowerCase().includes(this.searchTerm.toLowerCase())
+            ));
+          
+          return matchesCategory && matchesType && matchesSearch;
+        } catch (err) {
+          console.error('Error filtering document:', doc, err);
+          return false;
+        }
+      });
+      
+      console.log(`Filtered to ${this.filteredDocuments.length} documents`);
+      
+      // If no documents match the filters, show a message
+      if (this.filteredDocuments.length === 0 && this.documents.length > 0) {
+        this.toastr.info('No documents match the current filters.');
+      }
+    } catch (err) {
+      console.error('Error in filterDocuments:', err);
+      this.toastr.error('Error filtering documents');
+      this.filteredDocuments = [...this.documents];
+    }
+  }
+
+  openPreviewModal(document: CaseDocument): void {
+    console.log('Opening preview for document:', document);
+    
+    // Reset state
+    this.previewUrl = null;
+    this.previewError = null;
+    this.isPreviewLoading = true;
+    this.selectedDocument = document;
+    this.cdr.detectChanges();
+    
+    // Manually handle modal with DOM
+    const modalElement = this.document.getElementById('documentPreviewModal');
+    if (modalElement) {
+      try {
+        // Initialize modal if bootstrap is available
+        if (typeof window !== 'undefined' && (window as any).bootstrap) {
+          if (!(window as any).bs_modal) {
+            (window as any).bs_modal = new (window as any).bootstrap.Modal(modalElement);
+          }
+          (window as any).bs_modal.show();
+        } else {
+          // Fallback if bootstrap JS is not available
+          modalElement.classList.add('show');
+          modalElement.style.display = 'block';
+          this.document.body.classList.add('modal-open');
+          
+          // Create backdrop if needed
+          let backdrop = this.document.querySelector('.modal-backdrop');
+          if (!backdrop) {
+            backdrop = this.document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            this.document.body.appendChild(backdrop);
+          }
+        }
+      } catch (error) {
+        console.error('Error showing modal:', error);
+      }
+    }
+    
+    // Download and preview the document
+    if (!document || !document.id) {
+      this.previewError = 'Invalid document';
+      this.isPreviewLoading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+    
+    console.log(`Downloading document ${document.id} for preview`);
+    
+    this.documentsService.downloadDocument(String(this.caseId), document.id)
+      .pipe(
+        finalize(() => {
+          this.isPreviewLoading = false;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (blob: Blob) => {
+          if (!blob || blob.size === 0) {
+            this.previewError = 'Document is empty or could not be loaded';
+            return;
+          }
+          
+          console.log(`Received document blob: type=${blob.type}, size=${blob.size}`);
+          this.createPreviewFromBlob(blob, document);
+        },
+        error: (error) => {
+          console.error('Error downloading document for preview:', error);
+          this.previewError = 'Failed to load document for preview';
+          this.cdr.detectChanges();
+        }
+      });
+  }
+  
+  private createPreviewFromBlob(blob: Blob, document: CaseDocument): void {
+    console.log('Blob received for preview:', blob);
+    console.log('Blob type:', blob.type);
+    
+    if (blob && blob.size > 0) {
+      // Force PDF type if filename ends with .pdf but type is incorrect
+      let blobToUse = blob;
+      const filename = document.fileName || '';
+      
+      // If file is PDF but content type is not set correctly, fix it
+      if (filename.toLowerCase().endsWith('.pdf') && blob.type !== 'application/pdf') {
+        console.log('File appears to be PDF but has wrong content type. Creating new blob with correct type');
+        blobToUse = new Blob([blob], { type: 'application/pdf' });
+      }
+      
+      // Check blob type for preview compatibility
+      if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
+        console.log('Creating object URL for blob type:', blobToUse.type);
+        this.currentObjectUrl = URL.createObjectURL(blobToUse);
+        this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
+        console.log('Preview URL generated:', this.currentObjectUrl);
+        this.previewError = null;
+      } else {
+        console.warn(`Preview not supported for type: ${blobToUse.type}`);
+        this.previewError = `Preview is not available for this file type (${blobToUse.type || 'unknown'}). Please download the file instead.`;
+      }
+    } else {
+      console.error('Received empty blob for preview.');
+      this.previewError = 'Could not load document for preview (empty file).';
+    }
+    this.cdr.detectChanges();
+  }
+  
+  private revokeCurrentObjectUrl(): void {
+    if (this.currentObjectUrl) {
+      try {
+        console.log('Revoking previous object URL:', this.currentObjectUrl);
+        URL.revokeObjectURL(this.currentObjectUrl);
+      } catch (error) {
+        console.error('Error revoking URL:', error);
+      }
+      this.currentObjectUrl = null;
+    }
   }
 
   toggleUploadForm(): void {
@@ -581,12 +865,10 @@ export class CaseDocumentsComponent implements OnInit {
   resetForm(): void {
     this.newDocument = {
       title: '',
-      type: this.documentTypes[0],
-      category: this.categories[0],
+      type: null as unknown as DocumentType,
+      category: null as unknown as DocumentCategory,
       description: '',
-      tags: [],
-      currentVersion: 1,
-      versions: []
+      tags: []
     };
     this.selectedFile = null;
     this.tagsInput = '';
@@ -609,36 +891,136 @@ export class CaseDocumentsComponent implements OnInit {
   }
 
   uploadDocument(): void {
-    if (this.uploadForm.valid && this.selectedFile) {
-      const formData = new FormData();
-      formData.append('file', this.selectedFile);
-      formData.append('title', this.uploadForm.get('title')?.value);
-      formData.append('type', this.uploadForm.get('type')?.value);
-      formData.append('category', this.uploadForm.get('category')?.value);
-      formData.append('description', this.uploadForm.get('description')?.value);
-      formData.append('tags', this.uploadForm.get('tags')?.value);
-
-      this.documentsService.uploadDocument(this.caseId, formData).subscribe(
-        () => {
-          this.loadDocuments();
-          this.uploadForm.reset({
-            type: this.documentTypes[0],
-            category: this.categories[0]
-          });
-          this.selectedFile = null;
-        },
-        error => console.error('Error uploading document:', error)
-      );
+    if (!this.isFormValid()) {
+      Swal.fire({
+        title: 'Error!',
+        text: 'Please fill in all required fields',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
     }
-  }
 
-  previewDocument(document: CaseDocument): void {
-    this.selectedDocument = document;
-    this.previewUrl = document.fileUrl;
+    if (!this.selectedFile) {
+      Swal.fire({
+        title: 'Error!',
+        text: 'Please select a file to upload',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    this.isUploading = true;
+
+    const formData = new FormData();
+    formData.append('file', this.selectedFile);
+    formData.append('title', this.newDocument.title || 'Untitled Document');
+    
+    // Convert type to string, handle both enum and string values
+    const typeValue = typeof this.newDocument.type === 'string' ? 
+      this.newDocument.type : String(this.newDocument.type);
+    formData.append('type', typeValue);
+    
+    // Convert category to string, handle both enum and string values
+    const categoryValue = typeof this.newDocument.category === 'string' ? 
+      this.newDocument.category : String(this.newDocument.category);
+    formData.append('category', categoryValue || '');
+    
+    if (this.newDocument.description) {
+      formData.append('description', this.newDocument.description);
+    }
+    
+    if (this.tagsInput && this.tagsInput.length > 0) {
+      formData.append('tags', this.tagsInput);
+    }
+
+    console.log('Uploading document with data:', {
+      title: this.newDocument.title,
+      type: typeValue,
+      category: categoryValue,
+      description: this.newDocument.description,
+      tags: this.tagsInput
+    });
+
+    this.documentsService.uploadDocument(String(this.caseId), formData)
+      .subscribe({
+        next: (response) => {
+          console.log('Upload response:', response);
+          this.loadDocuments();
+          
+          // Show sweet alert success message
+          Swal.fire({
+            title: 'Success!',
+            text: 'Document uploaded successfully',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          }).then(() => {
+            // Reset the form and explicitly hide it after the alert is closed
+            this.resetForm();
+            this.isUploading = false;
+          });
+        },
+        error: (error) => {
+          this.isUploading = false;
+          console.error('Error uploading document:', error);
+          
+          // Show sweet alert error message
+          Swal.fire({
+            title: 'Error!',
+            text: error.message || 'Failed to upload document',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      });
   }
 
   closePreview(): void {
+    // Clean up resources first
+    this.revokeCurrentObjectUrl();
+    
+    // Close modal using DOM
+    const modalElement = this.document.getElementById('documentPreviewModal');
+    if (modalElement) {
+      try {
+        // Use bootstrap if available
+        if (typeof window !== 'undefined' && (window as any).bootstrap && (window as any).bs_modal) {
+          (window as any).bs_modal.hide();
+          // Explicitly remove modal-open and backdrop
+          this.document.body.classList.remove('modal-open');
+          const backdrop = this.document.querySelector('.modal-backdrop');
+          if (backdrop && backdrop.parentNode) {
+            backdrop.parentNode.removeChild(backdrop);
+          }
+        } else {
+          // Fallback
+          modalElement.classList.remove('show');
+          modalElement.style.display = 'none';
+          this.document.body.classList.remove('modal-open');
+          
+          // Remove backdrop
+          const backdrop = this.document.querySelector('.modal-backdrop');
+          if (backdrop && backdrop.parentNode) {
+            backdrop.parentNode.removeChild(backdrop);
+          }
+        }
+      } catch (error) {
+        console.error('Error closing modal:', error);
+        // Force cleanup if there's an error
+        this.document.body.classList.remove('modal-open');
+        const backdrop = this.document.querySelector('.modal-backdrop');
+        if (backdrop && backdrop.parentNode) {
+          backdrop.parentNode.removeChild(backdrop);
+        }
+      }
+    }
+    
+    // Reset component state
     this.selectedDocument = null;
+    this.previewUrl = null;
+    this.previewError = null;
+    this.cdr.detectChanges();
   }
 
   showVersionHistory(document: CaseDocument): void {
@@ -653,40 +1035,59 @@ export class CaseDocumentsComponent implements OnInit {
     this.documentForNewVersion = documentId;
   }
 
-  onNewVersionFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.length && this.documentForNewVersion) {
-      this.selectedFile = input.files[0];
-      const formData = new FormData();
-      formData.append('file', this.selectedFile);
-      formData.append('version', (this.documents.find(d => d.id === this.documentForNewVersion)?.currentVersion || 1).toString());
-      formData.append('notes', this.versionNotes);
-
-      this.documentsService.uploadNewVersion(this.documentForNewVersion, formData).subscribe({
-        next: () => {
-          this.loadDocuments();
-          this.selectedFile = null;
-          this.versionNotes = '';
-          this.documentForNewVersion = null;
-          this.toastr.success('New version uploaded successfully');
-        },
-        error: (error) => {
-          console.error('Error uploading new version:', error);
-          this.toastr.error('Failed to upload new version');
-        }
-      });
-    }
-  }
-
   closeNewVersionUpload(): void {
     this.documentForNewVersion = null;
     this.selectedFile = null;
     this.versionNotes = '';
   }
 
+  onNewVersionFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files?.length && this.documentForNewVersion) {
+      this.selectedFile = input.files[0];
+      const formData = new FormData();
+      formData.append('file', this.selectedFile);
+      
+      if (this.versionNotes) {
+        formData.append('notes', this.versionNotes);
+      }
+
+      this.documentsService.uploadNewVersion(String(this.caseId), this.documentForNewVersion, formData).subscribe({
+        next: () => {
+          this.loadDocuments();
+          this.closeNewVersionUpload();
+          
+          // Show sweet alert success message
+          Swal.fire({
+            title: 'Success!',
+            text: 'New version uploaded successfully',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          });
+        },
+        error: (error) => {
+          console.error('Error uploading new version:', error);
+          
+          // Show sweet alert error message
+          Swal.fire({
+            title: 'Error!',
+            text: error.message || 'Failed to upload new version',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      });
+    }
+  }
+
   downloadDocument(documentId: string): void {
-    this.documentsService.downloadDocument(documentId).subscribe(
-      response => {
+    if (!documentId) {
+      this.toastr.error('Invalid document ID');
+      return;
+    }
+    
+    this.documentsService.downloadDocument(String(this.caseId), documentId).subscribe({
+      next: (response) => {
         const blob = new Blob([response], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -695,13 +1096,16 @@ export class CaseDocumentsComponent implements OnInit {
         link.click();
         window.URL.revokeObjectURL(url);
       },
-      error => console.error('Error downloading document:', error)
-    );
+      error: (error) => {
+        console.error('Error downloading document:', error);
+        this.toastr.error('Failed to download document');
+      }
+    });
   }
 
   downloadVersion(documentId: string, versionId: string): void {
-    this.documentsService.downloadVersion(versionId).subscribe(
-      response => {
+    this.documentsService.downloadVersion(String(this.caseId), documentId, versionId).subscribe({
+      next: (response) => {
         const blob = new Blob([response], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -710,15 +1114,74 @@ export class CaseDocumentsComponent implements OnInit {
         link.click();
         window.URL.revokeObjectURL(url);
       },
-      error => console.error('Error downloading version:', error)
-    );
+      error: (error) => {
+        console.error('Error downloading version:', error);
+        this.toastr.error('Failed to download version');
+      }
+    });
   }
 
   deleteDocument(document: CaseDocument): void {
-    if (confirm('Are you sure you want to delete this document?')) {
-      this.documentsService.deleteDocument(document.id).subscribe(
-        () => this.loadDocuments()
-      );
+    if (!document || !document.id) {
+      console.error('Cannot delete document: Invalid document or missing ID', document);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Cannot delete document: Invalid document identifier',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
     }
+    
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You will not be able to recover this document!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'No, keep it'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        try {
+          this.documentsService.deleteDocument(String(this.caseId), document.id)
+            .subscribe({
+              next: () => {
+                console.log('Document deleted successfully');
+                
+                // Update UI
+                this.documents = this.documents.filter(d => d.id !== document.id);
+                this.filterDocuments();
+                
+                Swal.fire({
+                  title: 'Deleted!',
+                  text: 'Document has been deleted.',
+                  icon: 'success',
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+              },
+              error: (error) => {
+                console.error('Error deleting document:', error);
+                
+                Swal.fire({
+                  title: 'Error!',
+                  text: 'Failed to delete document: ' + (error.error?.message || error.message || 'Unknown error'),
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              }
+            });
+        } catch (e) {
+          console.error('Exception during document deletion:', e);
+          
+          Swal.fire({
+            title: 'Error!',
+            text: 'An unexpected error occurred: ' + (e instanceof Error ? e.message : 'Unknown error'),
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      }
+    });
   }
 } 

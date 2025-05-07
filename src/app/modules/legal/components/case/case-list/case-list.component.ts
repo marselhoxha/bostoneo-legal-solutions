@@ -127,17 +127,52 @@ export class CaseListComponent implements OnInit {
           error: (error) => {
             this.isLoading = false;
             console.error('Error deleting case:', error);
-            Swal.fire({
-              title: 'Error!',
-              text: 'Failed to delete case: ' + (error.error?.message || 'Please try again later.'),
-              icon: 'error',
-              confirmButtonColor: '#3085d6'
-            });
+            
+            // For status 400, always treat as dependency/foreign key error
+            if (error.status === 400) {
+              Swal.fire({
+                title: 'Cannot Delete Case',
+                html: `This case has related records (documents, notes, activities, etc.) that must be deleted first.<br><br>
+                       Please remove all documents, notes, and other related items before deleting this case.`,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'I Understand'
+              });
+            } else {
+              // Generic error handling for other types of errors
+              Swal.fire({
+                title: 'Error!',
+                text: 'Failed to delete case: ' + (error.error?.reason || error.error?.message || 'Please try again later.'),
+                icon: 'error',
+                confirmButtonColor: '#3085d6'
+              });
+            }
+            
             this.cdr.detectChanges();
           }
         });
       }
     });
+  }
+
+  /**
+   * Checks if an error is related to a foreign key constraint violation
+   * Note: This method is kept for backward compatibility but
+   * we now handle all 400 errors as dependency errors directly
+   */
+  private isForeignKeyConstraintError(error: any): boolean {
+    // All 400 status codes when deleting are treated as constraint errors
+    if (error.status === 400) {
+      return true;
+    }
+    
+    // For additional safety, still check error messages
+    const errorMsg = JSON.stringify(error || {}).toLowerCase();
+    return errorMsg.includes('foreign key constraint') || 
+           errorMsg.includes('constraint fails') || 
+           errorMsg.includes('cannot delete') ||
+           errorMsg.includes('referenced by') ||
+           errorMsg.includes('bad request');
   }
 
   getStatusClass(status: CaseStatus): string {

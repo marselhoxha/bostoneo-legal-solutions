@@ -464,16 +464,18 @@ export class ExpenseFormComponent implements OnInit {
       this.selectedFile = input.files[0];
       
       // Create a preview URL for the selected file
-      if (this.selectedFile.type.startsWith('image/')) {
-        // For image files, create a direct URL
+      if (this.selectedFile) {
+        // Revoke previous URL to prevent memory leaks
+        if (this.receiptPreviewUrl) {
+          URL.revokeObjectURL(this.receiptPreviewUrl);
+        }
+        
+        // Create new object URL for preview
         this.receiptPreviewUrl = URL.createObjectURL(this.selectedFile);
-      } else if (this.selectedFile.type === 'application/pdf') {
-        // For PDFs, we'll show a PDF icon or first page preview in the template
-        this.receiptPreviewUrl = 'assets/images/pdf-icon.png'; // Update this path as needed
-      } else {
-        // For other file types, show a generic file icon
-        this.receiptPreviewUrl = 'assets/images/file-icon.png'; // Update this path as needed
       }
+    } else {
+      this.selectedFile = null;
+      this.receiptPreviewUrl = null;
     }
   }
 
@@ -484,8 +486,7 @@ export class ExpenseFormComponent implements OnInit {
   onSubmit(): void {
     if (this.expenseForm.valid) {
       this.submitting = true;
-      this.error = null;
-      const expenseData = { ...this.expenseForm.value };
+      const expenseData = this.expenseForm.value;
       
       if (expenseData.date) {
         const date = new Date(expenseData.date);
@@ -493,7 +494,6 @@ export class ExpenseFormComponent implements OnInit {
         expenseData.date = date.toISOString().slice(0, 19);
       }
 
-      // Validate and convert required IDs
       if (!expenseData.categoryId) {
         this.error = 'Category is required';
         this.submitting = false;
@@ -515,26 +515,24 @@ export class ExpenseFormComponent implements OnInit {
       }
       expenseData.customerId = Number(expenseData.customerId);
 
-      // Convert optional IDs if present
-      if (expenseData.invoiceId) {
-        expenseData.invoiceId = Number(expenseData.invoiceId);
-      }
-      
-      if (expenseData.legalCaseId) {
-        expenseData.legalCaseId = Number(expenseData.legalCaseId);
-      }
-
       expenseData.amount = Number(expenseData.amount);
       expenseData.tax = Number(expenseData.tax);
       
-      // If there's a file, upload it first, otherwise save directly
-      if (this.selectedFile) {
-        this.handleFileUpload(expenseData);
-      } else {
-        this.saveExpense(expenseData);
-      }
+      const request$ = this.isEditMode && this.expenseId
+        ? this.expensesService.updateExpense(this.expenseId, expenseData)
+        : this.expensesService.createExpense(expenseData);
+
+      request$.subscribe({
+        next: () => {
+          this.router.navigate(['/expenses']);
+        },
+        error: (error) => {
+          console.error('Error saving expense:', error);
+          this.error = error.error?.message || 'Failed to save expense. Please try again later.';
+          this.submitting = false;
+        }
+      });
     } else {
-      // Mark all fields as touched to show validation errors
       Object.keys(this.expenseForm.controls).forEach(key => {
         const control = this.expenseForm.get(key);
         control?.markAsTouched();
@@ -617,85 +615,6 @@ export class ExpenseFormComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         console.error('Error loading vendors:', error);
         this.notificationService.onError('Failed to load vendors');
-      }
-    });
-  }
-
-  // Upload the file first, then submit the expense with the receipt ID
-  private handleFileUpload(expenseData: any): void {
-    if (!this.selectedFile) {
-      this.error = 'No file selected for upload';
-      this.submitting = false;
-      return;
-    }
-    
-    // Check file size (10MB limit)
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-    if (this.selectedFile.size > MAX_SIZE) {
-      this.error = `File size exceeds 10MB limit (${Math.round(this.selectedFile.size / (1024 * 1024))}MB)`;
-      this.submitting = false;
-      return;
-    }
-    
-    this.notificationService.onInfo('Uploading receipt...');
-    
-    this.expensesService.uploadReceipt(this.selectedFile).subscribe({
-      next: (response) => {
-        if (!response || !response.data) {
-          this.error = 'Receipt upload failed: Invalid server response';
-          this.submitting = false;
-          return;
-        }
-        
-        // Add receipt information to expense data
-        expenseData.receiptId = Number(response.data.id);
-        expenseData.receiptFileName = response.data.fileName;
-        
-        // In edit mode, use the attachReceiptToExpense endpoint
-        if (this.isEditMode && this.expenseId) {
-          this.expensesService.attachReceiptToExpense(this.expenseId, expenseData.receiptId).subscribe({
-            next: () => {
-              this.notificationService.onSuccess('Receipt attached to expense successfully');
-              this.router.navigate(['/expenses']);
-            },
-            error: () => {
-              // Try fallback to regular update if attachment endpoint fails
-              this.saveExpense(expenseData);
-            }
-          });
-        } else {
-          // In create mode, proceed with normal expense creation
-          this.saveExpense(expenseData);
-        }
-      },
-      error: (error) => {
-        this.submitting = false;
-        this.error = error.message || 'Failed to upload receipt. Please try again.';
-        this.notificationService.onError(this.error);
-      }
-    });
-  }
-  
-  // Submit the expense data to the server
-  private saveExpense(expenseData: any): void {
-    // Make sure IDs are properly converted to numbers
-    if (expenseData.receiptId) {
-      expenseData.receiptId = Number(expenseData.receiptId);
-    }
-    
-    const request$ = this.isEditMode && this.expenseId
-      ? this.expensesService.updateExpense(this.expenseId, expenseData)
-      : this.expensesService.createExpense(expenseData);
-
-    request$.subscribe({
-      next: () => {
-        this.notificationService.onSuccess('Expense saved successfully');
-        this.router.navigate(['/expenses']);
-      },
-      error: (error) => {
-        this.submitting = false;
-        this.error = error.error?.message || 'Failed to save expense. Please try again.';
-        this.notificationService.onError(this.error);
       }
     });
   }

@@ -1,0 +1,156 @@
+<div class="card custom-card shadow mb-3">
+  <div class="card-header bg-primary-subtle py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 d-flex align-items-center">
+        <i class="ri-sticky-note-line me-1"></i> Case Notes
+        <span *ngIf="notes.length > 0" class="badge bg-primary ms-2">{{notes.length}}</span>
+      </h5>
+      <button class="btn btn-sm btn-primary" (click)="toggleAddNoteForm()">
+        <i class="ri-add-line me-1"></i>{{ showAddNoteForm ? 'Cancel' : 'Add Note' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Add Note Form -->
+  <div class="card-body p-3" *ngIf="showAddNoteForm">
+    <form (ngSubmit)="saveNewNote()" #noteForm="ngForm" class="bg-light-subtle p-3 rounded border border-subtle">
+      <div class="mb-3">
+        <label for="noteTitle" class="form-label text-muted fw-medium">Title <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="noteTitle" name="title" 
+               [(ngModel)]="newNote.title" placeholder="Enter note title" required>
+      </div>
+      <div class="mb-3">
+        <label for="noteContent" class="form-label text-muted fw-medium">Content <span class="text-danger">*</span></label>
+        <textarea class="form-control" id="noteContent" name="content" 
+                 [(ngModel)]="newNote.content" rows="4" placeholder="Enter note content" required></textarea>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="isPrivate" name="isPrivate" 
+               [(ngModel)]="newNote.isPrivate">
+        <label class="form-check-label" for="isPrivate">
+          <i class="ri-lock-line me-1" [class.text-danger]="newNote.isPrivate"></i>
+          Make note private
+        </label>
+      </div>
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-light me-2" (click)="toggleAddNoteForm()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="!noteForm.form.valid || isLoading">
+          <i class="ri-save-line me-1" *ngIf="!isLoading"></i>
+          <i class="ri-loader-line animate-spin me-1" *ngIf="isLoading"></i>
+          Save Note
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Error message -->
+  <div class="card-body p-3" *ngIf="error">
+    <div class="alert alert-danger mb-0">
+      <i class="ri-error-warning-line me-2"></i> {{error}}
+      <button class="btn btn-sm btn-link ms-2" (click)="loadNotes()">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div class="card-body p-3 text-center" *ngIf="isLoading && !showAddNoteForm">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading notes...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading case notes...</p>
+  </div>
+
+  <!-- Empty state -->
+  <div class="card-body p-4 text-center" *ngIf="!isLoading && !error && notes.length === 0 && !showAddNoteForm">
+    <div class="avatar-lg mx-auto mb-4">
+      <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-1">
+        <i class="ri-sticky-note-line"></i>
+      </div>
+    </div>
+    <h5>No Notes Found</h5>
+    <p class="text-muted">There are no notes for this case yet.</p>
+    <button class="btn btn-primary" (click)="toggleAddNoteForm()">
+      <i class="ri-add-line me-1"></i> Add First Note
+    </button>
+  </div>
+
+  <!-- Notes list -->
+  <div class="card-body p-3 bg-light-subtle" *ngIf="!isLoading && !error && notes.length > 0 && !showAddNoteForm">
+    <div class="list-group">
+      <div *ngFor="let note of notes; let i = index" 
+           class="list-group-item list-group-item-action border-0 rounded mb-2 shadow-sm hover-shadow"
+           [class.opacity-75]="editNoteId === toString(note.id)"
+           [class.border-start]="true"
+           [class.border-danger]="note.isPrivate"
+           [class.border-primary]="!note.isPrivate"
+           [class.border-3]="true">
+           
+        
+        <!-- Note content (when not editing) -->
+        <div *ngIf="editNoteId !== toString(note.id)">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0 d-flex align-items-center fw-medium">
+              <span class="me-2">{{note.title}}</span>
+              <span *ngIf="note.isPrivate" class="badge bg-danger-subtle text-danger">
+                <i class="ri-lock-line me-1"></i>Private
+              </span>
+            </h5>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-soft-primary" (click)="startEditingNote(note)">
+                <i class="ri-edit-line"></i>
+              </button>
+              <button class="btn btn-sm btn-soft-danger" (click)="confirmDeleteNote(note)">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Note content with fallback for null/undefined content -->
+          <div class="mb-2 text-muted note-content" [innerHTML]="note.content ? (note.content | noSanitize) : ''"></div>
+          
+          <div class="d-flex justify-content-between align-items-center text-muted small">
+            <div>
+              <i class="ri-user-line me-1"></i>
+              {{note.createdBy?.name || note.user?.firstName + ' ' + note.user?.lastName || 'Unknown User'}}
+            </div>
+            <div>
+              <i class="ri-time-line me-1"></i>
+              {{formatDate(note.createdAt)}}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Edit note form -->
+        <div *ngIf="editNoteId === toString(note.id) && editedNote">
+          <form (ngSubmit)="saveEditedNote()" #editForm="ngForm" class="bg-light-subtle p-3 rounded">
+            <div class="mb-3">
+              <label for="editNoteTitle" class="form-label text-muted fw-medium">Title <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editNoteTitle" name="title" 
+                     [(ngModel)]="editedNote.title" placeholder="Enter note title" required>
+            </div>
+            <div class="mb-3">
+              <label for="editNoteContent" class="form-label text-muted fw-medium">Content <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="editNoteContent" name="content" 
+                       [(ngModel)]="editedNote.content" rows="4" placeholder="Enter note content" required></textarea>
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="editIsPrivate" name="isPrivate" 
+                     [(ngModel)]="editedNote.isPrivate">
+              <label class="form-check-label" for="editIsPrivate">
+                <i class="ri-lock-line me-1" [class.text-danger]="editedNote.isPrivate"></i>
+                Make note private
+              </label>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="button" class="btn btn-light me-2" (click)="cancelEditingNote()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!editForm.form.valid || isLoading">
+                <i class="ri-save-line me-1" *ngIf="!isLoading"></i>
+                <i class="ri-loader-line animate-spin me-1" *ngIf="isLoading"></i>
+                Update Note
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

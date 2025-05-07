@@ -625,13 +625,34 @@
             </div>
           </div>
           <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">
-            <app-case-documents [caseId]="case?.id || ''"></app-case-documents>
+            <div *ngIf="case?.id; else noDocuments">
+              <app-case-documents [caseId]="case.id"></app-case-documents>
+            </div>
+            <ng-template #noDocuments>
+              <div class="alert alert-info">
+                <p class="mb-0">Please save the case before managing documents.</p>
+              </div>
+            </ng-template>
           </div>
           <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
-            <app-case-notes [caseId]="case?.id || ''"></app-case-notes>
+            <div *ngIf="case?.id; else noNotes">
+              <app-case-notes [caseId]="case.id"></app-case-notes>
+            </div>
+            <ng-template #noNotes>
+              <div class="alert alert-info">
+                <p class="mb-0">Please save the case before managing notes.</p>
+              </div>
+            </ng-template>
           </div>
           <div class="tab-pane fade" id="timeline" role="tabpanel" aria-labelledby="timeline-tab">
-            <app-case-timeline [caseId]="case?.id || ''"></app-case-timeline>
+            <div *ngIf="case?.id; else noTimeline">
+              <app-case-timeline [caseId]="case.id"></app-case-timeline>
+            </div>
+            <ng-template #noTimeline>
+              <div class="alert alert-info">
+                <p class="mb-0">Please save the case before viewing timeline.</p>
+              </div>
+            </ng-template>
           </div>
         </div>
       </div>

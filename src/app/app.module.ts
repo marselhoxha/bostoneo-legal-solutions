@@ -1,6 +1,7 @@
 import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -19,6 +20,7 @@ import { CountUpModule } from 'ngx-countup';
 import { NgbAccordionModule } from '@ng-bootstrap/ng-bootstrap';
 import { FaqsComponent } from './component/faqs/faqs.component'; 
 import { PreloaderComponent } from './component/preloader/preloader.component'; 
+import { InvoiceAnalyticsService } from './service/invoice-analytics.service';
 
 
 
@@ -28,6 +30,7 @@ import { PreloaderComponent } from './component/preloader/preloader.component';
     ReactiveFormsModule,
     BrowserModule,
     HttpClientModule,
+    BrowserAnimationsModule,
     ToastrNotificationModule,
     CoreModule,
     AuthModule,
@@ -42,7 +45,10 @@ import { PreloaderComponent } from './component/preloader/preloader.component';
     RouterModule.forRoot([]) // Import RouterModule and configure routes
 
     ],
-   
+    
+  providers: [
+    InvoiceAnalyticsService
+  ],
   
   bootstrap: [AppComponent]
 })

@@ -100,8 +100,8 @@ export class ExpensesListComponent implements OnInit {
         this.loading = true;
         this.cdr.detectChanges();
         
-        this.expensesService.deleteExpense(id).subscribe({
-          next: () => {
+      this.expensesService.deleteExpense(id).subscribe({
+        next: () => {
             Swal.fire({
               title: 'Deleted!',
               text: 'Expense has been successfully deleted.',
@@ -110,20 +110,20 @@ export class ExpensesListComponent implements OnInit {
               timerProgressBar: true,
               showConfirmButton: false
             });
-            this.loadExpenses(this.currentPage);
-          },
-          error: (error) => {
+          this.loadExpenses(this.currentPage);
+        },
+        error: (error) => {
             this.loading = false;
             Swal.fire({
               title: 'Error!',
               text: error.message || 'Failed to delete expense',
               icon: 'error'
             });
-            this.error = error.message || 'Failed to delete expense';
+          this.error = error.message || 'Failed to delete expense';
             this.cdr.detectChanges();
-          }
-        });
-      }
+        }
+      });
+    }
     });
   }
 

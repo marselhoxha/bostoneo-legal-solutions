@@ -1,5 +1,5 @@
 import { User } from 'src/app/interface/user';
-import { CaseNote } from './case-note.interface';
+import { DocumentType, DocumentCategory } from './document.interface';
 
 export enum CaseStatus {
   OPEN = 'OPEN',
@@ -21,9 +21,6 @@ export enum PaymentStatus {
   PAID = 'PAID',
   OVERDUE = 'OVERDUE'
 }
-
-export type DocumentType = 'PLEADING' | 'MOTION' | 'ORDER' | 'EVIDENCE' | 'CONTRACT' | 'OTHER';
-export type DocumentCategory = 'LEGAL' | 'FINANCIAL' | 'CORRESPONDENCE' | 'REPORT' | 'OTHER';
 
 export interface CourtInfo {
   courtName: string;
@@ -115,6 +112,7 @@ export interface CaseDocument {
   title: string;
   type: DocumentType;
   category: DocumentCategory;
+  status?: string;
   fileName: string;
   fileUrl: string;
   description?: string;
@@ -160,4 +158,21 @@ export enum ActivityType {
   HEARING_COMPLETED = 'HEARING_COMPLETED',
   HEARING_CANCELLED = 'HEARING_CANCELLED',
   OTHER = 'OTHER'
+}
+
+export interface CaseNote {
+  id: string;
+  caseId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: {
+    id: string;
+    name: string;
+  };
+  updatedBy?: {
+    id: string;
+    name: string;
+  };
 } 
