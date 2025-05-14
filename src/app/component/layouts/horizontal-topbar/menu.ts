@@ -102,6 +102,14 @@ export const MENU: MenuItem[] = [
     link: '/faq',
     
   },
-  
- 
+  {
+    id: 8,
+    label: 'Push Notifications',
+    icon: 'ri-notification-line',
+    link: '/notification-test',
+    badge: {
+      variant: 'bg-info',
+      text: 'Test'
+    }
+  },
 ];

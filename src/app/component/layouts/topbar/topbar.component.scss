@@ -1,0 +1,555 @@
+:host ::ng-deep {
+  .notification-item {
+    transition: all 0.25s ease;
+    border-bottom: 1px solid var(--vz-border-color);
+    position: relative;
+    overflow: hidden;
+    transform-origin: center;
+    animation: notification-appear 0.3s ease forwards;
+    animation-delay: calc(var(--index, 0) * 0.05s);
+    opacity: 0;
+    
+    &:hover {
+      background-color: var(--vz-light);
+      cursor: pointer;
+      transform: translateX(3px);
+      
+      &::before {
+        opacity: 1;
+      }
+    }
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--vz-primary);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    &.bg-light-subtle {
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--vz-primary);
+      }
+    }
+  }
+  
+  .dropdown-head {
+    background-image: url('/assets/images/nft/bg-pattern.png');
+    background-size: cover;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .empty-notification {
+    padding: 1.5rem;
+    color: var(--vz-gray-600);
+  }
+  
+  .badge-soft-danger {
+    color: var(--vz-danger);
+    background-color: rgba(var(--vz-danger-rgb), 0.18);
+    font-weight: 500;
+  }
+  
+  .notification-list-scroll {
+    position: relative;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(var(--vz-dark-rgb), 0.2);
+      border-radius: 5px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+  }
+  
+  .avatar-xs {
+    height: 2rem;
+    width: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: avatar-pulse 2s infinite;
+  }
+  
+  .font-size-11 {
+    font-size: 11px !important;
+  }
+  
+  .font-size-13 {
+    font-size: 13px !important;
+  }
+  
+  .font-size-15 {
+    font-size: 15px !important;
+  }
+  
+  .font-size-16 {
+    font-size: 16px !important;
+  }
+  
+  .btn-group {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    
+    .btn {
+      transition: all 0.2s;
+      
+      &:hover {
+        transform: translateY(-2px);
+      }
+      
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+  
+  .dropdown-menu {
+    animation: dropdown-fade-in 0.15s cubic-bezier(0.3, 0, 0.3, 1) forwards !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, opacity 0.2s !important;
+    will-change: transform, opacity;
+    transform-origin: inherit !important;
+  }
+}
+
+// Bell animation for new notifications
+@keyframes bell-ring {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(15deg); }
+  20% { transform: rotate(-13deg); }
+  30% { transform: rotate(11deg); }
+  40% { transform: rotate(-8deg); }
+  50% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+  70% { transform: rotate(2deg); }
+  80% { transform: rotate(-1deg); }
+  100% { transform: rotate(0); }
+}
+
+@keyframes avatar-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0.2); }
+  70% { box-shadow: 0 0 0 6px rgba(var(--vz-primary-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0); }
+}
+
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notification-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+:host ::ng-deep {
+  .has-new-notifications {
+    animation: bell-ring 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    transform-origin: center top;
+  }
+  
+  // Badge animation
+  .topbar-badge {
+    animation: badge-pulse 1.5s infinite;
+  }
+}
+
+@keyframes badge-pulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+// Improve notification details modal styling
+:host ::ng-deep {
+  // Improve notification details modal
+  .notification-details {
+    .notification-content {
+      line-height: 1.6;
+    }
+    
+    // Enhanced card styling with soft shadow
+    .card {
+      border-radius: 0.75rem;
+      border: 1px solid var(--vz-border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      transition: all 0.3s ease;
+      
+      .card-header {
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        border-bottom: 1px solid rgba(var(--vz-border-color-rgb), 0.5);
+      }
+    }
+    
+    // Enhanced body content styling
+    .border-start {
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+      
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+      }
+    }
+    
+    // Enhanced tables
+    .table-responsive {
+      border-radius: 0.5rem;
+      
+      .table {
+        margin-bottom: 0;
+        
+        th {
+          font-weight: 600;
+          color: var(--vz-gray-700);
+        }
+        
+        td {
+          vertical-align: middle;
+        }
+      }
+    }
+    
+    // Priority badge enhancement
+    .badge.rounded-pill {
+      box-shadow: 0 2px 4px rgba(var(--vz-danger-rgb), 0.2);
+    }
+    
+    // Timestamp container enhancement
+    .avatar-xs.rounded-circle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      i {
+        font-size: 0.85rem;
+      }
+    }
+  }
+  
+  // Modal enhancements
+  .modal-content {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    
+    .modal-header {
+      position: relative;
+      
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 100%);
+      }
+    }
+    
+    .modal-footer {
+      border-top: 1px solid rgba(var(--vz-border-color-rgb), 0.5);
+      
+      .btn {
+        font-weight: 500;
+        padding: 0.5rem 1.25rem;
+        border-radius: 0.5rem;
+        
+        &.btn-primary {
+          box-shadow: 0 2px 10px rgba(var(--vz-primary-rgb), 0.3);
+        }
+      }
+    }
+  }
+}
+
+// Fix notification dropdown positioning
+:host ::ng-deep {
+  .custom-notification-dropdown {
+    right: 0 !important;
+    left: auto !important;
+    top: 100% !important;
+    transform: none !important;
+    margin-top: 0.5rem !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid var(--vz-border-color);
+  }
+}
+
+// Enhanced notification bell styling for better interaction
+.notification-bell {
+  position: relative;
+  transition: all 0.3s ease;
+  outline: none !important;
+  z-index: 1;
+  
+  // Improve touch target for better mobile interaction
+  &::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    z-index: -1;
+  }
+  
+  &:hover, &:active, &:focus {
+    background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+    color: var(--vz-primary) !important;
+  }
+  
+  &.has-new-notifications {
+    animation: bell-ring 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    transform-origin: center top;
+  }
+
+  .topbar-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(25%, -25%) !important;
+    animation: badge-pulse 1.5s infinite;
+    z-index: 2;
+  }
+}
+
+// Improved dropdown positioning and appearance
+.dropdown-menu.custom-notification-dropdown {
+  position: absolute !important;
+  margin-top: 0.75rem !important;
+  animation: dropdown-appear 0.2s ease-out;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid var(--vz-border-color);
+  max-width: 360px !important;
+  width: 360px !important;
+  border-radius: 0.5rem !important;
+  z-index: 1000 !important;
+  overflow: hidden;
+  will-change: transform, opacity;
+  
+  // Pseudo-element for dropdown arrow
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    background-color: var(--vz-primary);
+    transform: rotate(45deg);
+    border-top: 1px solid var(--vz-primary);
+    border-left: 1px solid var(--vz-primary);
+    z-index: -1;
+  }
+
+  // Ensure dropdown header has proper z-index
+  .dropdown-head {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Fix for notification items to ensure proper styling and behavior
+.notification-item {
+  padding: 0.75rem 1rem;
+  transition: all 0.25s ease;
+  border-bottom: 1px solid var(--vz-border-color);
+  
+  &:hover {
+    background-color: var(--vz-light) !important;
+    cursor: pointer;
+    transform: translateX(3px);
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  .flex-grow-1 {
+    max-width: calc(100% - 3rem); // Account for the avatar width and margin
+    
+    p {
+      word-wrap: break-word;
+      white-space: normal;
+      max-width: 100%;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+  }
+  
+  &.bg-light-subtle {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--vz-primary);
+    }
+  }
+  
+  // Improved visibility for dark mode
+  .notification-title {
+    color: var(--vz-body-color) !important;
+  }
+  
+  .notification-text {
+    color: var(--vz-body-color);
+    
+    p {
+      color: var(--vz-body-color);
+    }
+  }
+  
+  .notification-text-unread {
+    color: var(--vz-body-color) !important;
+    font-weight: 600;
+  }
+}
+
+// Apply darker background in dark mode for better contrast
+[data-bs-theme="dark"] {
+  .custom-notification-dropdown {
+    background-color: var(--vz-gray-800) !important;
+    
+    .notification-item {
+      &:hover {
+        background-color: var(--vz-gray-700) !important;
+      }
+      
+      .notification-title {
+        color: var(--vz-gray-100) !important;
+      }
+      
+      .notification-text {
+        p {
+          color: var(--vz-gray-300) !important;
+        }
+      }
+      
+      .notification-text-unread {
+        color: var(--vz-white) !important;
+      }
+      
+      &.bg-light-subtle {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+      }
+    }
+  }
+}
+
+// Update notification dropdown animation for smoother appearance
+@keyframes dropdown-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Enhanced notification detail modal
+.modal-content {
+  .notification-details {
+    .border-start {
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .avatar-xs.rounded-circle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      i {
+        font-size: 0.85rem;
+      }
+    }
+  }
+  
+  .modal-header {
+    .notification-icon {
+      width: 45px !important;
+      height: 45px !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+      background-color: var(--vz-primary);
+      
+      &.bg-primary, &.bg-info, &.bg-warning, &.bg-success, &.bg-danger, &.bg-purple {
+        i {
+          color: #fff;
+          font-size: 1.25rem;
+          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+        }
+      }
+    }
+  }
+}
+
+// Fix for notification badge text
+.dropdown-tabs {
+  .badge {
+    white-space: nowrap;
+    
+    .text-nowrap {
+      display: inline-block;
+    }
+  }
+}

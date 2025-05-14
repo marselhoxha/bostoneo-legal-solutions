@@ -12,6 +12,10 @@ import flatpickr from 'flatpickr';
 import { CaseNotesComponent } from '../case-notes/case-notes.component';
 import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
 import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
+import { CalendarService } from '../../../services/calendar.service';
+import { CalendarEvent } from '../../../interfaces/calendar-event.interface';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { EventModalComponent } from '../../../components/calendar/event-modal/event-modal.component';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -36,6 +40,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   isEditing = false;
   editForm: FormGroup;
   caseForm: FormGroup;
+  
+  // Events related properties
+  caseEvents: CalendarEvent[] = [];
+  isLoadingEvents = false;
 
   @ViewChildren('filingDate, nextHearing, trialDate') dateInputs: QueryList<ElementRef>;
 
@@ -53,6 +61,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private caseService: CaseService,
+    private calendarService: CalendarService,
+    private modalService: NgbModal,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
@@ -380,6 +390,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         }
         this.isLoading = false;
         this.cdr.detectChanges();
+        
+        // Load associated events after case is loaded
+        if (this.case && this.case.id) {
+          this.loadCaseEvents(this.case.id);
+        }
       },
       error: (err) => {
         console.error('Error loading case:', err);
@@ -406,6 +421,317 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // Load events associated with this case
+  loadCaseEvents(caseId: string | number): void {
+    this.isLoadingEvents = true;
+    this.cdr.detectChanges();
+    
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (this.isLoadingEvents) {
+        this.isLoadingEvents = false;
+        this.caseEvents = [];
+        console.warn('Events loading timed out - endpoint may not be available');
+        this.cdr.detectChanges();
+      }
+    }, 5000); // 5 second timeout
+    
+    this.calendarService.getEventsByCaseId(caseId).subscribe({
+      next: (events) => {
+        clearTimeout(loadingTimeout);
+        
+        if (!Array.isArray(events)) {
+          console.warn('Events data is not an array:', events);
+          this.caseEvents = [];
+          this.isLoadingEvents = false;
+          this.cdr.detectChanges();
+          return;
+        }
+        
+        console.log('Received events for case:', events);
+        
+        // Sort events by date (most recent first)
+        this.caseEvents = events.sort((a, b) => {
+          const dateA = new Date(a.start).getTime();
+          const dateB = new Date(b.start).getTime();
+          return dateA - dateB;
+        });
+        
+        // Only show upcoming events (today and future)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        this.caseEvents = this.caseEvents.filter(event => {
+          const eventDate = new Date(event.start);
+          return eventDate >= today;
+        });
+        
+        // Limit to next 5 events for display
+        this.caseEvents = this.caseEvents.slice(0, 5);
+        
+        this.isLoadingEvents = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        clearTimeout(loadingTimeout);
+        console.error('Error loading case events:', err);
+        this.isLoadingEvents = false;
+        this.caseEvents = []; // Set empty array on error
+        this.cdr.detectChanges();
+      }
+    });
+  }
+  
+  // Event actions
+  openCreateEventModal(): void {
+    try {
+      // Close any open modals first
+      this.modalService.dismissAll();
+      
+      const modalRef = this.modalService.open(EventModalComponent, {
+        size: 'lg',
+        backdrop: 'static',
+        keyboard: false,
+        centered: true
+      });
+      
+      // Pre-fill case info if available
+      if (this.case) {
+        modalRef.componentInstance.title = 'Create New Event';
+        
+        const now = new Date();
+        const oneHourLater = new Date(now.getTime() + 3600000); // 1 hour later
+        
+        const newEvent: Partial<CalendarEvent> = {
+          start: now,
+          end: oneHourLater,
+          startTime: now, // Add both formats for compatibility with the modal
+          endTime: oneHourLater,
+          caseId: this.case.id,
+          caseTitle: this.case.title,
+          caseNumber: this.case.caseNumber,
+          status: null,
+          eventType: null
+        };
+        
+        modalRef.componentInstance.event = newEvent;
+        // Explicitly set the caseId property on the modal component
+        modalRef.componentInstance.caseId = this.case.id;
+      }
+      
+      modalRef.result.then(
+        (result) => {
+          if (result && this.case?.id) {
+            // Reload events after successful creation
+            this.loadCaseEvents(this.case.id);
+          }
+        },
+        (reason) => {
+          // Modal was closed without saving
+          console.log('Modal dismissed:', reason);
+        }
+      );
+    } catch (error) {
+      console.error('Error opening event modal:', error);
+      
+      // Fallback message if modal component isn't available
+      this.snackBar.open(
+        'Event creation is currently unavailable. The calendar module may not be fully configured.',
+        'Close',
+        { duration: 5000 }
+      );
+    }
+  }
+  
+  viewEvent(event: CalendarEvent): void {
+    try {
+      const modalRef = this.modalService.open(EventModalComponent, {
+        size: 'lg',
+        backdrop: 'static',
+        keyboard: false,
+        centered: true
+      });
+      
+      modalRef.componentInstance.event = event;
+      modalRef.componentInstance.title = 'View Event';
+      modalRef.componentInstance.viewMode = true;
+    } catch (error) {
+      console.error('Error opening event view modal:', error);
+      
+      // Fallback message if modal component isn't available
+      this.snackBar.open(
+        'Event details view is currently unavailable. The calendar module may not be fully configured.',
+        'Close',
+        { duration: 5000 }
+      );
+    }
+  }
+  
+  editEvent(event: CalendarEvent): void {
+    try {
+      const modalRef = this.modalService.open(EventModalComponent, {
+        size: 'lg',
+        backdrop: 'static',
+        keyboard: false,
+        centered: true
+      });
+      
+      // Ensure both start/end and startTime/endTime fields exist
+      // This helps with compatibility between backend and frontend models
+      const eventCopy = { ...event };
+      
+      // Convert if only start/end exist but not startTime/endTime
+      if (event.start && !event.startTime) {
+        eventCopy.startTime = event.start;
+      }
+      if (event.end && !event.endTime) {
+        eventCopy.endTime = event.end;
+      }
+      
+      modalRef.componentInstance.event = eventCopy;
+      modalRef.componentInstance.title = 'Edit Event';
+      modalRef.componentInstance.viewMode = false;
+      
+      modalRef.result.then(
+        (result) => {
+          if (result && this.case?.id) {
+            // Reload events after successful edit
+            this.loadCaseEvents(this.case.id);
+          }
+        },
+        (reason) => {
+          // Modal was closed without saving
+          console.log('Modal dismissed:', reason);
+        }
+      );
+    } catch (error) {
+      console.error('Error opening event edit modal:', error);
+      
+      // Fallback message if modal component isn't available
+      this.snackBar.open(
+        'Event editing is currently unavailable. The calendar module may not be fully configured.',
+        'Close',
+        { duration: 5000 }
+      );
+    }
+  }
+  
+  deleteEvent(event: CalendarEvent): void {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You won\'t be able to revert this!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'No, cancel!',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6'
+    }).then((result) => {
+      if (result.isConfirmed && event.id) {
+        this.calendarService.deleteEvent(String(event.id)).subscribe({
+          next: () => {
+            Swal.fire('Deleted!', 'Event has been deleted.', 'success');
+            if (this.case?.id) {
+              this.loadCaseEvents(this.case.id);
+            }
+          },
+          error: (err) => {
+            console.error('Error deleting event:', err);
+            Swal.fire('Error!', 'Failed to delete event.', 'error');
+          }
+        });
+      }
+    });
+  }
+  
+  // Helper methods for styling
+  getEventTypeIcon(eventType?: string): string {
+    if (!eventType) return 'bg-secondary-subtle';
+    
+    switch(eventType) {
+      case 'COURT_DATE': 
+        return 'bg-danger-subtle';
+      case 'DEADLINE': 
+        return 'bg-warning-subtle';
+      case 'CLIENT_MEETING': 
+      case 'TEAM_MEETING': 
+        return 'bg-primary-subtle';
+      case 'DEPOSITION': 
+        return 'bg-info-subtle';
+      case 'MEDIATION': 
+        return 'bg-success-subtle';
+      default: 
+        return 'bg-secondary-subtle';
+    }
+  }
+  
+  getEventTypeIconClass(eventType?: string): string {
+    if (!eventType) return 'ri-calendar-line text-secondary';
+    
+    switch(eventType) {
+      case 'COURT_DATE': 
+        return 'ri-scales-line text-danger';
+      case 'DEADLINE': 
+        return 'ri-time-line text-warning';
+      case 'CLIENT_MEETING': 
+        return 'ri-user-line text-primary';
+      case 'TEAM_MEETING': 
+        return 'ri-team-line text-primary';
+      case 'DEPOSITION': 
+        return 'ri-file-text-line text-info';
+      case 'MEDIATION': 
+        return 'ri-discuss-line text-success';
+      default: 
+        return 'ri-calendar-line text-secondary';
+    }
+  }
+  
+  getEventTypeBadgeClass(type: string): string {
+    switch(type) {
+      case 'COURT_DATE': return 'bg-danger-subtle text-danger';
+      case 'DEADLINE': return 'bg-warning-subtle text-warning';
+      case 'CLIENT_MEETING': return 'bg-primary-subtle text-primary';
+      case 'TEAM_MEETING': return 'bg-info-subtle text-info';
+      case 'DEPOSITION': return 'bg-secondary-subtle text-secondary';
+      case 'MEDIATION': return 'bg-success-subtle text-success';
+      case 'CONSULTATION': return 'bg-primary-subtle text-primary';
+      case 'REMINDER': return 'bg-info-subtle text-info';
+      default: return 'bg-dark-subtle text-dark';
+    }
+  }
+  
+  getEventTypeColor(type: string): string {
+    switch(type) {
+      case 'COURT_DATE': return '#d63939';
+      case 'DEADLINE': return '#f59f00';
+      case 'CLIENT_MEETING': return '#3577f1';
+      case 'TEAM_MEETING': return '#0ab39c';
+      case 'DEPOSITION': return '#405189';
+      case 'MEDIATION': return '#0ab39c';
+      case 'CONSULTATION': return '#3577f1';
+      case 'REMINDER': return '#299cdb';
+      default: return '#212529';
+    }
+  }
+  
+  getEventStatusBadgeClass(status?: string): string {
+    if (!status) return 'bg-secondary-subtle text-secondary';
+    
+    switch(status) {
+      case 'SCHEDULED': 
+        return 'bg-info-subtle text-info';
+      case 'COMPLETED': 
+        return 'bg-success-subtle text-success';
+      case 'CANCELLED': 
+        return 'bg-danger-subtle text-danger';
+      case 'RESCHEDULED': 
+        return 'bg-warning-subtle text-warning';
+      case 'PENDING': 
+        return 'bg-secondary-subtle text-secondary';
+      default: 
+        return 'bg-light text-dark';
+    }
   }
 
   saveCase(): void {
@@ -642,5 +968,53 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   cancelEdit(): void {
     this.isEditing = false;
     this.updateFormWithCaseData();
+  }
+
+  // Get only the deadline events from caseEvents
+  getDeadlines(): CalendarEvent[] {
+    return this.caseEvents.filter(event => event.eventType === 'DEADLINE');
+  }
+
+  // Get deadline status based on due date
+  getDeadlineStatus(deadline: CalendarEvent): string {
+    const now = new Date();
+    const dueDate = new Date(deadline.start);
+    
+    if (deadline.status === 'COMPLETED') {
+      return 'Completed';
+    }
+    
+    if (dueDate < now) {
+      return 'Overdue';
+    }
+    
+    // Calculate days until deadline
+    const daysUntil = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntil <= 3) {
+      return 'Approaching';
+    } else if (daysUntil <= 7) {
+      return 'Upcoming';
+    } else {
+      return 'Future';
+    }
+  }
+  
+  // Get badge class based on deadline status
+  getDeadlineStatusBadgeClass(deadline: CalendarEvent): string {
+    const status = this.getDeadlineStatus(deadline);
+    
+    switch (status) {
+      case 'Completed':
+        return 'bg-success-subtle text-success';
+      case 'Overdue':
+        return 'bg-danger-subtle text-danger';
+      case 'Approaching':
+        return 'bg-warning-subtle text-warning';
+      case 'Upcoming':
+        return 'bg-info-subtle text-info';
+      default:
+        return 'bg-light text-dark';
+    }
   }
 }

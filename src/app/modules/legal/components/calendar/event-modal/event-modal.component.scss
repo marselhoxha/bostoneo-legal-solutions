@@ -1,0 +1,634 @@
+/* Modal styling */
+:host {
+  ::ng-deep {
+    // Fix for transparent modal backdrop
+    .modal-backdrop {
+      opacity: 0.5 !important; // Ensure backdrop has proper opacity
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+      border: none;
+      border-radius: 0.5rem;
+      box-shadow: 0 0.125rem 1.25rem rgba(var(--vz-dark-rgb), 0.15);
+      overflow: hidden;
+      background-color: var(--vz-card-bg);
+    }
+
+    .modal-header {
+      border-bottom: 0;
+      padding: 1.25rem 1.5rem;
+      
+      &.soft-header {
+        background-color: rgba(var(--vz-primary-rgb), 0.1);
+        color: var(--vz-heading-color);
+      }
+      
+      .modal-title {
+        h5 {
+          color: var(--vz-heading-color);
+          font-weight: 600;
+          margin-bottom: 0.25rem;
+          font-size: 1.05rem;
+        }
+        
+        p {
+          color: var(--vz-gray-600);
+          font-size: 0.8125rem;
+          margin-bottom: 0;
+        }
+      }
+      
+      .btn-close {
+        opacity: 0.75;
+        
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+    
+    .modal-body {
+      padding: 0; // Remove padding to allow full-width event view card
+      background-color: var(--vz-card-bg);
+      color: var(--vz-body-color);
+      
+      app-event-form {
+        padding: 1.5rem;
+        display: block;
+      }
+      
+      .alert, .d-flex.justify-content-center {
+        margin: 1.5rem;
+      }
+    }
+    
+    // Dark mode specific adjustments
+    [data-layout-mode="dark"] & {
+      .modal-content {
+        background-color: var(--vz-card-bg);
+        box-shadow: 0 0.125rem 1.25rem rgba(0, 0, 0, 0.25);
+      }
+      
+      .modal-header {
+        &.soft-header {
+          background-color: rgba(var(--vz-primary-rgb), 0.15);
+        }
+        
+        .modal-title {
+          h5 {
+            color: var(--vz-heading-color);
+          }
+          
+          p {
+            color: var(--vz-gray-400);
+          }
+        }
+      }
+      
+      .modal-body {
+        background-color: var(--vz-card-bg);
+      }
+    }
+  }
+}
+
+// Loading spinner and error message styling
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.alert {
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(var(--vz-danger-rgb), 0.15);
+}
+
+// Enhanced Event View Card
+.event-details {
+  color: var(--vz-body-color);
+  
+  .event-view-card {
+    background-color: var(--vz-card-bg);
+    position: relative;
+    overflow: hidden;
+    
+    // Event Header
+    .event-header {
+      padding: 1.5rem 1.5rem 0;
+      margin-bottom: 1rem;
+      
+      .event-type-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.25rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        
+        i {
+          font-size: 1rem;
+          margin-right: 0.5rem;
+        }
+      }
+      
+      .event-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--vz-heading-color);
+        word-break: break-word;
+        line-height: 1.4;
+      }
+      
+      .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+      }
+    }
+    
+    // Event Info Section
+    .event-info-section {
+      padding: 0 1.5rem;
+    }
+    
+    // Event Info Grid
+    .event-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+      
+      .event-info-item {
+        display: flex;
+        align-items: flex-start;
+        
+        .info-icon {
+          flex-shrink: 0;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: var(--vz-light);
+          border-radius: 50%;
+          margin-right: 0.875rem;
+          
+          i {
+            font-size: 1.125rem;
+          }
+        }
+        
+        .info-content {
+          flex-grow: 1;
+          
+          .info-label {
+            display: block;
+            font-size: 0.8125rem;
+            color: var(--vz-secondary-color);
+            margin-bottom: 0.125rem;
+          }
+          
+          .info-value {
+            font-weight: 500;
+            color: var(--vz-heading-color);
+            font-size: 0.9375rem;
+          }
+          
+          .info-extra {
+            display: block;
+            font-size: 0.8125rem;
+            color: var(--vz-secondary-color);
+            margin-top: 0.25rem;
+          }
+          
+          ul {
+            margin-top: 0.5rem;
+            
+            li {
+              font-size: 0.8125rem;
+              margin-bottom: 0.25rem;
+            }
+          }
+        }
+      }
+    }
+    
+    // Event Description Section
+    .event-description-section {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid var(--vz-border-color);
+      
+      .section-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin-bottom: 0.875rem;
+        color: var(--vz-heading-color);
+      }
+      
+      .description-content {
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--vz-body-color);
+        white-space: pre-line;
+      }
+    }
+    
+    // Event Priority Section
+    .event-priority-section {
+      padding: 0 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+  }
+  
+  // Custom Tabs Styling
+  .nav-tabs-custom {
+    border-bottom: 1px solid var(--vz-border-color);
+    margin-bottom: 0; // Removed margin to fix spacing
+    padding: 0 1.5rem; // Added padding for better alignment
+    
+    .nav-item {
+      margin-right: 0.375rem;
+      
+      .nav-link {
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        color: var(--vz-body-color);
+        position: relative;
+        
+        &.active {
+          color: var(--vz-primary);
+          background-color: transparent;
+          border-color: var(--vz-border-color) var(--vz-border-color) var(--vz-card-bg);
+          
+          &::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--vz-primary);
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+          }
+        }
+        
+        &:hover:not(.active) {
+          color: var(--vz-primary);
+          border-color: transparent;
+        }
+        
+        i {
+          font-size: 1rem;
+        }
+        
+        .badge {
+          font-size: 0.7rem;
+          padding: 0.2rem 0.5rem;
+          vertical-align: middle;
+        }
+      }
+    }
+  }
+  
+  // Tab Content
+  .tab-content {
+    margin-bottom: 0; // Removed margin to fix spacing
+    padding-bottom: 1rem; // Added padding to ensure content isn't crowded
+    
+    .tab-pane {
+      padding: 1.5rem 0 0; // Added top padding for better spacing
+    }
+  }
+  
+  // Reminder Status Header
+  .reminder-status-header {
+    border-bottom: 1px solid var(--vz-border-color);
+    
+    .reminder-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--vz-white);
+      border-radius: 50%;
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+  }
+  
+  // Reminder Section Title
+  .reminder-section-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--vz-border-color);
+  }
+  
+  // Reminder Item
+  .reminder-item {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
+    }
+    
+    .avatar-sm {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      
+      .avatar-title {
+        font-size: 1.25rem;
+      }
+    }
+  }
+  
+  // Alert Soft Variants
+  .alert-soft-warning {
+    background-color: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+    border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
+  }
+  
+  .alert-soft-info {
+    background-color: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+    border: 1px solid rgba(var(--vz-info-rgb), 0.2);
+  }
+  
+  .alert-soft-secondary {
+    background-color: rgba(var(--vz-secondary-rgb), 0.1);
+    color: var(--vz-secondary);
+    border: 1px solid rgba(var(--vz-secondary-rgb), 0.2);
+  }
+  
+  // Reminder Timeline - Improved visualization
+  .reminder-timeline-container {
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 1rem; // Added bottom spacing
+    
+    .timeline-event {
+      position: relative;
+      padding-bottom: 1.5rem; // Increased spacing between timeline items
+      padding-left: 0.625rem;
+      
+      &:last-child {
+        padding-bottom: 0;
+      }
+      
+      .timeline-event-dot {
+        position: absolute;
+        left: -28px;
+        top: 0;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: #fff;
+        font-size: 0.875rem;
+        z-index: 2;
+        border: 2px solid var(--vz-card-bg);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease; // Added transition for hover effect
+        
+        &:hover {
+          transform: scale(1.1); // Subtle hover effect
+        }
+        
+        // Color variants
+        &.bg-info {
+          box-shadow: 0 0 0 4px rgba(var(--vz-info-rgb), 0.15);
+        }
+        
+        &.bg-warning {
+          box-shadow: 0 0 0 4px rgba(var(--vz-warning-rgb), 0.15);
+        }
+        
+        &.bg-success {
+          box-shadow: 0 0 0 4px rgba(var(--vz-success-rgb), 0.15);
+        }
+      }
+      
+      .event-time {
+        .badge {
+          font-weight: 500;
+          padding: 0.4rem 0.6rem;
+        }
+        
+        .time-label {
+          display: block;
+          margin-top: 0.25rem;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: var(--vz-body-color);
+        }
+        
+        .reminder-label {
+          display: block;
+          font-size: 0.75rem;
+          color: var(--vz-gray-600);
+          font-style: italic;
+        }
+      }
+    }
+    
+    .timeline-connector {
+      position: absolute;
+      left: -14px;
+      width: 2px;
+      background-color: var(--vz-border-color);
+      top: 28px;
+      height: calc(100% - 28px); // Make connector span entire height
+      z-index: 1;
+      
+      &:last-child {
+        display: none;
+      }
+    }
+  }
+}
+
+// Action Buttons - improved styling
+.d-flex.mt-4.pt-2.px-4.pb-4 {
+  border-top: 1px solid var(--vz-border-color);
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+    
+    i {
+      margin-right: 0.375rem;
+      font-size: 1rem;
+    }
+  }
+  
+  .btn-soft-primary, .btn-soft-danger {
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+// Badge Soft Variants
+.badge-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+}
+
+.badge-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+}
+
+.badge-soft-success {
+  background-color: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--vz-success);
+}
+
+.badge-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--vz-info);
+}
+
+.badge-soft-warning {
+  background-color: rgba(var(--vz-warning-rgb), 0.1);
+  color: var(--vz-warning);
+}
+
+.badge-soft-danger {
+  background-color: rgba(var(--vz-danger-rgb), 0.1);
+  color: var(--vz-danger);
+}
+
+.badge-soft-dark {
+  background-color: rgba(var(--vz-dark-rgb), 0.1);
+  color: var(--vz-dark);
+}
+
+.badge-soft-light {
+  background-color: rgba(var(--vz-light-rgb), 0.1);
+  color: var(--vz-body-color);
+}
+
+// Soft Backgrounds
+.bg-soft-light {
+  background-color: rgba(var(--vz-light-rgb), 0.25);
+}
+
+.bg-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+}
+
+.bg-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+}
+
+.bg-soft-success {
+  background-color: rgba(var(--vz-success-rgb), 0.1);
+}
+
+.bg-soft-warning {
+  background-color: rgba(var(--vz-warning-rgb), 0.1);
+}
+
+.bg-soft-danger {
+  background-color: rgba(var(--vz-danger-rgb), 0.1);
+}
+
+.bg-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+}
+
+// New softer background variants
+.bg-soft-info-5 {
+  background-color: rgba(var(--vz-info-rgb), 0.05);
+}
+
+.bg-soft-primary-5 {
+  background-color: rgba(var(--vz-primary-rgb), 0.05);
+}
+
+// Event type badge styling
+.event-type-badge {
+  border-radius: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  
+  i {
+    font-size: 1.125rem;
+    vertical-align: middle;
+    margin-right: 0.25rem;
+  }
+}
+
+// Dark mode specific overrides for event details
+[data-layout-mode="dark"] {
+  .event-details {
+    .event-view-card {
+      background-color: var(--vz-card-bg);
+      
+      .event-header {
+        .event-title {
+          color: var(--vz-heading-color);
+        }
+      }
+      
+      .event-info-item {
+        .info-icon {
+          background-color: rgba(var(--vz-light-rgb), 0.1);
+        }
+        
+        .info-content {
+          .info-label {
+            color: var(--vz-gray-400);
+          }
+          
+          .info-value {
+            color: var(--vz-body-color);
+          }
+          
+          .info-extra {
+            color: var(--vz-gray-500);
+          }
+        }
+      }
+      
+      .event-description-section {
+        border-color: var(--vz-border-color);
+        
+        .section-title {
+          color: var(--vz-heading-color);
+        }
+        
+        .description-content {
+          background-color: rgba(var(--vz-dark-rgb), 0.2);
+        }
+      }
+    }
+  }
+  
+  // Dark mode specific fix for timeline connector
+  .reminder-timeline-container {
+    .timeline-connector {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+} 

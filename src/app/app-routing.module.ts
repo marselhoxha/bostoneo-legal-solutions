@@ -6,6 +6,7 @@ import { LayoutComponent } from './component/layouts/layout.component';
 import { InvoiceAnalyticsComponent } from './component/invoice-analytics/invoice-analytics.component';
 import { FaqsComponent } from './component/faqs/faqs.component';
 import { AuthGuard } from './guard/auth.guard';
+import { NotificationTestComponent } from './modules/legal/components/notification-test/notification-test.component';
 
 const routes: Routes = [
   {
@@ -20,6 +21,7 @@ const routes: Routes = [
       { path: 'faq', component: FaqsComponent },
       { path: 'legal', loadChildren: () => import('./modules/legal/legal.module').then(m => m.LegalModule), canActivate: [AuthenticationGuard] },
       { path: 'expenses', loadChildren: () => import('./modules/expenses/expenses.module').then(m => m.ExpensesModule), canActivate: [AuthenticationGuard] },
+      { path: 'notification-test', component: NotificationTestComponent, title: 'Push Notification Test', canActivate: [AuthenticationGuard] },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

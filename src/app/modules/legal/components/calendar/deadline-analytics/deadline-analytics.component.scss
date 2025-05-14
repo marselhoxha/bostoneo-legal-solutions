@@ -1,0 +1,90 @@
+// Card styling
+.card {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  
+  .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--vz-border-color);
+    padding: 1rem 1.25rem;
+  }
+  
+  .card-body {
+    padding: 1.25rem;
+  }
+}
+
+// Mini stats card
+.mini-stats-wid {
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .avatar-sm {
+    height: 3rem;
+    width: 3rem;
+  }
+  
+  .mini-stat-icon {
+    overflow: hidden;
+    
+    .avatar-title {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      i {
+        font-size: 1.5rem;
+        color: #fff;
+      }
+    }
+  }
+}
+
+// Progress bars
+.deadline-progress-bars {
+  .progress {
+    height: 0.5rem;
+    border-radius: 1rem;
+    background-color: var(--vz-gray-200);
+    
+    .progress-bar {
+      border-radius: 1rem;
+    }
+  }
+}
+
+// Avatar utilities
+.avatar-md {
+  height: 4.5rem;
+  width: 4.5rem;
+  
+  .avatar-title {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    
+    i {
+      font-size: 2rem;
+    }
+  }
+}
+
+// Font sizes
+.font-size-24 {
+  font-size: 1.5rem;
+}
+
+// Custom color
+.bg-purple {
+  background-color: #6f42c1 !important;
+}
+
+.text-purple {
+  color: #6f42c1 !important;
+} 

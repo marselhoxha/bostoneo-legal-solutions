@@ -1,0 +1,218 @@
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Deadline Analytics</h5>
+  </div>
+  <div class="card-body">
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="d-flex justify-content-center py-3">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading analytics...</span>
+      </div>
+    </div>
+    
+    <!-- Error Message -->
+    <div *ngIf="error" class="alert alert-danger">
+      <i class="ri-error-warning-line me-2"></i> {{ error }}
+    </div>
+    
+    <!-- Analytics Content -->
+    <div *ngIf="!isLoading && !error" class="analytics-content">
+      <!-- Quick Stats Row -->
+      <div class="row g-3 mb-4">
+        <!-- Total Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">Total</p>
+                  <h4 class="mb-0">{{ analytics.total }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-primary">
+                    <i class="ri-calendar-todo-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Upcoming Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">Upcoming</p>
+                  <h4 class="mb-0">{{ analytics.upcoming }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-info align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-info">
+                    <i class="ri-time-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Approaching Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">Approaching</p>
+                  <h4 class="mb-0">{{ analytics.approaching }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-warning align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-warning">
+                    <i class="ri-alarm-warning-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Overdue Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">Overdue</p>
+                  <h4 class="mb-0">{{ analytics.overdue }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-danger align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-danger">
+                    <i class="ri-error-warning-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Completed Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">Completed</p>
+                  <h4 class="mb-0">{{ analytics.completed }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-success align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-success">
+                    <i class="ri-check-double-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- High Priority Deadlines -->
+        <div class="col-sm-6 col-md-4 col-xl-2">
+          <div class="card mini-stats-wid border">
+            <div class="card-body">
+              <div class="d-flex">
+                <div class="flex-grow-1">
+                  <p class="text-muted fw-medium mb-1">High Priority</p>
+                  <h4 class="mb-0">{{ analytics.highPriority }}</h4>
+                </div>
+                <div class="avatar-sm rounded-circle bg-purple align-self-center mini-stat-icon">
+                  <span class="avatar-title rounded-circle bg-purple">
+                    <i class="ri-flag-line font-size-24"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Progress Bars Section -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="deadline-progress-bars mb-4">
+            <h6 class="fw-medium mb-3">Deadline Status Distribution</h6>
+            
+            <!-- Upcoming Progress -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Upcoming</span>
+                <span class="text-info">{{ analytics.upcoming }} ({{ getPercentage(analytics.upcoming) }}%)</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-info" role="progressbar" [style.width.%]="getPercentage(analytics.upcoming)" 
+                     [attr.aria-valuenow]="getPercentage(analytics.upcoming)" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            
+            <!-- Approaching Progress -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Approaching (Next 3 Days)</span>
+                <span class="text-warning">{{ analytics.approaching }} ({{ getPercentage(analytics.approaching) }}%)</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-warning" role="progressbar" [style.width.%]="getPercentage(analytics.approaching)" 
+                     [attr.aria-valuenow]="getPercentage(analytics.approaching)" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            
+            <!-- Overdue Progress -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Overdue</span>
+                <span class="text-danger">{{ analytics.overdue }} ({{ getPercentage(analytics.overdue) }}%)</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-danger" role="progressbar" [style.width.%]="getPercentage(analytics.overdue)" 
+                     [attr.aria-valuenow]="getPercentage(analytics.overdue)" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            
+            <!-- Completed Progress -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Completed</span>
+                <span class="text-success">{{ analytics.completed }} ({{ getPercentage(analytics.completed) }}%)</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" [style.width.%]="getPercentage(analytics.completed)" 
+                     [attr.aria-valuenow]="getPercentage(analytics.completed)" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            
+            <!-- Cancelled Progress -->
+            <div>
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Cancelled</span>
+                <span class="text-secondary">{{ analytics.cancelled }} ({{ getPercentage(analytics.cancelled) }}%)</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-secondary" role="progressbar" [style.width.%]="getPercentage(analytics.cancelled)" 
+                     [attr.aria-valuenow]="getPercentage(analytics.cancelled)" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- No Data Message -->
+      <div *ngIf="analytics.total === 0" class="text-center py-4">
+        <div class="avatar-md mx-auto mb-4">
+          <div class="avatar-title bg-light text-primary rounded-circle">
+            <i class="ri-file-search-line font-size-24"></i>
+          </div>
+        </div>
+        <h5>No deadline data available</h5>
+        <p class="text-muted">Create deadlines to see analytics and insights.</p>
+      </div>
+    </div>
+  </div>
+</div> 

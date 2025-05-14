@@ -11,7 +11,8 @@ import { CaseCreateComponent } from './components/case/case-create/case-create.c
 
 @NgModule({
   declarations: [
-    // Components will be added here
+    // DeadlineDashboardComponent has been removed as it's now a standalone component
+    // Other Components
   ],
   imports: [
     CommonModule,
@@ -24,6 +25,9 @@ import { CaseCreateComponent } from './components/case/case-create/case-create.c
     FlatpickrModule.forRoot(),
     CaseCreateComponent
   ],
-  providers: [CaseService]
+  providers: [CaseService],
+  exports: [
+    // DeadlineDashboardComponent has been removed as it's now a standalone component
+  ]
 })
 export class LegalModule { }
