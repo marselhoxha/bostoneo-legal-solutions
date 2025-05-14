@@ -622,6 +622,112 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Upcoming Events Section -->
+              <div class="col-12">
+                <div class="card shadow-sm mb-4">
+                  <div class="card-header bg-soft-primary py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
+                      Upcoming Events
+                    </h5>
+                    <button class="btn btn-soft-primary btn-sm btn-animation waves-effect waves-light" (click)="openCreateEventModal()">
+                      <i class="ri-add-line align-middle me-1"></i> Add Event
+                    </button>
+                  </div>
+                  <div class="card-body p-0">
+                    <div *ngIf="isLoadingEvents" class="text-center py-4">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <p class="mt-2 text-muted">Loading events...</p>
+                    </div>
+                    
+                    <div *ngIf="!isLoadingEvents && caseEvents && caseEvents.length > 0">
+                      <div class="table-responsive">
+                        <table class="table table-nowrap align-middle mb-0">
+                          <thead class="table-light text-muted">
+                            <tr>
+                              <th class="ps-3">#</th>
+                              <th>Title</th>
+                              <th>Type</th>
+                              <th>Date & Time</th>
+                              <th>Status</th>
+                              <th class="text-end pe-3">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let event of caseEvents; let i = index">
+                              <td class="ps-3">{{ i + 1 }}</td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div [style.--event-color]="event.color || getEventTypeColor(event.eventType)" class="avatar-xs me-2 event-icon">
+                                    <span class="avatar-title rounded-circle bg-light text-center">
+                                      <i [ngClass]="getEventTypeIconClass(event.eventType)" style="color: var(--event-color)" class="fs-15"></i>
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <h5 class="fs-14 mb-0 text-truncate" style="max-width: 150px;" title="{{ event.title }}">{{ event.title }}</h5>
+                                    <p *ngIf="event.location" class="text-muted fs-12 mb-0 text-truncate" style="max-width: 150px;" title="{{ event.location }}">
+                                      <i class="ri-map-pin-line me-1"></i>{{ event.location }}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span class="badge fs-11 fw-semibold"
+                                  [ngClass]="getEventTypeBadgeClass(event.eventType)">
+                                  {{ event.eventType ? (event.eventType | titlecase) : 'Other' }}
+                                </span>
+                              </td>
+                              <td>
+                                <div class="fs-14">{{ event.start ? (event.start | date:'MMM d, y') : 'No date' }}</div>
+                                <div class="text-muted fs-12">
+                                  {{ event.start ? (event.start | date:'h:mm a') : '' }} 
+                                  <span *ngIf="event.end">- {{ event.end | date:'h:mm a' }}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span class="badge fs-11 fw-semibold"
+                                  [ngClass]="getEventStatusBadgeClass(event.status)">
+                                  {{ event.status || 'Unknown' }}
+                                </span>
+                              </td>
+                              <td class="text-end pe-3">
+                                <div class="hstack gap-2 flex-wrap justify-content-end">
+                                  <button type="button" class="btn btn-sm btn-icon btn-soft-primary" (click)="viewEvent(event)">
+                                    <i class="ri-eye-line fs-13"></i>
+                                  </button>
+                                  <button type="button" class="btn btn-sm btn-icon btn-soft-info" (click)="editEvent(event)">
+                                    <i class="ri-pencil-line fs-13"></i>
+                                  </button>
+                                  <button type="button" class="btn btn-sm btn-icon btn-soft-danger" (click)="deleteEvent(event)">
+                                    <i class="ri-delete-bin-line fs-13"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    <div *ngIf="!isLoadingEvents && (!caseEvents || caseEvents.length === 0)" class="text-center py-5">
+                      <div class="avatar-md mx-auto mb-4">
+                        <div class="avatar-title rounded-circle bg-soft-primary text-primary fs-24">
+                          <i class="ri-calendar-event-line"></i>
+                        </div>
+                      </div>
+                      <h5>No events scheduled</h5>
+                      <p class="text-muted">This case doesn't have any upcoming events. Add one to keep track of important dates.</p>
+                      <button class="btn btn-soft-primary btn-sm btn-animation waves-effect waves-light mt-2" (click)="openCreateEventModal()">
+                        <i class="ri-add-line align-middle me-1"></i> Schedule Event
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- End Upcoming Events Section -->
             </div>
           </div>
           <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">

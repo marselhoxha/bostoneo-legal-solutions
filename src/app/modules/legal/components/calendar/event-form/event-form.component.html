@@ -1,0 +1,167 @@
+<form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="custom-form">
+  <div class="row g-3">
+    <div class="col-12">
+      <div class="form-floating">
+        <input id="title" type="text" class="form-control" formControlName="title" placeholder=" ">
+        <label for="title">Title <span class="text-danger">*</span></label>
+        <div *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched" class="text-danger fs-12 mt-1">
+          <i class="ri-error-warning-line me-1"></i> Title is required
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-12">
+      <div class="form-floating">
+        <textarea id="description" class="form-control" formControlName="description" rows="3" style="height: 100px" placeholder=" "></textarea>
+        <label for="description">Description</label>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="startTime" class="form-label">Start Time <span class="text-danger">*</span></label>
+        <div class="input-group input-group-dynamic">
+          <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+          <input id="startTime" class="form-control flatpickr-input" formControlName="startTime" placeholder="Select date and time" #startTimeFlatpickr>
+        </div>
+        <div *ngIf="eventForm.get('startTime')?.invalid && eventForm.get('startTime')?.touched" class="text-danger fs-12 mt-1">
+          <i class="ri-error-warning-line me-1"></i> Start time is required
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="endTime" class="form-label">End Time</label>
+        <div class="input-group input-group-dynamic">
+          <span class="input-group-text"><i class="ri-time-line"></i></span>
+          <input id="endTime" class="form-control flatpickr-input" formControlName="endTime" placeholder="Select date and time" #endTimeFlatpickr>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-12">
+      <div class="form-floating">
+        <input id="location" type="text" class="form-control" formControlName="location" placeholder=" ">
+        <label for="location">Location</label>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="eventType" class="form-label">Event Type <span class="text-danger">*</span></label>
+        <select id="eventType" class="form-select" formControlName="eventType">
+          <option [ngValue]="null" disabled selected>Select an event type</option>
+          <option *ngFor="let type of eventTypes" [value]="type">{{ type | titlecase }}</option>
+        </select>
+        <div *ngIf="eventForm.get('eventType')?.invalid && eventForm.get('eventType')?.touched" class="text-danger fs-12 mt-1">
+          <i class="ri-error-warning-line me-1"></i> Event type is required
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+        <select id="status" class="form-select" formControlName="status">
+          <option [ngValue]="null" disabled selected>Select status</option>
+          <option *ngFor="let status of statuses" [value]="status">{{ status | titlecase }}</option>
+        </select>
+        <div *ngIf="eventForm.get('status')?.invalid && eventForm.get('status')?.touched" class="text-danger fs-12 mt-1">
+          <i class="ri-error-warning-line me-1"></i> Status is required
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="caseId" class="form-label">Associated Case</label>
+        <select id="caseId" class="form-select" formControlName="caseId">
+          <option [value]="null">None</option>
+          <option *ngFor="let case of cases$ | async" [value]="case.id">{{ case.title }}</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="reminderMinutes" class="form-label">Reminder</label>
+        <select id="reminderMinutes" class="form-select" formControlName="reminderMinutes">
+          <option [ngValue]="0">No reminder</option>
+          <option [ngValue]="5">5 minutes before</option>
+          <option [ngValue]="15">15 minutes before</option>
+          <option [ngValue]="30">30 minutes before</option>
+          <option [ngValue]="60">1 hour before</option>
+          <option [ngValue]="120">2 hours before</option>
+          <option [ngValue]="1440">1 day before</option>
+        </select>
+        
+        <!-- Show notice about reminder reset when modifying an event with sent reminders -->
+        <div *ngIf="event && event['reminderSent'] === true && eventForm.get('reminderMinutes')?.value > 0" class="alert alert-warning p-2 mt-2">
+          <div class="d-flex align-items-center">
+            <i class="ri-error-warning-line fs-16 me-2"></i>
+            <small><strong>Note:</strong> A reminder has already been sent for this event. Updating will reset the reminder status.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- All Day Event toggle with improved alignment -->
+    <div class="col-md-6">
+      <div class="form-group py-1">
+        <label class="form-label mb-2">All Day Event</label>
+        <div class="toggle-container d-flex align-items-center">
+          <div class="form-check form-switch d-flex align-items-center">
+            <input class="form-check-input me-3" type="checkbox" id="allDay" formControlName="allDay">
+            <label class="form-check-label d-flex align-items-center" for="allDay">
+              <span class="badge rounded-pill px-3 py-1" 
+                    [ngClass]="eventForm.get('allDay')?.value ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                <i class="ri-time-fill me-1 align-middle"></i>
+                {{ eventForm.get('allDay')?.value ? 'Yes' : 'No' }}
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Notification Methods - Improved visual design with button-like appearance -->
+    <div class="col-md-6" *ngIf="eventForm.get('reminderMinutes')?.value > 0">
+      <div class="form-group py-1">
+        <label class="form-label mb-2">Notification Methods</label>
+        <div class="notification-buttons d-flex gap-2">
+          <button type="button" 
+                  class="btn notification-btn" 
+                  [ngClass]="eventForm.get('emailNotification')?.value ? 
+                    'btn-soft-success active' : 'btn-outline-secondary'"
+                  (click)="toggleEmailNotification()">
+            <i class="ri-mail-line me-1"></i>
+            <span>Email</span>
+          </button>
+          <button type="button" 
+                  class="btn notification-btn" 
+                  [ngClass]="eventForm.get('pushNotification')?.value ? 
+                    'btn-soft-success active' : 'btn-outline-secondary'"
+                  (click)="togglePushNotification()">
+            <i class="ri-notification-3-line me-1"></i>
+            <span>Push</span>
+          </button>
+        </div>
+        <!-- Hidden checkbox inputs to maintain form data bindings -->
+        <div class="d-none">
+          <input type="checkbox" id="emailNotification" formControlName="emailNotification">
+          <input type="checkbox" id="pushNotification" formControlName="pushNotification">
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="d-flex justify-content-end gap-3 mt-4 pt-2">
+    <button type="button" class="btn btn-light" (click)="onCancel()">
+      <i class="ri-close-line align-middle me-1"></i> Cancel
+    </button>
+    <button type="submit" class="btn btn-primary" [disabled]="eventForm.invalid">
+      <i class="ri-save-line align-middle me-1"></i> {{ event?.id ? 'Update Event' : 'Save Event' }}
+    </button>
+  </div>
+</form> 

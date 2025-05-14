@@ -3,6 +3,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { SimplebarAngularModule } from 'simplebar-angular';
+import { TranslateModule } from '@ngx-translate/core';
 
 // Component pages
 import { SharedModule } from 'src/app/shared/shared.module';
@@ -33,7 +34,8 @@ import { TopbarComponent } from './topbar/topbar.component';
     NgbDropdownModule,
     SimplebarAngularModule,
     FormsModule, 
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslateModule
   ],
   exports: [
     LayoutComponent

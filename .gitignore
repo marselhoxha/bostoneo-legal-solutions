@@ -29,3 +29,16 @@ backend/src/main/resources/application.yml
 backend/src/main/resources/application.yml
 backend/src/main/resources/application-*.yml
 backend/src/main/resources/*.properties
+
+# Firebase Configuration
+firebase.json
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
+firebase-adminsdk-*.json
+**/firebase-config.json
+**/firebaseConfig.js
+**/firebase-service-account.json
+backend/src/main/resources/firebase-service-account.json
+src/environments/environment.ts
+src/environments/environment.prod.ts

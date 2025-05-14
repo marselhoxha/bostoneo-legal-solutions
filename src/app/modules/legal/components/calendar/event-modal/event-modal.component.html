@@ -1,0 +1,162 @@
+<div class="modal-header soft-header">
+  <div class="modal-title">
+    <h5 class="mb-0 fw-semibold">{{ title }}</h5>
+    <p class="text-muted mb-0 fs-13">{{ viewMode ? 'Event details' : (event ? 'Update event details' : 'Create a new calendar event') }}</p>
+  </div>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
+
+<div class="modal-body">
+  <div *ngIf="loading" class="d-flex justify-content-center py-3">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Saving event...</span>
+    </div>
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-danger border-0">
+    <i class="ri-error-warning-line me-2 align-middle fs-16"></i> {{ errorMessage }}
+  </div>
+  
+  <!-- View Mode -->
+  <div *ngIf="viewModeInternal && event" class="event-details">
+    <!-- Simplified UI - No Tabs -->
+    <div class="event-view-card">
+      <!-- Event Header with Type Badge -->
+      <div class="event-header">
+        <div class="d-flex flex-wrap align-items-center mb-2">
+          <span class="event-type-badge bg-soft-{{ getEventTypeColor(event.eventType) }} text-{{ getEventTypeColor(event.eventType) }} me-2">
+            <i [class]="getEventTypeIcon(event.eventType)"></i>{{ getEventTypeName(event.eventType) }}
+          </span>
+          
+          <span *ngIf="event.highPriority" class="badge rounded-pill bg-danger-subtle text-danger ms-2">
+            <i class="ri-flag-2-fill me-1"></i>High Priority
+          </span>
+        </div>
+        
+        <h4 class="event-title mb-3">{{ event.title }}</h4>
+      </div>
+
+      <!-- Event Information -->
+      <div class="event-info-section">
+        <div class="event-info-grid">
+          <div class="event-info-item">
+            <div class="info-icon bg-soft-primary">
+              <i class="ri-calendar-event-line text-primary"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Date & Time</span>
+              <span class="info-value">{{ formatEventDate(event) }}</span>
+              <span class="info-extra" *ngIf="event.allDay">All-day event</span>
+            </div>
+          </div>
+          
+          <div class="event-info-item" *ngIf="event.location">
+            <div class="info-icon bg-soft-info">
+              <i class="ri-map-pin-line text-info"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Location</span>
+              <span class="info-value">{{ event.location }}</span>
+            </div>
+          </div>
+          
+          <div class="event-info-item">
+            <div class="info-icon bg-soft-{{ getEventStatusColor(event.status) }}">
+              <i class="ri-checkbox-circle-line text-{{ getEventStatusColor(event.status) }}"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Status</span>
+              <span class="info-value">{{ event.status }}</span>
+            </div>
+          </div>
+          
+          <div class="event-info-item" *ngIf="event.caseId && event.case">
+            <div class="info-icon bg-soft-warning">
+              <i class="ri-briefcase-4-line text-warning"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Associated Case</span>
+              <span class="info-value">{{ event.case.title }}</span>
+              <span class="info-extra">Case #{{ event.case.caseNumber }}</span>
+            </div>
+          </div>
+          
+          <div class="event-info-item" *ngIf="event.recurrence">
+            <div class="info-icon bg-soft-success">
+              <i class="ri-repeat-line text-success"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Recurrence</span>
+              <span class="info-value">{{ formatRecurrence(event.recurrence) }}</span>
+            </div>
+          </div>
+          
+          <div class="event-info-item" *ngIf="event.reminderMinutes > 0">
+            <div class="info-icon bg-soft-secondary">
+              <i class="ri-notification-3-line text-secondary"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Primary Reminder</span>
+              <span class="info-value">{{ formatReminderTime(event.reminderMinutes) }}</span>
+              <span class="info-extra">
+                <i [ngClass]="event.emailNotification ? 'ri-mail-check-line text-success' : 'ri-mail-close-line text-danger'"></i>
+                <span class="ms-1">{{ event.emailNotification ? 'Email' : 'No email' }}</span>
+                
+                <i class="ms-3" [ngClass]="event.pushNotification ? 'ri-notification-badge-line text-success' : 'ri-notification-off-line text-danger'"></i>
+                <span class="ms-1">{{ event.pushNotification ? 'Push' : 'No push' }}</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Additional Reminders (if any) - Integrated into the main view -->
+          <div class="event-info-item" *ngIf="event.additionalReminders?.length">
+            <div class="info-icon bg-soft-warning">
+              <i class="ri-notification-4-line text-warning"></i>
+            </div>
+            <div class="info-content">
+              <span class="info-label">Additional Reminders</span>
+              <div class="mt-1">
+                <span *ngFor="let reminder of getSortedAdditionalReminders()" 
+                      class="badge bg-warning-subtle text-warning me-1 mb-1 py-1 px-2">
+                  {{ formatReminderTime(reminder) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Event Description -->
+      <div class="event-description-section" *ngIf="event.description">
+        <h6 class="section-title">
+          <i class="ri-file-text-line me-2"></i>Description
+        </h6>
+        <div class="description-content">{{ event.description }}</div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="d-flex mt-4 pt-2 px-4 pb-4">
+      <button type="button" class="btn btn-light" (click)="onCancel()">
+        <i class="ri-close-line me-1 align-middle"></i>Close
+      </button>
+      <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-soft-primary" (click)="switchToEditMode()">
+          <i class="ri-edit-line me-1 align-middle"></i>Edit
+        </button>
+        <button *ngIf="event?.id" type="button" class="btn btn-soft-danger" (click)="confirmDelete()">
+          <i class="ri-delete-bin-line me-1 align-middle"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edit/Create Mode -->
+  <app-event-form 
+    *ngIf="!viewModeInternal"
+    [event]="event"
+    [caseId]="caseId"
+    (save)="onSave($event)"
+    (cancel)="onCancel()">
+  </app-event-form>
+</div> 

@@ -1,0 +1,118 @@
+/**
+ * Calendar View Popover Styles
+ * Styling for the "more events" popover in FullCalendar
+ */
+
+// More events popover styling
+.more-events-link {
+  font-weight: 500;
+  color: var(--vz-primary);
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.75rem;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.2);
+  }
+}
+
+// FullCalendar popover styling
+.fc-popover {
+  border: none !important;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+  border-radius: 0.5rem !important;
+  background: var(--vz-card-bg) !important;
+  
+  .fc-popover-header {
+    background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+    color: var(--vz-heading-color) !important;
+    font-weight: 500 !important;
+    padding: 0.75rem 1rem !important;
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+    border-bottom: 1px solid var(--vz-border-color) !important;
+    
+    .fc-popover-title {
+      margin: 0 !important;
+      font-size: 0.9rem !important;
+    }
+    
+    .fc-popover-close {
+      color: var(--vz-body-color) !important;
+      font-size: 1rem !important;
+      opacity: 0.75 !important;
+      
+      &:hover {
+        opacity: 1 !important;
+      }
+    }
+  }
+  
+  .fc-popover-body {
+    padding: 0.75rem !important;
+    
+    .fc-daygrid-event {
+      margin: 0.35rem 0 !important;
+      padding: 0.35rem 0.65rem !important;
+      border-radius: 0.25rem !important;
+      border-left: 3px solid currentColor !important;
+      background-color: rgba(var(--vz-light-rgb), 0.5) !important;
+      
+      .fc-event-main {
+        color: var(--vz-body-color) !important;
+      }
+      
+      .fc-event-title {
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+      }
+      
+      .fc-event-time {
+        font-size: 0.75rem !important;
+        opacity: 0.75 !important;
+      }
+    }
+  }
+}
+
+// Dark mode specific overrides
+[data-layout-mode="dark"] {
+  .fc-popover {
+    background: var(--vz-card-bg) !important;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25) !important;
+    
+    .fc-popover-header {
+      background-color: rgba(var(--vz-primary-rgb), 0.2) !important;
+    }
+    
+    .fc-popover-body {
+      .fc-daygrid-event {
+        background-color: var(--vz-gray-700) !important;
+      }
+    }
+  }
+  
+  .more-events-link {
+    background-color: rgba(var(--vz-primary-rgb), 0.2);
+    
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.3);
+    }
+  }
+}
+
+// Badge dot for event type legend
+.badge-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.badge-info {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+} 
