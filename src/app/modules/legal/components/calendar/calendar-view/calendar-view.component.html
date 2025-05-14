@@ -1,26 +1,89 @@
-<div class="calendar-container">
-  <div class="calendar-header">
-    <h2>Calendar</h2>
-    <div class="calendar-actions">
-      <button class="btn btn-primary" (click)="loadEvents()">
-        <i class="fas fa-sync-alt"></i> Refresh
-      </button>
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Page-Title -->
+  <div class="row">
+    <div class="col-sm-12">
+      <div class="page-title-box">
+        <div class="float-end">
+          <!-- Added wrapper div that also captures clicks -->
+          <div class="button-wrapper" (click)="$event.target.tagName !== 'BUTTON' ? null : null">
+            <a routerLink="test-reminders" class="btn btn-primary me-2">
+              <i class="ri-notification-3-line align-middle me-1"></i> Test Reminders
+            </a>
+            <div class="btn-wrapper" (click)="openCreateEventModal()" style="display: inline-block; cursor: pointer;"><button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn">
+              <i class="ri-add-line align-middle me-1"></i> Create Event
+            </button></div>
+          </div>
+        </div>
+        <h4 class="page-title mb-sm-0">Calendar</h4>
+      </div>
     </div>
   </div>
+  <!-- end page title end breadcrumb -->
 
-  <div class="calendar-content">
-    <div *ngIf="loading" class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i> Loading events...
+  <!-- Breadcrumbs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);" (click)="navigateToLegal()">Legal</a></li>
+            <li class="breadcrumb-item active">Calendar</li>
+          </ol>
+        </div>
+      </div>
     </div>
+  </div>
+  <!-- end Breadcrumbs -->
 
-    <div *ngIf="error" class="error-message">
-      <i class="fas fa-exclamation-circle"></i> {{ error }}
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header align-items-center d-flex">
+          <h4 class="card-title mb-0 flex-grow-1">Event Calendar</h4>
+          <div class="flex-shrink-0">
+            <div class="d-flex gap-1">
+              <div class="event-type-info me-4">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                  <div class="badge-info">
+                    <span class="badge-dot bg-danger"></span>
+                    <span class="text-muted ms-1">Court Dates</span>
+                  </div>
+                  <div class="badge-info">
+                    <span class="badge-dot bg-warning"></span>
+                    <span class="text-muted ms-1">Deadlines</span>
+                  </div>
+                  <div class="badge-info">
+                    <span class="badge-dot bg-primary"></span>
+                    <span class="text-muted ms-1">Meetings</span>
+                  </div>
+                  <div class="badge-info">
+                    <span class="badge-dot bg-info"></span>
+                    <span class="text-muted ms-1">Reminders</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Show loading spinner only when initially loading -->
+          <div *ngIf="loading && !calendarComponent" class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Show error as an alert but don't hide calendar -->
+          <div *ngIf="error" class="alert alert-danger mb-3">
+            <i class="ri-error-warning-line me-2"></i> {{ error }}
+          </div>
+
+          <!-- Always show calendar once loaded, even if there are no events -->
+          <div class="calendar-wrapper" [ngClass]="{'fc-theme-dark': isDarkMode}">
+            <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <app-month-view 
-      *ngIf="!loading && !error"
-      [events]="events"
-      (eventClick)="onEventClick($event)">
-    </app-month-view>
   </div>
 </div> 

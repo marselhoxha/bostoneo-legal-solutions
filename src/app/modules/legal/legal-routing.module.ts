@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { AuthenticationGuard } from '@app/guard/authentication.guard';
 
 const routes: Routes = [
   {
@@ -12,7 +13,8 @@ const routes: Routes = [
   },
   {
     path: 'calendar',
-    loadChildren: () => import('@app/modules/legal/components/calendar/calendar.module').then(m => m.CalendarModule)
+    loadChildren: () => import('@app/modules/legal/components/calendar/calendar.module').then(m => m.CalendarModule),
+    canActivate: [AuthenticationGuard]
   }
 ];
 

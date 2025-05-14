@@ -39,10 +39,10 @@
                               </div>
                               <div class="col-sm-auto">
                                   <div class="d-flex flex-wrap align-items-start gap-2">
-                                    <button type="button" class="btn btn-success add-btn" (click)="openNewCustomerModal()" id="create-btn">
-                                      <i class="ri-add-line align-bottom me-1"></i> Add Customer
+                                    <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn" (click)="openNewCustomerModal()" id="create-btn">
+                                      <i class="ri-add-line align-middle me-1"></i> Add Customer
                                     </button>
-                                      <button type="button" class="btn btn-info" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
+                                      <button type="button" class="btn btn-soft-info btn-animation waves-effect waves-light" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
                                   </div>
                               </div>
                           </div>
@@ -105,11 +105,11 @@
                                             <td>{{ customer.type }}</td>
                                             <td>
                                               <div class="btn-group" role="group">
-                                                <button type="button" [routerLink]="['/customers', customer.id]" class="btn btn-sm btn-soft-info me-2">
-                                                  <i class="ri-eye-line align-middle"></i> View
+                                                <button type="button" [routerLink]="['/customers', customer.id]" class="btn btn-sm btn-soft-primary btn-animation waves-effect waves-light me-2">
+                                                  <i class="ri-eye-line align-middle me-1"></i> View
                                                 </button>
-                                                <button type="button" (click)="deleteCustomer(customer.id)" class="btn btn-sm btn-soft-danger">
-                                                  <i class="ri-delete-bin-line align-middle"></i> Delete
+                                                <button type="button" (click)="deleteCustomer(customer.id)" class="btn btn-sm btn-soft-danger btn-animation waves-effect waves-light">
+                                                  <i class="ri-delete-bin-line align-middle me-1"></i> Delete
                                                 </button>
                                               </div>
                                             </td>
@@ -153,32 +153,52 @@
   <h5 class="modal-title" id="exampleModalLabel">Add Customer</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal" (click)="modal.dismiss('Cross click')"></button>
 </div>
-<form (ngSubmit)="createCustomer(newCustomerForm)" [formGroup]="customerForm" class="tablelist-form" #newCustomerForm="ngForm" autocomplete="off">
+<form (ngSubmit)="createCustomer(newCustomerForm)" [formGroup]="customerForm" class="tablelist-form custom-form" #newCustomerForm="ngForm" autocomplete="off">
   <div class="modal-body">
     <input type="hidden" name="id" formControlName="_id" />
 
     <div class="mb-3">
       <label for="name" class="form-label">Customer Name</label>
-      <input type="text" id="name" name="name" ngModel formControlName="customer" class="form-control" placeholder="Enter Name" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['customer'].invalid }" />
-      <div class="invalid-feedback">Please enter a customer name.</div>
+      <div class="form-floating">
+        <input type="text" id="name" name="name" ngModel formControlName="customer" class="form-control" placeholder=" " required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['customer'].invalid }" />
+        <label for="name">Customer Name <span class="text-danger">*</span></label>
+        <div class="invalid-feedback">
+          <i class="ri-error-warning-line me-1"></i> Please enter a customer name.
+        </div>
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="email" class="form-label">Email</label>
-      <input type="email" id="email" name="email" ngModel formControlName="email" class="form-control" placeholder="Enter Email" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['email'].invalid }" />
-      <div class="invalid-feedback">Please enter an email.</div>
+      <div class="form-floating">
+        <input type="email" id="email" name="email" ngModel formControlName="email" class="form-control" placeholder=" " required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['email'].invalid }" />
+        <label for="email">Email <span class="text-danger">*</span></label>
+        <div class="invalid-feedback">
+          <i class="ri-error-warning-line me-1"></i> Please enter an email.
+        </div>
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="phone" class="form-label">Phone</label>
-      <input type="text" id="phone" name="phone" ngModel formControlName="phone" class="form-control" placeholder="Enter Phone no." mask="000-000-0000" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['phone'].invalid }" />
-      <div class="invalid-feedback">Please enter a phone number.</div>
+      <div class="input-group input-group-dynamic">
+        <span class="input-group-text"><i class="ri-phone-line"></i></span>
+        <input type="text" id="phone" name="phone" ngModel formControlName="phone" class="form-control" placeholder="Enter Phone no." mask="000-000-0000" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['phone'].invalid }" />
+      </div>
+      <div class="invalid-feedback">
+        <i class="ri-error-warning-line me-1"></i> Please enter a phone number.
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="date" class="form-label">Joining Date</label>
-      <input class="form-control flatpickr-input" type="text" mwlFlatpickr [altInput]="true" [convertModelValue]="true" formControlName="date" placeholder="Select Date" [ngClass]="{ 'is-invalid': submitted && customerForm.controls['date'].invalid }">
-      <div class="invalid-feedback">Please select a joining date.</div>
+      <div class="input-group input-group-dynamic">
+        <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+        <input class="form-control flatpickr-input" type="text" mwlFlatpickr [altInput]="true" [convertModelValue]="true" formControlName="date" placeholder="Select Date" [ngClass]="{ 'is-invalid': submitted && customerForm.controls['date'].invalid }">
+      </div>
+      <div class="invalid-feedback">
+        <i class="ri-error-warning-line me-1"></i> Please select a joining date.
+      </div>
     </div>
 
     <div class="mb-3">
@@ -189,21 +209,32 @@
         <option value="PENDING">PENDING</option>
         <option value="INACTIVE">INACTIVE</option>
       </select>
-      <div class="invalid-feedback">Please select a status.</div>
+      <div class="invalid-feedback">
+        <i class="ri-error-warning-line me-1"></i> Please select a status.
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="imageUrl" class="form-label">Image URL</label>
-      <input type="text" id="imageUrl" name="imageUrl" ngModel formControlName="imageUrl" class="form-control" placeholder="Enter Image URL" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['imageUrl'].invalid }">
-      <div class="invalid-feedback">Please provide an image URL.</div>
+      <div class="input-group input-group-dynamic">
+        <span class="input-group-text"><i class="ri-image-line"></i></span>
+        <input type="text" id="imageUrl" name="imageUrl" ngModel formControlName="imageUrl" class="form-control" placeholder="Enter Image URL" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['imageUrl'].invalid }">
+      </div>
+      <div class="invalid-feedback">
+        <i class="ri-error-warning-line me-1"></i> Please provide an image URL.
+      </div>
     </div>
   </div>
   <div class="modal-footer">
     <div class="hstack gap-2 justify-content-end">
-      <button type="button" class="btn btn-light" data-bs-dismiss="modal" (click)="modal.close('Close click')">Close</button>
-      <button type="submit" class="btn btn-success" id="add-btn" [disabled]="state.dataState === DataState.LOADING || customerForm.invalid">
+      <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" data-bs-dismiss="modal" (click)="modal.close('Close click')">
+        <i class="ri-close-line align-middle me-1"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-soft-primary btn-animation waves-effect waves-light" id="add-btn" [disabled]="state.dataState === DataState.LOADING || customerForm.invalid">
         <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-        <span *ngIf="state.dataState !== DataState.LOADING">Add Customer</span>
+        <span *ngIf="state.dataState !== DataState.LOADING">
+          <i class="ri-save-line align-middle me-1"></i> Add Customer
+        </span>
       </button>
     </div>
   </div>
