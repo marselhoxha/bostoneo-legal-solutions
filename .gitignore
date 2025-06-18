@@ -59,3 +59,7 @@ src/environments/environment.prod.ts
 *.pyd
 __pycache__/
 *.egg-info/
+
+# Cursor Rules Files
+*.mdc
+.cursor/
