@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { CustomHttpResponse } from '../../../core/models/custom-http-response.model';
+import { Key } from '../../../enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -20,68 +21,87 @@ export class CaseDocumentsService {
     }
 
     console.log('Fetching documents for case ID:', caseId);
-    const url = `${this.apiUrl}/${caseId}/documents`;
+    // Use the direct document service endpoint that doesn't apply role filtering
+    const url = `${environment.apiUrl}/legal/documents/case/${caseId}`;
     
-    return this.http.get<any>(url, { headers: this.getAuthHeaders(false) }).pipe(
-      tap(response => console.log('Documents API response:', response)),
+    // Get fresh headers for each request
+    const headers = this.getAuthHeaders(false);
+    console.log('Request headers:', headers);
+    console.log('Request URL:', url);
+    console.log('Environment API URL:', environment.apiUrl);
+    console.log('Full constructed URL:', url);
+    
+    return this.http.get<any>(url, { headers }).pipe(
+      tap(response => {
+        console.log('✅ SUCCESS: Raw documents API response:', response);
+        console.log('✅ SUCCESS: Response type:', typeof response);
+        console.log('✅ SUCCESS: Response keys:', Object.keys(response || {}));
+        console.log('✅ SUCCESS: Response status:', response?.status);
+        console.log('✅ SUCCESS: Response data:', response?.data);
+      }),
       map(response => {
-        // Enhanced response handling for different API formats
-        if (response && Array.isArray(response)) {
-          console.log('Found direct array response');
+        // Handle the actual backend response structure
+        // Backend may return different formats, so let's handle them all
+        if (!response) {
+          console.log('Empty response received');
+          return [];
+        }
+        
+        // If response is already an array
+        if (Array.isArray(response)) {
+          console.log('Response is already an array with', response.length, 'items');
           return response;
-        } 
+        }
         
-        if (response && response.data) {
-          if (Array.isArray(response.data)) {
-            console.log('Found data array response');
-            return response.data;
-          }
-          
-          if (response.data.documents && Array.isArray(response.data.documents)) {
-            console.log('Found nested documents array response');
-            return response.data.documents;
-          }
-          
-          // Additional handling: data contains a single document property with array
-          if (response.data.document && Array.isArray(response.data.document)) {
-            console.log('Found nested document array response');
-            return response.data.document;
-          }
-          
-          // Additional handling: check for user and documents under data
-          if (response.data.user && response.data.documents && Array.isArray(response.data.documents)) {
-            console.log('Found documents with user context');
-            return response.data.documents;
-          }
-        } 
-        
-        if (response && response.documents && Array.isArray(response.documents)) {
-          console.log('Found documents property with array');
+        // If response has documents property directly
+        if (response.documents && Array.isArray(response.documents)) {
+          console.log('Found documents array with', response.documents.length, 'items');
           return response.documents;
         }
         
-        if (response && response.document && Array.isArray(response.document)) {
-          console.log('Found document property with array');
-          return response.document;
+        // If response has data.documents structure
+        if (response.data && response.data.documents && Array.isArray(response.data.documents)) {
+          console.log('Found nested documents array with', response.data.documents.length, 'items');
+          return response.data.documents;
         }
         
-        // If we get here and response is an object, search for any array property
-        if (response && typeof response === 'object') {
-          for (const key in response) {
-            if (Array.isArray(response[key])) {
-              console.log(`Found array in property: ${key}`);
-              return response[key];
-            }
-          }
+        // If response has data property that is an array
+        if (response.data && Array.isArray(response.data)) {
+          console.log('Found data array with', response.data.length, 'items');
+          return response.data;
         }
         
-        // If we can't determine the structure or no documents found
-        console.warn('Unexpected response format or no documents found:', response);
-        return [];
+        // If response has data property that contains the documents
+        if (response.data) {
+          console.log('Response has data property:', response.data);
+          return response.data;
+        }
+        
+        // Fallback
+        console.warn('Unexpected response format, returning as-is:', response);
+        return response;
       }),
       catchError(error => {
-        console.error('Error fetching documents:', error);
-        return throwError(() => new Error(`Failed to fetch documents: ${error.message || 'Unknown error'}`));
+        console.error('❌ ERROR: Error fetching documents:', error);
+        console.error('❌ ERROR: Error status:', error.status);
+        console.error('❌ ERROR: Error message:', error.message);
+        console.error('❌ ERROR: Error body:', error.error);
+        console.error('❌ ERROR: Full error object:', JSON.stringify(error, null, 2));
+        
+        if (error.status === 401) {
+          console.log('❌ ERROR: Authentication error - token may be expired');
+          console.log('❌ ERROR: Current token:', localStorage.getItem('token'));
+        } else if (error.status === 403) {
+          console.log('❌ ERROR: Permission denied for documents');
+        } else if (error.status === 404) {
+          console.log('❌ ERROR: Case not found or no documents');
+        } else if (error.status === 500) {
+          console.log('❌ ERROR: Backend internal server error');
+          console.log('❌ ERROR: This indicates a problem with the backend service');
+          console.log('❌ ERROR: URL that failed:', `${this.apiUrl}/${arguments[0]}/documents`);
+        }
+        
+        return throwError(() => error);
       })
     );
   }
@@ -120,24 +140,11 @@ export class CaseDocumentsService {
     );
   }
 
-  downloadDocument(caseId: string, documentId: string): Observable<Blob> {
-    if (!caseId || !documentId) {
-      console.error('Case ID and Document ID are required to download a document');
-      return throwError(() => new Error('Case ID and Document ID are required'));
-    }
-
-    const url = `${this.apiUrl}/${caseId}/documents/${documentId}/download`;
-    
-    return this.http.get(url, {
-      headers: this.getAuthHeaders(false),
-      responseType: 'blob'
-    }).pipe(
-      tap(() => console.log('Document downloaded successfully')),
-      catchError(error => {
-        console.error('Error downloading document:', error);
-        return throwError(() => error);
-      })
-    );
+  downloadDocument(caseId: string, documentId: string, preview: boolean = false): Observable<Blob> {
+    const params = preview ? '?preview=true' : '';
+    return this.http.get(`${this.apiUrl}/${caseId}/documents/${documentId}/download${params}`, { 
+      responseType: 'blob' 
+    });
   }
 
   downloadVersion(caseId: string, documentId: string, versionId: string): Observable<Blob> {
@@ -280,13 +287,13 @@ export class CaseDocumentsService {
     // with the correct boundary parameter
     if (isFormData) {
       return new HttpHeaders({
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem(Key.TOKEN)}`
       });
     }
     
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${localStorage.getItem(Key.TOKEN)}`
     });
   }
 } 

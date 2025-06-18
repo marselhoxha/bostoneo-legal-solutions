@@ -14,6 +14,7 @@ import { SharedModule } from 'src/app/shared/shared.module';
 import { DOCUMENT } from '@angular/common';
 import { finalize } from 'rxjs/operators';
 import { Pipe, PipeTransform } from '@angular/core';
+import { RbacService } from '../../../../../core/services/rbac.service';
 
 @Pipe({
   name: 'safe',
@@ -480,7 +481,18 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   isPreviewLoading: boolean = false;
 
   documentTypes = Object.values(DocumentType);
-  categories = Object.values(DocumentCategory);
+  allCategories = Object.values(DocumentCategory);
+  
+  // Dynamic categories based on user role
+  categories: DocumentCategory[] = [];
+  
+  // Category descriptions for user guidance
+  categoryDescriptions: {[key: string]: string} = {
+    PUBLIC: 'Documents accessible to all parties including clients (contracts, court orders)',
+    INTERNAL: 'Internal documents visible to staff only (research, briefs)',
+    CONFIDENTIAL: 'Sensitive documents for attorneys and admins only (financial, strategy)',
+    ATTORNEY_CLIENT_PRIVILEGE: 'Privileged communications protected by attorney-client privilege'
+  };
 
   newDocument: Partial<CaseDocument> = {
     title: '',
@@ -499,7 +511,8 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     private toastr: ToastrService,
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
-    @Inject(DOCUMENT) private document: Document
+    @Inject(DOCUMENT) private document: Document,
+    private rbacService: RbacService
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
@@ -511,6 +524,9 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Set available categories based on user role
+    this.setAvailableCategories();
+    
     if (this.caseId) {
       const caseIdStr = String(this.caseId);
       console.log('Loading documents for case ID:', caseIdStr);
@@ -572,17 +588,12 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     const caseIdStr = String(this.caseId);
     
     console.log('Loading documents for case ID:', caseIdStr);
-    
-    // Show loading status to the user
-    this.toastr.info('Loading documents...', '', {
-      timeOut: 2000,
-      positionClass: 'toast-top-right',
-      closeButton: true
-    });
+    console.log('Raw caseId value:', this.caseId, 'Type:', typeof this.caseId);
     
     this.documentsService.getDocuments(caseIdStr).subscribe({
       next: (response) => {
         console.log('Raw documents response:', response);
+        console.log('Response type:', typeof response, 'Is array:', Array.isArray(response));
         
         try {
           // Enhanced response processing
@@ -599,18 +610,20 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             docsArray = response.data.documents;
           } else {
             console.error('Unexpected response format:', response);
+            console.log('Response keys:', response ? Object.keys(response) : 'null');
             this.toastr.warning('Unexpected document format received. Contact support if documents are missing.');
             docsArray = [];
           }
           
+          console.log('Extracted documents array:', docsArray);
+          console.log('Documents array length:', docsArray.length);
+          
+          // Log results without showing intrusive toast messages
           if (docsArray.length === 0) {
             console.log('No documents found for case ID:', caseIdStr);
-            this.toastr.info('No documents found for this case.');
           } else {
             console.log(`Found ${docsArray.length} documents for case ID:`, caseIdStr);
           }
-          
-          console.log('Extracted documents array:', docsArray);
           
           // Process and normalize each document
           this.documents = docsArray.map(doc => {
@@ -746,6 +759,9 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     this.selectedDocument = document;
     this.cdr.detectChanges();
     
+    // Revoke any existing object URL
+    this.revokeCurrentObjectUrl();
+    
     // Manually handle modal with DOM
     const modalElement = this.document.getElementById('documentPreviewModal');
     if (modalElement) {
@@ -794,53 +810,44 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (blob: Blob) => {
-          if (!blob || blob.size === 0) {
-            this.previewError = 'Document is empty or could not be loaded';
-            return;
-          }
+          console.log('Blob received for preview:', blob);
+          console.log('Blob type:', blob.type);
           
-          console.log(`Received document blob: type=${blob.type}, size=${blob.size}`);
-          this.createPreviewFromBlob(blob, document);
+          if (blob && blob.size > 0) {
+            // Force PDF type if filename ends with .pdf but type is incorrect
+            let blobToUse = blob;
+            const filename = document.fileName || '';
+            
+            // If file is PDF but content type is not set correctly, fix it
+            if (filename.toLowerCase().endsWith('.pdf') && blob.type !== 'application/pdf') {
+              console.log('File appears to be PDF but has wrong content type. Creating new blob with correct type');
+              blobToUse = new Blob([blob], { type: 'application/pdf' });
+            }
+            
+            // Check blob type for preview compatibility
+            if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
+              console.log('Creating object URL for blob type:', blobToUse.type);
+              this.currentObjectUrl = URL.createObjectURL(blobToUse);
+              this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
+              console.log('Preview URL generated:', this.currentObjectUrl);
+              this.previewError = null;
+            } else {
+              console.warn(`Preview not supported for type: ${blobToUse.type}`);
+              this.previewError = `Preview is not available for this file type (${blobToUse.type || 'unknown'}). Please download the file instead.`;
+            }
+          } else {
+            console.error('Received empty blob for preview.');
+            this.previewError = 'Could not load document for preview (empty file).';
+          }
+          this.cdr.detectChanges();
         },
         error: (error) => {
           console.error('Error downloading document for preview:', error);
-          this.previewError = 'Failed to load document for preview';
+          this.previewError = 'Failed to load document for preview. Please try downloading it.';
+          this.previewUrl = null;
           this.cdr.detectChanges();
         }
       });
-  }
-  
-  private createPreviewFromBlob(blob: Blob, document: CaseDocument): void {
-    console.log('Blob received for preview:', blob);
-    console.log('Blob type:', blob.type);
-    
-    if (blob && blob.size > 0) {
-      // Force PDF type if filename ends with .pdf but type is incorrect
-      let blobToUse = blob;
-      const filename = document.fileName || '';
-      
-      // If file is PDF but content type is not set correctly, fix it
-      if (filename.toLowerCase().endsWith('.pdf') && blob.type !== 'application/pdf') {
-        console.log('File appears to be PDF but has wrong content type. Creating new blob with correct type');
-        blobToUse = new Blob([blob], { type: 'application/pdf' });
-      }
-      
-      // Check blob type for preview compatibility
-      if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
-        console.log('Creating object URL for blob type:', blobToUse.type);
-        this.currentObjectUrl = URL.createObjectURL(blobToUse);
-        this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
-        console.log('Preview URL generated:', this.currentObjectUrl);
-        this.previewError = null;
-      } else {
-        console.warn(`Preview not supported for type: ${blobToUse.type}`);
-        this.previewError = `Preview is not available for this file type (${blobToUse.type || 'unknown'}). Please download the file instead.`;
-      }
-    } else {
-      console.error('Received empty blob for preview.');
-      this.previewError = 'Could not load document for preview (empty file).';
-    }
-    this.cdr.detectChanges();
   }
   
   private revokeCurrentObjectUrl(): void {
@@ -1183,5 +1190,75 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  setAvailableCategories(): void {
+    const isClient = this.rbacService.hasRole('ROLE_CLIENT');
+    const isAttorney = this.rbacService.isAttorneyLevel();
+    const isAdmin = this.rbacService.isAdmin();
+    const isParalegal = this.rbacService.hasRole('ROLE_PARALEGAL');
+    const isSecretary = this.rbacService.hasRole('ROLE_SECRETARY');
+    
+    if (isClient) {
+      // Clients can only upload PUBLIC documents
+      this.categories = [DocumentCategory.PUBLIC];
+    } else if (isAttorney || isAdmin) {
+      // Attorneys and admins can use all categories
+      this.categories = this.allCategories;
+    } else if (isParalegal) {
+      // Paralegals can't create attorney-client privileged documents
+      this.categories = this.allCategories.filter(cat => cat !== DocumentCategory.ATTORNEY_CLIENT_PRIVILEGE);
+    } else if (isSecretary) {
+      // Secretaries can only create public and internal documents
+      this.categories = [
+        DocumentCategory.PUBLIC,
+        DocumentCategory.INTERNAL
+      ];
+    } else {
+      // Default: basic categories
+      this.categories = [DocumentCategory.PUBLIC];
+    }
+  }
+  
+  // Helper method to get category description
+  getCategoryDescription(category: string): string {
+    return this.categoryDescriptions[category] || '';
+  }
+
+  // Helper method to get category badge class
+  getCategoryBadgeClass(category: string): string {
+    switch(category) {
+      case 'PUBLIC':
+        return 'badge bg-success-subtle text-success';
+      case 'INTERNAL':
+        return 'badge bg-info-subtle text-info';
+      case 'CONFIDENTIAL':
+        return 'badge bg-warning-subtle text-warning';
+      case 'ATTORNEY_CLIENT_PRIVILEGE':
+        return 'badge bg-danger-subtle text-danger';
+      default:
+        return 'badge bg-secondary-subtle text-secondary';
+    }
+  }
+  
+  // Helper method to get category icon
+  getCategoryIcon(category: string): string {
+    switch(category) {
+      case 'PUBLIC':
+        return 'ri-global-line'; // Globe icon for public
+      case 'INTERNAL':
+        return 'ri-building-line'; // Building for internal
+      case 'CONFIDENTIAL':
+        return 'ri-lock-line'; // Lock for confidential
+      case 'ATTORNEY_CLIENT_PRIVILEGE':
+        return 'ri-shield-keyhole-line'; // Shield for privileged
+      default:
+        return 'ri-file-text-line';
+    }
+  }
+
+  // Track by function for category dropdown
+  trackByCategory(index: number, category: DocumentCategory): string {
+    return category;
   }
 } 

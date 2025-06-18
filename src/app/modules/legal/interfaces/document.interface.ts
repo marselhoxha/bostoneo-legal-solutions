@@ -9,11 +9,11 @@ export enum DocumentType {
 }
 
 export enum DocumentCategory {
-  LEGAL = 'LEGAL',
-  FINANCIAL = 'FINANCIAL',
-  CORRESPONDENCE = 'CORRESPONDENCE',
-  REPORT = 'REPORT',
-  OTHER = 'OTHER'
+  // RBAC-compliant categories
+  PUBLIC = 'PUBLIC',                                  // Accessible to all authorized users including clients
+  INTERNAL = 'INTERNAL',                              // Staff only (not clients)
+  CONFIDENTIAL = 'CONFIDENTIAL',                      // Attorney/Admin only
+  ATTORNEY_CLIENT_PRIVILEGE = 'ATTORNEY_CLIENT_PRIVILEGE' // Attorney + specific client only
 }
 
 export enum DocumentStatus {

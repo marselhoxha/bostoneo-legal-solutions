@@ -5,6 +5,8 @@ import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collection;
+
 public interface UserService {
     UserDTO createUser(User user);
     UserDTO getUserByEmail(String email);
@@ -21,4 +23,5 @@ public interface UserService {
     void updateAccountSettings(Long userId, Boolean enabled, Boolean notLocked);
     UserDTO toggleMfa(String email);
     void updateImage(UserDTO user, MultipartFile image);
+    Collection<User> getUsers(int page, int pageSize);
 }

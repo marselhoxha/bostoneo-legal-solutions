@@ -1,0 +1,183 @@
+<div class="card">
+  <div class="card-header bg-light">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Payment History</h5>
+      <button 
+        class="btn btn-sm btn-primary" 
+        (click)="toggleAddPayment()"
+        [disabled]="isLoading">
+        <i class="fas fa-plus"></i> Record Payment
+      </button>
+    </div>
+  </div>
+  
+  <div class="card-body">
+    <!-- Payment Summary -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <div class="text-muted">Invoice Total</div>
+        <h5>${{ invoiceTotal | number:'1.2-2' }}</h5>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted">Total Paid</div>
+        <h5 class="text-success">${{ totalPaid | number:'1.2-2' }}</h5>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted">Balance Due</div>
+        <h5 [ngClass]="getPaymentStatusClass()">
+          ${{ balanceDue | number:'1.2-2' }}
+          <span class="badge" [ngClass]="{
+            'bg-success': getPaymentStatus() === 'PAID',
+            'bg-warning': getPaymentStatus() === 'PARTIAL',
+            'bg-danger': getPaymentStatus() === 'UNPAID'
+          }">{{ getPaymentStatus() }}</span>
+        </h5>
+      </div>
+    </div>
+
+    <!-- Add Payment Form -->
+    <div *ngIf="showAddPayment" class="border rounded p-3 mb-3 bg-light">
+      <h6 class="mb-3">Record New Payment</h6>
+      <form #paymentForm="ngForm" (ngSubmit)="addPayment()">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Payment Date <span class="text-danger">*</span></label>
+              <input 
+                type="date" 
+                class="form-control form-control-sm" 
+                [(ngModel)]="newPayment.paymentDate"
+                name="paymentDate"
+                required
+                [max]="newPayment.paymentDate">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Amount <span class="text-danger">*</span></label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">$</span>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  [(ngModel)]="newPayment.amount"
+                  name="amount"
+                  required
+                  min="0.01"
+                  step="0.01">
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Payment Method <span class="text-danger">*</span></label>
+              <select 
+                class="form-control form-control-sm" 
+                [(ngModel)]="newPayment.paymentMethod"
+                name="paymentMethod"
+                required>
+                <option *ngFor="let method of paymentMethods" [value]="method.value">
+                  {{ method.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Reference #</label>
+              <input 
+                type="text" 
+                class="form-control form-control-sm" 
+                [(ngModel)]="newPayment.referenceNumber"
+                name="referenceNumber"
+                placeholder="Check/Transaction #">
+            </div>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-md-12">
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea 
+                class="form-control form-control-sm" 
+                [(ngModel)]="newPayment.notes"
+                name="notes"
+                rows="2"
+                placeholder="Optional notes about this payment..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button 
+            type="submit" 
+            class="btn btn-sm btn-primary"
+            [disabled]="!paymentForm.valid || isLoading">
+            <i class="fas fa-save"></i> Save Payment
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-sm btn-secondary ms-2"
+            (click)="resetForm()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Payments List -->
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Reference #</th>
+            <th>Notes</th>
+            <th>Recorded By</th>
+            <th width="50"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="text-center py-3">
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoading && payments.length === 0">
+            <td colspan="7" class="text-center text-muted py-3">
+              No payments recorded
+            </td>
+          </tr>
+          <tr *ngFor="let payment of payments">
+            <td>{{ payment.paymentDate | date:'MM/dd/yyyy' }}</td>
+            <td class="text-success">${{ payment.amount | number:'1.2-2' }}</td>
+            <td>{{ payment.paymentMethod }}</td>
+            <td>{{ payment.referenceNumber || '-' }}</td>
+            <td>
+              <small class="text-muted">{{ payment.notes || '-' }}</small>
+            </td>
+            <td>
+              <small class="text-muted">
+                {{ payment.createdByName || 'System' }}
+                <br>
+                {{ payment.createdAt | date:'MM/dd/yy h:mm a' }}
+              </small>
+            </td>
+            <td>
+              <button 
+                class="btn btn-sm btn-link text-danger p-0"
+                (click)="deletePayment(payment)"
+                [disabled]="isLoading"
+                title="Delete payment">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

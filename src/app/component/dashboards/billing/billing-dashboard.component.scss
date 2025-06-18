@@ -1,0 +1,372 @@
+/* Velzon System Theme - Billing Dashboard */
+
+/* === BILLING DASHBOARD - CLEAN VELZON STYLING === */
+
+/* Only disable animations for non-essential elements, keep loading animations */
+.card-enhanced *:not(.spinner-border):not(.placeholder):not(.loading-dots span):not(.status-dot) {
+  transition: none !important;
+}
+
+/* === ESSENTIAL ANIMATIONS === */
+.spinner-border {
+  animation: spinner-border 0.75s linear infinite !important;
+}
+
+.spin {
+  animation: spin 1s linear infinite !important;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Status Dot Pulse Animation */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vz-success);
+  animation: status-pulse 2s infinite !important;
+}
+
+@keyframes status-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--vz-success-rgb), 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--vz-success-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--vz-success-rgb), 0);
+  }
+}
+
+/* === PAGE HEADER === */
+.page-title-box {
+  margin-bottom: 1.5rem;
+  background: var(--vz-light);
+  border-radius: var(--vz-border-radius);
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--vz-border-color);
+}
+
+.letter-spacing {
+  letter-spacing: 0.5px;
+}
+
+/* Enhanced card styling matching time dashboard */
+.card-enhanced {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color-light);
+  border-radius: var(--vz-border-radius);
+  box-shadow: var(--vz-box-shadow-sm);
+}
+
+.card-enhanced .card-header {
+  background: var(--vz-light);
+  border-bottom: 1px solid var(--vz-border-color);
+}
+
+[data-bs-theme="dark"] .card-enhanced .card-header {
+  background: var(--vz-dark);
+}
+
+.trend-badge {
+  font-size: 0.6875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.trend-positive {
+  background: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--vz-success);
+}
+
+.trend-stable {
+  background: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+.fs-22 {
+  font-size: 1.375rem;
+}
+
+.progress-sm {
+  height: 0.25rem;
+}
+
+.ff-secondary {
+  font-family: var(--vz-font-sans-serif);
+}
+
+/* Empty state styling */
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  background: var(--vz-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-secondary);
+}
+
+[data-bs-theme="dark"] .empty-icon {
+  background: var(--vz-dark);
+}
+
+/* === CLIENT LIST STYLING === */
+.top-clients-list {
+  .client-item {
+    transition: all 0.2s ease;
+    border-radius: var(--vz-border-radius);
+    
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.02);
+      transform: translateX(2px);
+    }
+    
+    &:last-child {
+      border-bottom: none !important;
+    }
+  }
+}
+
+/* === INVOICE LIST STYLING === */
+.recent-invoices-list {
+  .invoice-item {
+    transition: all 0.2s ease;
+    border-radius: var(--vz-border-radius);
+    
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.02);
+      transform: translateX(2px);
+    }
+    
+    &:last-child {
+      border-bottom: none !important;
+    }
+  }
+}
+
+/* === TABLE STYLING === */
+.table {
+  font-size: 0.875rem;
+  
+  th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: var(--vz-secondary);
+    padding: 1rem 0.75rem;
+  }
+  
+  td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+  }
+  
+  .table-light th {
+    background: var(--vz-light);
+    border-color: var(--vz-border-color);
+  }
+  
+  tr:hover {
+    background: rgba(var(--vz-primary-rgb), 0.02);
+  }
+}
+
+[data-bs-theme="dark"] .table .table-light th {
+  background: var(--vz-dark);
+  color: var(--vz-body-color);
+}
+
+/* === STATUS BADGES === */
+.badge {
+  font-weight: 600;
+  
+  &.bg-success-subtle {
+    background-color: rgba(var(--vz-success-rgb), 0.1) !important;
+    color: var(--vz-success) !important;
+  }
+  
+  &.bg-warning-subtle {
+    background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
+    color: var(--vz-warning) !important;
+  }
+  
+  &.bg-danger-subtle {
+    background-color: rgba(var(--vz-danger-rgb), 0.1) !important;
+    color: var(--vz-danger) !important;
+  }
+  
+  &.bg-primary-subtle {
+    background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+    color: var(--vz-primary) !important;
+  }
+  
+  &.bg-info-subtle {
+    background-color: rgba(var(--vz-info-rgb), 0.1) !important;
+    color: var(--vz-info) !important;
+  }
+}
+
+/* === AVATAR STYLING === */
+.avatar-sm {
+  width: 2rem;
+  height: 2rem;
+  
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+}
+
+/* === BUTTON STYLING === */
+.btn {
+  font-weight: 600;
+  border-radius: var(--vz-border-radius);
+  
+  &.btn-sm {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+  .container-fluid {
+    margin-top: 100px !important;
+  }
+  
+  .card-body {
+    padding: 1rem !important;
+  }
+  
+  .row.g-4 {
+    margin: 0 -0.5rem;
+    
+    > [class*="col"] {
+      padding: 0 0.5rem;
+      margin-bottom: 1rem;
+    }
+  }
+  
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  
+  .badge {
+    font-size: 0.6875rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .fs-22 {
+    font-size: 1.125rem !important;
+  }
+  
+  .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.75rem;
+  }
+  
+  .client-item,
+  .invoice-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+    
+    .text-end {
+      text-align: left !important;
+      align-self: flex-end;
+      width: 100%;
+    }
+  }
+}
+
+/* === DARK MODE ADJUSTMENTS === */
+[data-bs-theme="dark"] {
+  .page-title-box {
+    background: var(--vz-dark);
+    border-color: var(--vz-border-color);
+  }
+  
+  .card-enhanced {
+    background: var(--vz-card-bg);
+    border-color: var(--vz-border-color);
+  }
+  
+  .empty-icon {
+    background: var(--vz-body-bg);
+  }
+  
+  .table tr:hover {
+    background: rgba(var(--vz-primary-rgb), 0.05);
+  }
+}
+
+/* === LOADING STATES === */
+.loading-container {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === HOVER EFFECTS === */
+.card-enhanced:hover {
+  box-shadow: var(--vz-box-shadow);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--vz-box-shadow-sm);
+}
+
+/* === CUSTOM SCROLLBAR === */
+.card-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-body::-webkit-scrollbar-track {
+  background: var(--vz-light);
+}
+
+.card-body::-webkit-scrollbar-thumb {
+  background: var(--vz-border-color);
+  border-radius: 2px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+  background: var(--vz-secondary);
+}

@@ -1,0 +1,328 @@
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">Edit Invoice</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item active">Edit</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alert for paid invoices -->
+<div *ngIf="currentInvoice?.status === 'PAID'" class="row">
+  <div class="col-12">
+    <div class="alert alert-warning" role="alert">
+      <i class="ri-alert-line me-2"></i>
+      <strong>Notice:</strong> This invoice has been paid and cannot be edited. You can only view the details.
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Invoice Details</h5>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="invoiceForm" (ngSubmit)="onSubmit()">
+          <div class="row">
+            <!-- Invoice Number and Status -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Invoice Number <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="invoiceNumber" 
+                       [class.is-invalid]="isFieldInvalid('invoiceNumber')"
+                       readonly>
+                <div class="invalid-feedback">
+                  Invoice number is required
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Template</label>
+                <select class="form-select" (change)="onTemplateChange($any($event.target).value)"
+                        [disabled]="isFormDisabled">
+                  <option value="">Select Template (Optional)</option>
+                  <option *ngFor="let template of templates" [value]="template.id">
+                    {{ template.name }}
+                    <span *ngIf="template.isDefault" class="text-muted">(Default)</span>
+                  </option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Status <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="status"
+                        [class.is-invalid]="isFieldInvalid('status')"
+                        [disabled]="isFormDisabled">
+                  <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select a status
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Client Selection -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Client <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="clientId" 
+                        (change)="onClientChange($any($event.target).value)"
+                        [class.is-invalid]="isFieldInvalid('clientId')"
+                        [disabled]="isFormDisabled">
+                  <option value="">Select Client</option>
+                  <option *ngFor="let client of clients" [value]="client.id">{{ client.name }}</option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select a client
+                </div>
+              </div>
+            </div>
+
+            <!-- Case Selection -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Legal Case</label>
+                <select class="form-select" formControlName="legalCaseId"
+                        [disabled]="isFormDisabled">
+                  <option value="">Select Case (Optional)</option>
+                  <option *ngFor="let case of cases" [value]="case.id">{{ case.title }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Dates -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Issue Date <span class="text-danger">*</span></label>
+                <input type="text" id="issueDate" class="form-control" formControlName="issueDate"
+                       placeholder="Select issue date"
+                       [class.is-invalid]="isFieldInvalid('issueDate')"
+                       [disabled]="isFormDisabled">
+                <div class="invalid-feedback">
+                  Issue date is required
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Due Date <span class="text-danger">*</span></label>
+                <input type="text" id="dueDate" class="form-control" formControlName="dueDate"
+                       placeholder="Select due date"
+                       [class.is-invalid]="isFieldInvalid('dueDate')"
+                       [disabled]="isFormDisabled">
+                <div class="invalid-feedback">
+                  Due date is required
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line Items Section -->
+          <div class="row mb-4" *ngIf="!isFormDisabled">
+            <div class="col-12">
+              <h5 class="mb-3">Line Items</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th style="width: 40%">Description</th>
+                      <th style="width: 15%">Quantity</th>
+                      <th style="width: 15%">Unit Price</th>
+                      <th style="width: 15%">Amount</th>
+                      <th style="width: 10%">Category</th>
+                      <th style="width: 5%"></th>
+                    </tr>
+                  </thead>
+                  <tbody formArrayName="lineItems">
+                    <tr *ngFor="let lineItem of lineItems.controls; let i = index" [formGroupName]="i">
+                      <td>
+                        <input type="text" class="form-control" formControlName="description" 
+                               placeholder="Service description..."
+                               [class.is-invalid]="isLineItemFieldInvalid(lineItem, 'description')">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="quantity" 
+                               step="0.01" min="0.01"
+                               [class.is-invalid]="isLineItemFieldInvalid(lineItem, 'quantity')">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="unitPrice" 
+                               step="0.01" min="0"
+                               [class.is-invalid]="isLineItemFieldInvalid(lineItem, 'unitPrice')">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="amount" 
+                               readonly [value]="lineItem.get('amount')?.value | number:'1.2-2'">
+                      </td>
+                      <td>
+                        <select class="form-select" formControlName="category">
+                          <option value="">None</option>
+                          <option value="LEGAL">Legal</option>
+                          <option value="CONSULTATION">Consultation</option>
+                          <option value="RESEARCH">Research</option>
+                          <option value="FILING">Filing</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-sm btn-danger" (click)="removeLineItem(i)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="lineItems.length === 0">
+                      <td colspan="6" class="text-center text-muted py-3">
+                        No line items added. Click "Add Line Item" to start.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" (click)="addLineItem()">
+                <i class="ri-add-line me-1"></i> Add Line Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Read-only line items for paid invoices -->
+          <div class="row mb-4" *ngIf="isFormDisabled && lineItems.length > 0">
+            <div class="col-12">
+              <h5 class="mb-3">Line Items</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Quantity</th>
+                      <th>Unit Price</th>
+                      <th>Amount</th>
+                      <th>Category</th>
+                    </tr>
+                  </thead>
+                  <tbody formArrayName="lineItems">
+                    <tr *ngFor="let lineItem of lineItems.controls; let i = index" [formGroupName]="i">
+                      <td>{{ lineItem.get('description')?.value }}</td>
+                      <td>{{ lineItem.get('quantity')?.value }}</td>
+                      <td>{{ lineItem.get('unitPrice')?.value | currency }}</td>
+                      <td>{{ lineItem.get('amount')?.value | currency }}</td>
+                      <td>{{ lineItem.get('category')?.value || 'None' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Financial Details -->
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Subtotal <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="subtotal" 
+                         step="0.01" min="0"
+                         [class.is-invalid]="isFieldInvalid('subtotal')"
+                         [readonly]="lineItems.length > 0 || isFormDisabled">
+                  <div class="invalid-feedback">
+                    Valid subtotal is required
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-2">
+              <div class="mb-3">
+                <label class="form-label">Tax Rate (%)</label>
+                <input type="number" class="form-control" formControlName="taxRate" 
+                       step="0.01" min="0" max="100"
+                       [disabled]="isFormDisabled">
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Tax Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="text" class="form-control" formControlName="taxAmount" 
+                         readonly [value]="(invoiceForm.get('taxAmount')?.value | number:'1.2-2') || '0.00'">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Total Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="text" class="form-control fw-bold" formControlName="totalAmount" 
+                         readonly [value]="(invoiceForm.get('totalAmount')?.value | number:'1.2-2') || '0.00'">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" formControlName="notes" rows="3"
+                          placeholder="Additional notes or payment instructions..."
+                          [disabled]="isFormDisabled"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-light" (click)="onCancel()">
+                  <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" 
+                        [disabled]="invoiceForm.invalid || (isLoading$ | async) || isFormDisabled"
+                        *ngIf="canEdit">
+                  <span *ngIf="!(isLoading$ | async)">
+                    <i class="ri-save-line me-1"></i> Update Invoice
+                  </span>
+                  <span *ngIf="isLoading$ | async">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Updating...
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div *ngIf="isLoading$ | async" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+     style="background-color: rgba(0,0,0,0.1); z-index: 1050;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div> 

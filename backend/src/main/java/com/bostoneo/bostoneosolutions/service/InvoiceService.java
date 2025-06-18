@@ -1,6 +1,7 @@
 package com.***REMOVED***.***REMOVED***solutions.service;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.InvoiceAnalyticsDTO;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
 import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,17 +18,19 @@ public class InvoiceService {
 
     // Total earnings from paid invoices
     public double calculateTotalEarnings() {
-        List<Invoice> paidInvoices = invoiceRepository.findByStatus("PAID");
-        return paidInvoices.stream().mapToDouble(Invoice::getTotal).sum();
+        return invoiceRepository.findAll().stream()
+                .filter(invoice -> invoice.getStatus() == InvoiceStatus.PAID)
+                .mapToDouble(invoice -> invoice.getTotalAmount().doubleValue())
+                .sum();
     }
 
     // Count paid vs unpaid invoices
     public InvoiceAnalyticsDTO countPaidVsUnpaidInvoices() {
-        long paidCount = invoiceRepository.countByStatus("PAID");
+        long paidCount = invoiceRepository.countByStatus(InvoiceStatus.PAID);
 
         // Count "PENDING" and "OVERDUE" statuses separately and sum them
-        long pendingCount = invoiceRepository.countByStatus("PENDING");
-        long overdueCount = invoiceRepository.countByStatus("OVERDUE");
+        long pendingCount = invoiceRepository.countByStatus(InvoiceStatus.PENDING);
+        long overdueCount = invoiceRepository.countByStatus(InvoiceStatus.OVERDUE);
 
         // Unpaid invoices are those that are either "PENDING" or "OVERDUE"
         long unpaidCount = pendingCount + overdueCount;
@@ -38,8 +41,7 @@ public class InvoiceService {
 
     // Count overdue invoices
     public long countOverdueInvoices() {
-        Date today = new Date();
-        return invoiceRepository.countByStatusAndDateBefore("OVERDUE", today);
+        return invoiceRepository.countByStatus(InvoiceStatus.OVERDUE);
     }
 }
 

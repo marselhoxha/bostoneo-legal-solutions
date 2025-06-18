@@ -6,12 +6,12 @@ export interface Expense {
   description: string;
   tax?: number;
   vendorId?: number;
-  customerId?: number;
+  clientId?: number;
   categoryId?: number;
   invoiceId?: number;
   createdAt?: string;
   updatedAt?: string;
-  customer?: {
+  client?: {
     id: number;
     name: string;
   };

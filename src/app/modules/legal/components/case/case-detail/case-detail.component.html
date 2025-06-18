@@ -248,11 +248,11 @@
                             <th scope="row" style="width: 200px;" class="ps-4 py-3 fw-semibold text-white-dark">Court Name</th>
                             <td class="py-3 fw-normal">{{ case?.courtInfo?.courtName }}</td>
                           </tr>
-                          <tr class="border-bottom">
+                          <tr class="border-bottom" *ngIf="!isClient">
                             <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Judge Name</th>
                             <td class="py-3 fw-normal">{{ case?.courtInfo?.judgeName }}</td>
                           </tr>
-                          <tr>
+                          <tr *ngIf="!isClient">
                             <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Courtroom</th>
                             <td class="py-3 fw-normal">{{ case?.courtInfo?.courtroom }}</td>
                           </tr>
@@ -416,64 +416,6 @@
               </div>
             </div>
             
-            <!-- Billing Information Section -->
-            <div class="row mt-4">
-              <div class="col-12">
-                <div class="card border shadow-none">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-money-dollar-circle-line align-middle me-2 text-primary"></i>
-                      Billing Information
-                    </h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="row g-3">
-                      <div class="col-md-3">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Hourly Rate</label>
-                          <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">$</span>
-                            <input type="number" class="form-control border-start-0" 
-                                   formControlName="hourlyRate"
-                                   placeholder="Enter hourly rate">
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Total Hours</label>
-                          <input type="number" class="form-control" 
-                                 formControlName="totalHours"
-                                 placeholder="Enter total hours">
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Total Amount</label>
-                          <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">$</span>
-                            <input type="number" class="form-control border-start-0" 
-                                   formControlName="totalAmount"
-                                   placeholder="Enter total amount">
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Payment Status</label>
-                          <select class="form-select" formControlName="paymentStatus">
-                            <option *ngFor="let status of paymentStatuses" [ngValue]="status">
-                              {{ status }}
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
             <div class="text-end mt-4">
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="onCancel()">
@@ -495,270 +437,571 @@
 
 <div class="row">
   <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <ul class="nav nav-tabs card-header-tabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button>
+    <div class="card shadow-sm">
+      <div class="card-header border-bottom-dashed bg-light-subtle">
+        <ul class="nav nav-tabs-custom card-header-tabs border-0 fs-14" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="!isClient" data-bs-toggle="tab" href="#notes" role="tab">
+              <i class="ri-sticky-note-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Notes</span>
+            </a>
           </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab" aria-controls="documents" aria-selected="false">Documents</button>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="isClient" data-bs-toggle="tab" href="#documents" role="tab">
+              <i class="ri-file-list-3-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Documents</span>
+            </a>
           </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false">Notes</button>
+          <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#timeline" role="tab">
+              <i class="ri-time-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Timeline</span>
+            </a>
           </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline" type="button" role="tab" aria-controls="timeline" aria-selected="false">Timeline</button>
+          <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#events" role="tab">
+              <i class="ri-calendar-event-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Events</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#timeentries" role="tab">
+              <i class="ri-time-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Time Entries</span>
+            </a>
+          </li>
+          <li class="nav-item" *ngIf="canViewBilling">
+            <a class="nav-link" data-bs-toggle="tab" href="#billing" role="tab">
+              <i class="ri-money-dollar-circle-line me-1 align-bottom"></i>
+              <span class="d-none d-sm-inline">Billing</span>
+            </a>
           </li>
         </ul>
       </div>
-      <div class="card-body">
+      <div class="card-body p-0">
         <div class="tab-content">
-          <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-            <!-- Case overview content -->
-            <div class="row">
-              <div class="col-md-6">
-                <div class="card shadow-sm mb-4">
-                  <div class="card-header bg-light-subtle py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-file-list-3-line align-middle me-2 text-primary"></i>
-                      Case Details
-                    </h5>
+          <!-- Notes Tab -->
+          <div class="tab-pane fade" [class.show]="!isClient" [class.active]="!isClient" id="notes" role="tabpanel">
+            <div class="p-4">
+              <app-case-notes [caseId]="case?.id" *ngIf="canViewInternalNotes"></app-case-notes>
+              <div *ngIf="!canViewInternalNotes" class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title rounded-circle bg-soft-warning text-warning fs-24">
+                    <i class="ri-lock-line"></i>
                   </div>
-                  <div class="card-body">
-                    <div class="table-responsive">
-                      <table class="table table-borderless mb-0">
-                        <tbody>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Status</th>
-                            <td class="text-end py-3">
-                              <span class="badge text-uppercase fw-semibold"
-                                [ngClass]="{
-                                  'bg-success-subtle text-success': case?.status === 'OPEN',
-                                  'bg-warning-subtle text-warning': case?.status === 'IN_PROGRESS',
-                                  'bg-info-subtle text-info': case?.status === 'PENDING',
-                                  'bg-danger-subtle text-danger': case?.status === 'CLOSED',
-                                  'bg-secondary-subtle text-secondary': case?.status === 'ARCHIVED'
-                                }">
-                                {{case?.status}}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Type</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.type}}</td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Priority</th>
-                            <td class="text-end py-3">
-                              <span class="badge text-uppercase fw-semibold"
-                                [ngClass]="{
-                                  'bg-success-subtle text-success': case?.priority === 'LOW',
-                                  'bg-warning-subtle text-warning': case?.priority === 'MEDIUM',
-                                  'bg-danger-subtle text-danger': case?.priority === 'HIGH' || case?.priority === 'URGENT'
-                                }">
-                                {{case?.priority}}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Assigned To</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.assignedTo?.firstName}} {{case?.assignedTo?.lastName || 'Unassigned'}}</td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Created</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.createdAt | date:'medium'}}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Last Updated</th>
-                            <td class="text-end py-3 text-white-dark">{{case?.updatedAt | date:'medium'}}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                </div>
+                <h5 class="mb-3">Access Restricted</h5>
+                <p class="text-muted mb-0">You don't have permission to view case notes.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documents Tab -->
+          <div class="tab-pane fade" [class.show]="isClient" [class.active]="isClient" id="documents" role="tabpanel">
+            <div class="p-4">
+              <app-case-documents [caseId]="caseId"></app-case-documents>
+            </div>
+          </div>
+
+          <!-- Timeline Tab -->
+          <div class="tab-pane fade" id="timeline" role="tabpanel">
+            <div class="p-4">
+              <app-case-timeline [caseId]="caseId" *ngIf="canViewPrivateActivities"></app-case-timeline>
+              <div *ngIf="!canViewPrivateActivities" class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title rounded-circle bg-soft-warning text-warning fs-24">
+                    <i class="ri-lock-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">Access Restricted</h5>
+                <p class="text-muted mb-0">You don't have permission to view the case timeline.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events Tab -->
+          <div class="tab-pane fade" id="events" role="tabpanel">
+            <div class="p-4">
+              <!-- Events Section -->
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-bottom-dashed">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="card-title mb-0">
+                      <i class="ri-calendar-2-line me-2 text-primary"></i>
+                      Upcoming Events & Deadlines
+                    </h6>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-soft-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#filterEvents">
+                        <i class="ri-filter-3-line me-1"></i> Filter
+                      </button>
+                      <button class="btn btn-primary btn-sm" (click)="openCreateEventModal()">
+                        <i class="ri-add-line me-1"></i> New Event
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Filter Section -->
+                  <div class="collapse mt-3" id="filterEvents">
+                    <div class="row g-2">
+                      <div class="col-md-3">
+                        <select class="form-select form-select-sm">
+                          <option value="">All Types</option>
+                          <option value="HEARING">Hearing</option>
+                          <option value="DEADLINE">Deadline</option>
+                          <option value="MEETING">Meeting</option>
+                          <option value="COURT_DATE">Court Date</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <select class="form-select form-select-sm">
+                          <option value="">All Status</option>
+                          <option value="SCHEDULED">Scheduled</option>
+                          <option value="COMPLETED">Completed</option>
+                          <option value="CANCELLED">Cancelled</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search events...">
+                      </div>
+                      <div class="col-md-2">
+                        <button class="btn btn-soft-secondary btn-sm w-100">Clear</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="col-md-6">
-                <div class="card shadow-sm mb-4">
-                  <div class="card-header bg-light-subtle py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-money-dollar-circle-line align-middle me-2 text-primary"></i>
-                      Billing Information
-                    </h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="table-responsive">
-                      <table class="table table-borderless mb-0">
-                        <tbody>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Hourly Rate</th>
-                            <td class="text-end py-3 text-white-dark">${{ case?.billingInfo?.hourlyRate || 0 }}</td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Total Hours</th>
-                            <td class="text-end py-3 text-white-dark">{{ case?.billingInfo?.totalHours || 0 }}</td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Total Amount</th>
-                            <td class="text-end py-3 text-white-dark">${{ case?.billingInfo?.totalAmount || 0 }}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Payment Status</th>
-                            <td class="text-end py-3">
-                              <span class="badge text-uppercase fw-semibold"
-                                [ngClass]="{
-                                  'bg-success-subtle text-success': case?.billingInfo?.paymentStatus === 'PAID',
-                                  'bg-warning-subtle text-warning': case?.billingInfo?.paymentStatus === 'PENDING',
-                                  'bg-danger-subtle text-danger': case?.billingInfo?.paymentStatus === 'OVERDUE'
-                                }">
-                                {{ case?.billingInfo?.paymentStatus }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+
+                <div class="card-body p-0">
+                  <!-- Loading State -->
+                  <div *ngIf="isLoadingEvents" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p class="mt-3 text-muted">Loading events...</p>
                   </div>
-                </div>
-              </div>
-              
-              <!-- Upcoming Events Section -->
-              <div class="col-12">
-                <div class="card shadow-sm mb-4">
-                  <div class="card-header bg-soft-primary py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
-                      Upcoming Events
-                    </h5>
-                    <button class="btn btn-soft-primary btn-sm btn-animation waves-effect waves-light" (click)="openCreateEventModal()">
-                      <i class="ri-add-line align-middle me-1"></i> Add Event
-                    </button>
-                  </div>
-                  <div class="card-body p-0">
-                    <div *ngIf="isLoadingEvents" class="text-center py-4">
-                      <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                      </div>
-                      <p class="mt-2 text-muted">Loading events...</p>
-                    </div>
-                    
-                    <div *ngIf="!isLoadingEvents && caseEvents && caseEvents.length > 0">
-                      <div class="table-responsive">
-                        <table class="table table-nowrap align-middle mb-0">
-                          <thead class="table-light text-muted">
-                            <tr>
-                              <th class="ps-3">#</th>
-                              <th>Title</th>
-                              <th>Type</th>
-                              <th>Date & Time</th>
-                              <th>Status</th>
-                              <th class="text-end pe-3">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr *ngFor="let event of caseEvents; let i = index">
-                              <td class="ps-3">{{ i + 1 }}</td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div [style.--event-color]="event.color || getEventTypeColor(event.eventType)" class="avatar-xs me-2 event-icon">
-                                    <span class="avatar-title rounded-circle bg-light text-center">
-                                      <i [ngClass]="getEventTypeIconClass(event.eventType)" style="color: var(--event-color)" class="fs-15"></i>
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <h5 class="fs-14 mb-0 text-truncate" style="max-width: 150px;" title="{{ event.title }}">{{ event.title }}</h5>
-                                    <p *ngIf="event.location" class="text-muted fs-12 mb-0 text-truncate" style="max-width: 150px;" title="{{ event.location }}">
-                                      <i class="ri-map-pin-line me-1"></i>{{ event.location }}
-                                    </p>
+                  
+                  <!-- Events Table -->
+                  <div *ngIf="!isLoadingEvents && caseEvents && caseEvents.length > 0" class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th class="ps-4" style="width: 5%;">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox" id="selectAll">
+                            </div>
+                          </th>
+                          <th style="width: 35%;">Event Details</th>
+                          <th style="width: 15%;">Type</th>
+                          <th style="width: 20%;">Date & Time</th>
+                          <th style="width: 10%;">Priority</th>
+                          <th style="width: 10%;">Status</th>
+                          <th class="text-end pe-4" style="width: 5%;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let event of caseEvents; let i = index" class="border-bottom">
+                          <td class="ps-4">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox" [id]="'event-' + i">
+                            </div>
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-start">
+                              <div class="avatar-xs me-3 flex-shrink-0">
+                                <span class="avatar-title rounded-circle fs-12" 
+                                  [style.background-color]="event.color || getEventTypeColor(event.eventType)">
+                                  <i [ngClass]="getEventTypeIconClass(event.eventType)" class="text-white"></i>
+                                </span>
+                              </div>
+                              <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14 fw-semibold">{{ event.title }}</h6>
+                                <p *ngIf="event.description" class="text-muted fs-12 mb-1 text-truncate" style="max-width: 250px;">
+                                  {{ event.description }}
+                                </p>
+                                <div *ngIf="event.location" class="d-flex align-items-center text-muted fs-11">
+                                  <i class="ri-map-pin-line me-1"></i>
+                                  <span class="text-truncate" style="max-width: 200px;">{{ event.location }}</span>
+                                </div>
+                                <div *ngIf="event.participants && event.participants.length > 0" class="d-flex align-items-center mt-1">
+                                  <div class="avatar-group">
+                                    <div class="avatar-group-item" *ngFor="let participant of event.participants.slice(0, 3)">
+                                      <div class="avatar-xxs">
+                                        <div class="avatar-title rounded-circle bg-soft-info text-info fs-10">
+                                          {{ getInitials(participant.name) }}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div class="avatar-group-item" *ngIf="event.participants.length > 3">
+                                      <div class="avatar-xxs">
+                                        <div class="avatar-title rounded-circle bg-light text-muted fs-10">
+                                          +{{ event.participants.length - 3 }}
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </td>
-                              <td>
-                                <span class="badge fs-11 fw-semibold"
-                                  [ngClass]="getEventTypeBadgeClass(event.eventType)">
-                                  {{ event.eventType ? (event.eventType | titlecase) : 'Other' }}
-                                </span>
-                              </td>
-                              <td>
-                                <div class="fs-14">{{ event.start ? (event.start | date:'MMM d, y') : 'No date' }}</div>
-                                <div class="text-muted fs-12">
-                                  {{ event.start ? (event.start | date:'h:mm a') : '' }} 
-                                  <span *ngIf="event.end">- {{ event.end | date:'h:mm a' }}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <span class="badge fs-11 fw-semibold"
-                                  [ngClass]="getEventStatusBadgeClass(event.status)">
-                                  {{ event.status || 'Unknown' }}
-                                </span>
-                              </td>
-                              <td class="text-end pe-3">
-                                <div class="hstack gap-2 flex-wrap justify-content-end">
-                                  <button type="button" class="btn btn-sm btn-icon btn-soft-primary" (click)="viewEvent(event)">
-                                    <i class="ri-eye-line fs-13"></i>
-                                  </button>
-                                  <button type="button" class="btn btn-sm btn-icon btn-soft-info" (click)="editEvent(event)">
-                                    <i class="ri-pencil-line fs-13"></i>
-                                  </button>
-                                  <button type="button" class="btn btn-sm btn-icon btn-soft-danger" (click)="deleteEvent(event)">
-                                    <i class="ri-delete-bin-line fs-13"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="badge fs-11 fw-medium"
+                              [ngClass]="getEventTypeBadgeClass(event.eventType)">
+                              {{ event.eventType ? (event.eventType | titlecase) : 'Other' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="fs-13 fw-medium text-dark mb-1">
+                              {{ event.start ? (event.start | date:'MMM dd, yyyy') : 'No date' }}
+                            </div>
+                            <div class="text-muted fs-12">
+                              {{ event.start ? (event.start | date:'h:mm a') : '' }}
+                              <span *ngIf="event.end"> - {{ event.end | date:'h:mm a' }}</span>
+                            </div>
+                            <div *ngIf="event.isAllDay" class="text-info fs-11 fw-medium">
+                              <i class="ri-time-line me-1"></i>All Day
+                            </div>
+                          </td>
+                          <td>
+                            <span class="badge fs-11 fw-medium"
+                              [ngClass]="{
+                                'bg-danger-subtle text-danger': event.priority === 'HIGH',
+                                'bg-warning-subtle text-warning': event.priority === 'MEDIUM',
+                                'bg-success-subtle text-success': event.priority === 'LOW'
+                              }">
+                              {{ event.priority || 'NORMAL' }}
+                            </span>
+                          </td>
+                          <td>
+                            <span class="badge fs-11 fw-medium"
+                              [ngClass]="getEventStatusBadgeClass(event.status)">
+                              {{ event.status || 'Scheduled' }}
+                            </span>
+                          </td>
+                          <td class="text-end pe-4">
+                            <div class="dropdown">
+                              <button class="btn btn-light btn-sm dropdown-toggle btn-icon" type="button" data-bs-toggle="dropdown">
+                                <i class="ri-more-2-fill"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="viewEvent(event)">
+                                    <i class="ri-eye-line align-bottom me-2 text-muted"></i> View Details
+                                  </a>
+                                </li>
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="editEvent(event)">
+                                    <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Edit Event
+                                  </a>
+                                </li>
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="duplicateEvent(event)">
+                                    <i class="ri-file-copy-line align-bottom me-2 text-muted"></i> Duplicate
+                                  </a>
+                                </li>
+                                <li class="dropdown-divider"></li>
+                                <li>
+                                  <a class="dropdown-item text-danger" href="#" (click)="deleteEvent(event)">
+                                    <i class="ri-delete-bin-line align-bottom me-2"></i> Delete
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <!-- Empty State -->
+                  <div *ngIf="!isLoadingEvents && (!caseEvents || caseEvents.length === 0)" class="text-center py-5">
+                    <div class="avatar-xl mx-auto mb-4">
+                      <div class="avatar-title rounded-circle bg-soft-primary text-primary">
+                        <i class="ri-calendar-event-line display-6"></i>
                       </div>
                     </div>
-                    
-                    <div *ngIf="!isLoadingEvents && (!caseEvents || caseEvents.length === 0)" class="text-center py-5">
-                      <div class="avatar-md mx-auto mb-4">
-                        <div class="avatar-title rounded-circle bg-soft-primary text-primary fs-24">
-                          <i class="ri-calendar-event-line"></i>
-                        </div>
-                      </div>
-                      <h5>No events scheduled</h5>
-                      <p class="text-muted">This case doesn't have any upcoming events. Add one to keep track of important dates.</p>
-                      <button class="btn btn-soft-primary btn-sm btn-animation waves-effect waves-light mt-2" (click)="openCreateEventModal()">
-                        <i class="ri-add-line align-middle me-1"></i> Schedule Event
+                    <h5 class="mb-3">No Events Scheduled</h5>
+                    <p class="text-muted mb-4 mx-auto" style="max-width: 400px;">
+                      This case doesn't have any events yet. Schedule important dates, deadlines, and appointments to stay organized.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                      <button class="btn btn-primary" (click)="openCreateEventModal()">
+                        <i class="ri-add-line align-middle me-1"></i> Schedule First Event
+                      </button>
+                      <button class="btn btn-soft-secondary">
+                        <i class="ri-calendar-line align-middle me-1"></i> Import Calendar
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-              <!-- End Upcoming Events Section -->
+
+              <!-- Quick Actions -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="card border-0 bg-soft-light">
+                    <div class="card-body p-3">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                          <i class="ri-lightbulb-line text-warning fs-18 me-2"></i>
+                          <div>
+                            <h6 class="mb-1">Quick Actions</h6>
+                            <p class="text-muted fs-12 mb-0">Streamline your case management workflow</p>
+                          </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                          <button class="btn btn-soft-primary btn-sm">
+                            <i class="ri-calendar-schedule-line me-1"></i> Schedule Court Date
+                          </button>
+                          <button class="btn btn-soft-info btn-sm">
+                            <i class="ri-alarm-line me-1"></i> Set Deadline
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">
-            <div *ngIf="case?.id; else noDocuments">
-              <app-case-documents [caseId]="case.id"></app-case-documents>
+
+          <!-- Time Entries Tab -->
+          <div class="tab-pane fade" id="timeentries" role="tabpanel">
+            <div class="p-4">
+              <app-case-time-entries [caseId]="caseId"></app-case-time-entries>
             </div>
-            <ng-template #noDocuments>
-              <div class="alert alert-info">
-                <p class="mb-0">Please save the case before managing documents.</p>
-              </div>
-            </ng-template>
           </div>
-          <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
-            <div *ngIf="case?.id; else noNotes">
-              <app-case-notes [caseId]="case.id"></app-case-notes>
-            </div>
-            <ng-template #noNotes>
-              <div class="alert alert-info">
-                <p class="mb-0">Please save the case before managing notes.</p>
+
+          <!-- Billing Tab -->
+          <div class="tab-pane fade" id="billing" role="tabpanel" *ngIf="canViewBilling">
+            <div class="p-4">
+              <!-- Action Buttons -->
+              <div class="text-end mb-4">
+                <div class="d-flex gap-2 justify-content-end">
+                  <button class="btn btn-soft-success btn-sm" 
+                          [routerLink]="['/time-tracking/entry/new']" 
+                          [queryParams]="{caseId: caseId}">
+                    <i class="ri-time-line me-1"></i> Log Time
+                  </button>
+                  <button class="btn btn-primary btn-sm" 
+                          [routerLink]="['/time-tracking/invoice-generation']" 
+                          [queryParams]="{clientId: case?.clientId, caseId: caseId}">
+                    <i class="ri-file-text-line me-1"></i> Generate Invoice
+                  </button>
+                </div>
               </div>
-            </ng-template>
-          </div>
-          <div class="tab-pane fade" id="timeline" role="tabpanel" aria-labelledby="timeline-tab">
-            <div *ngIf="case?.id; else noTimeline">
-              <app-case-timeline [caseId]="case.id"></app-case-timeline>
-            </div>
-            <ng-template #noTimeline>
-              <div class="alert alert-info">
-                <p class="mb-0">Please save the case before viewing timeline.</p>
+
+              <!-- Financial Summary Cards -->
+              <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                  <div class="card card-height-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm flex-shrink-0">
+                          <span class="avatar-title rounded-circle bg-soft-success text-success">
+                            <i class="ri-money-dollar-circle-line fs-20"></i>
+                          </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <span class="text-muted fs-13 fw-medium">Hourly Rate</span>
+                          <h4 class="mb-0 text-success">${{ case?.billingInfo?.hourlyRate || 0 | number:'1.2-2' }}</h4>
+                          <small class="text-muted">per hour</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card card-height-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm flex-shrink-0">
+                          <span class="avatar-title rounded-circle bg-soft-info text-info">
+                            <i class="ri-time-line fs-20"></i>
+                          </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <span class="text-muted fs-13 fw-medium">Total Hours</span>
+                          <h4 class="mb-0 text-info">{{ case?.billingInfo?.totalHours || 0 | number:'1.1-1' }}h</h4>
+                          <small class="text-muted">logged</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card card-height-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm flex-shrink-0">
+                          <span class="avatar-title rounded-circle bg-soft-primary text-primary">
+                            <i class="ri-wallet-3-line fs-20"></i>
+                          </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <span class="text-muted fs-13 fw-medium">Total Amount</span>
+                          <h4 class="mb-0 text-primary">${{ case?.billingInfo?.totalAmount || 0 | number:'1.2-2' }}</h4>
+                          <small class="text-muted">billed</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card card-height-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm flex-shrink-0">
+                          <span class="avatar-title rounded-circle" 
+                            [ngClass]="{
+                              'bg-soft-success text-success': case?.billingInfo?.paymentStatus === 'PAID',
+                              'bg-soft-warning text-warning': case?.billingInfo?.paymentStatus === 'PENDING',
+                              'bg-soft-danger text-danger': case?.billingInfo?.paymentStatus === 'OVERDUE'
+                            }">
+                            <i class="ri-secure-payment-line fs-20"></i>
+                          </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <span class="text-muted fs-13 fw-medium">Payment Status</span>
+                          <div>
+                            <span class="badge fs-11 fw-medium"
+                              [ngClass]="{
+                                'bg-success-subtle text-success': case?.billingInfo?.paymentStatus === 'PAID',
+                                'bg-warning-subtle text-warning': case?.billingInfo?.paymentStatus === 'PENDING',
+                                'bg-danger-subtle text-danger': case?.billingInfo?.paymentStatus === 'OVERDUE'
+                              }">
+                              {{ case?.billingInfo?.paymentStatus || 'PENDING' }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </ng-template>
+
+              <!-- Time Tracking Table -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom-dashed">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="card-title mb-0">
+                      <i class="ri-timer-line me-2 text-primary"></i>
+                      Recent Time Entries
+                    </h6>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-soft-primary btn-sm">
+                        <i class="ri-filter-3-line me-1"></i> Filter
+                      </button>
+                      <button class="btn btn-success btn-sm"
+                              [routerLink]="['/time-tracking/entry/new']" 
+                              [queryParams]="{caseId: caseId}">
+                        <i class="ri-add-line me-1"></i> Log Time
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th class="ps-4">Date</th>
+                          <th>Description</th>
+                          <th>Hours</th>
+                          <th>Rate</th>
+                          <th>Amount</th>
+                          <th>Attorney</th>
+                          <th class="text-end pe-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="ps-4">
+                            <div class="fs-13 fw-medium">Dec 15, 2024</div>
+                            <div class="text-muted fs-12">10:30 AM</div>
+                          </td>
+                          <td>
+                            <div class="fs-13">Client consultation and case review</div>
+                            <div class="text-muted fs-12">Initial meeting and strategy discussion</div>
+                          </td>
+                          <td>
+                            <span class="badge bg-info-subtle text-info fs-12">2.5h</span>
+                          </td>
+                          <td>
+                            <span class="fs-13 fw-medium">${{ case?.billingInfo?.hourlyRate || 0 | number:'1.2-2' }}</span>
+                          </td>
+                          <td>
+                            <span class="fs-13 fw-semibold text-success">${{ (case?.billingInfo?.hourlyRate || 0) * 2.5 | number:'1.2-2' }}</span>
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <div class="avatar-xs me-2">
+                                <div class="avatar-title rounded-circle bg-soft-primary text-primary fs-12">
+                                  JD
+                                </div>
+                              </div>
+                              <span class="fs-13">John Doe</span>
+                            </div>
+                          </td>
+                          <td class="text-end pe-4">
+                            <div class="dropdown">
+                              <button class="btn btn-light btn-sm dropdown-toggle btn-icon" type="button" data-bs-toggle="dropdown">
+                                <i class="ri-more-2-fill"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#"><i class="ri-edit-line me-2"></i> Edit</a></li>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="ri-delete-bin-line me-2"></i> Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <!-- More sample entries can be added here -->
+                      </tbody>
+                    </table>
+                  </div>
+                  <!-- Empty state for when no time entries exist -->
+                  <div class="text-center py-5" style="display: none;">
+                    <div class="avatar-xl mx-auto mb-4">
+                      <div class="avatar-title rounded-circle bg-soft-success text-success">
+                        <i class="ri-timer-line display-6"></i>
+                      </div>
+                    </div>
+                    <h5 class="mb-3">No Time Entries</h5>
+                    <p class="text-muted mb-4">Start tracking time to build accurate billing records for this case.</p>
+                    <button class="btn btn-success">
+                      <i class="ri-add-line me-1"></i> Log First Entry
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Expense Tracking -->
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-bottom-dashed">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="card-title mb-0">
+                      <i class="ri-receipt-line me-2 text-primary"></i>
+                      Case Expenses
+                    </h6>
+                    <button class="btn btn-primary btn-sm">
+                      <i class="ri-add-line me-1"></i> Add Expense
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="text-center py-4">
+                    <div class="avatar-lg mx-auto mb-3">
+                      <div class="avatar-title rounded-circle bg-soft-secondary text-secondary">
+                        <i class="ri-receipt-line fs-24"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-2">No Expenses Recorded</h6>
+                    <p class="text-muted mb-3">Track case-related expenses like court fees, travel costs, and research materials.</p>
+                    <button class="btn btn-outline-primary btn-sm">
+                      <i class="ri-add-line me-1"></i> Add First Expense
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

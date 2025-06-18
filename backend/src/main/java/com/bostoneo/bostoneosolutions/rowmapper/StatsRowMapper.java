@@ -11,7 +11,7 @@ public class StatsRowMapper  implements RowMapper<Stats> {
     @Override
     public Stats mapRow(ResultSet resultSet, int rowNum) throws SQLException {
         return Stats.builder()
-                .totalCustomers(resultSet.getInt("total_customers"))
+                .totalClients(resultSet.getInt("total_clients"))
                 .totalInvoices(resultSet.getInt("total_invoices"))
                 .totalBilled(resultSet.getDouble("total_billed"))
                 .build();

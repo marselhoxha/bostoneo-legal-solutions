@@ -1,0 +1,47 @@
+.card {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: none;
+}
+
+.card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: none;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.text-danger {
+  font-size: 0.875rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+}
+
+.btn-sm {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.input-group-text {
+  background: #f8f9fa;
+  border-color: #ced4da;
+}
+
+textarea.form-control {
+  resize: vertical;
+}
+
+.form-check {
+  padding-top: 0.375rem;
+} 
+ 
+ 
+ 
+ 
+ 
+ 

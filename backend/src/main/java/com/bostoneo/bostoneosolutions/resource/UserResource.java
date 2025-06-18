@@ -1,11 +1,14 @@
 package com.***REMOVED***.***REMOVED***solutions.resource;
 
+import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.EventType;
 import com.***REMOVED***.***REMOVED***solutions.event.NewUserEvent;
 import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
 import com.***REMOVED***.***REMOVED***solutions.form.*;
 import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
+import com.***REMOVED***.***REMOVED***solutions.model.Permission;
+import com.***REMOVED***.***REMOVED***solutions.model.Role;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
 import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
 import com.***REMOVED***.***REMOVED***solutions.provider.TokenProvider;
@@ -27,6 +30,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.TOKEN_PREFIX;
@@ -57,12 +62,14 @@ public class UserResource {
     private final ApplicationEventPublisher publisher;
 
     @PostMapping("/login")
+    @AuditLog(action = "LOGIN", entityType = "USER", description = "User login attempt")
     public ResponseEntity<HttpResponse> login(@RequestBody @Valid LoginForm loginForm) {
         UserDTO user = authenticate(loginForm.getEmail(), loginForm.getPassword());
         return user.isUsingMFA() ? sendVerificationCode(user) : sendResponse(user);
     }
 
     @PostMapping("/register")
+    @AuditLog(action = "CREATE", entityType = "USER", description = "New user registration")
     public ResponseEntity<HttpResponse> saveUser(@RequestBody @Valid User user) throws InterruptedException {
         TimeUnit.SECONDS.sleep(4);
         UserDTO userDto = userService.createUser(user);
@@ -90,6 +97,7 @@ public class UserResource {
     }
 
     @PatchMapping("/update")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Updated user profile information")
     public ResponseEntity<HttpResponse> updateUser(@RequestBody @Valid UpdateForm user) {
         UserDTO updatedUser = userService.updateUserDetails(user);
         publisher.publishEvent(new NewUserEvent(updatedUser.getEmail(), PROFILE_UPDATE));
@@ -309,6 +317,19 @@ public class UserResource {
                 .build(), NOT_FOUND);
     }*/
 
+    @GetMapping("/list")
+    public ResponseEntity<HttpResponse> getUsers() {
+        // Retrieve users through the service
+        return ResponseEntity.ok().body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("users", userService.getUsers(0, 1000)))
+                        .message("Users retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     private UserDTO authenticate(String email, String password) {
         UserDTO userByEmail = userService.getUserByEmail(email);
         try {
@@ -347,7 +368,18 @@ public class UserResource {
     }
 
     private UserPrincipal getUserPrincipal(UserDTO user) {
-        return new UserPrincipal(toUser(userService.getUserByEmail(user.getEmail())), roleService.getRoleByUserId(user.getId()));
+        User userEntity = toUser(userService.getUserByEmail(user.getEmail()));
+        // Get roles and permissions for the user
+        Set<Role> roles = roleService.getRolesByUserId(user.getId());
+        Set<Permission> permissions = new HashSet<>();
+        for (Role role : roles) {
+            permissions.addAll(roleService.getPermissionsByRoleId(role.getId()));
+        }
+        
+        // Get case role assignments for the user
+        Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(user.getId());
+        
+        return new UserPrincipal(userEntity, roles, permissions, caseRoleAssignments);
     }
 
     private ResponseEntity<HttpResponse> sendVerificationCode(UserDTO user) {

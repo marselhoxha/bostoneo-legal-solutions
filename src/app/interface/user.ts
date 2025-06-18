@@ -13,5 +13,7 @@ export interface User {
       usingMFA: boolean;
       createdAt?: Date;
       roleName: string;
+      primaryRoleName?: string;
+      roles?: string[];
       permissions: string;
 }

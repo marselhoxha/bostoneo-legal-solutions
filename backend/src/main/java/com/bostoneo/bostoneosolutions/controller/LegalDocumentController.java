@@ -1,5 +1,6 @@
 package com.***REMOVED***.***REMOVED***solutions.controller;
 
+import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
@@ -54,11 +55,13 @@ public class LegalDocumentController {
     }
 
     @PostMapping
+    @AuditLog(action = "CREATE", entityType = "DOCUMENT", description = "Created new document")
     public ResponseEntity<CustomHttpResponse<LegalDocument>> createDocument(@RequestBody LegalDocumentDTO document) {
         return ResponseEntity.ok(documentService.createDocument(document));
     }
 
     @PutMapping("/{id}")
+    @AuditLog(action = "UPDATE", entityType = "DOCUMENT", description = "Updated document")
     public ResponseEntity<CustomHttpResponse<LegalDocument>> updateDocument(
             @PathVariable Long id,
             @RequestBody LegalDocumentDTO document) {
@@ -66,11 +69,13 @@ public class LegalDocumentController {
     }
 
     @DeleteMapping("/{id}")
+    @AuditLog(action = "DELETE", entityType = "DOCUMENT", description = "Deleted document")
     public ResponseEntity<CustomHttpResponse<Void>> deleteDocument(@PathVariable Long id) {
         return ResponseEntity.ok(documentService.deleteDocument(id));
     }
 
     @PostMapping("/upload")
+    @AuditLog(action = "CREATE", entityType = "DOCUMENT", description = "Uploaded document file")
     public ResponseEntity<CustomHttpResponse<LegalDocument>> uploadDocument(
             @AuthenticationPrincipal UserDTO userDetails,
             @RequestParam("file") MultipartFile file,

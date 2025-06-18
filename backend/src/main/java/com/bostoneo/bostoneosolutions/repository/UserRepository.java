@@ -6,6 +6,7 @@ import com.***REMOVED***.***REMOVED***solutions.model.User;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface UserRepository<T extends User> {
     /* Basic CRUD Operations */
@@ -30,4 +31,8 @@ public interface UserRepository<T extends User> {
     void updateAccountSettings(Long userId, Boolean enabled, Boolean notLocked);
     User toggleMfa(String email);
     void updateImage(UserDTO user, MultipartFile image);
+    
+    /* RBAC Operations */
+    List<T> getUsersByRoleId(Long roleId);
+    T findByIdWithRoles(Long id);
 }

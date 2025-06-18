@@ -5,11 +5,30 @@ import { InvoiceDetailComponent } from "./invoice-detail/invoice-detail.componen
 import { InvoiceRoutingModule } from "./invoice-routing.module";
 import { InvoicesComponent } from "./invoices/invoices.component";
 import { NewinvoiceComponent } from "./newinvoice/newinvoice.component";
-import { FlatpickrModule } from 'angularx-flatpickr';  // Use angularx-flatpickr
+// EditInvoiceComponent is now standalone
+import { InvoiceTemplatesComponent } from "./invoice-templates/invoice-templates.component";
+import { InvoiceTemplateFormComponent } from "./invoice-template-form/invoice-template-form.component";
+import { InvoiceWorkflowsComponent } from "./invoice-workflows/invoice-workflows.component";
+
+import { InvoiceWorkflowConfigComponent } from "./invoice-workflow-config/invoice-workflow-config.component";
+import { InvoicePaymentsComponent } from "./invoice-payments/invoice-payments.component";
+import { FlatpickrModule } from 'angularx-flatpickr';
+import { PaymentDashboardComponent } from './payment-dashboard/payment-dashboard.component';  // Use angularx-flatpickr
+import { NgSelectModule } from '@ng-select/ng-select';
 
 
 @NgModule({
-  declarations: [InvoicesComponent, NewinvoiceComponent, InvoiceDetailComponent],
-  imports: [SharedModule, InvoiceRoutingModule, FlatpickrModule.forRoot(), LayoutsModule,]
+  declarations: [
+    InvoicesComponent, 
+    NewinvoiceComponent, 
+    InvoiceDetailComponent,
+    InvoiceTemplatesComponent,
+    InvoiceTemplateFormComponent,
+    InvoiceWorkflowsComponent,
+    InvoiceWorkflowConfigComponent,
+    InvoicePaymentsComponent,
+    PaymentDashboardComponent
+  ],
+  imports: [SharedModule, InvoiceRoutingModule, FlatpickrModule.forRoot(), LayoutsModule, NgSelectModule]
 })
 export class InvoiceModule { }

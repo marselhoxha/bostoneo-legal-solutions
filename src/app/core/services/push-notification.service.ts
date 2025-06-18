@@ -14,6 +14,8 @@ export class PushNotificationService {
   
   private notificationSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
   public notification$: Observable<any> = this.notificationSubject.asObservable();
+  
+  private isFirebaseEnabled = false;
 
   constructor(private http: HttpClient) {
     this.initializeFirebase();
@@ -24,11 +26,20 @@ export class PushNotificationService {
    */
   private initializeFirebase(): void {
     try {
+      // Check if Firebase is properly configured
+      if (!environment.firebase || !environment.firebase.apiKey) {
+        console.warn('⚠️ Firebase not configured - Push notifications disabled');
+        return;
+      }
+      
       const firebaseApp = initializeApp(environment.firebase);
       this.messaging = getMessaging(firebaseApp);
+      this.isFirebaseEnabled = true;
       this.listenForMessages();
+      console.log('✅ Firebase initialized successfully');
     } catch (error) {
-      console.error('Error initializing Firebase:', error);
+      console.warn('⚠️ Firebase initialization failed - Push notifications disabled:', error);
+      this.isFirebaseEnabled = false;
     }
   }
 
@@ -37,6 +48,11 @@ export class PushNotificationService {
    */
   public requestPermission(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
+      if (!this.isFirebaseEnabled) {
+        reject('Firebase not initialized');
+        return;
+      }
+
       // Request permission for notifications
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
@@ -69,6 +85,8 @@ export class PushNotificationService {
    * Listen for incoming messages when the app is in the foreground
    */
   private listenForMessages(): void {
+    if (!this.isFirebaseEnabled) return;
+    
     onMessage(this.messaging, (payload) => {
       console.log('Received foreground message:', payload);
       this.notificationSubject.next(payload);
@@ -97,13 +115,16 @@ export class PushNotificationService {
   }
 
   /**
-   * Save the token to your backend database
+   * Save the token to your backend database (currently disabled to prevent 401 errors)
    */
   private saveTokenToDatabase(token: string): void {
-    // Get the user ID from your authentication service or local storage
-    const userId = localStorage.getItem('user_id') || '1'; // Default to 1 if not available
+    // TODO: Enable when backend notification endpoint is implemented
+    console.log('🔔 FCM Token generated (not saved to backend yet):', token.substring(0, 20) + '...');
     
-    // Save the token to your backend
+    // Uncomment when backend endpoint is ready:
+    /*
+    const userId = localStorage.getItem('user_id') || '1';
+    
     this.http.post(`${environment.apiUrl}/api/v1/notifications/token`, {
       token,
       userId,
@@ -112,6 +133,7 @@ export class PushNotificationService {
       next: (response) => console.log('Token saved to database:', response),
       error: (error) => console.error('Error saving token:', error)
     });
+    */
   }
 
   /**
@@ -145,6 +167,13 @@ export class PushNotificationService {
   public sendCustomNotification(payload: any): void {
     this.notificationSubject.next(payload);
     this.showNotification(payload);
+  }
+  
+  /**
+   * Check if push notifications are available
+   */
+  public isAvailable(): boolean {
+    return this.isFirebaseEnabled && 'Notification' in window;
   }
 } 
  

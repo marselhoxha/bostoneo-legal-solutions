@@ -1,5 +1,6 @@
 package com.***REMOVED***.***REMOVED***solutions.controller;
 
+import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseCategoryDTO;
 import com.***REMOVED***.***REMOVED***solutions.service.ExpenseCategoryService;
 import jakarta.validation.Valid;
@@ -27,16 +28,19 @@ public class ExpenseCategoryController {
     }
 
     @PostMapping
+    @AuditLog(action = "CREATE", entityType = "EXPENSE_CATEGORY", description = "Created new expense category")
     public ResponseEntity<ExpenseCategoryDTO> createCategory(@Valid @RequestBody ExpenseCategoryDTO categoryDTO) {
         return new ResponseEntity<>(expenseCategoryService.createCategory(categoryDTO), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @AuditLog(action = "UPDATE", entityType = "EXPENSE_CATEGORY", description = "Updated expense category")
     public ResponseEntity<ExpenseCategoryDTO> updateCategory(@PathVariable Long id, @Valid @RequestBody ExpenseCategoryDTO categoryDTO) {
         return ResponseEntity.ok(expenseCategoryService.updateCategory(id, categoryDTO));
     }
 
     @DeleteMapping("/{id}")
+    @AuditLog(action = "DELETE", entityType = "EXPENSE_CATEGORY", description = "Deleted expense category")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         expenseCategoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();

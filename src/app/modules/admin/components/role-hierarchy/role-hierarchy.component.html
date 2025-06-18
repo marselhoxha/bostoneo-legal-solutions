@@ -1,0 +1,132 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Page Title -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Role Hierarchy</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Administration</a></li>
+            <li class="breadcrumb-item active">Role Hierarchy</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="row">
+    <div class="col-12 text-center my-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Hierarchy Visualization -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title mb-0">Organization Role Structure</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex flex-wrap justify-content-center">
+                <div *ngFor="let level of hierarchyLevels" class="role-level-container">
+                  <div class="role-level-header">
+                    <h5>{{ level.name }}</h5>
+                    <span class="badge bg-soft-primary">Level {{ level.level }}</span>
+                  </div>
+                  <div class="role-level-content">
+                    <div *ngFor="let role of getRolesByLevel(level.level)" class="role-card mb-3">
+                      <div class="card">
+                        <div class="card-header bg-soft-info">
+                          <h5 class="mb-0">{{ role.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                          <p class="text-muted">{{ role.description }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permission Matrix -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title mb-0">Permission Matrix</h4>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Resource / Action</th>
+                  <th *ngFor="let role of roles" class="text-center">
+                    {{ role.name }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let resource of resourceCategories">
+                  <tr class="table-info">
+                    <th colspan="100%">
+                      <i [class]="resource.icon"></i> {{ resource.name }}
+                    </th>
+                  </tr>
+                  <tr *ngFor="let actionType of actionTypes">
+                    <td><strong>{{ actionType }}</strong></td>
+                    <td *ngFor="let role of roles" class="text-center">
+                      <span [ngClass]="getPermissionClass(role.name, resource.name.toUpperCase() + ':' + actionType)">
+                        <i *ngIf="hasPermission(role.name, resource.name.toUpperCase() + ':' + actionType)" 
+                           class="ri-checkbox-circle-fill text-success"></i>
+                        <i *ngIf="!hasPermission(role.name, resource.name.toUpperCase() + ':' + actionType)" 
+                           class="ri-close-circle-line text-danger"></i>
+                      </span>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permission Details -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-lg-6" *ngFor="let resource of resourceCategories">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i [class]="resource.icon"></i> {{ resource.name }} Permissions
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <div *ngFor="let permission of getPermissionsByResource(resource.name)" 
+                 class="list-group-item list-group-item-action">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ permission.name }}</h5>
+                <small class="badge rounded-pill text-bg-info">{{ permission.actionType }}</small>
+              </div>
+              <p class="mb-1 text-muted">{{ permission.description }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

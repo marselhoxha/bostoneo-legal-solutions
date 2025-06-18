@@ -42,3 +42,20 @@ firebase-adminsdk-*.json
 backend/src/main/resources/firebase-service-account.json
 src/environments/environment.ts
 src/environments/environment.prod.ts
+
+# SQL Scripts
+*.sql
+
+# Markdown Files
+*.md
+
+# Shell Scripts
+*.sh
+
+# Python Files
+*.py
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.egg-info/

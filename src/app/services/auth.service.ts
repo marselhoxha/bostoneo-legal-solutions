@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { jwtDecode } from 'jwt-decode';
@@ -153,21 +153,29 @@ export class AuthService {
   }
 
   refreshToken(): Observable<any> {
-    const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY);
-    
+    const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
-      this.logout();
-      return of(null);
+      return throwError('No refresh token available');
     }
-    
-    return this.http.post<AuthResponse>(`${this.API_URL}/refresh`, { refreshToken })
-      .pipe(
-        tap(response => this.handleAuthResponse(response)),
-        catchError(error => {
-          console.error('Token refresh failed', error);
-          this.logout();
-          return of(null);
-        })
-      );
+
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${refreshToken}`
+    });
+
+    return this.http.get<any>(`${this.API_URL}/user/refresh/token`, { headers }).pipe(
+      tap(response => {
+        if (response.data && response.data.access_token) {
+          localStorage.setItem('access_token', response.data.access_token);
+          if (response.data.refresh_token) {
+            localStorage.setItem('refresh_token', response.data.refresh_token);
+          }
+        }
+      }),
+      catchError(error => {
+        console.error('Token refresh failed:', error);
+        this.logout();
+        return throwError(error);
+      })
+    );
   }
 } 

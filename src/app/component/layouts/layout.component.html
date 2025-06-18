@@ -1,6 +1,22 @@
-
 <!-- Horizontal layout -->
 @if(isHorizontalLayoutRequested()){
 <app-horizontal></app-horizontal>
+<app-skeleton-loader></app-skeleton-loader>
+}
+
+<!-- Vertical layout with sidebar (default) -->
+@if(!isHorizontalLayoutRequested()){
+<div id="layout-wrapper">
+  <app-topbar></app-topbar>
+  <app-sidebar></app-sidebar>
+  <div class="main-content">
+    <div class="page-content">
+      <div class="container-fluid">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+    <app-footer></app-footer>
+  </div>
+</div>
 <app-skeleton-loader></app-skeleton-loader>
 }

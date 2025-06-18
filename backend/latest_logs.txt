@@ -1,0 +1,12 @@
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-06-13 01:00:03,331 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-06-13 01:00:03,332 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-06-13 01:00:47,489 [1;31mERROR[0;39m [[34mhttp-nio-8085-exec-10[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: The token was expected to have 3 parts, but got 0.
+The token was expected to have 3 parts, but got 0.

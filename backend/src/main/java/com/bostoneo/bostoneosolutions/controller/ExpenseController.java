@@ -1,5 +1,6 @@
 package com.***REMOVED***.***REMOVED***solutions.controller;
 
+import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseDTO;
 import com.***REMOVED***.***REMOVED***solutions.model.Expense;
 import com.***REMOVED***.***REMOVED***solutions.service.ExpenseService;
@@ -32,6 +33,7 @@ public class ExpenseController {
     }
 
     @PostMapping
+    @AuditLog(action = "CREATE", entityType = "EXPENSE", description = "Created new expense record")
     public ResponseEntity<CustomHttpResponse<Expense>> createExpense(@Valid @RequestBody ExpenseDTO expenseDTO) {
         try {
             System.out.println("Received expense DTO: " + expenseDTO);
@@ -40,7 +42,7 @@ public class ExpenseController {
             System.out.println("Date: " + expenseDTO.getDate());
             System.out.println("Category ID: " + expenseDTO.getCategoryId());
             System.out.println("Vendor ID: " + expenseDTO.getVendorId());
-            System.out.println("Customer ID: " + expenseDTO.getCustomerId());
+            System.out.println("Client ID: " + expenseDTO.getClientId());
             
             if (expenseDTO.getAmount() == null) {
                 throw new IllegalArgumentException("Amount is required");
@@ -57,8 +59,8 @@ public class ExpenseController {
             if (expenseDTO.getVendorId() == null) {
                 throw new IllegalArgumentException("Vendor ID is required");
             }
-            if (expenseDTO.getCustomerId() == null) {
-                throw new IllegalArgumentException("Customer ID is required");
+            if (expenseDTO.getClientId() == null) {
+                throw new IllegalArgumentException("Client ID is required");
             }
             
             return ResponseEntity.ok(expenseService.createExpense(expenseDTO));
@@ -71,6 +73,7 @@ public class ExpenseController {
     }
 
     @PutMapping("/{id}")
+    @AuditLog(action = "UPDATE", entityType = "EXPENSE", description = "Updated expense information")
     public ResponseEntity<CustomHttpResponse<Expense>> updateExpense(
             @PathVariable Long id,
             @Valid @RequestBody ExpenseDTO expenseDTO) {
@@ -78,11 +81,13 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/{id}")
+    @AuditLog(action = "DELETE", entityType = "EXPENSE", description = "Deleted expense record")
     public ResponseEntity<CustomHttpResponse<Void>> deleteExpense(@PathVariable Long id) {
         return ResponseEntity.ok(expenseService.deleteExpense(id));
     }
 
     @PostMapping("/{expenseId}/attachReceipt/{receiptId}")
+    @AuditLog(action = "UPDATE", entityType = "EXPENSE", description = "Attached receipt to expense")
     public ResponseEntity<CustomHttpResponse<Expense>> attachReceiptToExpense(
             @PathVariable Long expenseId,
             @PathVariable Long receiptId) {

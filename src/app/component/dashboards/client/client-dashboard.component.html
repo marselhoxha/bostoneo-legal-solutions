@@ -1,0 +1,284 @@
+<!-- Welcome Section -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-lg overflow-hidden">
+      <div class="card-body bg-success bg-gradient text-white p-5">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <h1 class="text-white mb-3 fw-bold">Welcome, {{currentUser?.firstName}}! 🤝</h1>
+            <p class="mb-4 text-white-50 fs-16 lh-base">
+              <i class="ri-shield-check-line me-2 fs-18"></i>
+              Your secure legal portal - Stay informed about your case progress
+            </p>
+            <div class="alert alert-light border-0 bg-white bg-opacity-15 text-white mb-0">
+              <i class="ri-lock-line me-2"></i>
+              <strong>Attorney-Client Privilege Protected.</strong> All communications are confidential and secure.
+            </div>
+          </div>
+          <div class="col-lg-4 text-end">
+            <div class="position-relative">
+              <div class="avatar-xxl mx-auto">
+                <div class="avatar-title bg-white bg-opacity-15 rounded-circle border border-white border-opacity-25">
+                  <i class="ri-user-heart-line fs-1 text-white"></i>
+                </div>
+              </div>
+              <div class="position-absolute top-0 end-0">
+                <span class="badge bg-primary rounded-pill">Protected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Client Info Cards -->
+<div class="row g-4 mb-4">
+<div class="col-xl-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-4">
+          <div class="avatar-lg me-3 flex-shrink-0">
+            <span class="avatar-title bg-primary-subtle text-primary rounded shadow-sm">
+              <i class="ri-briefcase-line fs-2"></i>
+            </span>
+        </div>
+          <div class="flex-grow-1">
+            <h4 class="mb-1 fw-semibold">My Cases</h4>
+            <p class="text-muted mb-0">Track your legal matters</p>
+          </div>
+          <div class="flex-shrink-0">
+            <h2 class="text-primary mb-0 fw-bold">{{myCases}}</h2>
+          </div>
+        </div>
+        
+        <!-- Case Progress Card -->
+        <div class="bg-primary bg-opacity-10 rounded-3 p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h6 class="fw-semibold mb-1">Case #2025-LIT-001</h6>
+              <span class="badge bg-success-subtle text-success">Active</span>
+            </div>
+            <span class="text-primary fw-semibold">65%</span>
+          </div>
+          <div class="progress progress-lg mb-3">
+            <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" style="width: 65%"></div>
+          </div>
+          <div class="row text-center g-2">
+            <div class="col-6">
+              <p class="text-muted mb-1 fs-13">Current Phase</p>
+              <h6 class="fw-semibold mb-0">Discovery</h6>
+            </div>
+            <div class="col-6">
+              <p class="text-muted mb-1 fs-13">Est. Duration</p>
+              <h6 class="fw-semibold mb-0">6-8 Months</h6>
+            </div>
+          </div>
+        </div>
+        
+        <a href="/legal/cases" class="btn btn-primary w-100 btn-label">
+          <i class="ri-eye-line label-icon align-middle fs-16"></i>
+          View Case Details
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-4">
+          <div class="avatar-lg me-3 flex-shrink-0">
+            <span class="avatar-title bg-info-subtle text-info rounded shadow-sm">
+              <i class="ri-calendar-line fs-2"></i>
+            </span>
+          </div>
+          <div class="flex-grow-1">
+            <h4 class="mb-1 fw-semibold">Next Appointment</h4>
+            <p class="text-muted mb-0">{{getNextAppointmentFormatted()}}</p>
+          </div>
+        </div>
+        
+        <!-- Appointment Details Card -->
+        <div class="bg-info bg-opacity-10 rounded-3 p-4 mb-4">
+          <h6 class="fw-semibold mb-3 text-info">
+            <i class="ri-video-chat-line me-2"></i>Attorney Consultation
+          </h6>
+          <div class="vstack gap-3">
+            <div class="d-flex align-items-center">
+              <i class="ri-time-line text-info me-3 fs-16"></i>
+              <div>
+                <span class="fw-medium">2:00 PM - 3:00 PM</span>
+                <p class="text-muted mb-0 fs-13">60-minute session</p>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="ri-map-pin-line text-info me-3 fs-16"></i>
+              <div>
+                <span class="fw-medium">Conference Room A</span>
+                <p class="text-muted mb-0 fs-13">Main Office, 2nd Floor</p>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="ri-user-3-line text-info me-3 fs-16"></i>
+              <div>
+                <span class="fw-medium">Attorney Jane Smith</span>
+                <p class="text-muted mb-0 fs-13">Lead Counsel</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <a href="/legal/calendar" class="btn btn-info w-100 btn-label">
+          <i class="ri-calendar-check-line label-icon align-middle fs-16"></i>
+          View Schedule
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resources & Communication -->
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <h5 class="card-title mb-0 fw-semibold">
+          <i class="ri-client-service-2-line me-2 text-primary"></i>Resources & Support
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-4">
+          <!-- Documents Access -->
+          <div class="col-lg-4">
+            <div class="card border h-100 hover-shadow transition-all">
+              <div class="card-body text-center p-4">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                    <i class="ri-file-text-line fs-1"></i>
+                  </div>
+                </div>
+                <h5 class="fw-semibold mb-3">Case Documents</h5>
+                <p class="text-muted mb-4 fs-14">Access documents, evidence, and filings shared by your attorney</p>
+                <div class="mb-4">
+                  <div class="row text-center g-2">
+                    <div class="col-6">
+                      <div class="p-2 bg-primary bg-opacity-10 rounded">
+                        <h6 class="text-primary mb-1">8</h6>
+                        <p class="text-muted mb-0 fs-12">Documents</p>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="p-2 bg-warning bg-opacity-10 rounded">
+                        <h6 class="text-warning mb-1">3</h6>
+                        <p class="text-muted mb-0 fs-12">New</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <a href="/legal/documents" class="btn btn-primary w-100">
+                  <i class="ri-download-line me-1"></i>Access Documents
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Secure Messaging -->
+          <div class="col-lg-4">
+            <div class="card border h-100 hover-shadow transition-all">
+              <div class="card-body text-center p-4">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                    <i class="ri-message-3-line fs-1"></i>
+                  </div>
+                </div>
+                <h5 class="fw-semibold mb-3">Secure Messaging</h5>
+                <p class="text-muted mb-4 fs-14">Communicate securely with your legal team through encrypted messaging</p>
+                <div class="mb-4">
+                  <div class="d-flex justify-content-center align-items-center gap-3">
+                    <div class="text-center">
+                      <h6 class="text-info mb-1">5</h6>
+                      <p class="text-muted mb-0 fs-12">Unread</p>
+                    </div>
+                    <div class="vr"></div>
+                    <div class="text-center">
+                      <h6 class="text-success mb-1">24/7</h6>
+                      <p class="text-muted mb-0 fs-12">Available</p>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-info w-100">
+                  <i class="ri-send-plane-line me-1"></i>Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Help & FAQ -->
+          <div class="col-lg-4">
+            <div class="card border h-100 hover-shadow transition-all">
+              <div class="card-body text-center p-4">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                    <i class="ri-question-answer-line fs-1"></i>
+                  </div>
+                </div>
+                <h5 class="fw-semibold mb-3">Help & Support</h5>
+                <p class="text-muted mb-4 fs-14">Find answers to common questions and get help with portal navigation</p>
+                <div class="mb-4">
+                  <div class="d-flex justify-content-center align-items-center gap-3">
+                    <div class="text-center">
+                      <h6 class="text-success mb-1">50+</h6>
+                      <p class="text-muted mb-0 fs-12">Articles</p>
+                    </div>
+                    <div class="vr"></div>
+                    <div class="text-center">
+                      <h6 class="text-warning mb-1">Live</h6>
+                      <p class="text-muted mb-0 fs-12">Chat</p>
+                    </div>
+                  </div>
+                </div>
+                <a href="/faq" class="btn btn-success w-100">
+                  <i class="ri-question-line me-1"></i>Get Help
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Actions Bar -->
+        <div class="mt-4 pt-4 border-top">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <button class="btn btn-soft-primary w-100 btn-sm">
+                <i class="ri-phone-line me-1"></i>Request Call
+              </button>
+            </div>
+            <div class="col-md-3">
+              <button class="btn btn-soft-info w-100 btn-sm">
+                <i class="ri-calendar-line me-1"></i>Schedule Meeting
+              </button>
+            </div>
+            <div class="col-md-3">
+              <button class="btn btn-soft-warning w-100 btn-sm">
+                <i class="ri-file-upload-line me-1"></i>Upload Document
+              </button>
+            </div>
+            <div class="col-md-3">
+              <button class="btn btn-soft-success w-100 btn-sm">
+                <i class="ri-client-service-line me-1"></i>Live Support
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
+ 
+ 
+ 
+ 
+ 
+ 

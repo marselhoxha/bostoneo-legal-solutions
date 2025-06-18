@@ -1,0 +1,368 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header border-bottom">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-1 fw-semibold">
+                <i class="mdi mdi-file-document-outline text-primary me-2"></i>Invoice Generation
+              </h4>
+              <p class="text-muted mb-0 small">Create invoices from billable time entries</p>
+            </div>
+            <div class="d-flex gap-2">
+              <a routerLink="/time-tracking/billing/invoices" class="btn btn-outline-secondary btn-sm">
+                <i class="mdi mdi-arrow-left me-1"></i>Back to Invoices
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <!-- Error Alert -->
+          <div class="alert alert-danger alert-dismissible fade show" role="alert" *ngIf="error">
+            <i class="mdi mdi-alert-circle-outline me-2"></i>
+            <strong>Error:</strong> {{ error }}
+            <button type="button" class="btn-close" (click)="error = null" aria-label="Close"></button>
+      </div>
+
+          <!-- Loading State -->
+          <div *ngIf="loading" class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Loading data...</p>
+          </div>
+          
+          <div *ngIf="!loading" class="row">
+            <!-- Invoice Configuration Form -->
+            <div class="col-md-5">
+              <div class="card border shadow-sm mb-4">
+                <div class="card-header bg-light">
+                  <h5 class="card-title mb-0">
+                    <i class="mdi mdi-cog-outline me-2"></i>Invoice Configuration
+                  </h5>
+        </div>
+        <div class="card-body">
+                  <form [formGroup]="invoiceForm">
+                    <!-- Client Selection -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">
+                        <i class="mdi mdi-account-outline me-1 text-muted"></i>Client
+                        <span class="text-danger">*</span>
+                      </label>
+                      <select class="form-select" formControlName="clientId">
+                        <option value="">Select a client</option>
+                        <option *ngFor="let client of clients" [value]="client.id">
+                          {{ client.name }}
+                        </option>
+                      </select>
+                      <div class="form-text text-danger" 
+                           *ngIf="invoiceForm.get('clientId')?.invalid && invoiceForm.get('clientId')?.touched">
+                        Client selection is required
+                      </div>
+                    </div>
+                    
+                    <!-- Case Selection -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">
+                        <i class="mdi mdi-briefcase-outline me-1 text-muted"></i>Legal Case
+                        <span class="text-muted">(Optional)</span>
+                      </label>
+                      <select class="form-select" formControlName="legalCaseId">
+                        <option value="">All Cases</option>
+                        <option *ngFor="let case of filteredCases" [value]="case.id">
+                          {{ case.name }}
+                        </option>
+                      </select>
+                    </div>
+                    
+                    <!-- Invoice Dates -->
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-medium">
+                            <i class="mdi mdi-calendar me-1 text-muted"></i>Issue Date
+                            <span class="text-danger">*</span>
+                          </label>
+                          <input type="date" class="form-control" formControlName="issueDate">
+                          <div class="form-text text-danger" 
+                               *ngIf="invoiceForm.get('issueDate')?.invalid && invoiceForm.get('issueDate')?.touched">
+                            Issue date is required
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-medium">
+                            <i class="mdi mdi-calendar-check me-1 text-muted"></i>Due Date
+                            <span class="text-danger">*</span>
+                          </label>
+                          <input type="date" class="form-control" formControlName="dueDate">
+                          <div class="form-text text-danger" 
+                               *ngIf="invoiceForm.get('dueDate')?.invalid && invoiceForm.get('dueDate')?.touched">
+                            Due date is required
+          </div>
+        </div>
+      </div>
+    </div>
+
+                    <!-- Tax Rate -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">
+                        <i class="mdi mdi-percent me-1 text-muted"></i>Tax Rate (%)
+                      </label>
+                      <input type="number" class="form-control" formControlName="taxRate" min="0" max="100" step="0.01">
+          </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">
+                        <i class="mdi mdi-note-text-outline me-1 text-muted"></i>Notes
+                      </label>
+                      <textarea class="form-control" formControlName="notes" rows="3" 
+                                placeholder="Additional information for the client..."></textarea>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              
+              <!-- Invoice Preview -->
+              <div class="card border shadow-sm">
+                <div class="card-header bg-light">
+                  <h5 class="card-title mb-0">
+                    <i class="mdi mdi-file-document-outline me-2"></i>Invoice Preview
+                  </h5>
+              </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 class="mb-1">Invoice #{{ previewData.invoiceNumber }}</h6>
+                        <p class="text-muted mb-0 small">
+                          <span *ngIf="previewData.clientName">For: {{ previewData.clientName }}</span>
+                        </p>
+            </div>
+                      <div class="text-end">
+                        <p class="mb-0 small">Issue Date: {{ formatDate(previewData.issueDate) }}</p>
+                        <p class="mb-0 small">Due Date: {{ formatDate(previewData.dueDate) }}</p>
+              </div>
+            </div>
+          </div>
+
+                  <hr>
+                  
+                  <div class="mb-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal:</span>
+                      <span>{{ formatCurrency(previewData.subtotal) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                      <span>Tax ({{ invoiceForm.get('taxRate')?.value || 0 }}%):</span>
+                      <span>{{ formatCurrency(previewData.taxAmount) }}</span>
+            </div>
+                    <div class="d-flex justify-content-between fw-bold">
+                      <span>Total:</span>
+                      <span>{{ formatCurrency(previewData.totalAmount) }}</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" 
+                            (click)="generateInvoice()" 
+                            [disabled]="invoiceForm.invalid || selectedEntries.size === 0 || isGenerating">
+                      <span *ngIf="!isGenerating">
+                        <i class="mdi mdi-file-document-outline me-1"></i>Generate Invoice
+                      </span>
+                      <span *ngIf="isGenerating">
+                        <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                      </span>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" 
+                            (click)="saveDraft()" 
+                            [disabled]="selectedEntries.size === 0 || isGenerating">
+                      <i class="mdi mdi-content-save-outline me-1"></i>Save as Draft
+            </button>
+                    <div class="btn-group mt-2">
+                      <button type="button" class="btn btn-outline-info" 
+                              (click)="downloadInvoice()" 
+                              [disabled]="selectedEntries.size === 0">
+                        <i class="mdi mdi-download me-1"></i>Download PDF
+            </button>
+                      <button type="button" class="btn btn-outline-success" 
+                              (click)="openEmailModal()" 
+                              [disabled]="selectedEntries.size === 0">
+                        <i class="mdi mdi-email-outline me-1"></i>Send by Email
+            </button>
+          </div>
+        </div>
+      </div>
+              </div>
+            </div>
+            
+            <!-- Time Entries Selection -->
+            <div class="col-md-7">
+              <div class="card border shadow-sm">
+                <div class="card-header bg-light">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                      <i class="mdi mdi-clock-outline me-2"></i>Billable Time Entries
+                    </h5>
+              <div>
+                      <span class="badge rounded-pill bg-info">
+                        {{ getSelectedEntriesCount() }} selected
+                      </span>
+                      <span class="badge rounded-pill bg-success ms-1">
+                        {{ getSelectedEntriesHours() }} hours
+                      </span>
+                      <span class="badge rounded-pill bg-primary ms-1">
+                        {{ formatCurrency(getSelectedEntriesTotal()) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th class="ps-3">
+                            <div class="form-check">
+                              <input class="form-check-input" 
+                                     type="checkbox" 
+                                     id="selectAllEntries" 
+                                     (change)="toggleSelectAll($event)">
+                              <label class="form-check-label" for="selectAllEntries">
+                                Select All
+                              </label>
+                            </div>
+                          </th>
+                          <th>Date</th>
+                          <th>Description</th>
+                          <th>Hours</th>
+                          <th>Rate</th>
+                          <th class="text-end pe-3">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let entry of timeEntries">
+                          <td class="ps-3">
+                            <div class="form-check">
+                              <input class="form-check-input" 
+                                     type="checkbox" 
+                                     [id]="'entry-' + entry.id" 
+                                     [checked]="isEntrySelected(entry.id!)"
+                                     (change)="toggleEntrySelection(entry.id!)"
+                                     [disabled]="entry.status !== 'APPROVED'">
+                              <label class="form-check-label" [for]="'entry-' + entry.id">
+                                <span class="badge rounded-pill" 
+                                      [class.bg-success]="entry.status === 'APPROVED'"
+                                      [class.bg-warning]="entry.status === 'SUBMITTED'"
+                                      [class.bg-secondary]="entry.status !== 'APPROVED' && entry.status !== 'SUBMITTED'">
+                                  {{ entry.status }}
+                                </span>
+                              </label>
+                            </div>
+                          </td>
+                          <td>{{ entry.date | date:'MMM d, y' }}</td>
+                          <td>
+                            <div class="fw-medium">{{ entry.description }}</div>
+                            <small class="text-muted">
+                              by {{ entry.userName }} 
+                              <span *ngIf="entry.caseName">• {{ entry.caseName }}</span>
+                            </small>
+                          </td>
+                          <td>{{ entry.hours }}</td>
+                          <td>{{ formatCurrency(entry.rate) }}</td>
+                          <td class="text-end pe-3 fw-medium">
+                            {{ formatCurrency(entry.hours * entry.rate) }}
+                          </td>
+                        </tr>
+                        
+                        <!-- Empty State -->
+                        <tr *ngIf="timeEntries.length === 0">
+                          <td colspan="6" class="text-center py-5">
+                            <div class="empty-state">
+                              <i class="mdi mdi-clock-outline display-4 text-muted mb-3"></i>
+                              <h5 class="text-muted mb-2">No billable time entries found</h5>
+                              <p class="text-muted mb-0">
+                                Select a client to view billable time entries
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+              </div>
+            </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
+
+<!-- Email Modal -->
+<div class="modal fade" [class.show]="showEmailModal" [style.display]="showEmailModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-success bg-opacity-10 border-0">
+        <h5 class="modal-title text-success fw-semibold">
+          <i class="mdi mdi-email-outline me-2"></i>Send Invoice by Email
+        </h5>
+        <button type="button" class="btn-close" (click)="closeEmailModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form #emailForm="ngForm">
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-email me-1 text-muted"></i>Recipient Email
+              <span class="text-danger">*</span>
+            </label>
+            <input type="email" class="form-control" name="recipientEmail" ngModel required email>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-text me-1 text-muted"></i>Subject
+            </label>
+            <input type="text" class="form-control" name="subject" 
+                   [ngModel]="'Invoice #' + previewData.invoiceNumber + ' from ' + previewData.clientName">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-message-text-outline me-1 text-muted"></i>Message
+            </label>
+            <textarea class="form-control" name="message" ngModel rows="4"
+                      placeholder="Enter a message to include with the invoice..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeEmailModal()">
+          <i class="mdi mdi-close me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-success" 
+                (click)="sendEmail(emailForm.value)" 
+                [disabled]="emailForm.invalid || isSendingEmail">
+          <span *ngIf="!isSendingEmail">
+            <i class="mdi mdi-send me-1"></i>Send Email
+          </span>
+          <span *ngIf="isSendingEmail">
+            <span class="spinner-border spinner-border-sm me-2"></span>Sending...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade" [class.show]="showEmailModal" 
+     [style.display]="showEmailModal ? 'block' : 'none'"></div> 

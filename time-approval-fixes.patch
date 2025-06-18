@@ -1,0 +1,83 @@
+--- a/src/app/modules/time-tracking/components/time-approval/time-approval.component.ts
++++ b/src/app/modules/time-tracking/components/time-approval/time-approval.component.ts
+@@ -27,7 +27,7 @@ interface ApprovalFilters {
+   startDate?: string;
+   endDate?: string;
+   attorneyId?: number | null;
+-  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
++  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'DRAFT' | 'BILLING_APPROVED' | 'ALL';
+   caseId?: number | null;
+   searchTerm?: string;
+ }
+@@ -252,6 +252,31 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
+   private applyFilters(): void {
+     let filtered = [...this.timeEntries];
+ 
++    // Apply employee filter
++    if (this.filters.attorneyId) {
++      filtered = filtered.filter(entry => entry.userId === this.filters.attorneyId);
++    }
++
++    // Apply status filter
++    if (this.filters.status && this.filters.status !== 'ALL') {
++      filtered = filtered.filter(entry => entry.status === this.filters.status);
++    }
++
++    // Apply date range filter
++    if (this.filters.startDate) {
++      filtered = filtered.filter(entry => {
++        const entryDate = new Date(entry.date).toISOString().split('T')[0];
++        return entryDate >= this.filters.startDate!;
++      });
++    }
++
++    if (this.filters.endDate) {
++      filtered = filtered.filter(entry => {
++        const entryDate = new Date(entry.date).toISOString().split('T')[0];
++        return entryDate <= this.filters.endDate!;
++      });
++    }
++
+     // Apply search filter
+     if (this.filters.searchTerm) {
+       const term = this.filters.searchTerm.toLowerCase();
+@@ -296,7 +321,9 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
+     this.currentPage = 0;
+     this.selectedEntries.clear();
+     this.allSelected = false;
+-    this.loadInitialData();
++    this.applyFilters();
++    this.calculateStats();
++    this.cdr.detectChanges();
+   }
+ 
+   onSearchChange(): void {
+@@ -590,6 +617,10 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
+         return 'bg-success';
+       case 'REJECTED':
+         return 'bg-danger';
++      case 'BILLING_APPROVED':
++        return 'bg-info';
+       case 'DRAFT':
+         return 'bg-secondary';
+       default:
+@@ -670,9 +701,15 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
+   clearFilters(): void {
+     this.filters = {
+       dateRange: 'week',
+-      status: 'SUBMITTED',
++      status: 'ALL',
+       searchTerm: '',
++      startDate: undefined,
++      endDate: undefined,
+       attorneyId: null,
+       caseId: null
+     };
+-    this.onFiltersChange();
++    this.selectedEntries.clear();
++    this.allSelected = false;
++    this.applyFilters();
++    this.calculateStats();
++    this.cdr.detectChanges();
+   }
+ } 

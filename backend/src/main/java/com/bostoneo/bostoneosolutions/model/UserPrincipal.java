@@ -1,33 +1,84 @@
 package com.***REMOVED***.***REMOVED***solutions.model;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import lombok.RequiredArgsConstructor;
+import com.***REMOVED***.***REMOVED***solutions.enums.ActionType;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import static com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper.fromUser;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
 
-@RequiredArgsConstructor
 public class UserPrincipal implements UserDetails {
 
     private final User user;
-    private final Role role;
+    private final Set<Role> roles;
+    private final Set<Permission> permissions;
+    private final Set<CaseRoleAssignment> caseRoleAssignments;
 
+    /**
+     * Constructor for the RBAC system
+     */
+    public UserPrincipal(User user, Set<Role> roles, Set<Permission> permissions, Set<CaseRoleAssignment> caseRoleAssignments) {
+        this.user = user;
+        this.roles = roles;
+        this.permissions = permissions;
+        this.caseRoleAssignments = caseRoleAssignments;
+    }
 
-    /* This method processes a comma-separated string of permissions,
-     * creates SimpleGrantedAuthority objects for each permission, and returns them as a collection.
-     * This collection is then used by Spring Security to determine the authorities granted to the user. */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        //return stream(role.getPermission().split(",".trim())).map(SimpleGrantedAuthority::new).collect(toList());
-        return AuthorityUtils.commaSeparatedStringToAuthorityList(role.getPermission()); //"USER:READ,USER:DELETE"
+        Collection<GrantedAuthority> authorities = new ArrayList<>();
+        
+        // Add role-based authorities
+        for (Role role : roles) {
+            // Check if the role name already starts with ROLE_ prefix
+            String roleName = role.getName();
+            if (roleName.startsWith("ROLE_")) {
+                authorities.add(new SimpleGrantedAuthority(roleName));
+            } else {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
+            }
+            
+            // For backwards compatibility, add the "access:admin" permission for admin users
+            if (roleName.equalsIgnoreCase("ROLE_ADMIN") || roleName.equalsIgnoreCase("ADMIN")) {
+                authorities.add(new SimpleGrantedAuthority("access:admin"));
+            }
+        }
+        
+        // Add permission-based authorities
+        for (Permission permission : permissions) {
+            authorities.add(new SimpleGrantedAuthority(permission.getAuthority()));
+        }
+        
+        return authorities;
+    }
+    
+    /**
+     * Check if user has a specific case-level permission
+     */
+    public boolean hasCasePermission(Long caseId, ActionType actionType) {
+        // Check case-specific role assignments
+        for (CaseRoleAssignment assignment : caseRoleAssignments) {
+            if (assignment.getLegalCase().getId().equals(caseId) && assignment.isActive()) {
+                // Check if the role has the necessary permission
+                for (Permission permission : assignment.getRole().getPermissions()) {
+                    if (permission.getResourceType() == com.***REMOVED***.***REMOVED***solutions.enums.ResourceType.CASE && 
+                        permission.getActionType() == actionType) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
 
     @Override
@@ -60,8 +111,26 @@ public class UserPrincipal implements UserDetails {
         return user.isEnabled();
     }
 
-    public UserDTO getUser(){
-        return fromUser(user, role);
+    public User getUser() {
+        return user;
     }
-
+    
+    public Set<Role> getRoles() {
+        return this.roles;
+    }
+    
+    public Set<Permission> getPermissions() {
+        return this.permissions;
+    }
+    
+    public Set<CaseRoleAssignment> getCaseRoleAssignments() {
+        return this.caseRoleAssignments;
+    }
+    
+    /**
+     * Check if the user has a specific role
+     */
+    public boolean hasRole(String roleName) {
+        return roles.stream().anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+    }
 }

@@ -3,7 +3,7 @@
     <app-topbar (mobileMenuButtonClicked)="onToggleMobileMenu()"></app-topbar>
     <!-- Side Bar -->
     <!-- <app-sidebar></app-sidebar> -->
-    <app-horizontal-topbar></app-horizontal-topbar>
+    <app-horizontal-topbar [user]="currentUser"></app-horizontal-topbar>
     <div class="main-content">
         <div class="page-content">
             <div class="container-fluid">

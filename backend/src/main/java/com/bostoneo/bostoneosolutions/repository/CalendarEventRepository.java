@@ -1,6 +1,8 @@
 package com.***REMOVED***.***REMOVED***solutions.repository;
 
 import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -59,4 +61,9 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
             @Param("userId") Long userId,
             @Param("startDate") LocalDateTime startDate, 
             @Param("endDate") LocalDateTime endDate);
+
+    // Add method to find events by multiple case IDs
+    Page<CalendarEvent> findByCaseIdIn(List<Long> caseIds, Pageable pageable);
+
+    List<CalendarEvent> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
 } 

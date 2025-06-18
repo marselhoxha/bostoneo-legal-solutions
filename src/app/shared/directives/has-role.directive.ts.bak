@@ -1,0 +1,48 @@
+import { Directive, Input, OnInit, TemplateRef, ViewContainerRef } from '@angular/core';
+import { RbacService } from '../../core/services/rbac.service';
+
+/**
+ * Directive for conditional rendering based on user roles
+ * Usage:
+ * <div *hasRole="'ADMINISTRATOR'">Content visible only for administrators</div>
+ * <div *hasRole="['ADMINISTRATOR', 'MANAGING_PARTNER']">Content visible for administrators or managing partners</div>
+ */
+@Directive({
+  selector: '[hasRole]'
+})
+export class HasRoleDirective implements OnInit {
+  @Input('hasRole') role!: string | string[];
+  
+  constructor(
+    private templateRef: TemplateRef<any>,
+    private viewContainer: ViewContainerRef,
+    private rbacService: RbacService
+  ) {}
+  
+  ngOnInit(): void {
+    this.updateView();
+    
+    // Subscribe to role changes
+    this.rbacService.roles$.subscribe(() => {
+      this.updateView();
+    });
+  }
+  
+  private updateView(): void {
+    let hasRole = false;
+    
+    if (Array.isArray(this.role)) {
+      // Check if user has any of the specified roles
+      hasRole = this.role.some(roleName => this.rbacService.hasRole(roleName));
+    } else {
+      // Check if user has the specified role
+      hasRole = this.rbacService.hasRole(this.role);
+    }
+    
+    if (hasRole) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+    } else {
+      this.viewContainer.clear();
+    }
+  }
+} 

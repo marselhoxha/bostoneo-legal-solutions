@@ -1,0 +1,674 @@
+import { Injectable } from '@angular/core';
+import { UserService } from '../../service/user.service';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, forkJoin } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
+import { CustomHttpResponse } from '../models/custom-http-response';
+import { JwtHelperService } from '@auth0/angular-jwt';
+import { Key } from '../../enum/key.enum';
+import { environment } from '../../../environments/environment';
+
+export interface Permission {
+  id: number;
+  name: string;
+  resourceType: string;
+  actionType: string;
+  description?: string;
+  isContextual?: boolean;
+  permissionCategory: 'BASIC' | 'ADMINISTRATIVE' | 'FINANCIAL' | 'CONFIDENTIAL' | 'SYSTEM';
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  displayName: string;
+  description?: string;
+  hierarchyLevel: number;
+  isSystemRole?: boolean;
+  isActive?: boolean;
+  roleCategory: 'LEGAL' | 'ADMINISTRATIVE' | 'FINANCIAL' | 'TECHNICAL' | 'SUPPORT';
+  maxBillingRate?: number;
+  permissions: Permission[];
+}
+
+export interface UserPermissions {
+  userId: number;
+  roles: Role[];
+  effectivePermissions: Permission[];
+  hierarchyLevel: number;
+  hasFinancialAccess: boolean;
+  hasAdministrativeAccess: boolean;
+  contextualPermissions?: { [context: string]: Permission[] };
+}
+
+export interface UserRole {
+  id: number;
+  userId: number;
+  roleId: number;
+  role: Role;
+  isPrimary: boolean;
+  assignedAt: Date;
+  expiresAt?: Date;
+  isActive: boolean;
+}
+
+export interface CaseRole {
+  id: number;
+  caseId: number;
+  userId: number;
+  roleId: number;
+  user: any;
+  role: Role;
+  assignedAt: Date;
+  isActive: boolean;
+}
+
+/**
+ * Enhanced RBAC Service for Angular Frontend
+ * Supports hierarchical permissions, context-aware access control,
+ * and modern law firm role management
+ */
+@Injectable({
+  providedIn: 'root'
+})
+export class RbacService {
+  private readonly baseUrl = `${environment.apiUrl}/api`;
+  private jwtHelper = new JwtHelperService();
+  
+  private currentUserPermissions$ = new BehaviorSubject<UserPermissions | null>(null);
+  private permissionsCache = new Map<string, boolean>();
+  private cacheExpiry = new Map<string, number>();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // Observable streams for reactive UI
+  private _roles$ = new BehaviorSubject<Role[]>([]);
+  private _permissions$ = new BehaviorSubject<Permission[]>([]);
+  private _caseRoles$ = new BehaviorSubject<CaseRole[]>([]);
+
+  constructor(
+    private userService: UserService,
+    private http: HttpClient
+  ) {
+    // Only load data if user is authenticated
+    if (this.userService.isAuthenticated()) {
+      this.loadCurrentUserPermissions();
+      // this.loadRoles(); // Disabled due to 400 errors
+      // this.loadPermissions(); // Disabled due to 400 errors
+    }
+  }
+
+  // Observable getters
+  get roles$(): Observable<Role[]> {
+    return this._roles$.asObservable();
+  }
+
+  get permissions$(): Observable<Permission[]> {
+    return this._permissions$.asObservable();
+  }
+
+  get caseRoles$(): Observable<CaseRole[]> {
+    return this._caseRoles$.asObservable();
+  }
+
+  /**
+   * Load current user's permissions and roles
+   */
+  private loadCurrentUserPermissions(): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    this.http.get<UserPermissions>(`${this.baseUrl}/rbac/user/${userId}/permissions`)
+      .pipe(
+        catchError(error => {
+          console.error('Failed to load user permissions:', error);
+          return of(null);
+        })
+      )
+      .subscribe(permissions => {
+        this.currentUserPermissions$.next(permissions);
+        this.clearCache(); // Clear cache when permissions are refreshed
+      });
+  }
+
+  /**
+   * Load all roles
+   */
+  private loadRoles(): void {
+    this.getAllRoles().subscribe({
+      next: (roles) => {
+        this._roles$.next(roles);
+      },
+      error: (error) => {
+        console.warn('RBAC roles endpoint not available, using empty array');
+        this._roles$.next([]);
+      }
+    });
+  }
+
+  /**
+   * Load all permissions
+   */
+  private loadPermissions(): void {
+    this.getAllPermissions().subscribe(permissions => {
+      this._permissions$.next(permissions);
+    });
+  }
+
+  /**
+   * Get current user permissions as observable
+   */
+  getCurrentUserPermissions(): Observable<UserPermissions | null> {
+    return this.currentUserPermissions$.asObservable();
+  }
+
+  /**
+   * Check if current user has a specific permission
+   */
+  hasPermission(resource: string, action: string): Observable<boolean> {
+    const cacheKey = `${resource}:${action}`;
+    
+    // Check cache first
+    if (this.isCacheValid(cacheKey)) {
+      return of(this.permissionsCache.get(cacheKey) || false);
+    }
+
+    const currentPermissions = this.currentUserPermissions$.value;
+    if (!currentPermissions) {
+      return of(false);
+    }
+
+    const hasPermission = this.checkPermission(currentPermissions, resource, action);
+    
+    // Cache the result
+    this.permissionsCache.set(cacheKey, hasPermission);
+    this.cacheExpiry.set(cacheKey, Date.now() + this.CACHE_DURATION);
+    
+    return of(hasPermission);
+  }
+
+  /**
+   * Check permission synchronously (use carefully, prefer hasPermission)
+   */
+  hasPermissionSync(resource: string, action: string): boolean {
+    const currentPermissions = this.currentUserPermissions$.value;
+    if (!currentPermissions) return false;
+    
+    return this.checkPermission(currentPermissions, resource, action);
+  }
+
+  /**
+   * Check if user has context-specific permission (case-specific)
+   */
+  hasContextPermission(resource: string, action: string, contextType: string, contextId: number): Observable<boolean> {
+    const userId = this.getCurrentUserId();
+    if (!userId) return of(false);
+
+    const cacheKey = `${resource}:${action}:${contextType}:${contextId}`;
+    
+    if (this.isCacheValid(cacheKey)) {
+      return of(this.permissionsCache.get(cacheKey) || false);
+    }
+
+    return this.http.post<boolean>(`${this.baseUrl}/rbac/check-context-permission`, {
+      userId,
+      resource,
+      action,
+      contextType,
+      contextId
+    }).pipe(
+      tap(result => {
+        this.permissionsCache.set(cacheKey, result);
+        this.cacheExpiry.set(cacheKey, Date.now() + this.CACHE_DURATION);
+      }),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * Check case-specific permission
+   */
+  hasCasePermission(caseId: number, resource: string, action: string): Observable<boolean> {
+    return this.hasContextPermission(resource, action, 'CASE', caseId);
+  }
+
+  /**
+   * Check if user has specific role
+   */
+  hasRole(roleName: string): boolean {
+    const currentPermissions = this.currentUserPermissions$.value;
+    if (!currentPermissions) return false;
+    
+    return currentPermissions.roles.some(role => 
+      role.name === roleName && role.isActive !== false
+    );
+  }
+
+  /**
+   * Check if user has minimum hierarchy level
+   */
+  hasMinimumHierarchyLevel(level: number): boolean {
+    const currentPermissions = this.currentUserPermissions$.value;
+    return currentPermissions ? currentPermissions.hierarchyLevel >= level : false;
+  }
+
+  /**
+   * Check if user has administrative access
+   */
+  hasAdministrativeAccess(): boolean {
+    const currentPermissions = this.currentUserPermissions$.value;
+    return currentPermissions ? currentPermissions.hasAdministrativeAccess : false;
+  }
+
+  /**
+   * Check if user has financial access
+   */
+  hasFinancialAccess(): boolean {
+    const currentPermissions = this.currentUserPermissions$.value;
+    return currentPermissions ? currentPermissions.hasFinancialAccess : false;
+  }
+
+  /**
+   * Get user's effective billing rate
+   */
+  getMaxBillingRate(): number {
+    const currentPermissions = this.currentUserPermissions$.value;
+    if (!currentPermissions) return 0;
+    
+    return Math.max(...currentPermissions.roles
+      .filter(role => role.maxBillingRate)
+      .map(role => role.maxBillingRate || 0)
+    );
+  }
+
+  /**
+   * Check if user can edit resource (ownership-based)
+   */
+  canEditResource(resourceType: string, resourceOwnerId: number): Observable<boolean> {
+    const userId = this.getCurrentUserId();
+    if (!userId) return of(false);
+
+    // Users can edit their own resources
+    if (userId === resourceOwnerId) {
+      return this.hasPermission(resourceType, 'EDIT_OWN');
+    }
+
+    // Check team/admin edit permissions
+    return this.hasPermission(resourceType, 'EDIT').pipe(
+      map(canEdit => canEdit || this.hasAdministrativeAccess())
+    );
+  }
+
+  /**
+   * Check if user can approve resources
+   */
+  canApprove(resourceType: string): Observable<boolean> {
+    return this.hasPermission(resourceType, 'APPROVE').pipe(
+      map(canApprove => canApprove || this.hasAdministrativeAccess())
+    );
+  }
+
+  // Role Management Methods
+
+  /**
+   * Get all available roles
+   */
+  getAllRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>(`${this.baseUrl}/rbac/roles`).pipe(
+      catchError(error => {
+        console.error('Failed to load roles:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get all roles (alias for components expecting getRoles)
+   */
+  getRoles(): Observable<Role[]> {
+    return this.getAllRoles();
+  }
+
+  /**
+   * Get role by ID
+   */
+  getRoleById(roleId: number): Observable<Role | null> {
+    return this.http.get<Role>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+      catchError(error => {
+        console.error('Failed to load role:', error);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Create new role
+   */
+  createRole(roleData: Partial<Role>): Observable<Role> {
+    return this.http.post<Role>(`${this.baseUrl}/rbac/roles`, roleData).pipe(
+      tap(() => this.loadRoles()),
+      catchError(error => {
+        console.error('Failed to create role:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Update existing role
+   */
+  updateRole(roleId: number, roleData: Partial<Role>): Observable<Role> {
+    return this.http.put<Role>(`${this.baseUrl}/rbac/roles/${roleId}`, roleData).pipe(
+      tap(() => this.loadRoles()),
+      catchError(error => {
+        console.error('Failed to update role:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Delete role
+   */
+  deleteRole(roleId: number): Observable<boolean> {
+    return this.http.delete<boolean>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+      tap(() => this.loadRoles()),
+      catchError(error => {
+        console.error('Failed to delete role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  // Permission Management Methods
+
+  /**
+   * Get all available permissions
+   */
+  getAllPermissions(): Observable<Permission[]> {
+    return this.http.get<Permission[]>(`${this.baseUrl}/rbac/permissions`).pipe(
+      catchError(error => {
+        console.error('Failed to load permissions:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get all permissions (alias for components expecting getPermissions)
+   */
+  getPermissions(): Observable<Permission[]> {
+    return this.getAllPermissions();
+  }
+
+  /**
+   * Assign permissions to role
+   */
+  assignPermissionsToRole(roleId: number, permissionIds: number[]): Observable<boolean> {
+    return this.http.post<boolean>(`${this.baseUrl}/rbac/roles/${roleId}/permissions`, {
+      permissionIds
+    }).pipe(
+      tap(() => this.loadRoles()),
+      catchError(error => {
+        console.error('Failed to assign permissions:', error);
+        return of(false);
+      })
+    );
+  }
+
+  // User Management Methods
+
+  /**
+   * Get all users
+   */
+  getAllUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/users`).pipe(
+      catchError(error => {
+        console.error('Failed to load users:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get user roles
+   */
+  getUserRoles(userId: number): Observable<UserRole[]> {
+    return this.http.get<UserRole[]>(`${this.baseUrl}/rbac/users/${userId}/roles`).pipe(
+      catchError(error => {
+        console.error('Failed to load user roles:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get user case roles
+   */
+  getUserCaseRoles(userId: number): Observable<CaseRole[]> {
+    return this.http.get<CaseRole[]>(`${this.baseUrl}/rbac/users/${userId}/case-roles`).pipe(
+      tap(caseRoles => this._caseRoles$.next(caseRoles)),
+      catchError(error => {
+        console.error('Failed to load user case roles:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Assign role to user
+   */
+  assignRoleToUser(userId: number, roleId: number, expiresAt?: Date): Observable<boolean> {
+    return this.http.post<boolean>(`${this.baseUrl}/rbac/assign-role`, {
+      userId,
+      roleId,
+      expiresAt
+    }).pipe(
+      tap(() => this.refreshUserPermissions()),
+      catchError(error => {
+        console.error('Failed to assign role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Assign role to user (alias for compatibility)
+   */
+  assignRole(userId: number, roleId: number): Observable<boolean> {
+    return this.assignRoleToUser(userId, roleId);
+  }
+
+  /**
+   * Remove role from user
+   */
+  removeRoleFromUser(userId: number, roleId: number): Observable<boolean> {
+    return this.http.delete<boolean>(`${this.baseUrl}/rbac/remove-role/${userId}/${roleId}`).pipe(
+      tap(() => this.refreshUserPermissions()),
+      catchError(error => {
+        console.error('Failed to remove role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Remove role from user (alias for compatibility)
+   */
+  removeRole(userId: number, roleId: number): Observable<boolean> {
+    return this.removeRoleFromUser(userId, roleId);
+  }
+
+  /**
+   * Set primary role for user
+   */
+  setPrimaryRole(userId: number, roleId: number): Observable<boolean> {
+    return this.http.post<boolean>(`${this.baseUrl}/rbac/set-primary-role`, {
+      userId,
+      roleId
+    }).pipe(
+      tap(() => this.refreshUserPermissions()),
+      catchError(error => {
+        console.error('Failed to set primary role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  // Case Role Management
+
+  /**
+   * Assign case role to user
+   */
+  assignCaseRole(caseId: number, userId: number, roleId: number): Observable<boolean> {
+    return this.http.post<boolean>(`${this.baseUrl}/rbac/assign-case-role`, {
+      caseId,
+      userId,
+      roleId
+    }).pipe(
+      tap(() => this.refreshUserPermissions()),
+      catchError(error => {
+        console.error('Failed to assign case role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Remove case role assignment
+   */
+  removeCaseRole(assignmentId: number): Observable<boolean> {
+    return this.http.delete<boolean>(`${this.baseUrl}/rbac/case-roles/${assignmentId}`).pipe(
+      tap(() => this.refreshUserPermissions()),
+      catchError(error => {
+        console.error('Failed to remove case role:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Initialize RBAC service (call when user becomes authenticated)
+   */
+  initialize(): void {
+    if (this.userService.isAuthenticated()) {
+      this.loadCurrentUserPermissions();
+      // this.loadRoles(); // Disabled due to 400 errors
+      // this.loadPermissions(); // Disabled due to 400 errors
+    }
+  }
+
+  /**
+   * Refresh current user permissions
+   */
+  refreshUserPermissions(): void {
+    this.clearCache();
+    this.loadCurrentUserPermissions();
+  }
+
+  /**
+   * Clear permissions cache
+   */
+  private clearCache(): void {
+    this.permissionsCache.clear();
+    this.cacheExpiry.clear();
+  }
+
+  /**
+   * Check if cache entry is valid
+   */
+  private isCacheValid(key: string): boolean {
+    const expiry = this.cacheExpiry.get(key);
+    return expiry ? Date.now() < expiry : false;
+  }
+
+  /**
+   * Core permission checking logic
+   */
+  private checkPermission(userPermissions: UserPermissions, resource: string, action: string): boolean {
+    const permissionName = `${resource}:${action}`;
+    
+    return userPermissions.effectivePermissions.some(permission => 
+      permission.name === permissionName
+    );
+  }
+
+  /**
+   * Get current user ID from JWT token or local storage
+   */
+  private getCurrentUserId(): number | null {
+    try {
+      // Import Key enum for correct token key
+      const token = localStorage.getItem(Key.TOKEN);
+      console.log('🔍 RBAC getCurrentUserId - token:', token ? 'exists' : 'null');
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔍 RBAC getCurrentUserId - JWT payload:', payload);
+        const userId = Number(payload.sub || payload.userId || payload.id);
+        console.log('🔍 RBAC getCurrentUserId - extracted userId:', userId);
+        return userId;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to get current user ID:', error);
+      return null;
+    }
+  }
+
+  // Convenience methods for common permission checks
+
+  /**
+   * Time tracking permission helpers
+   */
+  canViewOwnTimeEntries(): boolean {
+    return this.hasPermissionSync('TIME_TRACKING', 'VIEW_OWN');
+  }
+
+  canViewTeamTimeEntries(): boolean {
+    return this.hasPermissionSync('TIME_TRACKING', 'VIEW_TEAM');
+  }
+
+  canViewAllTimeEntries(): boolean {
+    return this.hasPermissionSync('TIME_TRACKING', 'VIEW_ALL');
+  }
+
+  canApproveTimeEntries(): boolean {
+    return this.hasPermissionSync('TIME_TRACKING', 'APPROVE');
+  }
+
+  /**
+   * Case management permission helpers
+   */
+  canViewCases(): boolean {
+    return this.hasPermissionSync('CASE', 'VIEW');
+  }
+
+  canCreateCases(): boolean {
+    return this.hasPermissionSync('CASE', 'CREATE');
+  }
+
+  canAssignCases(): boolean {
+    return this.hasPermissionSync('CASE', 'ASSIGN');
+  }
+
+  /**
+   * User management permission helpers
+   */
+  canManageUsers(): boolean {
+    return this.hasPermissionSync('USER', 'ADMIN');
+  }
+
+  canManageRoles(): boolean {
+    return this.hasPermissionSync('ROLE', 'ADMIN');
+  }
+
+  /**
+   * Billing permission helpers
+   */
+  canViewBilling(): boolean {
+    return this.hasPermissionSync('BILLING', 'VIEW');
+  }
+
+  canCreateInvoices(): boolean {
+    return this.hasPermissionSync('BILLING', 'CREATE');
+  }
+} 

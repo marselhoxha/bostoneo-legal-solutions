@@ -1,0 +1,111 @@
+# Time Approval Component Fixes
+# Apply these changes to: src/app/modules/time-tracking/components/time-approval/time-approval.component.ts
+
+## Fix 1: Update ApprovalFilters interface (around line 29)
+# Change this line:
+  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
+# To:
+  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'DRAFT' | 'BILLING_APPROVED' | 'ALL';
+
+## Fix 2: Replace the entire applyFilters method (around line 253)
+# Replace the current applyFilters method with:
+
+  private applyFilters(): void {
+    let filtered = [...this.timeEntries];
+
+    // Apply employee filter
+    if (this.filters.attorneyId) {
+      filtered = filtered.filter(entry => entry.userId === this.filters.attorneyId);
+    }
+
+    // Apply status filter
+    if (this.filters.status && this.filters.status !== 'ALL') {
+      filtered = filtered.filter(entry => entry.status === this.filters.status);
+    }
+
+    // Apply date range filter
+    if (this.filters.startDate) {
+      filtered = filtered.filter(entry => {
+        const entryDate = new Date(entry.date).toISOString().split('T')[0];
+        return entryDate >= this.filters.startDate!;
+      });
+    }
+
+    if (this.filters.endDate) {
+      filtered = filtered.filter(entry => {
+        const entryDate = new Date(entry.date).toISOString().split('T')[0];
+        return entryDate <= this.filters.endDate!;
+      });
+    }
+
+    // Apply search filter
+    if (this.filters.searchTerm) {
+      const term = this.filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(entry =>
+        entry.description?.toLowerCase().includes(term) ||
+        entry.caseName?.toLowerCase().includes(term) ||
+        entry.caseNumber?.toLowerCase().includes(term) ||
+        entry.userName?.toLowerCase().includes(term)
+      );
+    }
+
+    this.filteredEntries = filtered;
+    this.totalElements = filtered.length;
+    this.totalPages = Math.ceil(this.totalElements / this.pageSize);
+  }
+
+## Fix 3: Update onFiltersChange method (around line 296)
+# Replace the method body with:
+  onFiltersChange(): void {
+    this.currentPage = 0;
+    this.selectedEntries.clear();
+    this.allSelected = false;
+    this.applyFilters();
+    this.calculateStats();
+    this.cdr.detectChanges();
+  }
+
+## Fix 4: Update getStatusBadgeClass method (around line 589)
+# Add these cases to the switch statement:
+      case 'BILLING_APPROVED':
+        return 'bg-info';
+      case 'DRAFT':
+        return 'bg-secondary';
+
+## Fix 5: Update clearFilters method (around line 670)
+# Replace the entire method with:
+  clearFilters(): void {
+    this.filters = {
+      dateRange: 'week',
+      status: 'ALL',
+      searchTerm: '',
+      startDate: undefined,
+      endDate: undefined,
+      attorneyId: null,
+      caseId: null
+    };
+    this.selectedEntries.clear();
+    this.allSelected = false;
+    this.applyFilters();
+    this.calculateStats();
+    this.cdr.detectChanges();
+  }
+
+## Summary of Changes:
+1. ✅ Date range now uses two separate inputs (already implemented in HTML)
+2. ✅ Status badges include BILLING_APPROVED and DRAFT (already implemented in HTML)
+3. ✅ Status filter dropdown includes all status types (already implemented in HTML)
+4. 🔧 Employee filtering now works properly
+5. 🔧 Status filtering now works properly
+6. 🔧 Date range filtering now works properly
+7. 🔧 All filters work together seamlessly
+8. 🔧 Clear filters resets everything properly
+
+## Testing:
+After applying these changes:
+1. Employee dropdown should filter entries by selected employee
+2. Status dropdown should filter entries by selected status
+3. Date range inputs should filter entries within the selected date range
+4. Search should work across all visible fields
+5. Clear filters should reset all filters and show all entries
+6. All status badges should display correctly including BILLING_APPROVED and DRAFT 

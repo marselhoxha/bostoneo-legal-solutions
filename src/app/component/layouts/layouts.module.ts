@@ -12,30 +12,32 @@ import { HorizontalTopbarComponent } from './horizontal-topbar/horizontal-topbar
 import { HorizontalComponent } from './horizontal/horizontal.component';
 import { LayoutComponent } from './layout.component';
 import { TopbarComponent } from './topbar/topbar.component';
-
-
+import { SidebarComponent } from './sidebar/sidebar.component';
+import { SidebarMenuComponent } from './sidebar/sidebar-menu/sidebar-menu.component';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { PermissionDebuggerComponent } from 'src/app/shared/components/permission-debugger/permission-debugger.component';
 
 @NgModule({
   declarations: [
     LayoutComponent,
-    
     TopbarComponent,
-  
     FooterComponent,
     HorizontalComponent,
     HorizontalTopbarComponent,
-   
-
+    SidebarComponent,
+    SidebarMenuComponent
   ],
   imports: [
-   
+    CommonModule,
+    RouterModule,
     SharedModule,
-    
     NgbDropdownModule,
     SimplebarAngularModule,
     FormsModule, 
     ReactiveFormsModule,
-    TranslateModule
+    TranslateModule,
+    PermissionDebuggerComponent
   ],
   exports: [
     LayoutComponent
@@ -43,6 +45,5 @@ import { TopbarComponent } from './topbar/topbar.component';
   schemas: [
     CUSTOM_ELEMENTS_SCHEMA
   ],
- 
 })
 export class LayoutsModule { }

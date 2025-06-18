@@ -1,0 +1,230 @@
+.sidebar-menu {
+  // Menu item styling
+  .menu-item {
+    margin-bottom: 2px;
+    
+    &.has-submenu {
+      .menu-link {
+        padding-right: 40px;
+        position: relative;
+        
+        &::after {
+          content: '\F054';
+          font-family: 'remixicon';
+          position: absolute;
+          right: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          transition: transform 0.3s ease;
+        }
+        
+        &.expanded::after {
+          transform: translateY(-50%) rotate(90deg);
+        }
+      }
+    }
+    
+    .menu-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 2px 10px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+      
+      &.active {
+        background-color: var(--bs-primary);
+        color: #fff;
+      }
+      
+      i {
+        font-size: 18px;
+        margin-right: 12px;
+        width: 20px;
+        text-align: center;
+      }
+      
+      .menu-text {
+        flex: 1;
+        font-weight: 500;
+      }
+      
+      .badge {
+        margin-left: auto;
+        font-size: 11px;
+        padding: 3px 6px;
+      }
+    }
+    
+    .submenu {
+      padding-left: 0;
+      margin: 0;
+      list-style: none;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      
+      &.expanded {
+        max-height: 500px;
+      }
+      
+      .submenu-item {
+        .submenu-link {
+          display: flex;
+          align-items: center;
+          padding: 10px 20px 10px 52px;
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          border-radius: 6px;
+          margin: 2px 10px;
+          font-size: 14px;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+            padding-left: 56px;
+          }
+          
+          &.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border-left: 3px solid var(--bs-primary);
+          }
+          
+          &::before {
+            content: '•';
+            margin-right: 8px;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Permission debugger toggle button
+.debugger-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  
+  .btn {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    i {
+      font-size: 20px;
+    }
+  }
+}
+
+// Permission indicator badges
+.permission-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  
+  &.admin-only {
+    background-color: #dc3545;
+    color: white;
+  }
+  
+  &.partner-level {
+    background-color: #6f42c1;
+    color: white;
+  }
+  
+  &.attorney-level {
+    background-color: #0d6efd;
+    color: white;
+  }
+  
+  &.financial {
+    background-color: #198754;
+    color: white;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .sidebar-menu {
+    .menu-item .menu-link {
+      padding: 10px 15px;
+      margin: 2px 5px;
+      
+      .menu-text {
+        font-size: 14px;
+      }
+    }
+    
+    .submenu .submenu-item .submenu-link {
+      padding: 8px 15px 8px 40px;
+      font-size: 13px;
+      
+      &:hover {
+        padding-left: 44px;
+      }
+    }
+  }
+}
+
+// Dark theme adjustments
+.dark-theme {
+  .sidebar-menu {
+    .menu-item .menu-link {
+      color: rgba(255, 255, 255, 0.9);
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+    }
+    
+    .submenu .submenu-item .submenu-link {
+      color: rgba(255, 255, 255, 0.8);
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+      }
+    }
+  }
+}
+
+// Animation for menu expansion
+.menu-expand-enter {
+  max-height: 0;
+  opacity: 0;
+}
+
+.menu-expand-enter-active {
+  max-height: 500px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.menu-expand-exit {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.menu-expand-exit-active {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+} 
+ 
+ 

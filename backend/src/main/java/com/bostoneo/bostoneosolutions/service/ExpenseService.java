@@ -13,6 +13,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,7 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final ReceiptRepository receiptRepository;
     private final ExpenseMapper expenseMapper;
+    private static final Logger log = LoggerFactory.getLogger(ExpenseService.class);
 
     public CustomHttpResponse<Page<Expense>> getAllExpenses(int page, int size) {
         Page<Expense> expenses = expenseRepository.findAllWithRelationships(PageRequest.of(page, size));
@@ -59,12 +65,48 @@ public class ExpenseService {
         return new CustomHttpResponse<>(200, "Expense updated successfully", savedExpense);
     }
 
+    @Transactional
+    @AuditLog(action = "DELETE", entityType = "EXPENSE", description = "Deleted expense record with proper cleanup")
     public CustomHttpResponse<Void> deleteExpense(Long id) {
-        if (!expenseRepository.existsById(id)) {
-            throw new EntityNotFoundException("Expense not found with id: " + id);
+        log.info("Attempting to delete expense with ID: {}", id);
+        
+        try {
+            Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Expense not found with id: " + id));
+            
+            // Log the expense details before deletion for audit purposes
+            log.info("Deleting expense: amount={}, description={}, invoice_id={}, case_id={}", 
+                    expense.getAmount(), 
+                    expense.getDescription(), 
+                    expense.getInvoice() != null ? expense.getInvoice().getId() : null,
+                    expense.getLegalCase() != null ? expense.getLegalCase().getId() : null);
+            
+            // Clean up any relationships before deletion
+            if (expense.getInvoice() != null) {
+                Invoice invoice = expense.getInvoice();
+                if (invoice.getExpenses() != null) {
+                    invoice.getExpenses().remove(expense);
+                }
+                expense.setInvoice(null);
+            }
+            
+            if (expense.getLegalCase() != null) {
+                expense.setLegalCase(null);
+            }
+            
+            // Delete the expense
+            expenseRepository.deleteById(id);
+            log.info("Successfully deleted expense with ID: {}", id);
+            
+            return new CustomHttpResponse<>(200, "Expense deleted successfully", null);
+            
+        } catch (EntityNotFoundException e) {
+            log.error("Expense not found with ID: {}", id);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error deleting expense with ID: {}", id, e);
+            throw new RuntimeException("Failed to delete expense: " + e.getMessage(), e);
         }
-        expenseRepository.deleteById(id);
-        return new CustomHttpResponse<>(200, "Expense deleted successfully", null);
     }
 
     /**

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracking Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🕐 Time Tracking & Billing Integration Test</h1>
+    
+    <div class="test-section">
+        <h3>Backend Connection Test</h3>
+        <button onclick="testBackendConnection()">Test Backend Connection</button>
+        <div id="backendResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Time Entries API Test</h3>
+        <button onclick="testTimeEntriesAPI()">Test Get Time Entries</button>
+        <div id="timeEntriesResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Create Time Entry Test</h3>
+        <button onclick="testCreateTimeEntry()">Test Create Time Entry</button>
+        <div id="createResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Billing Rates API Test</h3>
+        <button onclick="testBillingRatesAPI()">Test Billing Rates</button>
+        <div id="billingRatesResult"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8085';
+        const TOKEN = localStorage.getItem('auth_token') || 'test-token';
+
+        function setResult(elementId, content, type = 'loading') {
+            const element = document.getElementById(elementId);
+            element.className = `test-section ${type}`;
+            element.innerHTML = content;
+        }
+
+        async function testBackendConnection() {
+            setResult('backendResult', '<p>🔄 Testing backend connection...</p>', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    }
+                });
+
+                if (response.ok) {
+                    setResult('backendResult', '<p>✅ Backend connection successful!</p>', 'success');
+                } else {
+                    setResult('backendResult', `<p>❌ Backend responded with status: ${response.status}</p>`, 'error');
+                }
+            } catch (error) {
+                setResult('backendResult', `<p>❌ Backend connection failed: ${error.message}</p><p>Make sure the backend is running on port 8085</p>`, 'error');
+            }
+        }
+
+        async function testTimeEntriesAPI() {
+            setResult('timeEntriesResult', '<p>🔄 Testing time entries API...</p>', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/time-entries?page=0&size=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setResult('timeEntriesResult', 
+                        `<p>✅ Time entries API working!</p>
+                         <p><strong>Total entries:</strong> ${data.data.totalElements}</p>
+                         <p><strong>Retrieved:</strong> ${data.data.timeEntries?.length || 0} entries</p>
+                         <pre>${JSON.stringify(data, null, 2)}</pre>`, 
+                        'success');
+                } else {
+                    const errorText = await response.text();
+                    setResult('timeEntriesResult', 
+                        `<p>❌ Time entries API failed: ${response.status}</p>
+                         <pre>${errorText}</pre>`, 
+                        'error');
+                }
+            } catch (error) {
+                setResult('timeEntriesResult', `<p>❌ Error testing time entries API: ${error.message}</p>`, 'error');
+            }
+        }
+
+        async function testCreateTimeEntry() {
+            setResult('createResult', '<p>🔄 Testing create time entry...</p>', 'loading');
+            
+            const testEntry = {
+                legalCaseId: 1,
+                userId: 1,
+                date: new Date().toISOString().split('T')[0],
+                hours: 2.5,
+                rate: 250.00,
+                description: "Test time entry created via integration test",
+                status: "DRAFT",
+                billable: true
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/time-entries`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    },
+                    body: JSON.stringify(testEntry)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setResult('createResult', 
+                        `<p>✅ Time entry created successfully!</p>
+                         <p><strong>ID:</strong> ${data.data.timeEntry.id}</p>
+                         <p><strong>Hours:</strong> ${data.data.timeEntry.hours}</p>
+                         <p><strong>Amount:</strong> $${(data.data.timeEntry.hours * data.data.timeEntry.rate).toFixed(2)}</p>
+                         <pre>${JSON.stringify(data.data.timeEntry, null, 2)}</pre>`, 
+                        'success');
+                } else {
+                    const errorText = await response.text();
+                    setResult('createResult', 
+                        `<p>❌ Create time entry failed: ${response.status}</p>
+                         <pre>${errorText}</pre>`, 
+                        'error');
+                }
+            } catch (error) {
+                setResult('createResult', `<p>❌ Error creating time entry: ${error.message}</p>`, 'error');
+            }
+        }
+
+        async function testBillingRatesAPI() {
+            setResult('billingRatesResult', '<p>🔄 Testing billing rates API...</p>', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/billing-rates?page=0&size=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setResult('billingRatesResult', 
+                        `<p>✅ Billing rates API working!</p>
+                         <p><strong>Total rates:</strong> ${data.data.totalElements}</p>
+                         <p><strong>Retrieved:</strong> ${data.data.content?.length || 0} rates</p>
+                         <pre>${JSON.stringify(data, null, 2)}</pre>`, 
+                        'success');
+                } else {
+                    const errorText = await response.text();
+                    setResult('billingRatesResult', 
+                        `<p>❌ Billing rates API failed: ${response.status}</p>
+                         <pre>${errorText}</pre>`, 
+                        'error');
+                }
+            } catch (error) {
+                setResult('billingRatesResult', `<p>❌ Error testing billing rates API: ${error.message}</p>`, 'error');
+            }
+        }
+
+        // Auto-run basic connection test on page load
+        window.onload = () => {
+            testBackendConnection();
+        };
+    </script>
+</body>
+</html> 

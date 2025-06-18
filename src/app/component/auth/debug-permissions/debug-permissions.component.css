@@ -1,0 +1,13 @@
+.list-group-item {
+  padding: 0.5rem 1rem;
+}
+
+pre {
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+}

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    
+    <div class="section">
+        <h2>Current Authentication Status</h2>
+        <div id="authStatus"></div>
+        <button onclick="checkAuth()">Check Authentication</button>
+        <button onclick="clearTokens()">Clear Tokens</button>
+    </div>
+    
+    <div class="section">
+        <h2>Test Login</h2>
+        <input type="email" id="email" placeholder="Email" value="jeff.doe@lawfirm.com">
+        <input type="password" id="password" placeholder="Password" value="password">
+        <button onclick="testLogin()">Test Login</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test Customer API</h2>
+        <button onclick="testCustomerAPI()">Test Customer Endpoint</button>
+        <div id="customerResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8085';
+        
+        function checkAuth() {
+            const token = localStorage.getItem('TOKEN');
+            const refreshToken = localStorage.getItem('REFRESH_TOKEN');
+            
+            const status = document.getElementById('authStatus');
+            status.innerHTML = `
+                <p><strong>Token exists:</strong> ${!!token}</p>
+                <p><strong>Token length:</strong> ${token ? token.length : 0}</p>
+                <p><strong>Token preview:</strong> ${token ? token.substring(0, 50) + '...' : 'None'}</p>
+                <p><strong>Refresh token exists:</strong> ${!!refreshToken}</p>
+                <p><strong>All localStorage keys:</strong> ${Object.keys(localStorage).join(', ')}</p>
+            `;
+        }
+        
+        function clearTokens() {
+            localStorage.removeItem('TOKEN');
+            localStorage.removeItem('REFRESH_TOKEN');
+            checkAuth();
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            try {
+                const response = await fetch(`${API_BASE}/user/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.data) {
+                    localStorage.setItem('TOKEN', data.data.access_token);
+                    localStorage.setItem('REFRESH_TOKEN', data.data.refresh_token);
+                    resultDiv.innerHTML = `<p class="success">Login successful!</p>`;
+                    checkAuth();
+                } else {
+                    resultDiv.innerHTML = `<p class="error">Login failed: ${data.message || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Login error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testCustomerAPI() {
+            const token = localStorage.getItem('TOKEN');
+            const resultDiv = document.getElementById('customerResult');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<p class="error">No token found. Please login first.</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/customer?page=0`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">Customer API success! Got ${data.data?.page?.content?.length || 0} customers</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">Customer API failed (${response.status}): ${data.message || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Customer API error: ${error.message}</p>`;
+            }
+        }
+        
+        // Check auth on page load
+        checkAuth();
+    </script>
+</body>
+</html> 

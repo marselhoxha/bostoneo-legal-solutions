@@ -5,6 +5,7 @@ import com.***REMOVED***.***REMOVED***solutions.dto.CreateCalendarEventRequest;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.CalendarEventType;
 import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
 import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
+import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,7 @@ import com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventReposito
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.time.LocalDateTime.now;
@@ -38,15 +42,18 @@ public class CalendarEventController {
 
     private final CalendarEventService calendarEventService;
     private final CalendarEventRepository calendarEventRepository;
+    private final RoleService roleService;
 
     @GetMapping("/events")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getAllEvents(
+            @AuthenticationPrincipal(expression = "id") Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        log.info("Fetching all calendar events, page: {}, size: {}", page, size);
+        log.info("Fetching calendar events for user: {}, page: {}, size: {}", userId, page, size);
         
-        Page<CalendarEventDTO> eventsPage = calendarEventService.getAllEvents(page, size);
+        // Use the new role-based filtering method
+        Page<CalendarEventDTO> eventsPage = calendarEventService.getEventsForUser(userId, page, size);
         
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -64,7 +71,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/{id}")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getEventById(@PathVariable Long id) {
         log.info("Fetching calendar event with ID: {}", id);
         
@@ -81,7 +88,7 @@ public class CalendarEventController {
     }
 
     @PostMapping("/events")
-    @PreAuthorize("hasAuthority('CREATE:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:CREATE')")
     public ResponseEntity<HttpResponse> createEvent(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @Valid @RequestBody CreateCalendarEventRequest request) {
@@ -172,11 +179,43 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/case/{caseId}")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
-    public ResponseEntity<HttpResponse> getEventsByCaseId(@PathVariable Long caseId) {
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
+    public ResponseEntity<HttpResponse> getEventsByCaseId(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long caseId) {
         log.info("Fetching calendar events for case ID: {}", caseId);
         
+        // Check if user has access to this case
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isClient = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+        
+        if (isClient) {
+            // Check if client has access to this case
+            Set<Long> userCaseIds = roleService.getUserCaseIds(userId);
+            if (!userCaseIds.contains(caseId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("You do not have access to this case")
+                            .status(HttpStatus.FORBIDDEN)
+                            .statusCode(HttpStatus.FORBIDDEN.value())
+                            .build());
+            }
+        }
+        
         List<CalendarEventDTO> events = calendarEventService.getEventsByCaseId(caseId);
+        
+        // Filter events for clients - only show certain types
+        if (isClient) {
+            Set<String> clientVisibleEventTypes = Set.of(
+                "HEARING", "APPOINTMENT", "COURT_DATE", "CLIENT_MEETING"
+            );
+            
+            events = events.stream()
+                .filter(event -> clientVisibleEventTypes.contains(event.getEventType()))
+                .collect(Collectors.toList());
+        }
         
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -189,7 +228,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/date-range")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getEventsByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
@@ -208,12 +247,35 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/upcoming")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getUpcomingEvents(
+            @AuthenticationPrincipal(expression = "id") Long userId,
             @RequestParam(defaultValue = "7") int days) {
         log.info("Fetching upcoming calendar events for the next {} days", days);
         
         List<CalendarEventDTO> events = calendarEventService.getUpcomingEvents(days);
+        
+        // Filter for clients
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isClient = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+        
+        if (isClient) {
+            // Get user's case IDs
+            Set<Long> userCaseIds = roleService.getUserCaseIds(userId);
+            
+            // Filter to only include events for user's cases
+            events = events.stream()
+                .filter(event -> event.getCaseId() != null && userCaseIds.contains(event.getCaseId()))
+                .filter(event -> {
+                    // Only show certain event types to clients
+                    Set<String> clientVisibleEventTypes = Set.of(
+                        "HEARING", "APPOINTMENT", "COURT_DATE", "CLIENT_MEETING"
+                    );
+                    return clientVisibleEventTypes.contains(event.getEventType());
+                })
+                .collect(Collectors.toList());
+        }
         
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -226,7 +288,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/today")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getTodayEvents() {
         log.info("Fetching today's calendar events");
         
@@ -243,7 +305,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/types")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<HttpResponse> getEventTypes() {
         log.info("Fetching calendar event types");
         
@@ -262,7 +324,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/export")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<String> exportEvents(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
@@ -288,7 +350,7 @@ public class CalendarEventController {
     }
 
     @GetMapping("/events/case/{caseId}/export")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<String> exportCaseEvents(@PathVariable Long caseId) {
         log.info("Exporting calendar events for case ID: {} as iCal", caseId);
         

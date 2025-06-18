@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Document, DocumentVersion } from '../interfaces/document.interface';
 import { environment } from '../../../../environments/environment';
+import { Key } from 'src/app/enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +15,7 @@ export class DocumentService {
   constructor(private http: HttpClient) { }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(Key.TOKEN);
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`
     });
@@ -51,8 +52,11 @@ export class DocumentService {
     return this.http.post<Document>(`${this.apiUrl}/upload`, formData);
   }
 
-  downloadDocument(id: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/download`, { responseType: 'blob', headers: this.getAuthHeaders() });
+  downloadDocument(documentId: string, preview: boolean = false): Observable<Blob> {
+    const params = preview ? '?preview=true' : '';
+    return this.http.get(`${this.apiUrl}/${documentId}/download${params}`, {
+      responseType: 'blob'
+    });
   }
 
   /**

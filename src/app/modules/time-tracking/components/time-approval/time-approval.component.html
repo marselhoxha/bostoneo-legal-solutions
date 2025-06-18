@@ -1,0 +1,645 @@
+<!-- Professional Time Approval Dashboard - Enhanced Velzon Style -->
+<div class="container-fluid" style="margin-top: 115px;">
+  
+  <!-- Enhanced Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header page-title-box d-sm-flex align-items-center justify-content-between">
+        <div>
+          <h4 class="mb-sm-0 fw-bold">Time Approval Dashboard</h4>
+        </div>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Time Tracking</a></li>
+            <li class="breadcrumb-item active">Time Approval</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Activity Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary text-white rounded">
+                      <i class="ri-checkbox-circle-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h4 class="mb-1 fw-semibold">Time Entry Approval Center</h4>
+                  <p class="text-muted mb-2">Review, approve, and manage time entries efficiently with bulk actions</p>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                      <i class="ri-time-line me-1"></i>{{ filteredEntries.length }} Pending
+                    </span>
+                    <span class="badge bg-success-subtle text-success px-2 py-1">
+                      <i class="ri-checkbox-circle-line me-1"></i>Batch Actions
+                    </span>
+                    <span class="badge bg-info-subtle text-info px-2 py-1">
+                      <i class="ri-money-dollar-circle-line me-1"></i>Auto-billing
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                      <i class="ri-user-settings-line me-1"></i>Role-based
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-lg-4">
+              <div class="row g-3">
+                <!-- Pending Review -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-warning-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-time-line text-warning fs-20 me-2"></i>
+                        <h4 class="mb-0 text-warning fw-bold">{{ stats.pendingReview }}</h4>
+                      </div>
+                      <small class="text-warning fw-semibold">Pending</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Today Approved -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-success-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-checkbox-circle-line text-success fs-20 me-2"></i>
+                        <h4 class="mb-0 text-success fw-bold">{{ stats.approvedToday }}</h4>
+                      </div>
+                      <small class="text-success fw-semibold">Approved</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Selected Items -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-primary-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-checkbox-multiple-line text-primary fs-20 me-2"></i>
+                        <h4 class="mb-0 text-primary fw-bold">{{ selectedEntries.size }}</h4>
+                      </div>
+                      <small class="text-primary fw-semibold">Selected</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Statistics Cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm stats-card warning-stat">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13">
+                <i class="ri-timer-line me-1 text-warning"></i>Pending Review
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive" *ngIf="stats.pendingReview > 0">
+                <i class="ri-arrow-up-line fs-12"></i> Action Needed
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold stat-number text-warning mb-3">{{ stats.pendingReview }}</h4>
+              <span class="badge bg-warning-subtle text-warning fs-12">
+                <i class="ri-alert-line me-1"></i>Requires attention
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0 stat-icon">
+              <span class="avatar-title bg-warning text-white rounded shadow-sm">
+                <i class="ri-timer-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm stats-card success-stat">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13">
+                <i class="ri-checkbox-circle-line me-1 text-success"></i>Approved Today
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive" *ngIf="stats.approvedToday > 0">
+                <i class="ri-arrow-up-line fs-12"></i> +{{ stats.approvedToday }}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold stat-number text-success mb-3">{{ stats.approvedToday }}</h4>
+              <span class="badge bg-success-subtle text-success fs-12">
+                <i class="ri-check-line me-1"></i>Completed
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0 stat-icon">
+              <span class="avatar-title bg-success text-white rounded shadow-sm">
+                <i class="ri-checkbox-circle-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm stats-card primary-stat">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13">
+                <i class="ri-checkbox-multiple-line me-1 text-primary"></i>Selected Items
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-stable" *ngIf="selectedEntries.size > 0">
+                <i class="ri-check-line fs-12"></i> {{ selectedEntries.size }}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold stat-number text-primary mb-3">{{ selectedEntries.size }}</h4>
+              <span class="badge bg-primary-subtle text-primary fs-12">
+                <i class="ri-checkbox-multiple-line me-1"></i>Batch ready
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0 stat-icon">
+              <span class="avatar-title bg-primary text-white rounded shadow-sm">
+                <i class="ri-checkbox-multiple-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm stats-card info-stat">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13">
+                <i class="ri-money-dollar-circle-line me-1 text-info"></i>Pending Value
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive" *ngIf="stats.pendingAmount > 0">
+                <i class="ri-money-dollar-line fs-12"></i> ${{ (stats.pendingAmount / 1000).toFixed(1) }}K
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold stat-number text-info mb-3">${{ (stats.pendingAmount / 1000).toFixed(1) }}K</h4>
+              <span class="badge bg-info-subtle text-info fs-12">
+                <i class="ri-wallet-line me-1"></i>Revenue pending
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0 stat-icon">
+              <span class="avatar-title bg-info text-white rounded shadow-sm">
+                <i class="ri-money-dollar-circle-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Filters & Actions Bar with Velzon Styling -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm filters-card">
+        <div class="card-header bg-light border-bottom">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0 me-3">
+              <div class="avatar-sm">
+                <span class="avatar-title bg-info text-white rounded">
+                  <i class="ri-filter-3-line fs-16"></i>
+                </span>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="card-title mb-1 fw-semibold ">Filter & Search Options</h5>
+              <p class="text-muted mb-0 fs-13">Refine your time entry results with advanced filtering</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <!-- Status Filter -->
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+              <label class="form-label fw-medium">
+                <i class="ri-flag-line me-1 text-primary"></i>Status
+              </label>
+              <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="onFiltersChange()">
+                <option value="ALL">All Statuses</option>
+                <option value="SUBMITTED">Pending Review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="DRAFT">Draft</option>
+              </select>
+            </div>
+            
+            <!-- Employee Filter -->
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+              <label class="form-label fw-medium">
+                <i class="ri-user-line me-1 text-primary"></i>Employee
+              </label>
+              <select class="form-select form-select-sm" [(ngModel)]="filters.attorneyId" (change)="onFiltersChange()">
+                <option [value]="null">All Employees</option>
+                <option *ngFor="let attorney of attorneys" [value]="attorney.id">
+                  {{ attorney.firstName }} {{ attorney.lastName }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Date Range Filter -->
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+              <label class="form-label fw-medium">
+                <i class="ri-calendar-line me-1 text-primary"></i>Date Range
+              </label>
+              <select class="form-select form-select-sm" [(ngModel)]="filters.dateRange" (change)="onDateRangeChange()">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+            
+            <!-- Quick Search -->
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+              <label class="form-label fw-medium">
+                <i class="ri-search-line me-1 text-primary"></i>Search
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light">
+                  <i class="ri-search-2-line text-muted"></i>
+                </span>
+                <input type="text" class="form-control" 
+                       placeholder="Search descriptions, cases..."
+                       [(ngModel)]="filters.searchTerm" 
+                       (input)="onSearchChange()">
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-xl-1 col-lg-12 col-md-6 col-sm-6">
+              <label class="form-label d-block">&nbsp;</label>
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" 
+                        (click)="clearFilters()"
+                        data-bs-toggle="tooltip" 
+                        title="Clear all filters">
+                  <i class="ri-filter-off-line"></i>
+                </button>
+                <button class="btn btn-primary btn-sm flex-fill" 
+                        (click)="refreshData()"
+                        data-bs-toggle="tooltip" 
+                        title="Refresh data">
+                  <i class="ri-refresh-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Data Table with Fixed Responsive Layout -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm approval-table">
+        <!-- Enhanced Table Header -->
+        <div class="card-header bg-light border-bottom">
+          <div class="row align-items-center">
+            <div class="col-lg-6">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary text-white rounded">
+                      <i class="ri-time-line fs-16"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="card-title mb-1 fw-semibold">
+                    Time Entries Awaiting Approval
+                  </h5>
+                  <p class="text-muted mb-0 fs-13">
+                    <strong>{{ stats.pendingReview }}</strong> pending review • 
+                    <strong>{{ stats.approvedToday }}</strong> approved today • 
+                    <strong>${{ (stats.pendingAmount / 1000).toFixed(1) }}K</strong> pending value
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="d-flex align-items-center justify-content-end gap-3">
+                <!-- Entry Count Badge -->
+                <span class="badge bg-primary-subtle text-primary fs-12 px-3 py-2">
+                  <i class="ri-file-list-line me-1"></i>{{ filteredEntries.length }} entries
+                </span>
+                
+                <!-- Bulk Actions -->
+                <div class="btn-group" *ngIf="selectedEntries.size > 0">
+                  <button class="btn btn-success btn-sm" (click)="bulkApprove()">
+                    <i class="ri-check-line me-1"></i>Approve ({{ selectedEntries.size }})
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="bulkReject()">
+                    <i class="ri-close-line me-1"></i>Reject
+                  </button>
+                </div>
+                
+                <!-- Select All -->
+                <div class="form-check" *ngIf="filteredEntries.length > 0">
+                  <input class="form-check-input" type="checkbox" 
+                         [checked]="allSelected" 
+                         [disabled]="getSelectableEntriesCount() === 0"
+                         (change)="onSelectAll()"
+                         [indeterminate]="selectedEntries.size > 0 && !allSelected"
+                         id="selectAllCheckbox">
+                  <label class="form-check-label fs-13 text-muted" for="selectAllCheckbox">
+                    Select All {{ getSelectableEntriesCount() > 0 ? '(' + getSelectableEntriesCount() + ' pending)' : '(none pending)' }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed Table Content with Proper Responsive Layout -->
+        <div class="table-responsive">
+          <table class="table table-hover table-nowrap align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" style="width: 50px;" class="fw-semibold text-uppercase fs-13">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           [checked]="allSelected" 
+                           [disabled]="getSelectableEntriesCount() === 0"
+                           (change)="onSelectAll()"
+                           [indeterminate]="selectedEntries.size > 0 && !allSelected">
+                  </div>
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 180px;">
+                  <i class="ri-user-line me-1 text-muted"></i>Employee
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 140px;">
+                  <i class="ri-calendar-line me-1 text-muted"></i>Date & Duration
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 200px;">
+                  <i class="ri-file-text-line me-1 text-muted"></i>Description
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 160px;">
+                  <i class="ri-folder-line me-1 text-muted"></i>Case & Type
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 120px;">
+                  <i class="ri-money-dollar-circle-line me-1 text-muted"></i>Billing
+                </th>
+                <th scope="col" class="sort-header fw-semibold text-uppercase fs-13" style="min-width: 100px;">
+                  <i class="ri-flag-line me-1 text-muted"></i>Status
+                </th>
+                <th scope="col" class="text-center fw-semibold text-uppercase fs-13" style="min-width: 120px;">
+                  <i class="ri-settings-line me-1 text-muted"></i>Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entry of filteredEntries; trackBy: trackByEntryId"
+                  class="table-row-enhanced"
+                  [class.bg-warning-subtle]="entry.status === 'SUBMITTED'"
+                  [class.bg-success-subtle]="entry.status === 'APPROVED'"
+                  [class.bg-danger-subtle]="entry.status === 'REJECTED'">
+                
+                <!-- Selection Checkbox -->
+                <td>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           [checked]="isSelected(entry.id)"
+                           [disabled]="entry.status !== 'SUBMITTED'"
+                           (change)="onSelectEntry(entry.id)">
+                  </div>
+                </td>
+                
+                <!-- Employee Info with Enhanced Avatar -->
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                      <div class="avatar-xs">
+                        <span class="avatar-title rounded-circle bg-primary text-white fw-medium">
+                          {{ getEmployeeInfo(entry).initials }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fw-medium">{{ getEmployeeInfo(entry).name }}</h6>
+                      <p class="mb-0 text-muted fs-13">{{ getEmployeeInfo(entry).email }}</p>
+                    </div>
+                  </div>
+                </td>
+                
+                <!-- Date & Duration with Enhanced Styling -->
+                <td>
+                  <div class="text-nowrap">
+                    <div class="fw-medium  mb-1">{{ formatDate(entry.date) }}</div>
+                    <span class="badge bg-info-subtle text-info fs-11">
+                      <i class="ri-time-line me-1"></i>{{ formatHours(entry.hours) }}
+                    </span>
+                  </div>
+                </td>
+                
+                <!-- Description with Tooltip -->
+                <td>
+                  <div style="max-width: 250px;">
+                    <p class="mb-1  fw-medium text-truncate" [title]="entry.description">
+                      {{ entry.description }}
+                    </p>
+                    <small class="text-muted" *ngIf="entry.notes">
+                      <i class="ri-sticky-note-line me-1"></i>Additional notes available
+                    </small>
+                  </div>
+                </td>
+                
+                <!-- Case & Type with Enhanced Badges -->
+                <td>
+                  <div class="text-nowrap">
+                    <div class="fw-medium  mb-1" *ngIf="entry.caseName">
+                      <i class="ri-folder-line me-1 text-primary"></i>{{ entry.caseName }}
+                    </div>
+                    <span class="badge fs-11" 
+                          [class.bg-success-subtle]="entry.billable" 
+                          [class.text-success]="entry.billable"
+                          [class.bg-secondary-subtle]="!entry.billable" 
+                          [class.text-secondary]="!entry.billable">
+                      <i class="ri-money-dollar-circle-line me-1" *ngIf="entry.billable"></i>
+                      <i class="ri-forbid-line me-1" *ngIf="!entry.billable"></i>
+                      {{ entry.billable ? 'Billable' : 'Non-Billable' }}
+                    </span>
+                  </div>
+                </td>
+                
+                <!-- Billing Info with Enhanced Typography -->
+                <td>
+                  <div class="text-nowrap">
+                    <div class="fw-semibold  fs-14 mb-1">{{ formatCurrency(entry.hours * entry.rate) }}</div>
+                    <div class="text-muted fs-12">
+                      {{ formatCurrency(entry.rate) }}/hr
+                    </div>
+                  </div>
+                </td>
+                
+                <!-- Status with Enhanced Badges -->
+                <td>
+                  <span class="badge fs-11 px-2 py-1" 
+                        [class.bg-warning]="entry.status === 'SUBMITTED'"
+                        [class.bg-success]="entry.status === 'APPROVED' || entry.status === 'BILLING_APPROVED'"
+                        [class.bg-danger]="entry.status === 'REJECTED'"
+                        [class.bg-secondary]="entry.status === 'DRAFT'"
+                        [class.bg-info]="entry.status === 'BILLED'">
+                    <i class="ri-time-line me-1" *ngIf="entry.status === 'SUBMITTED'"></i>
+                    <i class="ri-check-line me-1" *ngIf="entry.status === 'APPROVED' || entry.status === 'BILLING_APPROVED'"></i>
+                    <i class="ri-close-line me-1" *ngIf="entry.status === 'REJECTED'"></i>
+                    <i class="ri-draft-line me-1" *ngIf="entry.status === 'DRAFT'"></i>
+                    <i class="ri-money-dollar-circle-line me-1" *ngIf="entry.status === 'BILLED'"></i>
+                    {{ getDisplayStatus(entry.status) }}
+                  </span>
+                </td>
+                
+                <!-- Actions with Enhanced Button Group -->
+                <td class="text-center">
+                  <div class="hstack gap-2 justify-content-center" *ngIf="entry.status === 'SUBMITTED' && canApprove">
+                    <button class="btn btn-success btn-sm" 
+                            (click)="approveEntry(entry)"
+                            [disabled]="loading"
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="Approve this entry">
+                      <i class="ri-check-line"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" 
+                            (click)="rejectEntry(entry)"
+                            [disabled]="loading"
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="Reject this entry">
+                      <i class="ri-close-line"></i>
+                    </button>
+                    <button class="btn btn-info btn-sm" 
+                            (click)="viewEntryDetails(entry)"
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="View details">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                  </div>
+                  <div class="text-center" *ngIf="entry.status !== 'SUBMITTED'">
+                    <span class="text-muted fs-13">
+                      <i class="ri-information-line me-1"></i>{{ getDisplayStatus(entry.status) }}
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Enhanced Empty State -->
+        <div class="card-body text-center py-5" *ngIf="filteredEntries.length === 0">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+              <i class="ri-checkbox-circle-line display-6"></i>
+            </div>
+          </div>
+          <h5 class="fs-16 mb-3">{{ stats.pendingReview === 0 ? 'All Caught Up!' : 'No Entries Found' }}</h5>
+          <div class="text-muted mb-4" *ngIf="stats.pendingReview === 0">
+            <p class="mb-2">🎉 <strong>Excellent work!</strong> All time entries have been reviewed and processed.</p>
+            <p class="mb-0">Take a moment to celebrate your efficiency - the team's time tracking is up to date!</p>
+          </div>
+          <div class="text-muted mb-4" *ngIf="stats.pendingReview > 0">
+            <p class="mb-0">No time entries match your current filters. Try adjusting your search criteria or clearing filters to see all entries.</p>
+          </div>
+          <div *ngIf="filters.searchTerm || filters.status !== 'ALL' || filters.attorneyId || filters.startDate || filters.endDate">
+            <button class="btn btn-primary" (click)="clearFilters()">
+              <i class="ri-filter-off-line me-2"></i>Clear All Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Enhanced Table Footer -->
+        <div class="card-footer bg-light border-top" *ngIf="filteredEntries.length > 0">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <div class="d-flex flex-wrap gap-4 text-muted fs-13">
+                <div class="d-flex align-items-center">
+                  <i class="ri-file-list-line me-1"></i>
+                  <span>Total: <strong>{{ filteredEntries.length }}</strong></span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <i class="ri-time-line me-1 text-warning"></i>
+                  <span>Pending: <strong class="text-warning">{{ stats.pendingReview }}</strong></span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <i class="ri-checkbox-circle-line me-1 text-success"></i>
+                  <span>Approved Today: <strong class="text-success">{{ stats.approvedToday }}</strong></span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <i class="ri-money-dollar-circle-line me-1 text-info"></i>
+                  <span>Pending Value: <strong class="text-info">${{ (stats.pendingAmount / 1000).toFixed(1) }}K</strong></span>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4 text-end">
+              <div class="text-muted fs-13">
+                <i class="ri-refresh-line me-1"></i>
+                Last updated: <strong>{{ lastUpdated | date:'MMM d, y - h:mm a' }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="text-center py-5" *ngIf="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Loading time entries...</p>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="alert alert-danger" role="alert" *ngIf="error">
+    <i class="ri-error-warning-line me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+</div> 

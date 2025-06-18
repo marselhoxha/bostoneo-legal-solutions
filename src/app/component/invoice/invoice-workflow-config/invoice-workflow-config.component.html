@@ -1,0 +1,388 @@
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">Configure Workflow</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices/workflows']">Workflows</a></li>
+          <li class="breadcrumb-item">
+            <a [routerLink]="['/invoices/workflows', workflowRule?.id]">{{ workflowRule?.name || 'Workflow' }}</a>
+          </li>
+          <li class="breadcrumb-item active">Configure</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ workflowRule?.name }} Configuration</h5>
+      </div>
+      
+      <div class="card-body">
+        <!-- Loading State -->
+        <div *ngIf="isLoading$ | async" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <form [formGroup]="configForm" (ngSubmit)="onSubmit()" *ngIf="workflowRule && !(isLoading$ | async)">
+          
+          <!-- Schedule Configuration (for SCHEDULED triggers) -->
+          <div *ngIf="workflowRule.triggerEvent === 'SCHEDULED'" class="mb-4">
+            <h6 class="mb-3">Schedule Configuration</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Days Before Due Date</label>
+                  <input type="number" class="form-control" formControlName="daysBeforeDue" 
+                         placeholder="Leave empty if not applicable">
+                  <small class="text-muted">Trigger workflow X days before invoice due date</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Days After Due Date</label>
+                  <input type="number" class="form-control" formControlName="daysAfterDue" 
+                         placeholder="Leave empty if not applicable">
+                  <small class="text-muted">Trigger workflow X days after invoice due date</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Execution Time</label>
+                  <input type="time" class="form-control" formControlName="executionTime">
+                  <small class="text-muted">Time of day to execute the workflow</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Max Executions <span class="text-danger">*</span></label>
+                  <input type="number" class="form-control" formControlName="maxExecutions" min="1">
+                  <small class="text-muted">Maximum times to execute per invoice</small>
+                  <div class="invalid-feedback" *ngIf="getFieldError('maxExecutions')">
+                    {{ getFieldError('maxExecutions') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <hr class="my-4">
+          </div>
+
+          <!-- Email Action Configuration -->
+          <div *ngIf="workflowRule.actionType === 'SEND_EMAIL'">
+            <h6 class="mb-3">Email Configuration</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Email Template <span class="text-danger">*</span></label>
+                  <select class="form-select" formControlName="email_template">
+                    <option value="">Select template</option>
+                    <option *ngFor="let template of emailTemplates" [value]="template.value">
+                      {{ template.label }}
+                    </option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="getFieldError('email_template')">
+                    {{ getFieldError('email_template') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">CC Email Addresses</label>
+                  <input type="text" class="form-control" formControlName="cc_emails" 
+                         placeholder="email1@example.com, email2@example.com">
+                  <small class="text-muted">Comma-separated list of CC recipients</small>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" formControlName="send_to_client" 
+                             id="sendToClient">
+                      <label class="form-check-label" for="sendToClient">
+                        Send to Client
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" formControlName="attach_pdf" 
+                             id="attachPdf">
+                      <label class="form-check-label" for="attachPdf">
+                        Attach Invoice PDF
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" formControlName="cc_accounting" 
+                             id="ccAccounting">
+                      <label class="form-check-label" for="ccAccounting">
+                        CC to Accounting
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Custom Subject (Optional)</label>
+                  <input type="text" class="form-control" formControlName="custom_subject" 
+                         placeholder="Leave empty to use default subject">
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Custom Message (Optional)</label>
+                  <textarea class="form-control" formControlName="custom_message" rows="4" 
+                            placeholder="Leave empty to use default message"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Update Configuration -->
+          <div *ngIf="workflowRule.actionType === 'UPDATE_STATUS'">
+            <h6 class="mb-3">Status Update Configuration</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">New Status <span class="text-danger">*</span></label>
+                  <select class="form-select" formControlName="new_status">
+                    <option value="">Select status</option>
+                    <option *ngFor="let status of invoiceStatuses" [value]="status.value">
+                      {{ status.label }}
+                    </option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="getFieldError('new_status')">
+                    {{ getFieldError('new_status') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Only Update If Current Status Is</label>
+                  <select class="form-select" formControlName="condition_status" multiple>
+                    <option *ngFor="let status of invoiceStatuses" [value]="status.value">
+                      {{ status.label }}
+                    </option>
+                  </select>
+                  <small class="text-muted">Leave empty to update regardless of current status</small>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" formControlName="notify_client" 
+                         id="notifyClient">
+                  <label class="form-check-label" for="notifyClient">
+                    Notify Client of Status Change
+                  </label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" formControlName="add_note" 
+                         id="addNote">
+                  <label class="form-check-label" for="addNote">
+                    Add Note to Invoice
+                  </label>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="configForm.get('add_note')?.value">
+                <div class="mb-3">
+                  <label class="form-label">Note Text</label>
+                  <textarea class="form-control" formControlName="note_text" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Late Fee Configuration -->
+          <div *ngIf="workflowRule.actionType === 'APPLY_LATE_FEE'">
+            <h6 class="mb-3">Late Fee Configuration</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Fee Percentage <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <input type="number" class="form-control" formControlName="fee_percentage" 
+                           step="0.1" min="0" max="100">
+                    <span class="input-group-text">%</span>
+                  </div>
+                  <div class="invalid-feedback" *ngIf="getFieldError('fee_percentage')">
+                    {{ getFieldError('fee_percentage') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Maximum Fee Amount <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="max_fee_amount" 
+                           step="0.01" min="0">
+                  </div>
+                  <div class="invalid-feedback" *ngIf="getFieldError('max_fee_amount')">
+                    {{ getFieldError('max_fee_amount') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Fee Description <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" formControlName="fee_description">
+                  <div class="invalid-feedback" *ngIf="getFieldError('fee_description')">
+                    {{ getFieldError('fee_description') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" formControlName="compound_fees" 
+                         id="compoundFees">
+                  <label class="form-check-label" for="compoundFees">
+                    Compound Late Fees
+                  </label>
+                  <small class="text-muted d-block">Apply fee on total including previous fees</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Waive If Paid Within (Days)</label>
+                  <input type="number" class="form-control" formControlName="waive_if_paid_within" min="0">
+                  <small class="text-muted">Automatically waive fee if paid within X days</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reminder Configuration -->
+          <div *ngIf="workflowRule.actionType === 'CREATE_REMINDER'">
+            <h6 class="mb-3">Reminder Configuration</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Reminder After Days <span class="text-danger">*</span></label>
+                  <input type="number" class="form-control" formControlName="reminder_days" min="1">
+                  <div class="invalid-feedback" *ngIf="getFieldError('reminder_days')">
+                    {{ getFieldError('reminder_days') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Reminder Time</label>
+                  <input type="time" class="form-control" formControlName="reminder_time">
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Reminder Subject <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" formControlName="reminder_subject">
+                  <div class="invalid-feedback" *ngIf="getFieldError('reminder_subject')">
+                    {{ getFieldError('reminder_subject') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Reminder Message</label>
+                  <textarea class="form-control" formControlName="reminder_message" rows="4"></textarea>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" formControlName="send_email" 
+                         id="sendEmail">
+                  <label class="form-check-label" for="sendEmail">
+                    Send Email Reminder
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" formControlName="create_task" 
+                         id="createTask">
+                  <label class="form-check-label" for="createTask">
+                    Create Task/Notification
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="button" class="btn btn-light" (click)="cancel()">
+              <i class="ri-close-line me-1"></i> Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="!configForm.valid">
+              <i class="ri-save-line me-1"></i> Save Configuration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help Card -->
+<div class="row" *ngIf="workflowRule">
+  <div class="col-lg-12">
+    <div class="card border card-border-warning">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="ri-information-line align-middle me-1"></i> Configuration Tips
+        </h6>
+      </div>
+      <div class="card-body">
+        <div [ngSwitch]="workflowRule.actionType">
+          <div *ngSwitchCase="'SEND_EMAIL'">
+            <ul class="mb-0">
+              <li>Email templates use predefined formats optimized for each scenario</li>
+              <li>CC emails will receive a copy of all communications</li>
+              <li>PDF attachments include the full invoice details</li>
+              <li>Custom messages support basic HTML formatting</li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'UPDATE_STATUS'">
+            <ul class="mb-0">
+              <li>Status updates are immediate and cannot be reversed automatically</li>
+              <li>Conditional status checks prevent unwanted updates</li>
+              <li>Notes are added to the invoice history for audit trail</li>
+              <li>Client notifications use the default status change template</li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'APPLY_LATE_FEE'">
+            <ul class="mb-0">
+              <li>Late fees are calculated on the original invoice amount</li>
+              <li>Maximum fee prevents excessive charges</li>
+              <li>Compound fees include previous late fees in calculation</li>
+              <li>Waived fees are automatically reversed if payment is received in time</li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'CREATE_REMINDER'">
+            <ul class="mb-0">
+              <li>Reminders are scheduled relative to the trigger date</li>
+              <li>Email reminders are sent at the specified time</li>
+              <li>Tasks appear in the user's dashboard</li>
+              <li>Multiple reminders can be created for the same invoice</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

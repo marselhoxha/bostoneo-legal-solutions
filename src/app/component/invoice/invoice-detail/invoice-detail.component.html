@@ -1,147 +1,490 @@
+<div class="invoice-detail-component">
 <ng-container *ngIf="(invoiceState$ | async) as state" [ngSwitch]="state.dataState">
-   <ng-container *ngSwitchCase="DataState.LOADED">
-    <app-layout [user]="state?.appData?.data?.user"></app-layout>
-      <!-- Start Breadcrumbs -->
-<app-breadcrumbs title="Invoice Details" [breadcrumbItems]="breadCrumbItems"></app-breadcrumbs>
-<!-- End Breadcrumbs -->
+  <ng-container *ngSwitchCase="DataState.LOADED">
+    
+    <!-- Professional Page Header -->
+    <div class="row" style="margin-top: 120px;">
+      <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+          <div class="page-title-left">
+            <h4 class="mb-sm-0 fw-semibold">
+              <ng-container *ngIf="isNewInvoice">Create New Invoice</ng-container>
+              <ng-container *ngIf="!isNewInvoice && editMode">Edit Invoice</ng-container>
+              <ng-container *ngIf="!isNewInvoice && !editMode">Invoice Details</ng-container>
+            </h4>
+            <div class="page-title-right">
+              <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="javascript: void(0);">Invoices</a></li>
+                <li class="breadcrumb-item active">
+                  <ng-container *ngIf="isNewInvoice">Create Invoice</ng-container>
+                  <ng-container *ngIf="!isNewInvoice && editMode">Edit Invoice</ng-container>
+                  <ng-container *ngIf="!isNewInvoice && !editMode">Invoice Details</ng-container>
+                </li>
+              </ol>
+            </div>
+          </div>
+          <div class="page-title-right">
+            <div class="d-flex gap-2 flex-wrap">
+              <!-- Edit Mode Header Buttons -->
+              <ng-container *ngIf="editMode">
+                <button class="btn btn-success btn-sm" 
+                        (click)="saveInvoice()"
+                        [disabled]="!isInvoiceEditable">
+                  <i class="ri-save-line align-bottom me-1"></i> {{ isNewInvoice ? 'Create' : 'Save' }}
+                </button>
+                <button *ngIf="!isNewInvoice" class="btn btn-soft-secondary btn-sm" (click)="cancelEdit()">
+                  <i class="ri-close-line align-bottom"></i>
+                </button>
+              </ng-container>
+              
+              <!-- View Mode Header Buttons -->
+              <ng-container *ngIf="!editMode">
+                <button *ngIf="showEditButton" class="btn btn-primary btn-sm" (click)="enterEditMode()">
+                  <i class="ri-pencil-line align-bottom"></i>
+                </button>
+                <button *ngIf="!isNewInvoice" 
+                        class="btn btn-soft-secondary btn-sm" 
+                        (click)="window.print()">
+                  <i class="ri-printer-line align-bottom"></i>
+                </button>
+                <button *ngIf="!isNewInvoice" 
+                        class="btn btn-soft-info btn-sm" 
+                        (click)="downloadPDF()">
+                  <i class="ri-download-2-line align-bottom"></i>
+                </button>
+                <button *ngIf="!isNewInvoice" 
+                        class="btn btn-soft-success btn-sm" 
+                        (click)="sendEmail()">
+                  <i class="ri-send-plane-2-line align-bottom"></i>
+                </button>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<div class="row justify-content-center" style="margin-bottom: 60px; margin-top: 20px;">
-   <div class="col-xxl-9">
-       <div class="card" id="invoice">
-           <div class="row">
-               <!-- Invoice Header -->
-               <div class="col-lg-12">
-                 <div class="card-header border-bottom-dashed p-4">
-                    <div class="d-flex flex-wrap">
-                        <div class="flex-grow-1">
-                            <img src="assets/images/***REMOVED***-logo-1.svg" class="card-logo card-logo-dark" style="margin-top: 20px;" alt="logo dark" height="90">
-                            <img src="assets/images/***REMOVED***-logo-white-1.svg" class="card-logo card-logo-light" style="margin-top: 20px;" alt="logo light" height="90">
-                            
-                        </div>
-                        <div class="flex-shrink-0 mt-sm-3 me-5">
-                          <h6><span class="text-muted fw-normal">EIN No: </span>12345678 </h6>
-                         <h6><span class="text-muted fw-normal">Email: </span>info&#64;***REMOVED***.com</h6>
-                          <h6><span class="text-muted fw-normal">Website: </span>***REMOVED***.com </h6>
-                          <h6 class="mb-0"><span class="text-muted fw-normal">Phone: </span>(123) 456-7890</h6>
-                      </div>
-                      
-                        
+    <!-- Main Invoice Card with Professional Design -->
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="card" id="demo" 
+             [class.create-mode]="isNewInvoice" 
+             [class.edit-mode]="!isNewInvoice && editMode" 
+             [class.view-mode]="!isNewInvoice && !editMode">
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="card-header border-bottom-dashed p-4">
+                <div class="d-sm-flex">
+                  <div class="flex-grow-1">
+                    <img src="assets/images/***REMOVED***-logo-1.svg" class="card-logo card-logo-dark" alt="Bostoneo Solutions" height="60">
+                    <img src="assets/images/***REMOVED***-logo-white-1.svg" class="card-logo card-logo-light" alt="Bostoneo Solutions" height="60">
+                    <div class="mt-sm-5 mt-4">
+                      <h6 class="text-muted text-uppercase fw-semibold fs-14">Address</h6>
+                      <p class="text-muted mb-1" id="address-details">68 Harrison Ave, Boston MA 02111</p>
+                      <p class="text-muted mb-0" id="zip-code"><span>Phone: </span>(123) 456-7890</p>
                     </div>
+                  </div>
+                  <div class="flex-shrink-0 mt-sm-0 mt-3">
+                    <h6><span class="text-muted fw-normal">Legal Services</span></h6>
+                    <h6><span class="text-muted fw-normal">Email: </span><span id="email">info&#64;***REMOVED***.com</span></h6>
+                    <h6><span class="text-muted fw-normal">Website: </span><a href="https://***REMOVED***.com" class="link-primary" target="_blank" id="website">www.***REMOVED***.com</a></h6>
+                    <h6 class="mb-0"><span class="text-muted fw-normal">Contact No: </span><span id="contact-no">(123) 456-7890</span></h6>
+                  </div>
                 </div>
-                   <!--end card-header-->
-               </div>
-               <!-- Invoice Info Cards -->
-               <div class="col-lg-12">
-                   <div class="card-body p-4">
-                       <div class="row g-3">
-                           <div class="col-lg-3 col-6">
-                               <p class="text-muted mb-2 text-uppercase fw-semibold">Invoice No</p>
-                               <h5 class="fs-14 mb-0">#{{ state?.appData?.data?.invoice.invoiceNumber }}</h5>
-                           </div>
-                           <div class="col-lg-3 col-6">
-                               <p class="text-muted mb-2 text-uppercase fw-semibold">Date</p>
-                               <h5 class="fs-14 mb-0">{{ state?.appData?.data?.invoice.date | date: 'mediumDate' }}</h5>
-                           </div>
-                           <div class="col-lg-3 col-6">
-                               <p class="text-muted mb-2 text-uppercase fw-semibold">Payment Status</p>
-                               <span class="badge fs-11" [ngClass]="[
-                                state?.appData?.data?.invoice.status === 'PAID' ? 'bg-success-subtle text-success' : '',
-                                state?.appData?.data?.invoice.status === 'OVERDUE' ? 'bg-info-subtle text-info' : '',
-                                state?.appData?.data?.invoice.status === 'CANCELED' ? 'bg-danger-subtle text-danger' : '',
-                                state?.appData?.data?.invoice.status === 'PENDING' ? 'bg-warning-subtle text-warning' : ''
-                                ]" >
-                             {{ state?.appData?.data?.invoice.status }}</span>
-                           </div>
-                           <div class="col-lg-3 col-6">
-                               <p class="text-muted mb-2 text-uppercase fw-semibold">Amount</p>
-                               <h5 class="fs-14 mb-0">${{ state?.appData?.data?.invoice.total | number: '.2-2' }}</h5>
-                           </div>
-                       </div>
-                   </div>
-               </div>
-               <!-- Billing and Shipping Address -->
-               <div class="col-lg-12">
-                   <div class="card-body p-4 border-top border-top-dashed">
-                       <div class="row g-3">
-                           <div class="col-6">
-                               <h6 class="text-muted text-uppercase fw-semibold mb-3">Billing From: </h6>
-                               <p class="fw-medium mb-2">Bostoneo Solutions LLC</p>
-                               <p class="text-muted mb-1">68 Harrison Ave, Boston MA</p>
-                               <p class="text-muted mb-1">Phone: (123) 456-7890</p>
-                           </div>
-                           <div class="col-6">
-                               <h6 class="text-muted text-uppercase fw-semibold mb-3">Billing To: </h6>
-                               <p class="fw-medium mb-2">{{ state?.appData?.data?.customer.name }}</p>
-                               <p class="text-muted mb-1">{{ state?.appData?.data?.customer.address }}</p>
-                               <p class="text-muted mb-1">Phone: {{ state?.appData?.data?.customer.phone }}</p>
-                           </div>
-                       </div>
-                   </div>
-               </div>
-               <!-- Invoice Items -->
-               <div class="col-lg-12">
-                   <div class="card-body p-4">
-                    <div class="table-responsive">
-                       <table class="table table-borderless text-center table-nowrap align-middle mb-0">
-                         <thead>
-                           <tr class="table-active">
-                             <th scope="col" style="width: 50px;">#</th>
-                             <th scope="col">Provided Services</th>
-                             <th scope="col">Rate</th>
-                             <th scope="col"></th>
-                             <th scope="col" class="text-end">Sub Total</th>
-                           </tr>
-                         </thead>
-                         <tbody>
-                           <tr *ngFor="let service of state?.appData?.data?.invoice.services.split(',')">
-                                       <td class="text-center">{{ service.split(' ')[0] }}</td>
-                                          <td>
-                                             <span class="text-inverse">{{ service.split(' ')[1] }} {{ service.split(' ')[2] }}</span><br>
-                                          </td>
-                                          <td class="text-center">1</td>
-                                          <td class="text-right">{{ service.split(' ')[3] }}</td>
-                                          <th class="text-end">${{ state?.appData?.data?.invoice.total | number: '.2-2' }}</th>
-                                    </tr>
-                         </tbody>
-                       </table>
-                     </div>
-                       <!-- Pricing Details -->
-                       <div class="border-top border-top-dashed mt-2">
-                        <table class="table table-borderless table-nowrap align-middle mb-0 ms-auto" style="width:250px">
-                            <tbody>
-                               
-                                <tr>
-                                    <td>Tax (6.25%)</td>
-                                    <td class="text-end">${{ state?.appData?.data?.invoice.total * (6.25/100) | number: '.2-2'}}</td>
-                                </tr>
-                                <tr class="border-top border-top-dashed fs-14">
-                                    <th scope="row">Total Amount</th>
-                                    <th class="text-end">${{ state?.appData?.data?.invoice.total * (6.25/100) + state?.appData?.data?.invoice.total | number: '.2-2' }}</th>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                       
-                      
-                       <!-- Notes Section -->
-                       <div class="mt-5">
-                           <div class="alert alert-primary">
-                             <p class="mb-0"><span class="fw-semibold">NOTES:</span>
-                                <span>All accounts are to be paid within 7 days from receipt of invoice. To be paid by check or credit card or direct payment online. If the account is not paid within 7 days, the credit details supplied as confirmation of work undertaken will be charged the agreed quoted fee noted above.</span>
-                            </p>
-                           </div>
-                       </div>
-                       <!-- Print and Download -->
-                       <div class="hstack gap-2 justify-content-end d-print-none mt-4">
-                           <a href="javascript:window.print()" class="btn btn-success no-pdf"><i class="ri-printer-line align-bottom me-1"></i> Print</a>
-                           <a (click)="exportAsPDF()" class="btn btn-primary no-pdf"><i class="ri-download-2-line align-bottom me-1"></i> Download</a>
-                       </div>
-                   </div>
-               </div>
-           </div>
-       </div>
-   </div>
-</div>
-   </ng-container>
-</ng-container> 
+              </div>
+            </div>
 
+            <div class="col-lg-12">
+              <div class="card-body p-4">
+                <div class="row g-3">
+                  <div class="col-lg-3 col-6">
+                    <p class="text-muted mb-2 text-uppercase fw-semibold fs-12">Invoice No</p>
+                    <h5 class="fs-14 mb-0">
+                      <span id="invoice-no" *ngIf="!isNewInvoice">{{ state?.appData?.data?.invoiceNumber }}</span>
+                      <span *ngIf="isNewInvoice" class="text-muted">Auto-generated</span>
+                    </h5>
+                  </div>
+                  
+                  <div class="col-lg-3 col-6">
+                    <p class="text-muted mb-2 text-uppercase fw-semibold fs-12">Issue Date</p>
+                    <div class="inline-edit-field" (click)="startEdit('issueDate')" [class.disabled]="!isInvoiceEditable">
+                      <span *ngIf="!editingField['issueDate']" class="editable-text fs-14">
+                        {{ editableInvoice.issueDate | date: 'dd MMM, yyyy' }}
+                        <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                      </span>
+                      <input *ngIf="editingField['issueDate']" 
+                             type="text"
+                             class="form-control form-control-sm"
+                             [(ngModel)]="editableInvoice.issueDate"
+                             flatpickr
+                             [config]="dateConfig"
+                             (blur)="finishEdit('issueDate')"
+                             (keyup.enter)="finishEdit('issueDate')"
+                             placeholder="Select date"
+                             #issueDateInput>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-3 col-6">
+                    <p class="text-muted mb-2 text-uppercase fw-semibold fs-12">Due Date</p>
+                    <div class="inline-edit-field" (click)="startEdit('dueDate')" [class.disabled]="!isInvoiceEditable">
+                      <span *ngIf="!editingField['dueDate']" class="editable-text fs-14">
+                        {{ editableInvoice.dueDate | date: 'dd MMM, yyyy' }}
+                        <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                      </span>
+                      <input *ngIf="editingField['dueDate']" 
+                             type="text"
+                             class="form-control form-control-sm"
+                             [(ngModel)]="editableInvoice.dueDate"
+                             flatpickr
+                             [config]="dateConfig"
+                             (blur)="finishEdit('dueDate')"
+                             (keyup.enter)="finishEdit('dueDate')"
+                             placeholder="Select date"
+                             #dueDateInput>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-3 col-6">
+                    <p class="text-muted mb-2 text-uppercase fw-semibold fs-12">Payment Status</p>
+                    <span class="badge fs-11" [ngClass]="{
+                      'badge-soft-success': state?.appData?.data?.status === 'PAID',
+                      'badge-soft-warning': state?.appData?.data?.status === 'PENDING' || state?.appData?.data?.status === 'ISSUED',
+                      'badge-soft-danger': state?.appData?.data?.status === 'OVERDUE' || state?.appData?.data?.status === 'CANCELLED',
+                      'badge-soft-secondary': state?.appData?.data?.status === 'DRAFT' || isNewInvoice
+                    }" id="payment-status">{{ state?.appData?.data?.status || 'DRAFT' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-12">
+              <div class="card-body p-4 border-top border-top-dashed">
+                <!-- Create Mode Helper -->
+                <div *ngIf="isNewInvoice" class="alert alert-info mb-4">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-information-line me-2 fs-16"></i>
+                    <div>
+                      <p class="mb-0"><span class="fw-semibold">Creating New Invoice:</span>
+                        <span class="text-muted"> Start by selecting a client, then optionally choose a legal case. Add invoice items and set your rates to complete the invoice.</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row g-3">
+                  <div class="col-sm-6">
+                    <h6 class="text-muted text-uppercase fw-semibold fs-14 mb-3">Client Name</h6>
+                    <div class="inline-edit-field" (click)="startEdit('client')" [class.disabled]="!isInvoiceEditable">
+                      <div *ngIf="!editingField['client']" class="editable-text">
+                        <p class="fw-medium mb-2 fs-15">
+                          {{ editableInvoice.clientName || (isNewInvoice ? 'Click to select client' : 'No client selected') }}
+                          <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                        </p>
+                      </div>
+                      <ng-select *ngIf="editingField['client']" 
+                                 [(ngModel)]="editableInvoice.clientId"
+                                 [items]="(clients$ | async) || []"
+                                 bindLabel="name"
+                                 bindValue="id"
+                                 placeholder="Search and select client..."
+                                 [searchable]="true"
+                                 [clearable]="true"
+                                 [loading]="!(clients$ | async)"
+                                 loadingText="Loading clients..."
+                                 notFoundText="No clients found. Please add clients first."
+                                 (ngModelChange)="onClientChange($event)"
+                                 (blur)="finishEdit('client')"
+                                 class="form-select">
+                      </ng-select>
+                    </div>
+                  </div>
+                  
+                  <div class="col-sm-6">
+                    <h6 class="text-muted text-uppercase fw-semibold fs-14 mb-3">Legal Case</h6>
+                    <div class="inline-edit-field" (click)="startEdit('case')" [class.disabled]="!isInvoiceEditable">
+                      <div *ngIf="!editingField['case']" class="editable-text">
+                        <p class="fw-medium mb-2 fs-15" [class.text-muted]="!editableInvoice.caseName">
+                          {{ editableInvoice.caseName || (isNewInvoice ? 'Click to select case (optional)' : '') }}
+                          <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                        </p>
+                      </div>
+                      <ng-select *ngIf="editingField['case']" 
+                                 [(ngModel)]="editableInvoice.legalCaseId"
+                                 [items]="(cases$ | async) || []"
+                                 bindLabel="title"
+                                 bindValue="id"
+                                 placeholder="Search and select legal case..."
+                                 [searchable]="true"
+                                 [clearable]="true"
+                                 [loading]="!(cases$ | async)"
+                                 loadingText="Loading cases..."
+                                 notFoundText="No cases found. This field is optional."
+                                 (ngModelChange)="onCaseChange($event)"
+                                 (blur)="finishEdit('case')"
+                                 class="form-select">
+                      </ng-select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-12">
+              <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="text-muted text-uppercase fw-semibold fs-14 mb-0">Invoice Items</h6>
+                  <button *ngIf="isInvoiceEditable" class="btn btn-soft-primary btn-sm" (click)="addItem()">
+                    <i class="ri-add-line me-1"></i> Add Item
+                  </button>
+                </div>
+                
+                <div class="table-responsive">
+                  <table class="table table-borderless text-center table-nowrap align-middle mb-0">
+                    <thead>
+                      <tr class="table-active">
+                        <th scope="col" style="width: 50px;">#</th>
+                        <th scope="col" class="text-start">Description</th>
+                        <th scope="col" class="text-end">Rate</th>
+                        <th scope="col" class="text-end">Quantity</th>
+                        <th scope="col" class="text-end">Amount</th>
+                        <th scope="col" class="text-center" style="width: 105px;" *ngIf="isInvoiceEditable">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="products-list">
+                      <tr *ngFor="let item of invoiceItems; let i = index">
+                        <th scope="row">{{ i + 1 }}</th>
+                        <td class="text-start">
+                          <div class="inline-edit-field" (click)="startEdit('item-desc-' + i)" [class.disabled]="!isInvoiceEditable">
+                            <div *ngIf="!editingField['item-desc-' + i]" class="editable-text">
+                              <span class="fw-medium">{{ item.description || 'Click to add description' }}</span>
+                              <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                              <p class="text-muted mb-0 mt-1" *ngIf="item.details">{{ item.details }}</p>
+                            </div>
+                            <div *ngIf="editingField['item-desc-' + i]">
+                              <input type="text" 
+                                     class="form-control form-control-sm mb-2"
+                                     [(ngModel)]="item.description"
+                                     (blur)="finishEdit('item-desc-' + i)"
+                                     (keyup.enter)="finishEdit('item-desc-' + i)"
+                                     placeholder="Service description">
+                              <input type="text" 
+                                     class="form-control form-control-sm"
+                                     [(ngModel)]="item.details"
+                                     (blur)="finishEdit('item-desc-' + i)"
+                                     (keyup.enter)="finishEdit('item-desc-' + i)"
+                                     placeholder="Additional details (optional)">
+                            </div>
+                          </div>
+                        </td>
+                        <td class="text-end">
+                          <div class="inline-edit-field" (click)="startEdit('item-rate-' + i)" [class.disabled]="!isInvoiceEditable">
+                            <span *ngIf="!editingField['item-rate-' + i]" class="editable-text">
+                              ${{ item.rate | number:'1.2-2' }}
+                              <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                            </span>
+                            <div *ngIf="editingField['item-rate-' + i]" class="input-group input-group-sm">
+                              <span class="input-group-text">$</span>
+                              <input type="number" 
+                                     class="form-control text-end"
+                                     [(ngModel)]="item.rate"
+                                     (ngModelChange)="calculateItemTotal(i)"
+                                     (blur)="finishEdit('item-rate-' + i)"
+                                     (keyup.enter)="finishEdit('item-rate-' + i)"
+                                     min="0"
+                                     step="0.01">
+                            </div>
+                          </div>
+                        </td>
+                        <td class="text-end">
+                          <div class="inline-edit-field" (click)="startEdit('item-qty-' + i)" [class.disabled]="!isInvoiceEditable">
+                            <span *ngIf="!editingField['item-qty-' + i]" class="editable-text">
+                              {{ item.quantity }}
+                              <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                            </span>
+                            <input *ngIf="editingField['item-qty-' + i]" 
+                                   type="number" 
+                                   class="form-control form-control-sm text-end"
+                                   [(ngModel)]="item.quantity"
+                                   (ngModelChange)="calculateItemTotal(i)"
+                                   (blur)="finishEdit('item-qty-' + i)"
+                                   (keyup.enter)="finishEdit('item-qty-' + i)"
+                                   min="0"
+                                   step="0.1">
+                          </div>
+                        </td>
+                        <td class="text-end">${{ item.total | number:'1.2-2' }}</td>
+                        <td class="text-center" *ngIf="isInvoiceEditable">
+                          <button class="btn btn-sm btn-soft-danger" (click)="removeItem(i)" title="Remove item">
+                            <i class="ri-delete-bin-line"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div class="border-top border-top-dashed mt-2">
+                  <table class="table table-borderless table-nowrap align-middle mb-0 ms-auto" style="width:250px">
+                    <tbody>
+                      <tr>
+                        <td>Sub Total</td>
+                        <td class="text-end">${{ editableInvoice.subtotal | number:'1.2-2' }}</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <span>Tax</span>
+                            <div class="inline-edit-field ms-2" (click)="startEdit('taxRate')" [class.disabled]="!isInvoiceEditable">
+                              <span *ngIf="!editingField['taxRate']" class="editable-text">
+                                ({{ editableInvoice.taxRate || 0 }}%)
+                                <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-1 text-muted fs-12"></i>
+                              </span>
+                              <div *ngIf="editingField['taxRate']" class="d-inline-flex align-items-center">
+                                <input type="number" 
+                                       class="form-control form-control-sm"
+                                       [(ngModel)]="editableInvoice.taxRate"
+                                       (ngModelChange)="calculateTotals()"
+                                       (blur)="finishEdit('taxRate')"
+                                       (keyup.enter)="finishEdit('taxRate')"
+                                       min="0"
+                                       max="100"
+                                       step="0.01"
+                                       style="width: 70px;">
+                                <span class="ms-1">%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="text-end">${{ editableInvoice.taxAmount | number:'1.2-2' }}</td>
+                      </tr>
+                      <tr class="border-top border-top-dashed fs-15">
+                        <th scope="row">Total Amount</th>
+                        <th class="text-end">${{ editableInvoice.totalAmount | number:'1.2-2' }}</th>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div class="mt-4">
+                  <h6 class="text-muted text-uppercase fw-semibold mb-3">Notes & Terms</h6>
+                  <div class="inline-edit-field" (click)="startEdit('notes')" [class.disabled]="!isInvoiceEditable">
+                    <p *ngIf="!editingField['notes']" class="text-muted mb-1 editable-text">
+                      {{ editableInvoice.notes || 'Click to add notes, terms, or special instructions...' }}
+                      <i *ngIf="isInvoiceEditable" class="ri-edit-2-line ms-2 text-muted fs-12"></i>
+                    </p>
+                    <textarea *ngIf="editingField['notes']" 
+                              class="form-control" 
+                              rows="4"
+                              [(ngModel)]="editableInvoice.notes"
+                              (blur)="finishEdit('notes')"
+                              placeholder="Add any notes, terms, or special instructions..."
+                              #notesTextarea></textarea>
+                  </div>
+                </div>
+                
+                <div class="mt-4">
+                  <div class="alert alert-info">
+                    <p class="mb-0"><span class="fw-semibold">PAYMENT TERMS:</span>
+                      <span class="text-muted"> All accounts are to be paid within 7 days from receipt of invoice. To be paid by cheque or credit card or direct payment online. If account is not paid within 7 days the credits details supplied as confirmation of work undertaken will be charged the agreed quoted fee noted above.</span>
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Paid Invoice Notice -->
+                <div *ngIf="!isNewInvoice && state?.appData?.data?.status === 'PAID'" class="mt-3">
+                  <div class="alert alert-success">
+                    <div class="d-flex align-items-center">
+                      <i class="ri-check-double-line me-2 fs-16"></i>
+                      <div>
+                        <p class="mb-0"><span class="fw-semibold">PAID INVOICE:</span>
+                          <span class="text-muted"> This invoice has been marked as paid and cannot be edited. All changes are now locked to maintain payment integrity.</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="hstack gap-2 justify-content-end d-print-none mt-4">
+                  <!-- Edit Mode Buttons -->
+                  <ng-container *ngIf="editMode">
+                    <button class="btn btn-success" 
+                            (click)="saveInvoice()"
+                            [disabled]="!isInvoiceEditable">
+                      <i class="ri-save-line align-bottom me-1"></i> {{ isNewInvoice ? 'Create Invoice' : 'Save Changes' }}
+                    </button>
+                    <button *ngIf="!isNewInvoice" class="btn btn-soft-secondary" (click)="cancelEdit()">
+                      <i class="ri-close-line align-bottom me-1"></i> Cancel Edit
+                    </button>
+                  </ng-container>
+                  
+                  <!-- View Mode Buttons -->
+                  <ng-container *ngIf="!editMode">
+                    <button *ngIf="showEditButton" class="btn btn-primary" (click)="enterEditMode()">
+                      <i class="ri-pencil-line align-bottom me-1"></i> Edit Invoice
+                    </button>
+                    <button *ngIf="!isNewInvoice" class="btn btn-success" (click)="downloadPDF()">
+                      <i class="ri-download-2-line align-bottom me-1"></i> Download PDF
+                    </button>
+                    <button *ngIf="!isNewInvoice" class="btn btn-info" (click)="window.print()">
+                      <i class="ri-printer-line align-bottom me-1"></i> Print
+                    </button>
+                    <button *ngIf="!isNewInvoice" class="btn btn-soft-success" (click)="sendEmail()">
+                      <i class="ri-send-plane-2-line align-bottom me-1"></i> Send Email
+                    </button>
+                    <button *ngIf="!isNewInvoice && isInvoiceEditable" class="btn btn-soft-danger" (click)="deleteInvoice()">
+                      <i class="ri-delete-bin-line align-bottom me-1"></i> Delete
+                    </button>
+                  </ng-container>
+                  
+                  <!-- Always visible buttons -->
+                  <button class="btn btn-soft-secondary" (click)="cancelInvoice()">
+                    <i class="ri-close-line align-bottom me-1"></i> {{ isNewInvoice ? 'Cancel' : 'Back to List' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Enhanced Loading State -->
+  <ng-container *ngSwitchCase="DataState.LOADING">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#405189,secondary:#0ab39c" style="width:120px;height:120px"></lord-icon>
+            <div class="mt-4">
+              <h5>Loading Invoice Details</h5>
+              <p class="text-muted">Please wait while we fetch your invoice information...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Enhanced Error State -->
+  <ng-container *ngSwitchCase="DataState.ERROR">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <lord-icon src="https://cdn.lordicon.com/tdrtiskw.json" trigger="loop" colors="primary:#f06548,secondary:#f7b84b" style="width:120px;height:120px"></lord-icon>
+            <div class="mt-4">
+              <h5>Something went wrong!</h5>
+              <p class="text-muted">{{ state.error || 'Failed to load invoice details. Please try again.' }}</p>
+              <button class="btn btn-primary" (click)="ngOnInit()">
+                <i class="ri-refresh-line me-1"></i> Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</ng-container>
+</div>

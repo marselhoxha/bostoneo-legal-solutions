@@ -1,0 +1,444 @@
+<!-- Velzon Billing Rates Management -->
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header border-bottom">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-1 fw-semibold">
+                <i class="mdi mdi-currency-usd text-primary me-2"></i>Billing Rates Management
+              </h4>
+              <p class="text-muted mb-0 small">Configure and manage hourly billing rates for your practice</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-info btn-sm" (click)="loadData()" title="Refresh Data">
+                <i class="mdi mdi-refresh me-1"></i>Refresh
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" (click)="exportRates()" title="Export to CSV">
+                <i class="mdi mdi-download me-1"></i>Export
+              </button>
+              <button type="button" class="btn btn-primary" (click)="openRateModal($event)">
+                <i class="mdi mdi-plus me-1"></i>Add New Rate
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <!-- Error Alert -->
+          <div class="alert alert-danger alert-dismissible fade show" role="alert" *ngIf="error">
+            <i class="mdi mdi-alert-circle-outline me-2"></i>
+            <strong>Error:</strong> {{ error }}
+            <button type="button" class="btn-close" (click)="error = null" aria-label="Close"></button>
+          </div>
+
+
+
+          <!-- Loading State -->
+          <div *ngIf="loading" class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Loading billing rates...</p>
+          </div>
+          
+          <!-- Search and Filter Section -->
+          <div class="row mb-4" *ngIf="!loading">
+            <div class="col-md-6">
+              <div class="position-relative">
+                <i class="mdi mdi-magnify position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" 
+                       class="form-control ps-5" 
+                       [(ngModel)]="searchTerm"
+                       placeholder="Search by rate type or description...">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select" [(ngModel)]="statusFilter">
+                <option value="all">🔍 All Status</option>
+                <option value="active">✅ Active Only</option>
+                <option value="inactive">⏸️ Inactive Only</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <div class="text-muted small">
+                <i class="mdi mdi-information-outline me-1"></i>
+                {{ filteredRateCards.length }} of {{ rateCards.length }} rates
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Cards -->
+          <div class="row mb-4" *ngIf="!loading && rateCards.length > 0">
+            <div class="col-md-3">
+              <div class="card bg-primary bg-opacity-10 border-primary border-opacity-25">
+                <div class="card-body text-center py-3">
+                  <h5 class="text-primary mb-1">{{ formatCurrency(analytics.averageRate) }}</h5>
+                  <small class="text-muted">Average Rate</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card bg-success bg-opacity-10 border-success border-opacity-25">
+                <div class="card-body text-center py-3">
+                  <h5 class="text-success mb-1">{{ analytics.activeRates }}</h5>
+                  <small class="text-muted">Active Rates</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card bg-info bg-opacity-10 border-info border-opacity-25">
+                <div class="card-body text-center py-3">
+                  <h5 class="text-info mb-1">{{ analytics.totalEntries }}</h5>
+                  <small class="text-muted">Total Hours</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card bg-warning bg-opacity-10 border-warning border-opacity-25">
+                <div class="card-body text-center py-3">
+                  <h5 class="text-warning mb-1">{{ formatCurrency(analytics.totalBilled) }}</h5>
+                  <small class="text-muted">Total Billed</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rates Table -->
+          <div *ngIf="!loading" class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-semibold border-0">
+                    <i class="mdi mdi-tag-outline me-1 text-muted"></i>Rate Type
+                  </th>
+                  <th class="fw-semibold border-0">
+                    <i class="mdi mdi-currency-usd me-1 text-muted"></i>Amount
+                  </th>
+                  <th class="fw-semibold border-0">
+                    <i class="mdi mdi-calendar me-1 text-muted"></i>Effective Date
+                  </th>
+                  <th class="fw-semibold border-0">
+                    <i class="mdi mdi-check-circle-outline me-1 text-muted"></i>Status
+                  </th>
+                  <th class="fw-semibold border-0">
+                    <i class="mdi mdi-chart-line me-1 text-muted"></i>Usage
+                  </th>
+                  <th class="fw-semibold border-0 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let rate of filteredRateCards; trackBy: trackByRateId" class="border-bottom">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="rate-type-indicator me-2" 
+                           [class.bg-primary]="rate.type.includes('Standard')"
+                           [class.bg-success]="rate.type.includes('Premium')"
+                           [class.bg-warning]="rate.type.includes('Emergency')"
+                           [class.bg-info]="rate.type.includes('Discounted')"
+                           [class.bg-secondary]="rate.type.includes('Pro Bono')"></div>
+                      <div>
+                        <div class="fw-medium">{{ rate.type }}</div>
+                        <small class="text-muted">{{ rate.description }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ formatCurrency(rate.amount) }}</div>
+                    <small class="text-muted">per hour</small>
+                  </td>
+                  <td>
+                    <div>{{ rate.effectiveDate | date:'MMM d, y' }}</div>
+                    <small class="text-muted">{{ getDateDifference(rate.effectiveDate) }}</small>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill" 
+                          [class.bg-success]="rate.isActive"
+                          [class.bg-secondary]="!rate.isActive">
+                      <i class="mdi mdi-check me-1" *ngIf="rate.isActive"></i>
+                      <i class="mdi mdi-pause me-1" *ngIf="!rate.isActive"></i>
+                      {{ rate.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="fw-medium me-2">{{ rate.usage }}</span>
+                      <div class="progress flex-grow-1" style="height: 4px;">
+                        <div class="progress-bar bg-info" 
+                             [style.width.%]="(rate.usage / getMaxUsage()) * 100"></div>
+                      </div>
+                    </div>
+                    <small class="text-muted">hours</small>
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group" role="group">
+                      <button type="button" 
+                              class="btn btn-outline-primary btn-sm" 
+                              (click)="openEditModal(rate, $event)"
+                              title="Edit Rate">
+                        <i class="mdi mdi-pencil"></i>
+                      </button>
+                      <button type="button" 
+                              class="btn btn-outline-warning btn-sm" 
+                              (click)="toggleRateStatus(rate)"
+                              [title]="rate.isActive ? 'Deactivate Rate' : 'Activate Rate'">
+                        <i class="mdi mdi-toggle-switch" *ngIf="rate.isActive"></i>
+                        <i class="mdi mdi-toggle-switch-off" *ngIf="!rate.isActive"></i>
+                      </button>
+                      <button type="button" 
+                              class="btn btn-outline-danger btn-sm" 
+                              (click)="deleteRate(rate)"
+                              title="Delete Rate">
+                        <i class="mdi mdi-delete"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Empty State -->
+                <tr *ngIf="filteredRateCards.length === 0">
+                  <td colspan="6" class="text-center py-5">
+                    <div class="empty-state">
+                      <i class="mdi mdi-currency-usd display-4 text-muted mb-3"></i>
+                      <h5 class="text-muted mb-2">No billing rates found</h5>
+                      <p class="text-muted mb-3" *ngIf="searchTerm || statusFilter !== 'all'">
+                        Try adjusting your search or filter criteria
+                      </p>
+                      <p class="text-muted mb-3" *ngIf="!searchTerm && statusFilter === 'all'">
+                        Create your first billing rate to get started
+                      </p>
+                      <button class="btn btn-primary" (click)="openRateModal($event)" *ngIf="!searchTerm && statusFilter === 'all'">
+                        <i class="mdi mdi-plus me-1"></i>Add First Rate
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Rate Modal -->
+<div class="modal fade" [class.show]="showRateModal" [style.display]="showRateModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary bg-opacity-10 border-0">
+        <h5 class="modal-title text-primary fw-semibold">
+          <i class="mdi mdi-plus-circle me-2"></i>Add New Billing Rate
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRateModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form [formGroup]="rateForm" (ngSubmit)="saveRate()">
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-tag me-1 text-muted"></i>Rate Type
+              <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" formControlName="rateType">
+              <option value="STANDARD">Standard Rate</option>
+              <option value="PREMIUM">Premium Rate</option>
+              <option value="EMERGENCY">Emergency Rate</option>
+              <option value="DISCOUNTED">Discounted Rate</option>
+              <option value="PRO_BONO">Pro Bono</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-currency-usd me-1 text-muted"></i>Hourly Rate
+              <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" 
+                     class="form-control" 
+                     formControlName="rateAmount"
+                     min="1" 
+                     max="2000"
+                     step="25"
+                     placeholder="250">
+              <span class="input-group-text">/hr</span>
+            </div>
+            <div class="form-text">Enter the hourly rate in USD</div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-medium">
+                  <i class="mdi mdi-calendar-start me-1 text-muted"></i>Effective Date
+                  <span class="text-danger">*</span>
+                </label>
+                <input type="date" 
+                       class="form-control" 
+                       formControlName="effectiveDate">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-medium">
+                  <i class="mdi mdi-calendar-end me-1 text-muted"></i>End Date
+                  <span class="text-muted">(Optional)</span>
+                </label>
+                <input type="date" 
+                       class="form-control" 
+                       formControlName="endDate">
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" 
+                     type="checkbox" 
+                     formControlName="isActive"
+                     id="rateActiveSwitch">
+              <label class="form-check-label fw-medium" for="rateActiveSwitch">
+                <i class="mdi mdi-check-circle me-1 text-success"></i>Active Rate
+              </label>
+              <div class="form-text">Inactive rates won't be available for new time entries</div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeRateModal()">
+          <i class="mdi mdi-close me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-primary" 
+                (click)="saveRate()" 
+                [disabled]="rateForm.invalid || isProcessing">
+          <span *ngIf="!isProcessing">
+            <i class="mdi mdi-check me-1"></i>Save Rate
+          </span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Saving...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Rate Modal -->
+<div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning bg-opacity-10 border-0">
+        <h5 class="modal-title text-warning fw-semibold">
+          <i class="mdi mdi-pencil-circle me-2"></i>Edit Billing Rate
+        </h5>
+        <button type="button" class="btn-close" (click)="closeEditModal()"></button>
+      </div>
+      <div class="modal-body p-4" *ngIf="editingRate">
+        <!-- Current Rate Info -->
+        <div class="alert alert-info border-0 bg-info bg-opacity-10 mb-4">
+          <div class="d-flex align-items-center">
+            <i class="mdi mdi-information me-2 text-info"></i>
+            <div>
+              <strong>Current Rate:</strong> {{ formatCurrency(editingRate.rateAmount) }}/hr
+              <span class="badge bg-info ms-2">{{ editingRate.rateType }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <form [formGroup]="rateForm" (ngSubmit)="updateRate()">
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-tag me-1 text-muted"></i>Rate Type
+              <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" formControlName="rateType">
+              <option value="STANDARD">Standard Rate</option>
+              <option value="PREMIUM">Premium Rate</option>
+              <option value="EMERGENCY">Emergency Rate</option>
+              <option value="DISCOUNTED">Discounted Rate</option>
+              <option value="PRO_BONO">Pro Bono</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">
+              <i class="mdi mdi-currency-usd me-1 text-muted"></i>Hourly Rate
+              <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" 
+                     class="form-control" 
+                     formControlName="rateAmount"
+                     min="1" 
+                     max="2000"
+                     step="25">
+              <span class="input-group-text">/hr</span>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-medium">
+                  <i class="mdi mdi-calendar-start me-1 text-muted"></i>Effective Date
+                  <span class="text-danger">*</span>
+                </label>
+                <input type="date" 
+                       class="form-control" 
+                       formControlName="effectiveDate">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-medium">
+                  <i class="mdi mdi-calendar-end me-1 text-muted"></i>End Date
+                  <span class="text-muted">(Optional)</span>
+                </label>
+                <input type="date" 
+                       class="form-control" 
+                       formControlName="endDate">
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" 
+                     type="checkbox" 
+                     formControlName="isActive"
+                     id="editRateActiveSwitch">
+              <label class="form-check-label fw-medium" for="editRateActiveSwitch">
+                <i class="mdi mdi-check-circle me-1 text-success"></i>Active Rate
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeEditModal()">
+          <i class="mdi mdi-close me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-warning" 
+                (click)="updateRate()" 
+                [disabled]="rateForm.invalid || isProcessing">
+          <span *ngIf="!isProcessing">
+            <i class="mdi mdi-check me-1"></i>Update Rate
+          </span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Updating...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade" [class.show]="showRateModal || showEditModal" 
+     [style.display]="(showRateModal || showEditModal) ? 'block' : 'none'"></div> 

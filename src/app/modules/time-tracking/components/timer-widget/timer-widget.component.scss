@@ -1,0 +1,798 @@
+// Timer Widget - Enhanced Velzon Theme Styling
+@import 'src/assets/scss/config/saas/bootstrap';
+@import 'src/assets/scss/config/saas/variables';
+
+// Define missing variables if not imported
+$gray-600: #6c757d !default;
+$warning: #ffc107 !default;
+
+.timer-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1050;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 380px;
+  
+  @media (max-width: 768px) {
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
+    max-width: none;
+  }
+
+  // Validation error state
+  &.has-validation-errors {
+    .timer-panel {
+      border-color: $warning;
+      box-shadow: 0 8px 25px rgba($warning, 0.15);
+    }
+  }
+}
+
+// Floating Action Button (Collapsed)
+.timer-fab {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-4px) scale(1.05);
+  }
+  
+  .fab-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .timer-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $primary 0%, lighten($primary, 10%) 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba($primary, 0.3);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent 30%, rgba(white, 0.1) 50%, transparent 70%);
+      transform: rotate(45deg);
+      transition: transform 0.6s;
+    }
+    
+    &:hover::before {
+      transform: rotate(45deg) translateY(-100%);
+    }
+    
+    &.running {
+      background: linear-gradient(135deg, $success 0%, lighten($success, 10%) 100%);
+      box-shadow: 0 8px 25px rgba($success, 0.4);
+      animation: pulse-success 2s infinite;
+    }
+    
+    &.paused {
+      background: linear-gradient(135deg, $warning 0%, lighten($warning, 10%) 100%);
+      box-shadow: 0 8px 25px rgba($warning, 0.3);
+    }
+    
+    .timer-icon {
+      font-size: 24px;
+      margin-bottom: 2px;
+    }
+    
+    .timer-duration {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      opacity: 0.9;
+    }
+  }
+  
+  .active-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $danger 0%, lighten($danger, 10%) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba($danger, 0.3);
+    animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+// Expanded Timer Panel
+.timer-panel {
+  width: 380px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba($border-color, 0.2);
+  overflow: hidden;
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    border-radius: 12px;
+  }
+}
+
+// Header with Gradient
+.timer-header {
+  background: linear-gradient(135deg, $primary 0%, darken($primary, 10%) 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.03)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.03)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.5;
+  }
+  
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+    
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(white, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .header-text {
+      .title {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+      }
+      
+      .subtitle {
+        font-size: 13px;
+        opacity: 0.8;
+        margin: 0;
+      }
+    }
+  }
+  
+  .close-btn {
+    background: rgba(white, 0.1);
+    border: 1px solid rgba(white, 0.2);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 1;
+    
+    &:hover {
+      background: rgba(white, 0.2);
+      transform: scale(1.1);
+    }
+  }
+}
+
+// Section Headers
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  
+  h6 {
+    color: $gray-700;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+}
+
+// Quick Timer Section
+.quick-timer-section {
+  padding: 24px;
+  border-bottom: 1px solid $border-color;
+  
+  .quick-form {
+    .form-label {
+      color: $gray-700;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    
+    .form-select, .form-control {
+      border-radius: 8px;
+      border: 1.5px solid $border-color;
+      padding: 12px 16px;
+      transition: all 0.2s;
+      font-size: 14px;
+      
+      &:focus {
+        border-color: $primary;
+        box-shadow: 0 0 0 3px rgba($primary, 0.1);
+      }
+      
+      &.is-invalid {
+        border-color: $danger;
+        box-shadow: 0 0 0 3px rgba($danger, 0.1);
+      }
+    }
+    
+    .char-counter {
+      font-size: 12px;
+      color: #212529;
+      
+      &.text-warning {
+        color: $warning !important;
+      }
+    }
+    
+    .invalid-feedback {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  }
+}
+
+// Rate Preview Card
+.rate-preview {
+  .rate-card {
+    background: linear-gradient(135deg, rgba($success, 0.1) 0%, rgba($success, 0.05) 100%);
+    border: 1px solid rgba($success, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    
+    .rate-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      
+      .rate-label {
+        color: $gray-600;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      
+      .rate-value {
+        color: $success;
+        font-size: 18px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+      }
+    }
+    
+    .rate-modifiers {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      
+      .badge {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Start Timer Button
+.start-timer-btn {
+  position: relative;
+  overflow: hidden;
+  height: 52px;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 12px;
+  transition: all 0.3s;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba($success, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .btn-glow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(white, 0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  &:hover .btn-glow {
+    left: 100%;
+  }
+}
+
+// Active Timer Display
+.active-timer-display {
+  padding: 24px;
+  border-bottom: 1px solid $border-color;
+  
+  .timer-status-card {
+    text-align: center;
+    
+    .timer-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      
+      .case-badge {
+        background: rgba($primary, 0.1);
+        color: $primary;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+      }
+      
+      .timer-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        
+        &.status-running {
+          background: rgba($success, 0.1);
+          color: $success;
+          
+          i {
+            animation: pulse-icon 1.5s infinite;
+          }
+        }
+        
+        &.status-paused {
+          background: rgba($warning, 0.1);
+          color: $warning;
+        }
+      }
+    }
+    
+    .timer-main-display {
+      margin: 32px 0;
+      
+      .timer-circle-large {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba($gray-100, 0.8) 0%, rgba($gray-100, 0.9) 100%);
+        border: 8px solid $border-color;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s;
+        
+        &.circle-running {
+          border-color: $success;
+          background: linear-gradient(135deg, rgba($success, 0.1) 0%, rgba($success, 0.05) 100%);
+          box-shadow: 0 0 30px rgba($success, 0.2);
+        }
+        
+        &.circle-paused {
+          border-color: $warning;
+          background: linear-gradient(135deg, rgba($warning, 0.1) 0%, rgba($warning, 0.05) 100%);
+        }
+        
+        &.animate-pulse {
+          animation: pulse-circle 2s infinite;
+        }
+        
+        .timer-time {
+          font-size: 24px;
+          font-weight: 700;
+          font-family: 'JetBrains Mono', 'Courier New', monospace;
+          color: $gray-800;
+          margin-bottom: 4px;
+        }
+        
+        .timer-sublabel {
+          font-size: 12px;
+          color: #212529;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+      }
+    }
+    
+    .timer-controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin: 24px 0;
+      
+      .btn-control {
+        min-width: 100px;
+        height: 44px;
+        border-radius: 10px;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        transition: all 0.2s;
+        
+        i {
+          font-size: 16px;
+        }
+        
+        span {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        &:hover {
+          transform: translateY(-2px);
+        }
+      }
+    }
+    
+    .timer-description {
+      background: rgba($gray-100, 0.5);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: $gray-600;
+      margin-top: 16px;
+      text-align: left;
+      border-left: 3px solid $primary;
+    }
+  }
+}
+
+// Recent Entries Section
+.recent-entries-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid $border-color;
+  
+  .entries-list {
+    .entry-item {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba($border-color, 0.5);
+      transition: all 0.2s;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background: rgba($primary, 0.02);
+        border-radius: 6px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      
+      .entry-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        
+        .entry-case {
+          color: $primary;
+          font-weight: 600;
+          font-size: 13px;
+        }
+        
+        .entry-date {
+          color: #212529;
+          font-size: 12px;
+        }
+      }
+      
+      .entry-details {
+        .entry-description {
+          color: $gray-600;
+          font-size: 12px;
+          margin-bottom: 6px;
+          line-height: 1.4;
+        }
+        
+        .entry-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          
+          .entry-duration {
+            color: $success;
+            font-weight: 600;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+          }
+          
+          .entry-status {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            
+            &.status-draft {
+              background: rgba($secondary, 0.1);
+              color: $secondary;
+            }
+            
+            &.status-submitted {
+              background: rgba($info, 0.1);
+              color: $info;
+            }
+            
+            &.status-approved {
+              background: rgba($success, 0.1);
+              color: $success;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Daily Progress Section
+.daily-progress-section {
+  padding: 20px 24px;
+  
+  .progress-card {
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      
+      .progress-label {
+        color: $gray-700;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      
+      .progress-value {
+        color: $gray-800;
+        font-weight: 700;
+        font-size: 14px;
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+      }
+    }
+    
+    .progress-bar-container {
+      margin-bottom: 8px;
+      
+      .progress {
+        border-radius: 4px;
+        background: rgba($gray-200, 0.5);
+        
+        .progress-bar {
+          border-radius: 4px;
+          transition: all 0.4s ease;
+        }
+      }
+    }
+    
+    .progress-warning {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+// Validation Alerts
+.validation-alerts {
+  padding: 16px 24px;
+  
+  .alert {
+    border-radius: 8px;
+    
+    ul {
+      font-size: 13px;
+      
+      li {
+        margin-bottom: 4px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
+// Mobile Backdrop
+.timer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1040;
+  animation: fadeIn 0.3s ease;
+  
+  @media (min-width: 769px) {
+    display: none;
+  }
+}
+
+// Animations
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-success {
+  0%, 100% {
+    box-shadow: 0 8px 25px rgba($success, 0.4);
+  }
+  50% {
+    box-shadow: 0 8px 35px rgba($success, 0.6);
+  }
+}
+
+@keyframes pulse-circle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pulse-icon {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+// Utility Classes
+.animate-pulse {
+  animation: pulse-circle 2s infinite;
+}
+
+// Responsive Design
+@media (max-width: 480px) {
+  .timer-panel {
+    .timer-header {
+      padding: 16px;
+      
+      .header-content {
+        gap: 12px;
+        
+        .header-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+        }
+        
+        .header-text .title {
+          font-size: 16px;
+        }
+      }
+    }
+    
+    .quick-timer-section,
+    .active-timer-display,
+    .recent-entries-section,
+    .daily-progress-section {
+      padding: 16px;
+    }
+    
+    .active-timer-display {
+      .timer-main-display .timer-circle-large {
+        width: 120px;
+        height: 120px;
+        
+        .timer-time {
+          font-size: 20px;
+        }
+      }
+      
+      .timer-controls .btn-control {
+        min-width: 80px;
+        height: 40px;
+        
+        i {
+          font-size: 14px;
+        }
+        
+        span {
+          font-size: 10px;
+        }
+      }
+    }
+  }
+} 

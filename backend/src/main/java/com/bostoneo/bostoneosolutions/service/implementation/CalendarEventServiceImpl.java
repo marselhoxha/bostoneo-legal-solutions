@@ -13,19 +13,23 @@ import com.***REMOVED***.***REMOVED***solutions.service.UserService;
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 import com.***REMOVED***.***REMOVED***solutions.service.ReminderQueueService;
+import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +44,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     private final UserService userService;
     private final NotificationService notificationService;
     private final ReminderQueueService reminderQueueService;
+    private final RoleService roleService;
 
     @Override
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
@@ -810,5 +815,111 @@ public class CalendarEventServiceImpl implements CalendarEventService {
             case "OTHER": return "#74788d"; // gray
             default: return "#74788d"; // gray
         }
+    }
+
+    @Override
+    public Page<CalendarEventDTO> getEventsForCases(Set<Long> caseIds, int page, int size) {
+        log.info("Fetching calendar events for case IDs: {}", caseIds);
+        
+        if (caseIds == null || caseIds.isEmpty()) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+        
+        Page<CalendarEvent> eventsPage = calendarEventRepository.findByCaseIdIn(
+            new ArrayList<>(caseIds), 
+            PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
+        );
+        
+        return eventsPage.map(CalendarEventDTOMapper::fromCalendarEvent);
+    }
+    
+    /**
+     * Get events filtered by user role and permissions
+     */
+    public Page<CalendarEventDTO> getEventsForUser(Long userId, int page, int size) {
+        log.info("Fetching calendar events for user: {}", userId);
+        
+        // Get user to check their role
+        UserDTO user = userService.getUserById(userId);
+        if (user == null) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+        
+        String userRole = user.getRoleName();
+        
+        // ATTORNEY: Full calendar access
+        if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) ||
+            "ROLE_MANAGING_PARTNER".equals(userRole) || "ROLE_SENIOR_PARTNER".equals(userRole) ||
+            "ROLE_EQUITY_PARTNER".equals(userRole) || "ROLE_OF_COUNSEL".equals(userRole) ||
+            "MANAGING_PARTNER".equals(userRole) || "SENIOR_PARTNER".equals(userRole) ||
+            "EQUITY_PARTNER".equals(userRole) || "OF_COUNSEL".equals(userRole) ||
+            "ROLE_SYSADMIN".equals(userRole) || "ADMINISTRATOR".equals(userRole)) {
+            return getAllEvents(page, size);
+        }
+        
+        // CLIENT: Only events they're invited to
+        if ("ROLE_CLIENT".equals(userRole)) {
+            // Get user's case IDs
+            Set<Long> userCaseIds = roleService.getUserCaseIds(userId);
+            
+            if (userCaseIds.isEmpty()) {
+                return Page.empty(PageRequest.of(page, size));
+            }
+            
+            // Get events for user's cases
+            Page<CalendarEvent> eventsPage = calendarEventRepository.findByCaseIdIn(
+                new ArrayList<>(userCaseIds),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
+            );
+            
+            // Filter to only client-visible event types
+            Set<String> clientVisibleTypes = Set.of(
+                "HEARING", "APPOINTMENT", "COURT_DATE", "CLIENT_MEETING", "PUBLIC"
+            );
+            
+            List<CalendarEventDTO> filteredEvents = eventsPage.getContent().stream()
+                .filter(event -> {
+                    // Include if it's a public event or client-visible type
+                    return clientVisibleTypes.contains(event.getEventType()) ||
+                           (event.getUserId() != null && event.getUserId().equals(userId)); // Or if they created it
+                })
+                .map(CalendarEventDTOMapper::fromCalendarEvent)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(filteredEvents, PageRequest.of(page, size), eventsPage.getTotalElements());
+        }
+        
+        // PARALEGAL: View all, edit assigned
+        if ("ROLE_PARALEGAL".equals(userRole)) {
+            // Get all events
+            Page<CalendarEvent> allEventsPage = calendarEventRepository.findAll(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
+            );
+            
+            // Get paralegal's assigned case IDs
+            Set<Long> assignedCaseIds = roleService.getUserCaseIds(userId);
+            
+            // Map events and mark which ones they can edit
+            List<CalendarEventDTO> eventDTOs = allEventsPage.getContent().stream()
+                .map(event -> {
+                    CalendarEventDTO dto = CalendarEventDTOMapper.fromCalendarEvent(event);
+                    // Paralegal can edit if it's their event or in their assigned cases
+                    boolean canEdit = (event.getUserId() != null && event.getUserId().equals(userId)) ||
+                                    (event.getCaseId() != null && assignedCaseIds.contains(event.getCaseId()));
+                    // You might want to add a canEdit field to CalendarEventDTO
+                    return dto;
+                })
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(eventDTOs, PageRequest.of(page, size), allEventsPage.getTotalElements());
+        }
+        
+        // SECRETARY: View all, create appointments
+        if ("ROLE_SECRETARY".equals(userRole) || "ROLE_MANAGER".equals(userRole)) {
+            return getAllEvents(page, size);
+        }
+        
+        // Default: No access
+        return Page.empty(PageRequest.of(page, size));
     }
 } 

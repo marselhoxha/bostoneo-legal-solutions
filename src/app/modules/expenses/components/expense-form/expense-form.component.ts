@@ -6,16 +6,16 @@ import { Expense, ExpenseCategory, Vendor } from '../../../../interface/expense.
 import { CustomHttpResponse, Page } from '../../../../interface/appstates';
 import { map, tap, catchError } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
-import { CustomerService } from '../../../../service/customer.service';
+import { ClientService } from '../../../../service/client.service';
 import { CaseService } from '../../../legal/services/case.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NotificationService } from '../../../../service/notification.service';
 
-interface Customer {
+interface Client {
   id: number;
   name: string;
-  // Add other customer properties as needed
+  // Add other client properties as needed
 }
 
 @Component({
@@ -29,7 +29,7 @@ export class ExpenseFormComponent implements OnInit {
   submitting = false;
   error: string | null = null;
   vendors: Vendor[] = [];
-  customers: Customer[] = [];
+  clients: Client[] = [];
   categories: ExpenseCategory[] = [];
   invoices: any[] = [];
   legalCases: any[] = [];
@@ -47,7 +47,7 @@ export class ExpenseFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
-    private customerService: CustomerService,
+    private clientService: ClientService,
     private caseService: CaseService,
     private http: HttpClient,
     private notificationService: NotificationService
@@ -61,7 +61,7 @@ export class ExpenseFormComponent implements OnInit {
       description: [''],
       tax: [0, [Validators.min(0)]],
       vendorId: ['', [Validators.required]],
-      customerId: ['', [Validators.required]],
+      clientId: ['', [Validators.required]],
       categoryId: ['', [Validators.required]],
       invoiceId: [''],
       legalCaseId: ['']
@@ -93,8 +93,8 @@ export class ExpenseFormComponent implements OnInit {
             console.log('- expense.amount:', expense.amount, typeof expense.amount);
             console.log('- expense.vendor:', expense.vendor, typeof expense.vendor);
             console.log('- expense.vendorId:', expense.vendorId, typeof expense.vendorId);
-            console.log('- expense.customer:', expense.customer, typeof expense.customer);
-            console.log('- expense.customerId:', expense.customerId, typeof expense.customerId);
+            console.log('- expense.client:', expense.client, typeof expense.client);
+            console.log('- expense.clientId:', expense.clientId, typeof expense.clientId);
             console.log('- expense.category:', expense.category, typeof expense.category);
             console.log('- expense.categoryId:', expense.categoryId, typeof expense.categoryId);
             console.log('- expense.invoice:', expense.invoice, typeof expense.invoice);
@@ -123,7 +123,7 @@ export class ExpenseFormComponent implements OnInit {
     console.log('Loading invoices separately');
     
     // Use a direct HTTP call to fetch invoices with full error debugging
-    return this.customerService.invoices$(0).pipe(  // Only accepts page parameter
+    return this.clientService.invoices$(0).pipe(  // Only accepts page parameter
       tap(response => {
         console.log('Raw invoices response:', JSON.stringify(response));
         
@@ -162,7 +162,7 @@ export class ExpenseFormComponent implements OnInit {
       'Authorization': `Bearer ${token}`
     });
     
-    return this.http.get('http://localhost:8085/customer/invoice/list?page=0&size=100', { headers }).pipe(
+    return this.http.get('http://localhost:8085/client/invoice/list?page=0&size=100', { headers }).pipe(
       tap((response: any) => {
         console.log('Direct invoice API response:', JSON.stringify(response));
         
@@ -206,7 +206,7 @@ export class ExpenseFormComponent implements OnInit {
     
     // Log what dropdown options we have available
     console.log('Available vendors:', this.vendors.map(v => `${v.id}: ${v.name}`));
-    console.log('Available customers:', this.customers.map(c => `${c.id}: ${c.name}`));
+    console.log('Available clients:', this.clients.map(c => `${c.id}: ${c.name}`));
     console.log('Available categories:', this.categories.map(c => `${c.id}: ${c.name}`));
     console.log('Available invoices:', this.invoices.map(i => `${i.id}: ${i.invoiceNumber || i.id}`));
     console.log('Available legal cases:', this.legalCases.map(l => `${l.id}: ${l.caseNumber || l.id}`));
@@ -228,7 +228,7 @@ export class ExpenseFormComponent implements OnInit {
     
     // Collect all relationship IDs
     let vendorId = '';
-    let customerId = '';
+    let clientId = '';
     let categoryId = '';
     let invoiceId = '';
     let legalCaseId = '';
@@ -245,12 +245,12 @@ export class ExpenseFormComponent implements OnInit {
       }
     }
     
-    // Try to extract customer information
-    if (this.pendingExpenseData.customer) {
-      console.log('Found customer object:', this.pendingExpenseData.customer);
-      if (this.pendingExpenseData.customer.id) {
-        customerId = this.pendingExpenseData.customer.id.toString();
-        console.log('Extracted customerId from customer object:', customerId);
+    // Try to extract client information
+    if (this.pendingExpenseData.client) {
+      console.log('Found client object:', this.pendingExpenseData.client);
+      if (this.pendingExpenseData.client.id) {
+        clientId = this.pendingExpenseData.client.id.toString();
+        console.log('Extracted clientId from client object:', clientId);
       }
     }
     
@@ -283,23 +283,23 @@ export class ExpenseFormComponent implements OnInit {
     
     // Check if we have valid IDs that match our available options
     const validVendor = vendorId && this.vendors.some(v => v.id.toString() === vendorId);
-    const validCustomer = customerId && this.customers.some(c => c.id.toString() === customerId);
+    const validClient = clientId && this.clients.some(c => c.id.toString() === clientId);
     const validCategory = categoryId && this.categories.some(c => c.id.toString() === categoryId);
     
     console.log('Validation checks:', {
       validVendor,
-      validCustomer, 
+      validClient, 
       validCategory,
       vendorId,
-      customerId,
+      clientId,
       categoryId
     });
     
     if (!validVendor) {
       console.warn(`Vendor ID ${vendorId} is not in the available vendors list.`);
     }
-    if (!validCustomer) {
-      console.warn(`Customer ID ${customerId} is not in the available customers list.`);
+    if (!validClient) {
+      console.warn(`Client ID ${clientId} is not in the available clients list.`);
     }
     if (!validCategory) {
       console.warn(`Category ID ${categoryId} is not in the available categories list.`);
@@ -313,7 +313,7 @@ export class ExpenseFormComponent implements OnInit {
       description: this.pendingExpenseData.description || '',
       tax: this.pendingExpenseData.tax || 0,
       vendorId: vendorId,
-      customerId: customerId,
+      clientId: clientId,
       categoryId: categoryId,
       invoiceId: invoiceId,
       legalCaseId: legalCaseId
@@ -341,7 +341,7 @@ export class ExpenseFormComponent implements OnInit {
     // First load the main data without invoices
     forkJoin({
       vendors: this.expensesService.getVendors(),
-      customers: this.expensesService.getCustomers(),
+      clients: this.expensesService.getClients(),
       categories: this.expensesService.getCategories(),
       legalCases: this.caseService.getCases(0, 100)
     })
@@ -355,10 +355,10 @@ export class ExpenseFormComponent implements OnInit {
           console.log('Loaded vendors:', this.vendors);
         }
         
-        // Process customers
-        if (results.customers?.data) {
-          this.customers = results.customers.data;
-          console.log('Loaded customers:', this.customers);
+        // Process clients
+        if (results.clients?.data) {
+          this.clients = results.clients.data;
+          console.log('Loaded clients:', this.clients);
         }
         
         // Process categories
@@ -374,7 +374,7 @@ export class ExpenseFormComponent implements OnInit {
         }
         
         // Try to load all invoices using the new method that supports size parameter
-        this.customerService.allInvoices$(0, 100).subscribe({
+        this.clientService.allInvoices$(0, 100).subscribe({
           next: (response) => {
             console.log('All invoices response:', response);
             
@@ -508,12 +508,12 @@ export class ExpenseFormComponent implements OnInit {
       }
       expenseData.vendorId = Number(expenseData.vendorId);
 
-      if (!expenseData.customerId) {
-        this.error = 'Customer is required';
+      if (!expenseData.clientId) {
+        this.error = 'Client is required';
         this.submitting = false;
         return;
       }
-      expenseData.customerId = Number(expenseData.customerId);
+      expenseData.clientId = Number(expenseData.clientId);
 
       expenseData.amount = Number(expenseData.amount);
       expenseData.tax = Number(expenseData.tax);
@@ -550,14 +550,14 @@ export class ExpenseFormComponent implements OnInit {
           
           // Convert relevant IDs to strings for form comparison
           const vendorId = expense.vendor?.id?.toString() || '';
-          const customerId = expense.customer?.id?.toString() || '';
+          const clientId = expense.client?.id?.toString() || '';
           const categoryId = expense.category?.id?.toString() || '';
           const invoiceId = expense.invoice?.id?.toString() || '';
           const legalCaseId = expense.legalCaseId?.toString() || '';
           
           console.log('Extracted IDs:', {
             vendorId,
-            customerId,
+            clientId,
             categoryId,
             invoiceId,
             legalCaseId
@@ -569,7 +569,7 @@ export class ExpenseFormComponent implements OnInit {
             description: expense.description || '',
             tax: expense.tax || 0,
             vendorId,
-            customerId, 
+            clientId, 
             categoryId,
             invoiceId,
             legalCaseId
@@ -598,7 +598,7 @@ export class ExpenseFormComponent implements OnInit {
       reference: [''],
       tax: [0, [Validators.min(0)]],
       vendorId: ['', [Validators.required]],
-      customerId: ['', [Validators.required]],
+      clientId: ['', [Validators.required]],
       categoryId: ['', [Validators.required]],
       invoiceId: [''],
       legalCaseId: ['']

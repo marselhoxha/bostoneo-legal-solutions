@@ -11,14 +11,14 @@ import Odometer from 'odometer';
 })
 export class StatsComponent implements AfterViewInit {
   @Input() stats: Stats;
-  odometerCustomers: any;
+  odometerClients: any;
   odometerInvoices: any;
   odometerBilled: any;
 
   ngAfterViewInit(): void {
     // Initialize Odometers
-    this.odometerCustomers = new Odometer({
-      el: document.querySelector('.odometer-customers'),
+    this.odometerClients = new Odometer({
+      el: document.querySelector('.odometer-clients'),
       value: 0
     });
 
@@ -50,7 +50,7 @@ export class StatsComponent implements AfterViewInit {
   updateOdometers(): void {
     // Use a timeout to delay the update for 1 second (1000ms)
     setTimeout(() => {
-      this.odometerCustomers.update(this.stats?.totalCustomers || 0);
+      this.odometerClients.update(this.stats?.totalClients || 0);
       this.odometerInvoices.update(this.stats?.totalInvoices || 0);
       this.odometerBilled.update(this.stats?.totalBilled || 0);
     }, 1000); // Delay for 1 second (1000ms)

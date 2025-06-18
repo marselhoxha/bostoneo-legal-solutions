@@ -1,0 +1,73 @@
+import { Directive, Input, OnInit, TemplateRef, ViewContainerRef } from '@angular/core';
+import { RbacService } from '../../core/services/rbac.service';
+
+/**
+ * Structural directive that conditionally shows or hides elements based on user permissions
+ * 
+ * Usage:
+ * <div *appHasPermission="{ resource: 'CASE', action: 'CREATE' }">Create Case</div>
+ * <div *appHasPermission="'ROLE_ADMIN'">Admin Area</div>
+ * <div *appHasPermission="{ caseId: '123', action: 'EDIT' }">Edit Case</div>
+ */
+@Directive({
+  selector: '[appHasPermission]'
+})
+export class PermissionDirective implements OnInit {
+  private hasView = false;
+
+  // Input can be either: 
+  // - a string (role name)
+  // - an object with resource and action for general permissions
+  // - an object with caseId and action for case-specific permissions
+  @Input() set appHasPermission(permission: string | { resource?: string, action?: string, caseId?: string }) {
+    this.updateView(permission);
+    
+    // Subscribe to permission changes
+    this.rbacService.permissions$.subscribe(() => {
+      this.updateView(permission);
+    });
+    
+    // Subscribe to role changes
+    this.rbacService.roles$.subscribe(() => {
+      this.updateView(permission);
+    });
+    
+    // Subscribe to case role changes
+    this.rbacService.caseRoles$.subscribe(() => {
+      this.updateView(permission);
+    });
+  }
+
+  constructor(
+    private templateRef: TemplateRef<any>,
+    private viewContainer: ViewContainerRef,
+    private rbacService: RbacService
+  ) { }
+
+  ngOnInit(): void {
+    // Initial view setup will be handled by the setter
+  }
+
+  private updateView(permission: string | { resource?: string, action?: string, caseId?: string }): void {
+    let hasPermission = false;
+
+    if (typeof permission === 'string') {
+      // Check for role
+      hasPermission = this.rbacService.hasRole(permission);
+    } else if (permission.caseId && permission.action) {
+      // Check for case-specific permission
+      hasPermission = this.rbacService.hasCasePermission(permission.caseId, permission.action);
+    } else if (permission.resource && permission.action) {
+      // Check for general permission
+      hasPermission = this.rbacService.hasPermission(permission.resource, permission.action);
+    }
+
+    if (hasPermission && !this.hasView) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+      this.hasView = true;
+    } else if (!hasPermission && this.hasView) {
+      this.viewContainer.clear();
+      this.hasView = false;
+    }
+  }
+} 

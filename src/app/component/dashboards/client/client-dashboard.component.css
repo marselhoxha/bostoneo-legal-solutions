@@ -1,0 +1,35 @@
+/* Client Dashboard Styles */
+.hover-shadow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.progress-lg {
+  height: 1rem;
+}
+
+.btn-label {
+  position: relative;
+}
+
+.label-icon {
+  margin-right: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .d-flex.flex-wrap {
+    flex-direction: column;
+  }
+  
+  .badge {
+    align-self: flex-start;
+  }
+} 

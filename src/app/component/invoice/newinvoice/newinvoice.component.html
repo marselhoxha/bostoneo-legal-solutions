@@ -1,124 +1,266 @@
-<ng-container *ngIf="(newInvoiceState$ | async) as state" [ngSwitch]="state.dataState">
-    <ng-container *ngSwitchCase="DataState.LOADED">
-      <div class="modal-content border-0 shadow-sm" style="width: 100%; max-width: 1000px; margin: 0 auto;">
-        <div class="modal-header bg-info dark:bg-dark text-white border-0 py-3">
-          <h5 class="modal-title d-flex align-items-center fs-4">
-            <i class="bi bi-file-earmark-text me-2"></i>Create New Invoice
-          </h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeModal()" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div *ngIf="state?.error" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ state.error }}
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">New Invoice</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item active">New</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Invoice Details</h5>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="invoiceForm" (ngSubmit)="onSubmit()">
+          <div class="row">
+            <!-- Invoice Number and Status -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Invoice Number <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="invoiceNumber" 
+                       [class.is-invalid]="invoiceForm.get('invoiceNumber')?.invalid && invoiceForm.get('invoiceNumber')?.touched"
+                       readonly>
+                <div class="invalid-feedback">
+                  Invoice number is required
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Template</label>
+                <select class="form-select" (change)="onTemplateChange($any($event.target).value)">
+                  <option value="">Select Template (Optional)</option>
+                  <option *ngFor="let template of templates" [value]="template.id">
+                    {{ template.name }}
+                    <span *ngIf="template.isDefault" class="text-muted">(Default)</span>
+                  </option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Status <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="status">
+                  <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <form #invoiceForm="ngForm" (ngSubmit)="newInvoice(invoiceForm)">
-            <div class="row g-4">
-              <!-- Services Input -->
-              <div class="col-12">
-                <label for="services" class="form-label mb-2">Services</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-list-check icon-color"></i>
-                    </span>
-                    <input type="text" id="services" name="services" class="form-control border-start-0" ngModel required placeholder="Enter services">
-                  </div>
+          <div class="row">
+            <!-- Client Selection -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Client <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="clientId" 
+                        (change)="onClientChange($any($event.target).value)"
+                        [class.is-invalid]="invoiceForm.get('clientId')?.invalid && invoiceForm.get('clientId')?.touched">
+                  <option value="">Select Client</option>
+                  <option *ngFor="let client of clients" [value]="client.id">{{ client.name }}</option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select a client
                 </div>
               </div>
+            </div>
 
-              <!-- Customer Select -->
-              <div class="col-md-6">
-                <label for="customerId" class="form-label mb-2">Customer</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-person icon-color"></i>
-                    </span>
-                    <select id="customerId" name="customerId" class="form-select border-start-0" ngModel required>
-                      <option *ngFor="let customer of state?.appData?.data?.customers" [ngValue]="customer.id">{{ customer.name }}</option>
-                    </select>
-                  </div>
-                </div>
+            <!-- Case Selection -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Legal Case</label>
+                <select class="form-select" formControlName="legalCaseId">
+                  <option value="">Select Case (Optional)</option>
+                  <option *ngFor="let case of cases" [value]="case.id">{{ case.title }}</option>
+                </select>
               </div>
+            </div>
+          </div>
 
-              <!-- Total Input -->
-              <div class="col-md-6">
-                <label for="total" class="form-label mb-2">Total</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-currency-dollar icon-color"></i>
-                    </span>
-                    <input type="number" id="total" name="total" class="form-control border-start-0" ngModel required placeholder="Enter total">
-                  </div>
+          <div class="row">
+            <!-- Dates -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Issue Date <span class="text-danger">*</span></label>
+                <input type="text" id="issueDate" class="form-control" formControlName="issueDate"
+                       placeholder="Select issue date"
+                       [class.is-invalid]="invoiceForm.get('issueDate')?.invalid && invoiceForm.get('issueDate')?.touched">
+                <div class="invalid-feedback">
+                  Issue date is required
                 </div>
               </div>
+            </div>
 
-              <!-- Date Input -->
-              <div class="col-md-6">
-                <label for="due" class="form-label mb-2">Due Date</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-calendar icon-color"></i>
-                    </span>
-                    <input class="form-control border-start-0 flatpickr-input"
-                           type="text"
-                           id="due"
-                           placeholder="Due Date"
-                           mwlFlatpickr
-                           [altInput]="true"
-                           [enableTime]="false"
-                           [convertModelValue]="true"
-                           [dateFormat]="'Y-m-d H:i'"
-                           [(ngModel)]="newInvoice.date"  
-                           name="date"  
-                           required>
-                  </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Due Date <span class="text-danger">*</span></label>
+                <input type="text" id="dueDate" class="form-control" formControlName="dueDate"
+                       placeholder="Select due date"
+                       [class.is-invalid]="invoiceForm.get('dueDate')?.invalid && invoiceForm.get('dueDate')?.touched">
+                <div class="invalid-feedback">
+                  Due date is required
                 </div>
               </div>
-              
-              <!-- Status Select -->
-              <div class="col-md-6">
-                <label for="ticket-status" class="form-label mb-2">Status</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-check-circle icon-color"></i>
-                    </span>
-                    <select id="ticket-status"
-                            class="form-select border-start-0"
-                            [(ngModel)]="newInvoice.status"
-                            name="status"
-                            required>
-                      <option value="PENDING">PENDING</option>
-                      <option value="PAID">PAID</option>
-                      <option value="CANCELED">CANCELED</option>
-                      <option value="OVERDUE">OVERDUE</option>
-                    </select>
+            </div>
+          </div>
+
+          <!-- Line Items Section -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <h5 class="mb-3">Line Items</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th style="width: 40%">Description</th>
+                      <th style="width: 15%">Quantity</th>
+                      <th style="width: 15%">Unit Price</th>
+                      <th style="width: 15%">Amount</th>
+                      <th style="width: 10%">Category</th>
+                      <th style="width: 5%"></th>
+                    </tr>
+                  </thead>
+                  <tbody formArrayName="lineItems">
+                    <tr *ngFor="let lineItem of lineItems.controls; let i = index" [formGroupName]="i">
+                      <td>
+                        <input type="text" class="form-control" formControlName="description" 
+                               placeholder="Service description..."
+                               [class.is-invalid]="lineItem.get('description')?.invalid && lineItem.get('description')?.touched">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="quantity" 
+                               step="0.01" min="0.01"
+                               [class.is-invalid]="lineItem.get('quantity')?.invalid && lineItem.get('quantity')?.touched">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="unitPrice" 
+                               step="0.01" min="0"
+                               [class.is-invalid]="lineItem.get('unitPrice')?.invalid && lineItem.get('unitPrice')?.touched">
+                      </td>
+                      <td>
+                        <input type="number" class="form-control" formControlName="amount" 
+                               readonly [value]="lineItem.get('amount')?.value | number:'1.2-2'">
+                      </td>
+                      <td>
+                        <select class="form-select" formControlName="category">
+                          <option value="">None</option>
+                          <option value="LEGAL">Legal</option>
+                          <option value="CONSULTATION">Consultation</option>
+                          <option value="RESEARCH">Research</option>
+                          <option value="FILING">Filing</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-sm btn-danger" (click)="removeLineItem(i)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="lineItems.length === 0">
+                      <td colspan="6" class="text-center text-muted py-3">
+                        No line items added. Click "Add Line Item" to start.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" (click)="addLineItem()">
+                <i class="ri-add-line me-1"></i> Add Line Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Financial Details -->
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Subtotal <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="subtotal" 
+                         step="0.01" min="0" readonly
+                         [class.is-invalid]="invoiceForm.get('subtotal')?.invalid && invoiceForm.get('subtotal')?.touched">
+                  <div class="invalid-feedback">
+                    Valid subtotal is required
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Form Actions -->
-            <div class="d-flex justify-content-end gap-2 mt-4">
-              <button type="button" class="btn btn-light px-4" (click)="closeModal()">
-                <i class="bi bi-x-circle me-2"></i>Cancel
-              </button>
-              <button [disabled]="state?.dataState === DataState.LOADING || invoiceForm.invalid || invoiceForm.pristine || (isLoading$ | async)" 
-                type="submit" class="btn btn-info px-4">
-                <span *ngIf="isLoading$ | async" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <span *ngIf="isLoading$ | async">Saving...</span>
-                <span *ngIf="!(isLoading$ | async)">
-                  <i class="bi bi-check-circle me-2"></i>Save Invoice
-                </span>
-              </button>
+            <div class="col-md-2">
+              <div class="mb-3">
+                <label class="form-label">Tax Rate (%)</label>
+                <input type="number" class="form-control" formControlName="taxRate" 
+                       step="0.01" min="0" max="100">
+              </div>
             </div>
-          </form>
-        </div>
+
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Tax Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="taxAmount" 
+                         readonly [value]="invoiceForm.get('taxAmount')?.value | number:'1.2-2'">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Total Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="totalAmount" 
+                         readonly [value]="invoiceForm.get('totalAmount')?.value | number:'1.2-2'"
+                         class="fw-bold">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" formControlName="notes" rows="3"
+                          placeholder="Additional notes or payment instructions..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-light" (click)="onCancel()">
+                  <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" [disabled]="invoiceForm.invalid || (isLoading$ | async)">
+                  <span *ngIf="!(isLoading$ | async)">
+                    <i class="ri-save-line me-1"></i> Create Invoice
+                  </span>
+                  <span *ngIf="isLoading$ | async">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Creating...
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
       </div>
-    </ng-container>
-</ng-container>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,238 @@
+<!-- Welcome Section -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm overflow-hidden">
+      <div class="card-body bg-secondary bg-gradient text-white p-4">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <h2 class="text-white mb-3">Welcome back, {{currentUser?.firstName}}! 📋</h2>
+            <p class="mb-4 text-white-75 fs-15">
+              <i class="ri-file-search-line me-2"></i>
+              Paralegal Dashboard - Support attorneys with case management and research
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="bg-white-subtle rounded px-3 py-2">
+                <i class="ri-briefcase-line me-2 text-secondary"></i>
+                <span class="text-secondary fw-medium">{{activeCases}} assigned cases</span>
+              </div>
+              <div class="bg-white-subtle rounded px-3 py-2">
+                <i class="ri-file-text-line me-2 text-info"></i>
+                <span class="text-info fw-medium">{{documentsToReview}} documents pending</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-end">
+            <div class="avatar-xxl">
+              <div class="avatar-title bg-white-subtle rounded-circle">
+                <i class="ri-file-search-line fs-1 text-secondary"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Paralegal Metrics -->
+<div class="row">
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Assigned Cases</p>
+          </div>
+          <div class="flex-shrink-0">
+            <h5 class="text-muted fs-14 mb-0">
+              <i class="ri-arrow-right-up-line fs-13 align-middle"></i> Active
+            </h5>
+          </div>
+        </div>
+        <div class="d-flex align-items-end justify-content-between mt-4">
+          <div>
+            <h4 class="fs-22 fw-semibold ff-secondary mb-4">{{activeCases}}</h4>
+            
+            <!-- Case breakdown -->
+            <div class="vstack gap-2 mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted fs-13">Research Phase</span>
+                <span class="fw-medium">5</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted fs-13">Document Prep</span>
+                <span class="fw-medium">3</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted fs-13">Review</span>
+                <span class="fw-medium">2</span>
+              </div>
+            </div>
+            
+            <a href="/legal/cases" class="text-decoration-underline">View assigned cases</a>
+          </div>
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-primary-subtle rounded fs-3">
+              <i class="ri-briefcase-line text-primary"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Documents to Process</p>
+          </div>
+          <div class="flex-shrink-0">
+            <h5 class="text-warning fs-14 mb-0">
+              <i class="ri-time-line fs-13 align-middle"></i> Pending
+            </h5>
+          </div>
+        </div>
+        <div class="d-flex align-items-end justify-content-between mt-4">
+          <div>
+            <h4 class="fs-22 fw-semibold ff-secondary mb-4">{{documentsToReview}}</h4>
+            
+            <!-- Priority indicators -->
+            <div class="d-flex gap-3 mb-3">
+              <div class="text-center">
+                <h5 class="text-danger mb-1">3</h5>
+                <p class="text-muted mb-0 fs-12">Urgent</p>
+              </div>
+              <div class="text-center">
+                <h5 class="text-warning mb-1">5</h5>
+                <p class="text-muted mb-0 fs-12">High</p>
+              </div>
+              <div class="text-center">
+                <h5 class="text-info mb-1">7</h5>
+                <p class="text-muted mb-0 fs-12">Normal</p>
+              </div>
+            </div>
+            
+            <a href="/legal/documents" class="text-decoration-underline">Process documents</a>
+          </div>
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-warning-subtle rounded fs-3">
+              <i class="ri-file-text-line text-warning"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Management & Research Tools -->
+<div class="row">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+          <i class="ri-task-line me-2 text-primary"></i>Current Tasks
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Task</th>
+                <th>Case</th>
+                <th>Attorney</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Action</th>
+                </tr>
+              </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <h6 class="mb-1 fs-14">Legal Research - Precedents</h6>
+                  <p class="text-muted mb-0 fs-12">Contract law research</p>
+                  </td>
+                <td><span class="badge bg-info-subtle text-info">#2025-CV-123</span></td>
+                <td>Jane Smith</td>
+                <td>Jan 20, 2025</td>
+                <td><span class="badge bg-warning">In Progress</span></td>
+                <td>
+                  <button class="btn btn-sm btn-soft-primary">Update</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h6 class="mb-1 fs-14">Draft Motion</h6>
+                  <p class="text-muted mb-0 fs-12">Motion to dismiss</p>
+                </td>
+                <td><span class="badge bg-info-subtle text-info">#2025-LIT-045</span></td>
+                <td>Mike Johnson</td>
+                <td>Jan 18, 2025</td>
+                <td><span class="badge bg-danger">Urgent</span></td>
+                <td>
+                  <button class="btn btn-sm btn-soft-primary">Update</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-4">
+    <div class="card bg-primary-subtle border-0">
+      <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">
+          <i class="ri-tools-line me-2"></i>Research Tools
+        </h5>
+                </div>
+      <div class="card-body">
+        <div class="vstack gap-3">
+          <a href="#" class="btn btn-primary">
+            <i class="ri-search-line me-1"></i> Legal Database
+          </a>
+          <a href="#" class="btn btn-info">
+            <i class="ri-book-line me-1"></i> Case Law Library
+          </a>
+          <a href="#" class="btn btn-success">
+            <i class="ri-file-copy-line me-1"></i> Document Templates
+          </a>
+          <a href="#" class="btn btn-warning">
+            <i class="ri-calendar-2-line me-1"></i> Court Calendar
+          </a>
+            </div>
+        
+        <!-- Recent Research -->
+        <div class="mt-4 pt-3 border-top border-primary-subtle">
+          <h6 class="text-primary mb-3">Recent Research</h6>
+          <div class="vstack gap-2">
+            <div class="d-flex align-items-center">
+              <i class="ri-file-text-line text-muted me-2"></i>
+              <div class="flex-grow-1">
+                <p class="mb-0 fs-13">Contract Breach Cases</p>
+                <p class="text-muted mb-0 fs-12">2 hours ago</p>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="ri-file-text-line text-muted me-2"></i>
+              <div class="flex-grow-1">
+                <p class="mb-0 fs-13">Employment Law</p>
+                <p class="text-muted mb-0 fs-12">Yesterday</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
+ 
+ 
+ 
+ 
+ 
+ 

@@ -12,14 +12,41 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
+
+import lombok.extern.slf4j.Slf4j;
 
 
 @SpringBootApplication//(exclude = { SecurityAutoConfiguration.class })
 @EnableScheduling
+@Slf4j
 public class BostoneosolutionsApplication {
 	private static final int STRENGTH = 12;
+	
+	@PostConstruct
+	public void init() {
+		// Set default timezone
+		TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"));
+		
+		// Log system time information for debugging
+		LocalDateTime now = LocalDateTime.now();
+		ZonedDateTime zonedNow = ZonedDateTime.now();
+		
+		log.info("🕐 System timezone: {}", TimeZone.getDefault().getID());
+		log.info("🕐 Current LocalDateTime: {} (Year: {})", now, now.getYear());
+		log.info("🕐 Current ZonedDateTime: {}", zonedNow);
+		log.info("🕐 Available zones: America/New_York, UTC, etc.");
+		
+		// Log system time for verification
+		log.info("✅ System clock initialized - Current year: {}", now.getYear());
+	}
+	
 	public static void main(String[] args) {
 		SpringApplication.run(BostoneosolutionsApplication.class, args);
 	}
@@ -40,7 +67,7 @@ public class BostoneosolutionsApplication {
 		//corsConfiguration.setAllowedOrigins(Arrays.asList("*"));
 		corsConfiguration.setAllowedHeaders(Arrays.asList("Origin", "Access-Control-Allow-Origin", "Content-Type",
 				"Accept", "Jwt-Token", "Authorization", "Origin", "Accept", "X-Requested-With",
-				"Access-Control-Request-Method", "Access-Control-Request-Headers"));
+				"Access-Control-Request-Method", "Access-Control-Request-Headers", "Cache-Control"));
 		corsConfiguration.setExposedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Jwt-Token", "Authorization",
 				"Access-Control-Allow-Origin", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "File-Name"));
 		corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

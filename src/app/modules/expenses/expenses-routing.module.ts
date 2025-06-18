@@ -6,37 +6,56 @@ import { ExpenseDetailsComponent } from './components/expense-details/expense-de
 import { ExpenseCategoryComponent } from './components/expense-category/expense-category.component';
 import { AuthenticationGuard } from '../../guard/authentication.guard';
 import { VendorListComponent } from './components/vendor/vendor-list/vendor-list.component';
+import { PermissionGuard } from '../../guard/permission.guard';
 
 const routes: Routes = [
   {
     path: '',
     component: ExpensesListComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'VIEW' }
+    }
   },
   {
     path: 'new',
     component: ExpenseFormComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'CREATE' }
+    }
   },
   {
     path: 'edit/:id',
     component: ExpenseFormComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'EDIT' }
+    }
   },
   {
     path: 'details/:id',
     component: ExpenseDetailsComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'VIEW' }
+    }
   },
   {
     path: 'categories',
     component: ExpenseCategoryComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'ADMIN' }
+    }
   },
   {
     path: 'vendors',
     component: VendorListComponent,
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'VIEW' }
+    }
   }
 ];
 

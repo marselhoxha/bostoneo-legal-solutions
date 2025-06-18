@@ -206,20 +206,12 @@ public class EmailServiceImpl implements EmailService {
 
     private String getEmailMessage(String firstName, String verificationUrl, VerificationType verificationType) {
         switch (verificationType) {
-            case PASSWORD -> { return "Hello " + firstName + "," + "\n\nReset password request. Please click the link below to reset your password. \n\n" + verificationUrl + "\n\nThe Support Team"; }
-            case ACCOUNT -> { return "Hello " + firstName + "," + "\n\nYour new account has been created. Please click the link below to verify your account. \n\n" + verificationUrl + "\n\nThe Support Team"; }
-            default -> throw new ApiException("Unable to send email. Email type unknown");
+            case PASSWORD:
+                return "Hello " + firstName + "," + "\n\nReset password request. Please click the link below to reset your password. \n\n" + verificationUrl + "\n\nThe Support Team";
+            case ACCOUNT:
+                return "Hello " + firstName + "," + "\n\nYour new account has been created. Please click the link below to verify your account. \n\n" + verificationUrl + "\n\nThe Support Team";
+            default:
+                throw new ApiException("Unable to send email. Email type unknown");
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-

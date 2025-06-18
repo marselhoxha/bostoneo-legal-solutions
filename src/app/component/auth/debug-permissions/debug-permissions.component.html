@@ -1,0 +1,74 @@
+<div class="container mt-4">
+  <h2>JWT Token Debug Information</h2>
+  
+  <div *ngIf="hasError" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="!hasError && tokenData" class="card">
+    <div class="card-body">
+      <h5 class="card-title">Token Details</h5>
+      
+      <div class="mb-3">
+        <strong>Subject (User ID):</strong> {{ tokenData.sub }}
+      </div>
+      
+      <div class="mb-3">
+        <strong>Issued At:</strong> {{ tokenData.iat ? (tokenData.iat * 1000 | date:'medium') : 'N/A' }}
+      </div>
+      
+      <div class="mb-3">
+        <strong>Expires At:</strong> {{ tokenData.exp ? (tokenData.exp * 1000 | date:'medium') : 'N/A' }}
+      </div>
+
+      <hr>
+
+      <div class="mb-3">
+        <h6>Authorities ({{ authorities.length }})</h6>
+        <div class="list-group">
+          <div *ngFor="let auth of authorities" class="list-group-item">
+            {{ auth }}
+            <span *ngIf="auth === 'BILLING:EDIT'" class="badge bg-success ms-2">Required for Workflow Toggle</span>
+          </div>
+        </div>
+        <div *ngIf="authorities.length === 0" class="text-muted">No authorities found</div>
+      </div>
+
+      <div class="mb-3">
+        <h6>Permissions ({{ permissions.length }})</h6>
+        <div class="list-group">
+          <div *ngFor="let perm of permissions" class="list-group-item">
+            {{ perm }}
+            <span *ngIf="perm === 'BILLING:EDIT'" class="badge bg-success ms-2">Required for Workflow Toggle</span>
+          </div>
+        </div>
+        <div *ngIf="permissions.length === 0" class="text-muted">No permissions found</div>
+      </div>
+
+      <div class="mb-3">
+        <h6>Roles ({{ roles.length }})</h6>
+        <div class="list-group">
+          <div *ngFor="let role of roles" class="list-group-item">
+            {{ role }}
+          </div>
+        </div>
+        <div *ngIf="roles.length === 0" class="text-muted">No roles found</div>
+      </div>
+
+      <hr>
+
+      <div class="alert" [ngClass]="hasBillingEdit() ? 'alert-success' : 'alert-warning'">
+        <strong>BILLING:EDIT Permission:</strong> 
+        {{ hasBillingEdit() ? 'FOUND - You should be able to toggle workflow rules' : 'NOT FOUND - This is why you cannot toggle workflow rules' }}
+      </div>
+
+      <div class="mb-3">
+        <h6>Full Token Payload</h6>
+        <pre class="bg-light p-2">{{ tokenData | json }}</pre>
+        <button class="btn btn-sm btn-secondary" (click)="copyToClipboard()">
+          Copy Full Payload
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

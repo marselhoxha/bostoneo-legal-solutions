@@ -1,0 +1,451 @@
+package com.***REMOVED***.***REMOVED***solutions.service.impl;
+
+import com.***REMOVED***.***REMOVED***solutions.dto.ActiveTimerDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.StartTimerRequest;
+import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
+import com.***REMOVED***.***REMOVED***solutions.model.ActiveTimer;
+import com.***REMOVED***.***REMOVED***solutions.model.TimerSession;
+import com.***REMOVED***.***REMOVED***solutions.repository.ActiveTimerRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.TimerSessionRepository;
+import com.***REMOVED***.***REMOVED***solutions.service.TimerService;
+import com.***REMOVED***.***REMOVED***solutions.service.TimeTrackingService;
+import com.***REMOVED***.***REMOVED***solutions.service.BillingRateService;
+import com.***REMOVED***.***REMOVED***solutions.service.CaseRateConfigurationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class TimerServiceImpl implements TimerService {
+
+    private final ActiveTimerRepository activeTimerRepository;
+    private final TimerSessionRepository timerSessionRepository;
+    private final TimeTrackingService timeTrackingService;
+    private final BillingRateService billingRateService;
+    private final CaseRateConfigurationService caseRateConfigurationService;
+
+    @Override
+    public ActiveTimerDTO startTimer(Long userId, StartTimerRequest request) {
+        log.info("Starting timer for user {} on case {} with rate configuration", userId, request.getLegalCaseId());
+
+        // Check if user already has an active timer for this case
+        if (hasActiveTimerForCase(userId, request.getLegalCaseId())) {
+            throw new RuntimeException("User already has an active timer for this case");
+        }
+
+        // Determine the effective rate to use
+        BigDecimal effectiveRate = determineEffectiveRate(request);
+        
+        // Create new active timer with rate configuration
+        ActiveTimer timer = ActiveTimer.builder()
+                .userId(userId)
+                .legalCaseId(request.getLegalCaseId())
+                .description(request.getDescription())
+                .startTime(new Date())
+                .isActive(true)
+                .pausedDuration(0)
+                .hourlyRate(effectiveRate)
+                .applyMultipliers(request.getApplyMultipliers())
+                .isEmergency(request.getIsEmergency())
+                .workType(request.getWorkType())
+                .tags(request.getTags())
+                .build();
+
+        ActiveTimer savedTimer = activeTimerRepository.save(timer);
+        log.info("Timer started with rate: ${}/hr, multipliers: {}, emergency: {}", 
+                effectiveRate, request.getApplyMultipliers(), request.getIsEmergency());
+        
+        return mapToDTO(savedTimer);
+    }
+
+    private BigDecimal determineEffectiveRate(StartTimerRequest request) {
+        log.debug("Determining effective rate for case: {}", request.getLegalCaseId());
+        
+        // If rate is explicitly provided in request, use it as base
+        BigDecimal baseRate = request.getRate();
+        
+        // If no rate provided, get default rate for the case
+        if (baseRate == null) {
+            baseRate = caseRateConfigurationService.getDefaultRateForCase(request.getLegalCaseId());
+            log.debug("Using case default rate: ${}", baseRate);
+        }
+        
+        // Apply multipliers if requested
+        if (Boolean.TRUE.equals(request.getApplyMultipliers())) {
+            LocalDate now = LocalDate.now();
+            LocalTime currentTime = LocalTime.now();
+            
+            boolean isWeekend = now.getDayOfWeek().getValue() >= 6; // Saturday = 6, Sunday = 7
+            boolean isAfterHours = currentTime.isAfter(LocalTime.of(18, 0)) || currentTime.isBefore(LocalTime.of(8, 0));
+            boolean isEmergency = Boolean.TRUE.equals(request.getIsEmergency());
+            
+            BigDecimal effectiveRate = caseRateConfigurationService.calculateEffectiveRate(
+                    request.getLegalCaseId(), baseRate, isWeekend, isAfterHours, isEmergency);
+            
+            log.debug("Applied multipliers - Base: ${}, Effective: ${}, Weekend: {}, AfterHours: {}, Emergency: {}", 
+                     baseRate, effectiveRate, isWeekend, isAfterHours, isEmergency);
+            
+            return effectiveRate;
+        } else {
+            log.debug("No multipliers applied, using base rate: ${}", baseRate);
+            return baseRate;
+        }
+    }
+
+    @Override
+    public ActiveTimerDTO pauseTimer(Long userId, Long timerId) {
+        log.info("Pausing timer {} for user {}", timerId, userId);
+        
+        ActiveTimer timer = activeTimerRepository.findById(timerId)
+            .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+        
+        if (!timer.getUserId().equals(userId)) {
+            throw new RuntimeException("Timer does not belong to user");
+        }
+        
+        if (!timer.getIsActive()) {
+            log.warn("Timer {} is already paused", timerId);
+            return mapToDTO(timer);
+        }
+        
+        // Calculate current session duration and add to total working time
+        long currentTime = System.currentTimeMillis();
+        long currentSessionMs = currentTime - timer.getStartTime().getTime();
+        int currentSessionSeconds = (int)(currentSessionMs / 1000);
+        
+        // Add current session to total working time (pausedDuration = total working time)
+        timer.setPausedDuration(timer.getPausedDuration() + currentSessionSeconds);
+        
+        // Mark as paused and update start time for next session
+        timer.setIsActive(false);
+        timer.setStartTime(new Date(currentTime)); // Reset for next resume
+        
+        ActiveTimer updated = activeTimerRepository.save(timer);
+        log.debug("Timer {} paused. Total working time: {}s", timerId, updated.getPausedDuration());
+        
+        return mapToDTO(updated);
+    }
+
+    @Override
+    public ActiveTimerDTO resumeTimer(Long userId, Long timerId) {
+        log.info("Resuming timer {} for user {}", timerId, userId);
+        
+        ActiveTimer timer = activeTimerRepository.findById(timerId)
+            .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+        
+        if (!timer.getUserId().equals(userId)) {
+            throw new RuntimeException("Timer does not belong to user");
+        }
+        
+        if (timer.getIsActive()) {
+            log.warn("Timer {} is already active", timerId);
+            return mapToDTO(timer);
+        }
+        
+        // Resume: just mark as active and reset start time
+        timer.setIsActive(true);
+        timer.setStartTime(new Date()); // New session starts now
+        
+        // Optionally recalculate rate if multipliers are enabled and time context changed
+        if (Boolean.TRUE.equals(timer.getApplyMultipliers())) {
+            BigDecimal newRate = recalculateRateForCurrentTime(timer);
+            if (newRate != null && !newRate.equals(timer.getHourlyRate())) {
+                log.info("Rate recalculated on resume: ${} -> ${}", timer.getHourlyRate(), newRate);
+                timer.setHourlyRate(newRate);
+            }
+        }
+        
+        ActiveTimer updated = activeTimerRepository.save(timer);
+        log.debug("Timer {} resumed. Total working time so far: {}s", timerId, updated.getPausedDuration());
+        
+        return mapToDTO(updated);
+    }
+
+    private BigDecimal recalculateRateForCurrentTime(ActiveTimer timer) {
+        if (!Boolean.TRUE.equals(timer.getApplyMultipliers())) {
+            return timer.getHourlyRate();
+        }
+        
+        // Get base rate (remove any existing multipliers)
+        BigDecimal baseRate = caseRateConfigurationService.getDefaultRateForCase(timer.getLegalCaseId());
+        
+        LocalDate now = LocalDate.now();
+        LocalTime currentTime = LocalTime.now();
+        
+        boolean isWeekend = now.getDayOfWeek().getValue() >= 6;
+        boolean isAfterHours = currentTime.isAfter(LocalTime.of(18, 0)) || currentTime.isBefore(LocalTime.of(8, 0));
+        boolean isEmergency = Boolean.TRUE.equals(timer.getIsEmergency());
+        
+        return caseRateConfigurationService.calculateEffectiveRate(
+                timer.getLegalCaseId(), baseRate, isWeekend, isAfterHours, isEmergency);
+    }
+
+    @Override
+    public void stopTimer(Long userId, Long timerId) {
+        log.info("Stopping timer {} for user {}", timerId, userId);
+        
+        // Check if timer exists first
+        ActiveTimer timer = activeTimerRepository.findById(timerId).orElse(null);
+        
+        if (timer == null) {
+            log.warn("Timer {} not found - may have already been stopped", timerId);
+            return; // Timer already stopped/deleted, this is OK
+        }
+        
+        // Check if timer belongs to user
+        if (!timer.getUserId().equals(userId)) {
+            throw new RuntimeException("Timer does not belong to user");
+        }
+        
+        // Calculate total duration
+        int totalDurationSeconds;
+        
+        if (timer.getIsActive()) {
+            // Timer is currently running, add current session to total elapsed time
+            long currentTime = System.currentTimeMillis();
+            long currentSessionMs = currentTime - timer.getStartTime().getTime();
+            int currentSessionSeconds = (int)(currentSessionMs / 1000);
+            totalDurationSeconds = timer.getPausedDuration() + currentSessionSeconds;
+        } else {
+            // Timer is paused, total duration is already in pausedDuration
+            totalDurationSeconds = timer.getPausedDuration();
+        }
+        
+        log.debug("Timer {} stopped. Total duration: {}s, Rate: ${}/hr", 
+                 timerId, totalDurationSeconds, timer.getHourlyRate());
+        
+        // Create timer session record with rate information
+        TimerSession session = TimerSession.builder()
+            .userId(timer.getUserId())
+            .legalCaseId(timer.getLegalCaseId())
+            .description(timer.getDescription())
+            .startTime(timer.getCreatedAt()) // Original timer creation time
+            .endTime(new Date())
+            .duration(totalDurationSeconds) // Total working duration
+            .pausedDuration(0) // Not using this field in TimerSession for now
+            .convertedToTimeEntry(false)
+            .build();
+        
+        timerSessionRepository.save(session);
+        
+        // Delete the active timer
+        activeTimerRepository.delete(timer);
+    }
+
+    @Override
+    public void stopAllTimers(Long userId) {
+        log.info("Stopping all timers for user {}", userId);
+
+        List<ActiveTimer> activeTimers = activeTimerRepository.findByUserIdAndIsActive(userId, true);
+        for (ActiveTimer timer : activeTimers) {
+            stopTimer(userId, timer.getId());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveTimerDTO> getActiveTimers(Long userId) {
+        log.info("Getting active timers for user {}", userId);
+
+        List<ActiveTimer> timers = activeTimerRepository.findByUserIdAndIsActive(userId, true);
+        return timers.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveTimerDTO> getAllActiveTimers() {
+        log.info("Getting all active timers");
+
+        List<ActiveTimer> timers = activeTimerRepository.findByIsActive(true);
+        return timers.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ActiveTimerDTO getActiveTimer(Long timerId) {
+        log.info("Getting timer {}", timerId);
+
+        ActiveTimer timer = activeTimerRepository.findById(timerId)
+                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+
+        return mapToDTO(timer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ActiveTimerDTO getActiveTimerForCase(Long userId, Long legalCaseId) {
+        log.info("Getting active timer for user {} and case {}", userId, legalCaseId);
+
+        return activeTimerRepository.findByUserIdAndLegalCaseIdAndIsActive(userId, legalCaseId, true)
+                .map(this::mapToDTO)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveTimer(Long userId) {
+        return activeTimerRepository.hasActiveTimer(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveTimerForCase(Long userId, Long legalCaseId) {
+        return activeTimerRepository.findByUserIdAndLegalCaseIdAndIsActive(userId, legalCaseId, true).isPresent();
+    }
+
+    @Override
+    public TimeEntryDTO convertTimerToTimeEntry(Long userId, Long timerId, String description) {
+        log.info("Converting timer {} to time entry for user {}", timerId, userId);
+
+        ActiveTimer timer = activeTimerRepository.findById(timerId)
+                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+
+        if (!timer.getUserId().equals(userId)) {
+            throw new RuntimeException("Timer does not belong to user");
+        }
+
+        // Calculate total working time before stopping the timer
+        int totalWorkingSeconds = timer.getPausedDuration(); // Already accumulated working time
+        
+        if (timer.getIsActive()) {
+            // Timer is currently running, add current session working time
+            long currentTime = System.currentTimeMillis();
+            long currentSessionMs = currentTime - timer.getStartTime().getTime();
+            int currentSessionSeconds = (int)(currentSessionMs / 1000);
+            totalWorkingSeconds += currentSessionSeconds;
+        }
+
+        // Stop the timer first
+        stopTimer(userId, timerId);
+
+        // Convert working seconds to hours with 6-minute (0.1 hour) rounding
+        double workingHours = totalWorkingSeconds / 3600.0;
+        double roundedHours = Math.ceil(workingHours * 10.0) / 10.0; // Round up to nearest 0.1 hour
+
+        log.debug("Converting timer {} - Working time: {}s, Hours: {}, Rounded: {}, Rate: ${}", 
+                  timerId, totalWorkingSeconds, workingHours, roundedHours, timer.getHourlyRate());
+
+        // Create time entry with the timer's rate information
+        TimeEntryDTO timeEntry = TimeEntryDTO.builder()
+                .legalCaseId(timer.getLegalCaseId())
+                .userId(userId)
+                .date(LocalDate.now())
+                .hours(BigDecimal.valueOf(roundedHours))
+                .rate(timer.getHourlyRate() != null ? timer.getHourlyRate() : 
+                      billingRateService.getEffectiveRateForTimeEntry(userId, timer.getLegalCaseId(), LocalDate.now()))
+                .description(description != null ? description : timer.getDescription())
+                .status(TimeEntryStatus.DRAFT)
+                .billable(true)
+                .build();
+
+        log.info("Time entry created with rate: ${}/hr, hours: {}, amount: ${}", 
+                timeEntry.getRate(), timeEntry.getHours(), 
+                timeEntry.getHours().multiply(timeEntry.getRate()));
+
+        return timeTrackingService.createTimeEntry(timeEntry);
+    }
+    
+    /**
+     * Get effective billing rate for user and case (fallback method)
+     */
+    private BigDecimal getEffectiveRateForUser(Long userId, Long legalCaseId) {
+        try {
+            return billingRateService.getEffectiveRateForTimeEntry(userId, legalCaseId, LocalDate.now());
+        } catch (Exception e) {
+            log.warn("Error getting rate from billing service, using default: {}", e.getMessage());
+            return new BigDecimal("250.00"); // Fallback rate
+        }
+    }
+
+    @Override
+    public List<TimeEntryDTO> convertMultipleTimersToTimeEntries(Long userId, List<Long> timerIds) {
+        log.info("Converting {} timers to time entries for user {}", timerIds.size(), userId);
+
+        return timerIds.stream()
+                .map(timerId -> convertTimerToTimeEntry(userId, timerId, null))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void updateTimerDescription(Long userId, Long timerId, String description) {
+        log.info("Updating description for timer {} for user {}", timerId, userId);
+
+        ActiveTimer timer = activeTimerRepository.findById(timerId)
+                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+
+        if (!timer.getUserId().equals(userId)) {
+            throw new RuntimeException("Timer does not belong to user");
+        }
+
+        timer.setDescription(description);
+        activeTimerRepository.save(timer);
+    }
+
+    @Override
+    public void deleteTimer(Long timerId) {
+        log.info("Deleting timer {}", timerId);
+
+        if (!activeTimerRepository.existsById(timerId)) {
+            throw new RuntimeException("Timer not found with id: " + timerId);
+        }
+
+        activeTimerRepository.deleteById(timerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long getTotalActiveTimersCount() {
+        return (long) activeTimerRepository.findByIsActive(true).size();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveTimerDTO> getLongRunningTimers(Integer hoursThreshold) {
+        log.info("Getting timers running longer than {} hours", hoursThreshold);
+
+        List<ActiveTimer> allActiveTimers = activeTimerRepository.findByIsActive(true);
+        long thresholdMillis = hoursThreshold * 3600L * 1000L;
+        Date now = new Date();
+
+        return allActiveTimers.stream()
+                .filter(timer -> (now.getTime() - timer.getStartTime().getTime()) > thresholdMillis)
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private ActiveTimerDTO mapToDTO(ActiveTimer timer) {
+        return ActiveTimerDTO.builder()
+                .id(timer.getId())
+                .userId(timer.getUserId())
+                .legalCaseId(timer.getLegalCaseId())
+                .startTime(timer.getStartTime())
+                .description(timer.getDescription())
+                .isActive(timer.getIsActive())
+                .pausedDuration(timer.getPausedDuration())
+                .hourlyRate(timer.getHourlyRate())
+                .applyMultipliers(timer.getApplyMultipliers())
+                .isEmergency(timer.getIsEmergency())
+                .workType(timer.getWorkType())
+                .tags(timer.getTags())
+                .currentDurationSeconds(timer.getCurrentDurationSeconds())
+                .createdAt(timer.getCreatedAt())
+                .updatedAt(timer.getUpdatedAt())
+                .build();
+    }
+} 

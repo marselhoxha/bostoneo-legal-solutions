@@ -1,0 +1,211 @@
+/* Invoice Workflow Detail Component Styles */
+
+/* Tab Navigation */
+.nav-tabs-custom .nav-link {
+  color: #74788d;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs-custom .nav-link.active {
+  color: #5664d2;
+  background: transparent;
+  border-bottom: 2px solid #5664d2;
+}
+
+.nav-tabs-custom .nav-link:hover:not(.active) {
+  color: #5664d2;
+}
+
+/* Table Styling */
+.table-borderless td {
+  padding: 0.75rem 0;
+  vertical-align: middle;
+}
+
+.table-borderless td:first-child {
+  font-weight: 500;
+  color: #74788d;
+}
+
+.table-bordered th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.table-bordered td code {
+  color: #e83e8c;
+  background-color: #f8f9fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 87.5%;
+}
+
+/* Badges */
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+/* Execution Status Colors */
+.bg-success-subtle {
+  background-color: rgba(34, 192, 60, 0.1) !important;
+}
+
+.text-success {
+  color: #22c03c !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(240, 101, 72, 0.1) !important;
+}
+
+.text-danger {
+  color: #f06548 !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(251, 188, 11, 0.1) !important;
+}
+
+.text-warning {
+  color: #fbbc0b !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(53, 119, 241, 0.1) !important;
+}
+
+.text-info {
+  color: #3577f1 !important;
+}
+
+.bg-primary-subtle {
+  background-color: rgba(86, 100, 210, 0.1) !important;
+}
+
+.text-primary {
+  color: #5664d2 !important;
+}
+
+/* Info Card */
+.card-border-info {
+  border-left: 3px solid #3577f1;
+}
+
+.card-border-info .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eff2f7;
+}
+
+.card-border-info .card-title {
+  color: #3577f1;
+  font-weight: 600;
+}
+
+/* Configuration Display */
+pre {
+  background-color: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Loading State */
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Buttons */
+.btn-light {
+  background-color: #f3f6f9;
+  border-color: #f3f6f9;
+  color: #495057;
+}
+
+.btn-light:hover {
+  background-color: #e7ecf1;
+  border-color: #e7ecf1;
+  color: #495057;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .nav-tabs-custom .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .table {
+    font-size: 0.875rem;
+  }
+  
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Animation for tab switching */
+.tab-pane {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stats Cards */
+.card.border-success {
+  border-color: #22c03c !important;
+  border-width: 2px;
+}
+
+.card.border-danger {
+  border-color: #f06548 !important;
+  border-width: 2px;
+}
+
+.card.border-warning {
+  border-color: #fbbc0b !important;
+  border-width: 2px;
+}
+
+.card.border-primary {
+  border-color: #5664d2 !important;
+  border-width: 2px;
+}
+
+.card-body h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.card-body h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Empty State */
+.ri-inbox-line {
+  font-size: 4rem;
+  opacity: 0.3;
+}

@@ -4,9 +4,11 @@ import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.CreateActivityRequest;
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.dtomapper.CaseActivityDTOMapper;
+import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.model.CaseActivity;
 import com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
+import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
 import com.***REMOVED***.***REMOVED***solutions.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +32,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     private final CaseActivityRepository caseActivityRepository;
     private final UserService userService;
     private final ObjectMapper objectMapper;
+    private final SystemAuditService systemAuditService;
     
     @Override
     public List<CaseActivityDTO> getActivitiesByCaseId(Long caseId) {
@@ -134,6 +137,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging note added activity for case ID: {}, note ID: {}", caseId, noteId);
         
         try {
+            // 1. Log to case_activities table (existing functionality)
             CaseActivity activity = new CaseActivity();
             activity.setCaseId(caseId);
             activity.setUserId(userId);
@@ -155,7 +159,25 @@ public class CaseActivityServiceImpl implements CaseActivityService {
             }
             
             caseActivityRepository.save(activity);
-            log.info("Successfully logged note added activity");
+            log.info("Successfully logged note added activity to case_activities table");
+            
+            // 2. Also log to main audit_log table for unified activity feed
+            if (userId != null) {
+                try {
+                    systemAuditService.logActivity(
+                        userId,
+                        AuditLog.AuditAction.CREATE,
+                        AuditLog.EntityType.CASE,
+                        caseId,
+                        "Added note \"" + noteTitle + "\" to legal case",
+                        objectMapper.writeValueAsString(metadata)
+                    );
+                    log.debug("Successfully logged note addition to audit_log table");
+                } catch (Exception auditError) {
+                    log.warn("Failed to log note addition to audit system: {}", auditError.getMessage());
+                }
+            }
+            
         } catch (Exception e) {
             log.error("Failed to log note added activity: {}", e.getMessage());
         }

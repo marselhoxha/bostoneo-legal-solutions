@@ -32,8 +32,8 @@ public class ExpenseDTO {
     private String description;
     private BigDecimal tax;
     
-    private Long customerId;
-    private String customerName;
+    private Long clientId;
+    private String clientName;
     
     private Long invoiceId;
     private String invoiceNumber;

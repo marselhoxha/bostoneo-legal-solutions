@@ -202,7 +202,8 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error loading calendar events:', err);
-        this.error = 'Failed to load calendar events. Please try again later or contact support.';
+        // Don't show error message to the user
+        this.error = null;
         this.loading = false;
         this.events = [];
         
@@ -210,6 +211,9 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.calendarComponent && this.calendarComponent.getApi()) {
           this.calendarComponent.getApi().removeAllEvents();
         }
+        
+        // Continue with empty calendar and no error message
+        this.mapEventsToCalendar();
       }
     });
   }

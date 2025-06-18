@@ -1,0 +1,28 @@
+package com.***REMOVED***.***REMOVED***solutions.repository;
+
+import com.***REMOVED***.***REMOVED***solutions.model.InvoiceTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface InvoiceTemplateRepository extends JpaRepository<InvoiceTemplate, Long> {
+    
+    Optional<InvoiceTemplate> findByName(String name);
+    
+    Optional<InvoiceTemplate> findByIsDefaultTrue();
+    
+    Page<InvoiceTemplate> findByIsActiveTrue(Pageable pageable);
+    
+    List<InvoiceTemplate> findByIsActiveTrueOrderByName();
+    
+    @Query("SELECT t FROM InvoiceTemplate t WHERE t.isActive = true AND (t.name LIKE %?1% OR t.description LIKE %?1%)")
+    Page<InvoiceTemplate> searchActiveTemplates(String searchTerm, Pageable pageable);
+    
+    boolean existsByNameAndIdNot(String name, Long id);
+}

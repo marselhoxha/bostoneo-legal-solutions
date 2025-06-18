@@ -1,0 +1,218 @@
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+import { User } from 'src/app/interface/user';
+import { UserService } from 'src/app/service/user.service';
+import { RbacService } from 'src/app/core/services/rbac.service';
+import { AuthService } from 'src/app/services/auth.service';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.css']
+})
+export class HomeComponent implements OnInit, OnDestroy {
+
+  // Core properties
+  currentUser: User | null = null;
+  userRole: string = '';
+  isDarkMode: boolean = false;
+
+  private destroy$ = new Subject<void>();
+  private themeObserver?: MutationObserver;
+
+  constructor(
+    private router: Router, 
+    private userService: UserService,
+    private rbacService: RbacService,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) { }
+
+  ngOnInit(): void {
+    console.log('Home component initializing...');
+    
+    // Get current user and role
+    this.currentUser = this.userService.getCurrentUser();
+    this.userRole = this.detectUserRole();
+    
+    // Detect and monitor theme changes
+    this.detectTheme();
+    this.setupThemeObserver();
+    
+    console.log('Home component initialized with role:', this.userRole);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Clean up theme observer
+    if (this.themeObserver) {
+      this.themeObserver.disconnect();
+    }
+  }
+
+  /**
+   * Detect current user role from various sources
+   */
+  private detectUserRole(): string {
+    // Try multiple sources for role detection
+    let role = '';
+
+    // 1. Check current user object
+    if (this.currentUser?.roleName) {
+      role = this.currentUser.roleName;
+    }
+
+    // 2. Check local storage first (synchronous)
+    if (!role) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          role = user.roleName || user.role || '';
+        } catch (error) {
+          console.warn('Could not parse stored user:', error);
+        }
+      }
+    }
+
+    // 3. Check auth service (synchronous)
+    if (!role) {
+      try {
+        const authUser = this.authService.getCurrentUser();
+        if (authUser?.roles && authUser.roles.length > 0) {
+          role = authUser.roles[0];
+        }
+      } catch (error) {
+        console.warn('Could not get user from auth service:', error);
+      }
+    }
+
+    // 4. Subscribe to RBAC service for future updates (async)
+    this.rbacService.roles$.pipe(takeUntil(this.destroy$)).subscribe(roles => {
+      if (roles && roles.length > 0 && !role) {
+        this.userRole = this.normalizeRole(roles[0].name);
+        this.cdr.detectChanges();
+      }
+    });
+    
+    // 5. Fallback to ADMIN if no role detected
+    if (!role) {
+      role = 'ADMIN';
+      console.log('No role detected, defaulting to ADMIN');
+    }
+
+    // Normalize role
+    const normalizedRole = this.normalizeRole(role);
+    console.log('Detected role:', normalizedRole);
+    return normalizedRole;
+  }
+
+  private normalizeRole(role: string): string {
+    let normalizedRole = role ? role.toUpperCase() : '';
+    
+    // Remove ROLE_ prefix if present
+    if (normalizedRole.startsWith('ROLE_')) {
+      normalizedRole = normalizedRole.substring(5);
+    }
+    
+    // Map database roles to frontend dashboard types
+    const roleMapping: { [key: string]: string } = {
+      // Admin roles
+      'ADMIN': 'ADMIN',
+      'ROLE_ADMIN': 'ADMIN',
+      'MANAGING_PARTNER': 'ADMIN',
+      'SENIOR_PARTNER': 'ADMIN',
+      'COO': 'ADMIN',
+      'CFO': 'ADMIN',
+      
+      // Attorney roles  
+      'ATTORNEY': 'ATTORNEY',
+      'EQUITY_PARTNER': 'ATTORNEY',
+      'NON_EQUITY_PARTNER': 'ATTORNEY',
+      'OF_COUNSEL': 'ATTORNEY',
+      'SENIOR_ASSOCIATE': 'ATTORNEY',
+      'ASSOCIATE': 'ATTORNEY',
+      'JUNIOR_ASSOCIATE': 'ATTORNEY',
+      
+      // Manager roles
+      'MANAGER': 'MANAGER',
+      'PRACTICE_MANAGER': 'MANAGER',
+      'IT_MANAGER': 'MANAGER',
+      'HR_MANAGER': 'MANAGER',
+      'FINANCE_MANAGER': 'MANAGER',
+      
+      // Secretary roles
+      'SECRETARY': 'SECRETARY',
+      'LEGAL_SECRETARY': 'SECRETARY',
+      
+      // Paralegal roles
+      'PARALEGAL': 'PARALEGAL',
+      'SENIOR_PARALEGAL': 'PARALEGAL',
+      'LEGAL_ASSISTANT': 'PARALEGAL',
+      'LAW_CLERK': 'PARALEGAL',
+      
+      // Client roles
+      'CLIENT': 'CLIENT',
+      'ROLE_USER': 'CLIENT'
+    };
+    
+    return roleMapping[normalizedRole] || 'ADMIN'; // Default to ADMIN for unknown roles
+  }
+
+  /**
+   * Detect current theme (dark/light mode)
+   */
+  private detectTheme(): void {
+    // Check document body for theme classes
+    const body = document.body;
+    const html = document.documentElement;
+    
+    // Check for various dark mode indicators
+    this.isDarkMode = 
+      body.classList.contains('dark') ||
+      body.classList.contains('dark-mode') ||
+      html.classList.contains('dark') ||
+      html.classList.contains('dark-mode') ||
+      body.getAttribute('data-theme') === 'dark' ||
+      html.getAttribute('data-theme') === 'dark' ||
+      body.getAttribute('data-bs-theme') === 'dark' ||
+      html.getAttribute('data-bs-theme') === 'dark';
+
+    console.log('Theme detected:', this.isDarkMode ? 'Dark' : 'Light');
+  }
+
+  /**
+   * Set up observer to watch for theme changes
+   */
+  private setupThemeObserver(): void {
+    this.themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && 
+           (mutation.attributeName === 'class' || 
+            mutation.attributeName === 'data-theme' || 
+            mutation.attributeName === 'data-bs-theme')) {
+          this.detectTheme();
+          this.cdr.detectChanges();
+        }
+      });
+    });
+
+    // Observe both body and html elements
+    this.themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'data-bs-theme']
+    });
+
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'data-bs-theme']
+    });
+  }
+}
+
+
+
+

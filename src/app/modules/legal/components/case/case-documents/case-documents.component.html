@@ -69,13 +69,21 @@
           </div>
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label">Category</label>
+              <label class="form-label">Category <i class="ri-information-line text-muted" data-bs-toggle="tooltip" title="Choose the appropriate security level for this document"></i></label>
               <select class="form-select" [(ngModel)]="newDocument.category">
                 <option value="" disabled selected>Select document category</option>
                 @for(category of categories; track category) {
-                  <option [value]="category">{{category}}</option>
+                  <option [value]="category">
+                    {{category}}
+                    @if(getCategoryDescription(category)) {
+                      - {{getCategoryDescription(category)}}
+                    }
+                  </option>
                 }
               </select>
+              @if(newDocument.category) {
+                <small class="text-muted">{{getCategoryDescription(newDocument.category)}}</small>
+              }
             </div>
           </div>
         </div>
@@ -175,7 +183,16 @@
                 </div>
               </td>
               <td>{{document.type || 'N/A'}}</td>
-              <td>{{document.category || 'N/A'}}</td>
+              <td>
+                @if(document.category) {
+                  <span [class]="getCategoryBadgeClass(document.category)">
+                    <i [class]="getCategoryIcon(document.category) + ' me-1'"></i>
+                    {{document.category}}
+                  </span>
+                } @else {
+                  <span class="text-muted">N/A</span>
+                }
+              </td>
               <td>v{{document.currentVersion || 1}}</td>
               <td>
                 @if(document.uploadedBy) {

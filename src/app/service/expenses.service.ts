@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError, map, tap, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Expense, ExpenseCategory, Vendor, Receipt } from '../interface/expense.interface';
 import { CustomHttpResponse, Page } from '../interface/appstates';
+import { Key } from '../enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +14,7 @@ export class ExpensesService {
 
   private getHeaders(): HttpHeaders {
     // Try getting token from localStorage first, then sessionStorage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const token = localStorage.getItem(Key.TOKEN) || sessionStorage.getItem(Key.TOKEN);
     
     let headers = new HttpHeaders({
       'Content-Type': 'application/json'
@@ -231,7 +232,7 @@ export class ExpensesService {
     formData.append('file', file);
     
     // Get the auth token from localStorage or session storage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const token = localStorage.getItem(Key.TOKEN) || sessionStorage.getItem(Key.TOKEN);
     
     // Set headers with token if available
     let headers = new HttpHeaders();
@@ -291,15 +292,15 @@ export class ExpensesService {
       );
   }
 
-  // Customers
-  getCustomers(): Observable<CustomHttpResponse<any[]>> {
-    return this.http.get<CustomHttpResponse<any>>(`${environment.apiUrl}/customer/list?page=0&size=100`, { headers: this.getHeaders() })
+  // Clients
+  getClients(): Observable<CustomHttpResponse<any[]>> {
+    return this.http.get<CustomHttpResponse<any>>(`${environment.apiUrl}/client/list?page=0&size=100`, { headers: this.getHeaders() })
       .pipe(
         map(response => ({
           ...response,
           data: response.data?.page?.content || []
         })),
-        tap(response => console.log('Customers loaded:', response)),
+        tap(response => console.log('Clients loaded:', response)),
         catchError(this.handleError)
       );
   }

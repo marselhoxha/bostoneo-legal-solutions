@@ -1,0 +1,265 @@
+import { Component, OnInit, EventEmitter, Output, ViewChild, ElementRef, Input } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
+import { filter } from 'rxjs/operators';
+
+// Menu Pachage
+// import MetisMenu from 'metismenujs';
+
+import { MENU } from './menu';
+import { MenuItem } from './menu.model';
+import { User } from 'src/app/interface/user';
+import { RbacService } from 'src/app/core/services/rbac.service';
+
+@Component({
+  selector: 'app-horizontal-topbar',
+  templateUrl: './horizontal-topbar.component.html',
+  styleUrls: ['./horizontal-topbar.component.scss']
+})
+export class HorizontalTopbarComponent implements OnInit {
+  @Input() user: User;
+  menu: any;
+  menuItems: MenuItem[] = [];
+  @ViewChild('sideMenu') sideMenu!: ElementRef;
+  @Output() mobileMenuButtonClicked = new EventEmitter();
+
+  constructor(
+    private router: Router,
+    private rbacService: RbacService
+  ) {
+    // Subscribe to route changes to update active menu
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.initActiveMenu();
+    });
+  }
+
+  ngOnInit(): void {
+    // Menu Items - filter by permissions
+    this.menuItems = this.filterMenuByPermissions(MENU);
+    
+    // Initialize active menu
+    this.initActiveMenu();
+    
+    // Subscribe to permission changes
+    this.rbacService.permissions$.subscribe(() => {
+      // Update menu when permissions change
+      this.menuItems = this.filterMenuByPermissions(MENU);
+    });
+  }
+
+  /**
+   * Filter menu items based on user permissions
+   */
+  filterMenuByPermissions(menuItems: MenuItem[]): MenuItem[] {
+    console.log('Filtering menu items. Current user:', this.user);
+    console.log('User permissions:', this.rbacService.permissions$);
+    
+    // If user is admin, show all menu items
+    if (this.hasRole('ROLE_ADMIN') || this.hasRole('MANAGING_PARTNER') || this.hasRole('SENIOR_PARTNER') || this.hasRole('COO')) {
+      console.log('User is admin, showing all menu items');
+      return menuItems;
+    }
+    
+    return menuItems.filter(item => {
+      // Always show items without permission requirements
+      if (!item.requiredPermission) {
+        return true;
+      }
+      
+      // Check if item has required permission
+      const hasPermission = this.hasPermission(
+        item.requiredPermission.resource, 
+        item.requiredPermission.action
+      );
+      
+      console.log(`Checking permission for ${item.label}: ${item.requiredPermission.resource}:${item.requiredPermission.action} = ${hasPermission}`);
+      
+      if (!hasPermission) {
+        return false;
+      }
+      
+      return true;
+    }).map(item => {
+      // Also filter subItems recursively if they exist
+      if (item.subItems && item.subItems.length > 0) {
+        const filteredSubItems = this.filterMenuByPermissions(item.subItems);
+        
+        // Return item with filtered subItems only if there are visible subItems
+        // or if the parent item itself doesn't require permissions
+        if (filteredSubItems.length > 0 || !item.requiredPermission) {
+          return { ...item, subItems: filteredSubItems };
+        } else {
+          // If parent has subItems but none are visible, hide the parent too
+          return null;
+        }
+      }
+      
+      return item;
+    }).filter(item => item !== null); // Remove null items
+  }
+
+  /**
+   * Check if user has permission
+   */
+  hasPermission(resource: string, action: string): boolean {
+    // For now, let's be more permissive while RBAC is stabilizing
+    const hasPermission = this.rbacService.hasPermissionSync(resource, action);
+    
+    // If RBAC service says no permission, but user has a role, allow basic navigation
+    if (!hasPermission) {
+      // Allow basic navigation for known legal roles
+      if (this.hasRole('MANAGING_PARTNER') || this.hasRole('SENIOR_PARTNER') || 
+          this.hasRole('EQUITY_PARTNER') || this.hasRole('NON_EQUITY_PARTNER') ||
+          this.hasRole('OF_COUNSEL') || this.hasRole('ASSOCIATE') || 
+          this.hasRole('SENIOR_ASSOCIATE') || this.hasRole('JUNIOR_ASSOCIATE')) {
+        // Attorneys can access most legal features
+        if (['CASE', 'DOCUMENT', 'CALENDAR', 'TIME_TRACKING', 'CLIENT'].includes(resource)) {
+          return true;
+        }
+      }
+      
+      // Allow time tracking for most roles
+      if (resource === 'TIME_TRACKING' && ['VIEW_OWN', 'CREATE'].includes(action)) {
+        return true;
+      }
+      
+      // Allow basic client viewing for most roles
+      if (resource === 'CLIENT' && action === 'VIEW') {
+        return true;
+      }
+    }
+    
+    return hasPermission;
+  }
+
+  /**
+   * Check if user has role
+   */
+  hasRole(roleName: string): boolean {
+    return this.rbacService.hasRole(roleName);
+  }
+
+  /***
+   * Activate droup down set
+   */
+   ngAfterViewInit() {
+    this.initActiveMenu();
+  }
+
+  removeActivation(items: any) {   
+    items.forEach((item: any) => {
+      if (item.classList.contains("menu-link")) {
+        if (!item.classList.contains("active")) {
+          item.setAttribute("aria-expanded", false);
+        }
+        (item.nextElementSibling) ? item.nextElementSibling.classList.remove("show") : null;
+      }
+      if (item.classList.contains("nav-link")) {
+        if (item.nextElementSibling) {
+          item.nextElementSibling.classList.remove("show");
+        }
+        item.setAttribute("aria-expanded", false);
+      }
+      item.classList.remove("active");
+    });
+  }
+
+  // remove active items of two-column-menu
+  activateParentDropdown(item: any) { // navbar-nav menu add active
+    item.classList.add("active");
+    let parentCollapseDiv = item.closest(".collapse.menu-dropdown");
+    if (parentCollapseDiv) {      
+      // to set aria expand true remaining
+      parentCollapseDiv.classList.add("show");
+      parentCollapseDiv.parentElement.children[0].classList.add("active");
+      parentCollapseDiv.parentElement.children[0].setAttribute("aria-expanded", "true");
+      if (parentCollapseDiv.parentElement.closest(".collapse.menu-dropdown")) {
+        parentCollapseDiv.parentElement.closest(".collapse").classList.add("show");
+        if (parentCollapseDiv.parentElement.closest(".collapse").previousElementSibling)
+        parentCollapseDiv.parentElement.closest(".collapse").previousElementSibling.classList.add("active");
+        parentCollapseDiv.parentElement.closest(".collapse").previousElementSibling.setAttribute("aria-expanded", "true");
+      }
+      return false;
+    }
+    return false;
+  }
+
+  updateActive(event: any) {
+    const ul = document.getElementById("navbar-nav");
+    
+    if (ul) {
+      const items = Array.from(ul.querySelectorAll("a.nav-link"));
+      this.removeActivation(items);
+    }
+    this.activateParentDropdown(event.target);
+  }
+
+  initActiveMenu() {
+    const pathName = window.location.pathname;
+    const ul = document.getElementById("navbar-nav");
+    
+    if (ul) {
+      const items = Array.from(ul.querySelectorAll("a.nav-link"));
+      let activeItems = items.filter((x: any) => x.classList.contains("active")); 
+      this.removeActivation(activeItems);
+      let matchingMenuItem = items.find((x: any) => {
+        return x.pathname === pathName;
+      });
+      if (matchingMenuItem) {
+        this.activateParentDropdown(matchingMenuItem);
+      }
+    }
+  }
+
+  toggleSubItem(event: any) {
+    if(event.target && event.target.nextElementSibling)
+      event.target.nextElementSibling.classList.toggle("show");
+  };
+
+  toggleItem(event: any) {
+    let isCurrentMenuId = event.target.closest('a.nav-link');    
+    
+    let isMenu = isCurrentMenuId.nextElementSibling as any;
+    let dropDowns = Array.from(document.querySelectorAll('#navbar-nav .show'));
+    dropDowns.forEach((node: any) => {
+      node.classList.remove('show');
+    });
+
+    (isMenu) ? isMenu.classList.add('show') : null;
+
+    const ul = document.getElementById("navbar-nav");
+    if(ul){
+      const iconItems = Array.from(ul.getElementsByTagName("a"));
+      let activeIconItems = iconItems.filter((x: any) => x.classList.contains("active"));
+      activeIconItems.forEach((item: any) => {
+        item.setAttribute('aria-expanded', "false")
+        item.classList.remove("active");
+      });
+    } 
+    if (isCurrentMenuId) {
+      this.activateParentDropdown(isCurrentMenuId);
+    }
+  }
+
+
+  /**
+   * Returns true or false if given menu item has child or not
+   * @param item menuItem
+   */
+  hasItems(item: MenuItem) {
+    return item.subItems !== undefined ? item.subItems.length > 0 : false;
+  }
+
+  /**
+   * remove active and mm-active class
+   */
+  _removeAllClass(className: any) {
+    const els = document.getElementsByClassName(className);
+    while (els[0]) {
+      els[0].classList.remove(className);
+    }
+  }
+
+}

@@ -1,6 +1,7 @@
 package com.***REMOVED***.***REMOVED***solutions.service.implementation;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.CaseDocumentDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.DocumentDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
 import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
@@ -17,14 +18,18 @@ import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
 import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
 import com.***REMOVED***.***REMOVED***solutions.model.DocumentVersion;
+import com.***REMOVED***.***REMOVED***solutions.model.Client;
 import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
 import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
 import com.***REMOVED***.***REMOVED***solutions.service.UserService;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
+import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
 import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.***REMOVED***.***REMOVED***solutions.util.RoleUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +65,8 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final UserService userService;
     private final DocumentVersionRepository documentVersionRepository;
     private final CaseActivityService caseActivityService;
+    private final RoleService roleService;
+    private final ClientRepository clientRepository;
 
     @Override
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
@@ -125,6 +132,116 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     }
 
     @Override
+    public Page<LegalCaseDTO> getCasesForUser(Long userId, int page, int size) {
+        // Get user to check their role
+        UserDTO user = userService.getUserById(userId);
+        if (user == null) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+        
+        String userRole = user.getRoleName();
+        
+        // Admin users can see all cases
+        if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) || "ROLE_MANAGER".equals(userRole)) {
+            return getAllCases(page, size);
+        }
+        
+        // PARALEGAL: See assigned cases + cases where attorney granted access
+        if ("ROLE_PARALEGAL".equals(userRole)) {
+            // Get case IDs from case role assignments
+            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
+            
+            if (caseRoleAssignments.isEmpty()) {
+                return Page.empty(PageRequest.of(page, size));
+            }
+            
+            // Extract case IDs from active assignments
+            List<Long> caseIds = caseRoleAssignments.stream()
+                .filter(assignment -> assignment.isActive()) // Only active assignments
+                .map(assignment -> assignment.getLegalCase().getId())
+                .distinct()
+                .collect(Collectors.toList());
+                
+            if (caseIds.isEmpty()) {
+                return Page.empty(PageRequest.of(page, size));
+            }
+            
+            // Get cases by IDs with pagination
+            Page<LegalCase> cases = legalCaseRepository.findByIdIn(caseIds, PageRequest.of(page, size));
+            return cases.map(legalCaseDTOMapper::toDTO);
+        }
+        
+        // CLIENT: See only cases where explicitly assigned
+        if ("ROLE_CLIENT".equals(userRole)) {
+            // Get case IDs from case role assignments
+            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
+            
+            if (caseRoleAssignments.isEmpty()) {
+                return Page.empty(PageRequest.of(page, size));
+            }
+            
+            // Extract case IDs from active assignments
+            List<Long> caseIds = caseRoleAssignments.stream()
+                .filter(assignment -> assignment.isActive()) // Only active assignments
+                .map(assignment -> assignment.getLegalCase().getId())
+                .distinct()
+                .collect(Collectors.toList());
+                
+            if (caseIds.isEmpty()) {
+                return Page.empty(PageRequest.of(page, size));
+            }
+            
+            // Get cases by IDs with pagination
+            Page<LegalCase> cases = legalCaseRepository.findByIdIn(caseIds, PageRequest.of(page, size));
+            
+            // Map to DTOs with client-specific filtering
+            return cases.map(legalCase -> {
+                LegalCaseDTO dto = legalCaseDTOMapper.toDTO(legalCase);
+                // Filter sensitive information for clients
+                dto.setHourlyRate(null);
+                dto.setTotalHours(null);
+                dto.setTotalAmount(null);
+                dto.setBillingInfo(null);
+                dto.setJudgeName(null);
+                dto.setCourtroom(null);
+                dto.setDescription(null); // Hide attorney notes
+                return dto;
+            });
+        }
+        
+        // SECRETARY: See case list with limited details
+        if ("ROLE_SECRETARY".equals(userRole)) {
+            Page<LegalCase> allCases = legalCaseRepository.findAll(PageRequest.of(page, size));
+            
+            // Map to DTOs with limited information
+            return allCases.map(legalCase -> {
+                LegalCaseDTO dto = new LegalCaseDTO();
+                // Only basic info for secretary
+                dto.setId(legalCase.getId());
+                dto.setCaseNumber(legalCase.getCaseNumber());
+                dto.setTitle(legalCase.getTitle());
+                dto.setClientName(legalCase.getClientName());
+                dto.setStatus(legalCase.getStatus());
+                dto.setPriority(legalCase.getPriority());
+                dto.setFilingDate(legalCase.getFilingDate());
+                dto.setNextHearing(legalCase.getNextHearing());
+                // Important dates
+                if (legalCase.getFilingDate() != null || legalCase.getNextHearing() != null || legalCase.getTrialDate() != null) {
+                    Map<String, Object> dates = new HashMap<>();
+                    dates.put("filingDate", legalCase.getFilingDate());
+                    dates.put("nextHearing", legalCase.getNextHearing());
+                    dates.put("trialDate", legalCase.getTrialDate());
+                    dto.setImportantDates(dates);
+                }
+                return dto;
+            });
+        }
+        
+        // Default: no access
+        return Page.empty(PageRequest.of(page, size));
+    }
+
+    @Override
     public Page<LegalCaseDTO> searchCasesByTitle(String title, int page, int size) {
         Page<LegalCase> cases = legalCaseRepository.findByTitleContainingIgnoreCase(title, PageRequest.of(page, size));
         return cases.map(legalCaseDTOMapper::toDTO);
@@ -145,6 +262,21 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     @Override
     public Page<LegalCaseDTO> getCasesByType(String type, int page, int size) {
         Page<LegalCase> cases = legalCaseRepository.findByType(type, PageRequest.of(page, size));
+        return cases.map(legalCaseDTOMapper::toDTO);
+    }
+
+    @Override
+    public Page<LegalCaseDTO> getCasesByClientId(Long clientId, int page, int size) {
+        log.info("Getting cases for client ID: {}", clientId);
+        
+        // First, get the client to find their name
+        Client client = clientRepository.findById(clientId)
+            .orElseThrow(() -> new RuntimeException("Client not found with id: " + clientId));
+        
+        // Search cases by client name since LegalCase uses clientName field
+        Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
+            client.getName(), PageRequest.of(page, size));
+        
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
@@ -230,20 +362,46 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             
         log.info("Uploading document for case: {}", caseId);
         
+        // Validate category based on user role
+        String userRole = user.getRoleName();
+        DocumentCategory selectedCategory = null;
+        
+        try {
+            selectedCategory = category != null ? DocumentCategory.valueOf(category) : DocumentCategory.PUBLIC;
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid category: {}. Using PUBLIC instead.", category);
+            selectedCategory = DocumentCategory.PUBLIC;
+        }
+        
+        // Enforce category restrictions based on role
+        if ("ROLE_CLIENT".equals(userRole)) {
+            // Clients can only upload PUBLIC documents
+            if (selectedCategory != DocumentCategory.PUBLIC) {
+                log.warn("Client attempted to upload {} document. Changing to PUBLIC.", selectedCategory);
+                selectedCategory = DocumentCategory.PUBLIC;
+            }
+        } else if ("ROLE_SECRETARY".equals(userRole)) {
+            // Secretaries cannot upload confidential or privileged documents
+            if (selectedCategory == DocumentCategory.CONFIDENTIAL || 
+                selectedCategory == DocumentCategory.ATTORNEY_CLIENT_PRIVILEGE) {
+                log.warn("Secretary attempted to upload {} document. Changing to INTERNAL.", selectedCategory);
+                selectedCategory = DocumentCategory.INTERNAL;
+            }
+        } else if ("ROLE_PARALEGAL".equals(userRole)) {
+            // Paralegals cannot create attorney-client privileged documents
+            if (selectedCategory == DocumentCategory.ATTORNEY_CLIENT_PRIVILEGE) {
+                log.warn("Paralegal attempted to upload ATTORNEY_CLIENT_PRIVILEGE document. Changing to CONFIDENTIAL.", selectedCategory);
+                selectedCategory = DocumentCategory.CONFIDENTIAL;
+            }
+        }
+        // ADMIN and ATTORNEY can upload any category
+        
         try {
             // Create DocumentDTO to pass to the document service
             LegalDocumentDTO documentDTO = new LegalDocumentDTO();
             documentDTO.setTitle(title != null ? title : "Untitled Document");
             documentDTO.setType(type != null ? DocumentType.valueOf(type) : DocumentType.OTHER);
-            
-            // Convert string category to enum safely
-            try {
-                documentDTO.setCategory(category != null ? DocumentCategory.valueOf(category) : DocumentCategory.OTHER);
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid category: {}. Using OTHER instead.", category);
-                documentDTO.setCategory(DocumentCategory.OTHER);
-            }
-            
+            documentDTO.setCategory(selectedCategory);
             documentDTO.setStatus(DocumentStatus.FINAL);
             documentDTO.setCaseId(caseId);
             documentDTO.setDescription(description);
@@ -293,7 +451,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             resultDTO.setId(savedDocument.getId().toString());
             resultDTO.setTitle(savedDocument.getTitle());
             resultDTO.setType(savedDocument.getType().name());
-            resultDTO.setCategory(savedDocument.getCategory() != null ? savedDocument.getCategory().name() : "OTHER");
+            resultDTO.setCategory(savedDocument.getCategory() != null ? savedDocument.getCategory().name() : "PUBLIC");
             resultDTO.setDescription(savedDocument.getDescription());
             resultDTO.setFileName(savedDocument.getFileName());
             resultDTO.setFileUrl(savedDocument.getUrl());
@@ -369,7 +527,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         dto.setId(document.getId().toString());
         dto.setTitle(document.getTitle());
         dto.setType(document.getType().name());
-        dto.setCategory(document.getCategory() != null ? document.getCategory().name() : "OTHER");
+        dto.setCategory(document.getCategory() != null ? document.getCategory().name() : "PUBLIC");
         dto.setFileName(document.getFileName());
         dto.setFileUrl(document.getUrl());
         dto.setDescription(document.getDescription());
@@ -695,5 +853,253 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         
         // Create the activity using the service
         return caseActivityService.createActivity(request);
+    }
+
+    @Override
+    public LegalCaseDTO getCaseForUser(Long id, Long userId, Collection<String> roles) {
+        LegalCase legalCase = legalCaseRepository.findById(id)
+            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
+        
+        // Get user to check their specific role
+        UserDTO user = userService.getUserById(userId);
+        if (user == null) {
+            throw new LegalCaseException("User not found");
+        }
+        
+        // Get ALL user roles, not just the primary one
+        Collection<String> userRoles = roles; // Use the roles collection passed in
+        
+        // Also check user's role names if available
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            // Combine both sources of roles
+            Set<String> allRoles = new HashSet<>(roles);
+            user.getRoles().forEach(role -> allRoles.add(role));
+            userRoles = allRoles;
+        }
+        
+        log.info("Checking case access for user {} with roles: {}", userId, userRoles);
+        
+        // Check if user has administrative/attorney level access
+        // Include hierarchical roles with both ROLE_ prefixed and non-prefixed versions
+        boolean hasFullAccess = userRoles.stream().anyMatch(role -> 
+            "ROLE_ADMIN".equals(role) || 
+            "ROLE_ATTORNEY".equals(role) ||
+            "MANAGING_PARTNER".equals(role) ||
+            "ROLE_MANAGING_PARTNER".equals(role) ||
+            "SENIOR_PARTNER".equals(role) ||
+            "ROLE_SENIOR_PARTNER".equals(role) ||
+            "EQUITY_PARTNER".equals(role) ||
+            "ROLE_EQUITY_PARTNER".equals(role) ||
+            "OF_COUNSEL".equals(role) ||
+            "ROLE_OF_COUNSEL".equals(role) ||
+            "ASSOCIATE".equals(role) ||
+            "ROLE_ASSOCIATE".equals(role) ||
+            "ROLE_MANAGER".equals(role)
+        );
+        
+        // ADMIN/ATTORNEY/PARTNERS: Full access to all case information
+        if (hasFullAccess) {
+            log.info("User {} has full access to case {}", userId, id);
+            return legalCaseDTOMapper.toDTO(legalCase);
+        }
+        
+        // Check for paralegal access
+        boolean isParalegal = userRoles.stream().anyMatch(role -> 
+            "ROLE_PARALEGAL".equals(role) || 
+            "PARALEGAL".equals(role) || 
+            "LEGAL_ASSISTANT".equals(role)
+        );
+        
+        // Check for client access  
+        boolean isClient = userRoles.stream().anyMatch(role -> 
+            "ROLE_CLIENT".equals(role) || 
+            "ROLE_USER".equals(role)
+        );
+        
+        // Check for secretary access
+        boolean isSecretary = userRoles.stream().anyMatch(role -> 
+            "ROLE_SECRETARY".equals(role) || 
+            "LEGAL_SECRETARY".equals(role)
+        );
+        
+        LegalCaseDTO dto = legalCaseDTOMapper.toDTO(legalCase);
+        
+        // PARALEGAL: Edit access to assigned cases
+        if (isParalegal) {
+            // Check if paralegal is assigned to this case
+            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
+            boolean hasAccess = assignments.stream()
+                .anyMatch(a -> a.getLegalCase().getId().equals(id) && a.isActive());
+                
+            if (!hasAccess) {
+                throw new LegalCaseException("You don't have access to this case");
+            }
+            
+            // Paralegals can see most information but not financial details
+            dto.setHourlyRate(null);
+            dto.setTotalHours(null);
+            dto.setTotalAmount(null);
+            dto.setBillingInfo(null);
+            
+            return dto;
+        }
+        
+        // Default: Full access for any authenticated user (as fallback)
+        log.info("User {} with roles {} granted access to case {}", userId, userRoles, id);
+        return dto;
+    }
+
+    @Override
+    public List<CaseDocumentDTO> getCaseDocumentsForUser(Long caseId, Long userId, Collection<String> roles) {
+        List<DocumentDTO> allDocuments = getCaseDocuments(caseId);
+        
+        // Get user to check their specific role
+        UserDTO user = userService.getUserById(userId);
+        if (user == null) {
+            return Collections.emptyList();
+        }
+        
+        String userRole = user.getRoleName();
+        Collection<String> userRoles = roles != null ? roles : Collections.emptyList();
+        
+        // Define document categories
+        Set<String> publicCategories = Set.of("PUBLIC", "FILING", "COURT_ORDER");
+        Set<String> internalCategories = Set.of("INTERNAL", "NOTES", "RESEARCH");
+        Set<String> confidentialCategories = Set.of("CONFIDENTIAL", "FINANCIAL", "STRATEGY");
+        Set<String> privilegedCategories = Set.of("ATTORNEY_CLIENT_PRIVILEGE", "WORK_PRODUCT");
+        
+        // ADMIN/ATTORNEY/PARTNERS: Full access to all documents
+        Set<String> adminRoles = Set.of(
+            "ROLE_ADMIN", "ROLE_ATTORNEY", "ROLE_MANAGING_PARTNER", 
+            "ROLE_SENIOR_PARTNER", "ROLE_EQUITY_PARTNER", "ROLE_OF_COUNSEL",
+            "MANAGING_PARTNER", "SENIOR_PARTNER", "EQUITY_PARTNER", "OF_COUNSEL"
+        );
+        
+        boolean isAdmin = adminRoles.contains(userRole) || 
+                         userRoles.stream().anyMatch(role -> adminRoles.contains(role));
+        
+        if (isAdmin) {
+            log.info("Admin user {} with roles {} accessing all documents for case {}", 
+                    userId, userRoles, caseId);
+            return allDocuments.stream()
+                .map(doc -> {
+                    CaseDocumentDTO dto = new CaseDocumentDTO();
+                    dto.setId(doc.getId());
+                    dto.setTitle(doc.getTitle());
+                    dto.setType(doc.getType());
+                    dto.setCategory(doc.getCategory());
+                    dto.setDescription(doc.getDescription());
+                    dto.setTags(doc.getTags());
+                    dto.setUploadedAt(doc.getUploadedAt());
+                    dto.setUploadedBy(doc.getUploadedBy());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        }
+        
+        // PARALEGAL/MANAGER: Can see all except attorney-client privileged
+        if ("ROLE_PARALEGAL".equals(userRole) || "ROLE_MANAGER".equals(userRole)) {
+            // Check if paralegal is assigned to this case
+            if ("ROLE_PARALEGAL".equals(userRole)) {
+                Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
+                boolean hasAccess = assignments.stream()
+                    .anyMatch(a -> a.getLegalCase().getId().equals(caseId) && a.isActive());
+                    
+                if (!hasAccess) {
+                    return Collections.emptyList();
+                }
+            }
+            
+            return allDocuments.stream()
+                .filter(doc -> {
+                    String category = doc.getCategory() != null ? doc.getCategory().toUpperCase() : "PUBLIC";
+                    // Exclude only attorney-client privileged documents
+                    return !privilegedCategories.contains(category);
+                })
+                .map(doc -> {
+                    CaseDocumentDTO dto = new CaseDocumentDTO();
+                    dto.setId(doc.getId());
+                    dto.setTitle(doc.getTitle());
+                    dto.setType(doc.getType());
+                    dto.setCategory(doc.getCategory());
+                    dto.setDescription(doc.getDescription());
+                    dto.setTags(doc.getTags());
+                    dto.setUploadedAt(doc.getUploadedAt());
+                    dto.setUploadedBy(doc.getUploadedBy());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        }
+        
+        // SECRETARY: Only public and basic documents
+        if ("ROLE_SECRETARY".equals(userRole)) {
+            return allDocuments.stream()
+                .filter(doc -> {
+                    String category = doc.getCategory() != null ? doc.getCategory().toUpperCase() : "PUBLIC";
+                    String type = doc.getType() != null ? doc.getType().toUpperCase() : "";
+                    
+                    // Secretary can only see public documents
+                    boolean isPublic = publicCategories.contains(category) || "PUBLIC".equals(category);
+                    boolean isBasicType = "CONTRACT".equals(type) || "COURT_ORDER".equals(type) || 
+                                        "FILING".equals(type) || "CORRESPONDENCE".equals(type);
+                    
+                    return isPublic || isBasicType;
+                })
+                .map(doc -> {
+                    CaseDocumentDTO dto = new CaseDocumentDTO();
+                    dto.setId(doc.getId());
+                    dto.setTitle(doc.getTitle());
+                    dto.setType(doc.getType());
+                    dto.setUploadedAt(doc.getUploadedAt());
+                    // Limited information for secretary
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        }
+        
+        // Default: No access
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<CaseActivityDTO> getCaseActivitiesForUser(Long caseId, Long userId, Collection<String> roles) {
+        List<CaseActivityDTO> allActivities = getCaseActivities(caseId);
+        
+        // If user is a client, filter activities
+        if (roles.contains("ROLE_CLIENT")) {
+            // Only show client-visible activities
+            Set<String> clientVisibleTypes = Set.of(
+                "CASE_CREATED", 
+                "STATUS_CHANGED", 
+                "HEARING_SCHEDULED",
+                "DOCUMENT_SHARED" // Only documents explicitly shared with client
+            );
+            
+            return allActivities.stream()
+                .filter(activity -> clientVisibleTypes.contains(activity.getActivityType()))
+                .map(activity -> {
+                    // Create a sanitized copy
+                    CaseActivityDTO sanitized = new CaseActivityDTO();
+                    sanitized.setId(activity.getId());
+                    sanitized.setActivityType(activity.getActivityType());
+                    sanitized.setCreatedAt(activity.getCreatedAt());
+                    
+                    // Simplify description for clients
+                    if ("STATUS_CHANGED".equals(activity.getActivityType())) {
+                        sanitized.setDescription("Case status updated");
+                    } else if ("HEARING_SCHEDULED".equals(activity.getActivityType())) {
+                        sanitized.setDescription("Hearing scheduled");
+                    } else {
+                        sanitized.setDescription(activity.getDescription());
+                    }
+                    
+                    // Don't include internal metadata
+                    return sanitized;
+                })
+                .collect(Collectors.toList());
+        }
+        
+        // For staff, return all activities
+        return allActivities;
     }
 } 

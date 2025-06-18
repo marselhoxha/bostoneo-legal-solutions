@@ -1,0 +1,271 @@
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">{{ isEditMode ? 'Edit' : 'New' }} Template</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices/templates']">Templates</a></li>
+          <li class="breadcrumb-item active">{{ isEditMode ? 'Edit' : 'New' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form [formGroup]="templateForm" (ngSubmit)="onSubmit()">
+  <div class="row">
+    <!-- Basic Information -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Template Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Template Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="name" 
+                       placeholder="e.g., Standard Legal Invoice"
+                       [class.is-invalid]="templateForm.get('name')?.invalid && templateForm.get('name')?.touched">
+                <div class="invalid-feedback">
+                  Template name is required (max 100 characters)
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-control" formControlName="description" 
+                       placeholder="Brief description of this template"
+                       [class.is-invalid]="templateForm.get('description')?.invalid && templateForm.get('description')?.touched">
+                <div class="invalid-feedback">
+                  Description must be less than 500 characters
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Tax Rate (%)</label>
+                <input type="number" class="form-control" formControlName="taxRate" 
+                       step="0.01" min="0" max="100">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Payment Terms (days)</label>
+                <input type="number" class="form-control" formControlName="paymentTerms" 
+                       min="0" placeholder="30">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Currency</label>
+                <select class="form-select" formControlName="currencyCode">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CAD">CAD</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="isActive" id="isActive">
+                  <label class="form-check-label" for="isActive">Active</label>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="isDefault" id="isDefault">
+                  <label class="form-check-label" for="isDefault">Default Template</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template Content -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Template Content</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Header Text</label>
+            <textarea class="form-control" formControlName="headerText" rows="2"
+                      placeholder="Text to appear at the top of invoices"></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Footer Text</label>
+            <textarea class="form-control" formControlName="footerText" rows="2"
+                      placeholder="Text to appear at the bottom of invoices"></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Notes Template</label>
+            <textarea class="form-control" formControlName="notesTemplate" rows="3"
+                      placeholder="Default notes for invoices. Use variables like {client_name}, {invoice_number}, etc."></textarea>
+            <small class="text-muted">Available variables: {{ '{' }}client_name{{ '}' }}, {{ '{' }}invoice_number{{ '}' }}, {{ '{' }}issue_date{{ '}' }}, {{ '{' }}due_date{{ '}' }}, {{ '{' }}case_name{{ '}' }}</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Terms and Conditions</label>
+            <textarea class="form-control" formControlName="termsAndConditions" rows="4"
+                      placeholder="Standard terms and conditions"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template Items -->
+      <div class="card">
+        <div class="card-header d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1">Default Line Items</h5>
+          <button type="button" class="btn btn-sm btn-success" (click)="addTemplateItem()">
+            <i class="ri-add-line"></i> Add Item
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 40%">Description</th>
+                  <th style="width: 15%">Default Qty</th>
+                  <th style="width: 15%">Default Price</th>
+                  <th style="width: 15%">Category</th>
+                  <th style="width: 10%">Optional</th>
+                  <th style="width: 5%">Actions</th>
+                </tr>
+              </thead>
+              <tbody formArrayName="templateItems">
+                <tr *ngFor="let item of templateItems.controls; let i = index" [formGroupName]="i">
+                  <td>
+                    <input type="text" class="form-control" formControlName="description" 
+                           placeholder="Item description"
+                           [class.is-invalid]="item.get('description')?.invalid && item.get('description')?.touched">
+                  </td>
+                  <td>
+                    <input type="number" class="form-control" formControlName="defaultQuantity" 
+                           step="0.01" min="0.01">
+                  </td>
+                  <td>
+                    <input type="number" class="form-control" formControlName="defaultUnitPrice" 
+                           step="0.01" min="0">
+                  </td>
+                  <td>
+                    <select class="form-select" formControlName="category">
+                      <option value="">None</option>
+                      <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                    </select>
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="isOptional">
+                    </div>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button type="button" class="btn btn-light" 
+                              (click)="moveItemUp(i)" 
+                              [disabled]="i === 0">
+                        <i class="ri-arrow-up-line"></i>
+                      </button>
+                      <button type="button" class="btn btn-light" 
+                              (click)="moveItemDown(i)"
+                              [disabled]="i === templateItems.length - 1">
+                        <i class="ri-arrow-down-line"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger" (click)="removeTemplateItem(i)">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="templateItems.length === 0">
+                  <td colspan="6" class="text-center text-muted py-3">
+                    No default items. Click "Add Item" to create predefined line items.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Styling Options -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Styling Options</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Logo Position</label>
+            <select class="form-select" formControlName="logoPosition">
+              <option value="top-left">Top Left</option>
+              <option value="top-center">Top Center</option>
+              <option value="top-right">Top Right</option>
+              <option value="none">No Logo</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Primary Color</label>
+            <div class="input-group">
+              <input type="color" class="form-control form-control-color" formControlName="primaryColor">
+              <input type="text" class="form-control" formControlName="primaryColor" readonly>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Secondary Color</label>
+            <div class="input-group">
+              <input type="color" class="form-control form-control-color" formControlName="secondaryColor">
+              <input type="text" class="form-control" formControlName="secondaryColor" readonly>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Font Family</label>
+            <select class="form-select" formControlName="fontFamily">
+              <option value="Inter">Inter</option>
+              <option value="Arial">Arial</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Georgia">Georgia</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card">
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary" [disabled]="templateForm.invalid || (isLoading$ | async)">
+              <span *ngIf="!(isLoading$ | async)">
+                <i class="ri-save-line me-1"></i> {{ isEditMode ? 'Update' : 'Create' }} Template
+              </span>
+              <span *ngIf="isLoading$ | async">
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Saving...
+              </span>
+            </button>
+            <button type="button" class="btn btn-light" (click)="onCancel()">
+              <i class="ri-close-line me-1"></i> Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>

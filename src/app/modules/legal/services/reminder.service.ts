@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { Observable, interval, Subscription } from 'rxjs';
-import { startWith, tap } from 'rxjs/operators';
+import { Observable, interval, Subscription, EMPTY } from 'rxjs';
+import { startWith, tap, catchError, retry, retryWhen, delay, take } from 'rxjs/operators';
 import { CalendarService } from './calendar.service';
 
 @Injectable({
@@ -9,6 +9,7 @@ import { CalendarService } from './calendar.service';
 export class ReminderService implements OnDestroy {
   private checkInterval = 5 * 60 * 1000; // 5 minutes
   private reminderSubscription: Subscription;
+  private isCheckingReminders = false; // Prevent overlapping checks
 
   constructor(private calendarService: CalendarService) {}
 
@@ -23,8 +24,13 @@ export class ReminderService implements OnDestroy {
       .pipe(
         startWith(0),
         tap(() => {
-          console.log('Checking for deadline reminders...');
-          this.checkForReminders();
+          // Only start checking if not already in progress
+          if (!this.isCheckingReminders) {
+            console.log('Checking for deadline reminders...');
+            this.checkForReminders();
+          } else {
+            console.log('Reminder check already in progress, skipping...');
+          }
         })
       )
       .subscribe();
@@ -38,33 +44,68 @@ export class ReminderService implements OnDestroy {
       this.reminderSubscription.unsubscribe();
       console.log('Deadline reminder service stopped.');
     }
+    this.isCheckingReminders = false;
   }
 
   /**
    * Check for upcoming deadline reminders
    */
   private checkForReminders(): void {
-    // Main reminders
-    this.calendarService.generateDeadlineReminders().subscribe({
+    this.isCheckingReminders = true;
+
+    // Main reminders with error handling
+    this.calendarService.generateDeadlineReminders().pipe(
+      catchError(error => {
+        console.error('Error checking for deadline reminders:', error);
+        // Return empty observable to prevent retries
+        return EMPTY;
+      }),
+      retryWhen(errors => 
+        errors.pipe(
+          delay(30000), // Wait 30 seconds before retry
+          take(3) // Only retry 3 times
+        )
+      )
+    ).subscribe({
       next: (results) => {
-        if (results.length > 0) {
+        if (results && results.length > 0) {
           console.log(`Sent ${results.length} deadline reminders.`);
         }
+        this.checkAdditionalRemindersWithErrorHandling();
       },
       error: (error) => {
-        console.error('Error checking for deadline reminders:', error);
+        console.error('Failed to check deadline reminders after retries:', error);
+        this.isCheckingReminders = false;
       }
     });
+  }
 
-    // Additional reminders
-    this.calendarService.checkAdditionalReminders().subscribe({
+  /**
+   * Check additional reminders with proper error handling
+   */
+  private checkAdditionalRemindersWithErrorHandling(): void {
+    this.calendarService.checkAdditionalReminders().pipe(
+      catchError(error => {
+        console.error('Error checking for additional deadline reminders:', error);
+        // Return empty observable to prevent retries
+        return EMPTY;
+      }),
+      retryWhen(errors => 
+        errors.pipe(
+          delay(30000), // Wait 30 seconds before retry
+          take(3) // Only retry 3 times
+        )
+      )
+    ).subscribe({
       next: (results) => {
-        if (results.length > 0) {
+        if (results && results.length > 0) {
           console.log(`Sent ${results.length} additional deadline reminders.`);
         }
+        this.isCheckingReminders = false;
       },
       error: (error) => {
-        console.error('Error checking for additional deadline reminders:', error);
+        console.error('Failed to check additional reminders after retries:', error);
+        this.isCheckingReminders = false;
       }
     });
   }

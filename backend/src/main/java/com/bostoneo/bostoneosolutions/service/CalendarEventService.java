@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 public interface CalendarEventService {
     
@@ -40,4 +41,10 @@ public interface CalendarEventService {
     String generateICalendarData(List<CalendarEventDTO> events);
     
     void processReminderForEvent(Long eventId);
+    
+    // Add method for filtering events by case IDs
+    Page<CalendarEventDTO> getEventsForCases(Set<Long> caseIds, int page, int size);
+    
+    // Add method for role-based event filtering
+    Page<CalendarEventDTO> getEventsForUser(Long userId, int page, int size);
 } 

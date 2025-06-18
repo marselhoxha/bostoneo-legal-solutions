@@ -10,3 +10,39 @@
     opacity: 1;
   }
   
+/* Smooth transitions for loading states */
+.table-responsive {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.pagination .page-link {
+  transition: all 0.2s ease-in-out;
+}
+
+.pagination .page-link.disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Smooth opacity changes */
+.opacity-50 {
+  opacity: 0.5 !important;
+}
+
+/* Prevent content jumping during loading */
+.table-card {
+  min-height: 400px;
+  position: relative;
+}
+
+/* Spinner in pagination button */
+.pagination .spinner-border-sm {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+  

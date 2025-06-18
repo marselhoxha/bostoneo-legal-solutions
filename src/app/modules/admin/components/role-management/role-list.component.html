@@ -1,0 +1,58 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Role Management</h5>
+          <button type="button" class="btn btn-primary" (click)="openRoleForm()">
+            <i class="mdi mdi-plus me-1"></i> Add Role
+          </button>
+        </div>
+        <div class="card-body">
+          <div *ngIf="isLoading" class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          
+          <div *ngIf="!isLoading" class="table-responsive">
+            <table class="table table-centered table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Hierarchy Level</th>
+                  <th>System Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let role of roles">
+                  <td>{{ role.name }}</td>
+                  <td>{{ role.description || 'N/A' }}</td>
+                  <td>{{ role.hierarchyLevel }}</td>
+                  <td>
+                    <span *ngIf="role.isSystemRole" class="badge bg-success">Yes</span>
+                    <span *ngIf="!role.isSystemRole" class="badge bg-secondary">No</span>
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-info me-1" (click)="openRoleForm(role)">
+                      <i class="mdi mdi-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" [disabled]="role.isSystemRole"
+                            (click)="deleteRole(role)">
+                      <i class="mdi mdi-delete"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="roles.length === 0">
+                  <td colspan="5" class="text-center">No roles found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

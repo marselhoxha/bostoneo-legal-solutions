@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, map, throwError, catchError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { LegalCase } from '../interfaces/case.interface';
 import { CaseNote } from '../models/case-note.model';
+import { Key } from 'src/app/enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +16,15 @@ export class LegalCaseService {
 
   constructor(private http: HttpClient) { }
 
+  // Helper method to get auth headers
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem(Key.TOKEN);
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+  }
+
   /**
    * Get all legal cases
    * @param page Page number (optional)
@@ -22,7 +32,9 @@ export class LegalCaseService {
    * @returns Observable of legal cases page
    */
   getAllCases(page = 0, size = 10): Observable<any> {
-    return this.http.get<any>(`${this.legacyCaseApiUrl}/list?page=${page}&size=${size}`);
+    return this.http.get<any>(`${this.legacyCaseApiUrl}/list?page=${page}&size=${size}`, {
+      headers: this.getAuthHeaders()
+    });
   }
 
   /**
@@ -31,7 +43,9 @@ export class LegalCaseService {
    * @returns Observable of legal case
    */
   getCaseById(id: string): Observable<LegalCase> {
-    return this.http.get<any>(`${this.legacyCaseApiUrl}/get/${id}`)
+    return this.http.get<any>(`${this.legacyCaseApiUrl}/get/${id}`, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           if (response && response.data && response.data.case) {
@@ -48,7 +62,9 @@ export class LegalCaseService {
    * @returns Observable of created legal case
    */
   createCase(caseData: any): Observable<LegalCase> {
-    return this.http.post<any>(`${this.legacyCaseApiUrl}/create`, caseData)
+    return this.http.post<any>(`${this.legacyCaseApiUrl}/create`, caseData, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           if (response && response.data && response.data.case) {
@@ -66,7 +82,9 @@ export class LegalCaseService {
    * @returns Observable of updated legal case
    */
   updateCase(id: string, caseData: any): Observable<LegalCase> {
-    return this.http.put<any>(`${this.legacyCaseApiUrl}/update/${id}`, caseData)
+    return this.http.put<any>(`${this.legacyCaseApiUrl}/update/${id}`, caseData, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           if (response && response.data && response.data.case) {
@@ -83,7 +101,33 @@ export class LegalCaseService {
    * @returns Observable of void
    */
   deleteCase(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.legacyCaseApiUrl}/delete/${id}`);
+    return this.http.delete<void>(`${this.legacyCaseApiUrl}/delete/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Get cases by client ID
+   * @param clientId Client ID
+   * @param page Page number (optional)
+   * @param size Page size (optional)
+   * @returns Observable of legal cases for the client
+   */
+  getCasesByClient(clientId: number, page = 0, size = 100): Observable<any> {
+    const params = new HttpParams()
+      .set('clientId', clientId.toString())
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    return this.http.get<any>(`${this.legacyCaseApiUrl}/client/${clientId}`, {
+      headers: this.getAuthHeaders(),
+      params
+    }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error(`Error fetching cases for client ${clientId}:`, error);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
@@ -93,7 +137,9 @@ export class LegalCaseService {
    */
   getCaseNotes(caseId: string | number): Observable<CaseNote[]> {
     console.log(`Fetching notes for case ID: ${caseId} from ${this.caseApiUrl}/${caseId}/notes`);
-    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/notes`)
+    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/notes`, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Raw notes API response:', response);
@@ -133,7 +179,9 @@ export class LegalCaseService {
    * @returns An observable of CaseNote
    */
   getCaseNoteById(caseId: string | number, noteId: string | number): Observable<CaseNote> {
-    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`)
+    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Get note by ID response:', response);
@@ -172,7 +220,9 @@ export class LegalCaseService {
     
     console.log('Sending create note request:', createNoteRequest);
     
-    return this.http.post<any>(`${this.caseApiUrl}/${caseId}/notes`, createNoteRequest)
+    return this.http.post<any>(`${this.caseApiUrl}/${caseId}/notes`, createNoteRequest, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Create note response:', response);
@@ -211,7 +261,9 @@ export class LegalCaseService {
     
     console.log(`Sending update request for note ${noteId}:`, updateNoteRequest);
     
-    return this.http.put<any>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`, updateNoteRequest)
+    return this.http.put<any>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`, updateNoteRequest, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Update note response:', response);
@@ -240,7 +292,9 @@ export class LegalCaseService {
    * @returns An observable of the operation result
    */
   deleteCaseNote(caseId: string | number, noteId: string | number): Observable<void> {
-    return this.http.delete<void>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`);
+    return this.http.delete<void>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`, {
+      headers: this.getAuthHeaders()
+    });
   }
   
   /**
@@ -250,7 +304,9 @@ export class LegalCaseService {
    */
   getCaseActivities(caseId: string | number): Observable<any[]> {
     console.log(`Fetching activities for case ID: ${caseId}`);
-    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/activities`)
+    return this.http.get<any>(`${this.caseApiUrl}/${caseId}/activities`, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Raw activities API response:', response);
@@ -284,7 +340,9 @@ export class LegalCaseService {
    * @returns An observable of the created activity
    */
   createCaseActivity(caseId: string | number, activityData: any): Observable<any> {
-    return this.http.post<any>(`${this.caseApiUrl}/${caseId}/activities`, activityData)
+    return this.http.post<any>(`${this.caseApiUrl}/${caseId}/activities`, activityData, {
+      headers: this.getAuthHeaders()
+    })
       .pipe(
         map(response => {
           console.log('Create activity response:', response);

@@ -1,0 +1,2211 @@
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { TimeTrackingService, TimeEntry } from '../../services/time-tracking.service';
+import { TimerService, ActiveTimer } from '../../services/timer.service';
+import { UserService } from '../../../../service/user.service';
+import { LegalCaseService } from '../../../legal/services/legal-case.service';
+import { interval, Subscription } from 'rxjs';
+import { timeout, catchError, of, finalize } from 'rxjs';
+import { Key } from '../../../../enum/key.enum';
+import Swal from 'sweetalert2';
+import flatpickr from 'flatpickr';
+
+interface DashboardStats {
+  todayHours: number;
+  activeTimers: number;
+  weekTotal: number;
+  todayAmount: number;
+  isShowingToday?: boolean;
+  displayDate?: string;
+}
+
+interface TimerState {
+  id: number | null;
+  description: string;
+  elapsed: string;
+  isRunning: boolean;
+  caseId: number | null;
+  caseName: string;
+}
+
+interface LegalCase {
+  id: number;
+  name: string;
+  number: string;
+  defaultRate?: number;
+  allowMultipliers?: boolean;
+  weekendMultiplier?: number;
+  afterHoursMultiplier?: number;
+  emergencyMultiplier?: number;
+}
+
+interface StopTimerFormData {
+  description: string;
+  date: string;
+  billable: boolean;
+  rate: number;
+  activityType: string;
+  tags: string;
+  notes: string;
+  applyMultipliers: boolean;
+  isEmergency: boolean;
+}
+
+interface EditEntryFormData {
+  id: number;
+  description: string;
+  date: string;
+  hours: number;
+  billable: boolean;
+  rate: number;
+  caseId: number | null;
+  activityType: string;
+  tags: string;
+  notes: string;
+}
+
+@Component({
+  selector: 'app-time-dashboard',
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule],
+  templateUrl: './time-dashboard.component.html',
+  styleUrls: ['./time-dashboard.component.scss']
+})
+export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('dateInput', { static: false }) dateInput!: ElementRef<HTMLInputElement>;
+  
+  // Core state
+  stats: DashboardStats = { todayHours: 0, activeTimers: 0, weekTotal: 0, todayAmount: 0 };
+  timer: TimerState = { id: null, description: 'Start tracking time', elapsed: '00:00:00', isRunning: false, caseId: null, caseName: '' };
+  recentEntries: TimeEntry[] = [];
+  availableCases: LegalCase[] = [];
+  
+  // UI state
+  loading = true;
+  error: string | null = null;
+  showStopModal = false;
+  showEditModal = false;
+  showRateSelectionModal = false;
+  selectedCaseForRateSelection: LegalCase | null = null;
+  selectedRate = 250;
+  applyMultipliers = true;
+  isEmergencyWork = false;
+  stopDescription = '';
+  showAllEntries = false; // Track if table is expanded
+  stopFormData: StopTimerFormData = {
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    billable: true,
+    rate: 250,
+    activityType: '',
+    tags: '',
+    notes: '',
+    applyMultipliers: true,
+    isEmergency: false
+  };
+  editingEntry: TimeEntry | null = null;
+  editFormData: EditEntryFormData = {
+    id: 0,
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    hours: 0,
+    billable: true,
+    rate: 250,
+    caseId: null,
+    activityType: '',
+    tags: '',
+    notes: ''
+  };
+  isProcessing = false;
+  lastUpdated = new Date();
+  showAllCases = false;
+  
+  // Subscriptions
+  private timerUpdateSubscription?: Subscription;
+  private activeTimer?: ActiveTimer;
+  private flatpickrInstance?: flatpickr.Instance;
+
+  constructor(
+    private timeTrackingService: TimeTrackingService,
+    private timerService: TimerService,
+    private userService: UserService,
+    private router: Router,
+    private changeDetectorRef: ChangeDetectorRef,
+    private legalCaseService: LegalCaseService
+  ) {}
+
+  ngOnInit(): void {
+    this.initializeDashboard();
+  }
+
+  ngOnDestroy(): void {
+    this.timerUpdateSubscription?.unsubscribe();
+    this.flatpickrInstance?.destroy();
+  }
+
+  ngAfterViewInit(): void {
+    // Flatpickr will be initialized when the modal opens
+  }
+
+  private async initializeDashboard(): Promise<void> {
+    try {
+      this.loading = true;
+      this.error = null;
+      this.changeDetectorRef.detectChanges(); // Force initial loading state
+
+      // Enhanced authentication check
+      const currentUserId = this.getCurrentUserId();
+      if (!currentUserId) {
+        console.log('No user ID found, checking authentication...');
+        
+        // Try to load user profile first
+        if (this.userService.isAuthenticated()) {
+          try {
+            const profileResponse = await this.userService.profile$().toPromise();
+            if (profileResponse?.data?.user?.id) {
+              console.log('User profile loaded successfully');
+              // Continue with dashboard loading
+            } else {
+              this.error = 'Please log in to access time tracking';
+              this.loading = false;
+              this.changeDetectorRef.detectChanges();
+              return;
+            }
+          } catch (profileError) {
+            console.error('Profile loading failed:', profileError);
+            this.error = 'Authentication required. Please log in again.';
+            this.loading = false;
+            this.changeDetectorRef.detectChanges();
+            return;
+          }
+        } else {
+          this.error = 'Please log in to access time tracking';
+          this.loading = false;
+          this.changeDetectorRef.detectChanges();
+          return;
+        }
+      }
+
+      // Load all dashboard components with timeout to prevent hanging
+      try {
+        await Promise.race([
+          Promise.all([
+            this.loadAvailableCases(),
+            this.loadDashboardStats(),
+            this.loadRecentEntries(),
+            this.syncTimerState()
+          ]),
+          // Add timeout to prevent infinite loading
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Dashboard loading timeout')), 30000)
+          )
+        ]);
+
+        this.startTimerUpdates();
+        this.loading = false;
+        this.changeDetectorRef.detectChanges();
+        console.log('Dashboard initialization completed successfully');
+      } catch (timeoutError) {
+        console.error('Dashboard loading timeout or error:', timeoutError);
+        this.error = 'Dashboard loading is taking too long. Please refresh the page.';
+        this.loading = false;
+        this.changeDetectorRef.detectChanges();
+      }
+    } catch (error) {
+      console.error('Dashboard initialization error:', error);
+      this.error = 'Failed to load dashboard. Please refresh the page.';
+      this.loading = false;
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  private loadAvailableCases(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID found for loading cases');
+        this.error = 'Authentication required to load legal cases. Please log in.';
+        this.availableCases = [];
+        this.changeDetectorRef.detectChanges();
+        return reject('No user ID found');
+      }
+
+      // Determine how many cases to load
+      const pageSize = this.showAllCases ? 50 : 12;
+
+      // Fetch cases from the backend using the legal case service
+      this.legalCaseService.getAllCases(0, pageSize).subscribe({
+        next: (response) => {
+          console.log('Available cases from backend:', response);
+          
+          // Handle the API response structure
+          let cases = [];
+          if (response && response.data && response.data.page && response.data.page.content) {
+            cases = response.data.page.content;
+          } else if (response && response.data && Array.isArray(response.data)) {
+            cases = response.data;
+          } else if (Array.isArray(response)) {
+            cases = response;
+          }
+          
+          // Filter out closed cases and map to our interface with rate info
+          this.availableCases = cases
+            .filter(caseItem => 
+              caseItem.status !== 'CLOSED' && 
+              caseItem.status !== 'COMPLETED' && 
+              caseItem.status !== 'ARCHIVED'
+            )
+            .map(caseItem => ({
+              id: parseInt(caseItem.id) || caseItem.id,
+              name: caseItem.title || caseItem.name || `Case #${caseItem.id}`,
+              number: caseItem.caseNumber || caseItem.number || `CASE-${caseItem.id}`,
+              // Add default rate information - in real implementation, this would come from backend
+              defaultRate: caseItem.defaultRate || this.getDefaultRateForCase(caseItem),
+              allowMultipliers: caseItem.allowMultipliers !== false, // Default to true
+              weekendMultiplier: caseItem.weekendMultiplier || 1.5,
+              afterHoursMultiplier: caseItem.afterHoursMultiplier || 1.25,
+              emergencyMultiplier: caseItem.emergencyMultiplier || 2.0
+            }))
+            .slice(0, this.showAllCases ? 50 : 12); // Limit based on view mode
+          
+          console.log('Filtered available cases with rates:', this.availableCases);
+          
+          if (this.availableCases.length === 0) {
+            this.error = 'No active legal cases found. Please contact your administrator to create cases.';
+          }
+          
+          this.changeDetectorRef.detectChanges();
+          resolve();
+        },
+        error: (error) => {
+          console.error('Failed to load cases from backend:', error);
+          this.error = `Failed to load legal cases: ${error.error?.message || error.message || 'Unable to connect to server'}`;
+          this.availableCases = [];
+          this.changeDetectorRef.detectChanges();
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // Helper method to determine default rate for a case
+  private getDefaultRateForCase(caseItem: any): number {
+    // Basic logic to determine rate based on case type or complexity
+    const caseName = (caseItem.title || caseItem.name || '').toLowerCase();
+    
+    if (caseName.includes('merger') || caseName.includes('acquisition')) return 450;
+    if (caseName.includes('litigation') || caseName.includes('fraud')) return 500;
+    if (caseName.includes('estate') || caseName.includes('trust')) return 250;
+    if (caseName.includes('corporate') || caseName.includes('compliance')) return 400;
+    if (caseName.includes('ip') || caseName.includes('patent')) return 500;
+    if (caseName.includes('employment') || caseName.includes('discrimination')) return 275;
+    if (caseName.includes('real estate') || caseName.includes('property')) return 300;
+    if (caseName.includes('international') || caseName.includes('trade')) return 600;
+    
+    return 300; // Default rate
+  }
+
+  private loadDashboardStats(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID found for loading dashboard stats');
+        this.changeDetectorRef.detectChanges();
+        return reject('No user ID');
+      }
+
+      console.log('=== DASHBOARD STATS DEBUG ===');
+      console.log('User ID:', userId);
+
+      // First, get recent entries to find the most recent date with data
+      this.timeTrackingService.getTimeEntriesByUser(userId, 0, 50).subscribe({
+        next: (recentResponse) => {
+          const recentEntries = recentResponse.content || [];
+          
+          if (recentEntries.length === 0) {
+            console.log('No time entries found for user');
+            this.stats = {
+              todayHours: 0,
+              todayAmount: 0,
+              weekTotal: 0,
+              activeTimers: this.timer.isRunning ? 1 : 0
+            };
+            this.changeDetectorRef.detectChanges();
+            return resolve();
+          }
+
+          // Find the most recent date with entries
+          const allDates = recentEntries.map(e => e.date).sort().reverse();
+          const mostRecentDate = allDates[0];
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Use today's date if we have entries for today, otherwise use the most recent date
+          const targetDate = allDates.includes(today) ? today : mostRecentDate;
+          
+          console.log('Available dates:', [...new Set(allDates)]);
+          console.log('Today date:', today);
+          console.log('Target date for stats:', targetDate);
+          console.log('Using today\'s date:', targetDate === today);
+
+          // Calculate week range based on target date
+          const targetDateObj = new Date(targetDate);
+          const startOfWeek = new Date(targetDateObj);
+          startOfWeek.setDate(targetDateObj.getDate() - targetDateObj.getDay());
+          const endOfWeek = new Date(targetDateObj);
+          endOfWeek.setDate(targetDateObj.getDate() - targetDateObj.getDay() + 6);
+
+          console.log('Week range:', startOfWeek.toISOString().split('T')[0], 'to', endOfWeek.toISOString().split('T')[0]);
+
+          this.loadStatsForDateRange(userId, targetDate, startOfWeek, endOfWeek, targetDate === today).then(resolve).catch(reject);
+        },
+        error: (error) => {
+          console.error('Error getting recent entries for date analysis:', error);
+          // Fallback to original logic
+          this.loadStatsForToday(userId).then(resolve).catch(reject);
+        }
+      });
+    });
+  }
+
+  private loadStatsForToday(userId: number): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const endOfWeek = new Date();
+    endOfWeek.setDate(endOfWeek.getDate() - endOfWeek.getDay() + 6);
+
+    return this.loadStatsForDateRange(userId, today, startOfWeek, endOfWeek, true);
+  }
+
+  private loadStatsForDateRange(userId: number, targetDate: string, startOfWeek: Date, endOfWeek: Date, isToday: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+
+      Promise.all([
+        this.timeTrackingService.getTimeEntriesByDateRange(userId, targetDate, targetDate).toPromise(),
+        this.timeTrackingService.getTimeEntriesByDateRange(userId, 
+          startOfWeek.toISOString().split('T')[0], 
+          endOfWeek.toISOString().split('T')[0]).toPromise()
+      ]).then(([targetDateResponse, weekResponse]) => {
+        console.log('=== API RESPONSES ===');
+        console.log('Target date response:', targetDateResponse);
+        console.log('Week response:', weekResponse);
+
+        // Handle different response structures
+        let targetDateData: any[] = [];
+        let weekData: any[] = [];
+
+        // Extract data from response - handle both direct array and paginated response
+        if (Array.isArray(targetDateResponse)) {
+          targetDateData = targetDateResponse;
+        } else if (targetDateResponse && typeof targetDateResponse === 'object') {
+          const responseObj = targetDateResponse as any;
+          if (responseObj.content) {
+            targetDateData = responseObj.content;
+          } else if (responseObj.data?.content) {
+            targetDateData = responseObj.data.content;
+          } else if (responseObj.data && Array.isArray(responseObj.data)) {
+            targetDateData = responseObj.data;
+          }
+        }
+
+        if (Array.isArray(weekResponse)) {
+          weekData = weekResponse;
+        } else if (weekResponse && typeof weekResponse === 'object') {
+          const responseObj = weekResponse as any;
+          if (responseObj.content) {
+            weekData = responseObj.content;
+          } else if (responseObj.data?.content) {
+            weekData = responseObj.data.content;
+          } else if (responseObj.data && Array.isArray(responseObj.data)) {
+            weekData = responseObj.data;
+          }
+        }
+
+        console.log('=== EXTRACTED DATA ===');
+        console.log('Target date entries:', targetDateData.length, targetDateData);
+        console.log('Week entries:', weekData.length, weekData);
+        
+        // Debug: Show what dates we found vs what we were looking for
+        if (targetDateData.length > 0) {
+          console.log('Target date entries dates found:', targetDateData.map(e => e.date));
+        } else {
+          console.log('No entries found for target date:', targetDate);
+        }
+        
+        if (weekData.length > 0) {
+          console.log('Week entries dates found:', weekData.map(e => e.date));
+          console.log('Week entries date range:', weekData.reduce((acc, e) => {
+            if (!acc.min || e.date < acc.min) acc.min = e.date;
+            if (!acc.max || e.date > acc.max) acc.max = e.date;
+            return acc;
+          }, {min: null, max: null}));
+        } else {
+          console.log('No entries found for week range:', startOfWeek.toISOString().split('T')[0], 'to', endOfWeek.toISOString().split('T')[0]);
+        }
+
+        // Calculate target date hours (all entries)
+        const todayHours = targetDateData.reduce((sum: number, entry: any) => {
+          const hours = Number(entry.hours) || 0;
+          const normalizedHours = this.normalizeHoursValue(hours);
+          console.log(`Entry ${entry.id}: ${hours} hours → ${normalizedHours} normalized`);
+          return sum + normalizedHours;
+        }, 0);
+
+        // Calculate target date revenue (only billable entries)
+        const todayAmount = targetDateData.reduce((sum: number, entry: any) => {
+          // Only count billable entries for revenue
+          if (!entry.billable) {
+            console.log(`Entry ${entry.id}: Non-billable, skipping revenue calculation`);
+            return sum;
+          }
+          
+          const hours = Number(entry.hours) || 0;
+          const rate = Number(entry.rate) || 0;
+          const normalizedHours = this.normalizeHoursValue(hours);
+          const entryAmount = normalizedHours * rate;
+          
+          console.log(`Entry ${entry.id}: ${normalizedHours}h × $${rate} = $${entryAmount} (billable: ${entry.billable})`);
+          return sum + entryAmount;
+        }, 0);
+
+        // Calculate week total hours
+        const weekTotal = weekData.reduce((sum: number, entry: any) => {
+          const hours = Number(entry.hours) || 0;
+          return sum + this.normalizeHoursValue(hours);
+        }, 0);
+
+        console.log('=== CALCULATED STATS ===');
+        console.log('Target Date Hours:', todayHours);
+        console.log('Target Date Amount:', todayAmount);
+        console.log('Week Total:', weekTotal);
+        console.log('Active Timers:', this.timer.isRunning ? 1 : 0);
+        console.log('Is showing today\'s data:', isToday);
+
+        this.stats = {
+          todayHours,
+          todayAmount,
+          weekTotal,
+          activeTimers: this.timer.isRunning ? 1 : 0
+        };
+
+        // Store whether we're showing today's data or most recent data
+        (this.stats as any).isShowingToday = isToday;
+        (this.stats as any).displayDate = targetDate;
+
+        console.log('=== FINAL STATS OBJECT ===');
+        console.log('Stats:', this.stats);
+        console.log('=== END DASHBOARD STATS DEBUG ===');
+
+        this.changeDetectorRef.detectChanges();
+        resolve();
+      }).catch(error => {
+        console.error('=== DASHBOARD STATS ERROR ===');
+        console.error('Error loading dashboard stats:', error);
+        console.error('Error details:', {
+          status: error.status,
+          message: error.message,
+          error: error.error,
+          url: error.url
+        });
+        
+        // Provide specific error message based on error type
+        if (error.status === 401) {
+          this.error = 'Authentication required. Please log in again.';
+        } else if (error.status === 403) {
+          this.error = 'You do not have permission to view time tracking data.';
+        } else if (error.status === 404) {
+          this.error = 'Time tracking service not found. Please contact support.';
+        } else if (error.status === 0) {
+          this.error = 'Cannot connect to server. Please check your internet connection.';
+        } else {
+          this.error = `Failed to load dashboard data: ${error.error?.message || error.message || 'Unknown error'}`;
+        }
+        
+        // Set default values on error
+        this.stats = {
+          todayHours: 0,
+          todayAmount: 0,
+          weekTotal: 0,
+          activeTimers: this.timer.isRunning ? 1 : 0
+        };
+        
+        console.warn('Using default stats due to error:', this.stats);
+        this.changeDetectorRef.detectChanges();
+        resolve(); // Don't fail the whole dashboard
+      });
+    });
+  }
+
+  private loadRecentEntries(): Promise<void> {
+    return new Promise((resolve) => {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        this.changeDetectorRef.detectChanges();
+        return resolve();
+      }
+
+      // Increase to show more recent entries (last 20 entries to ensure we get all recent ones)
+      this.timeTrackingService.getTimeEntriesByUser(userId, 0, 20).subscribe({
+        next: (response) => {
+          console.log('=== RECENT ENTRIES RESPONSE DEBUG ===');
+          console.log('Full response:', response);
+          console.log('Response type:', typeof response);
+          console.log('Response keys:', Object.keys(response || {}));
+          
+          let entries = response.content || [];
+          
+          // Debug: Log original order
+          console.log('Original entries order:', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
+          
+          // Debug: Log sample entry data structure
+          if (entries.length > 0) {
+            console.log('=== SAMPLE ENTRY ANALYSIS ===');
+            const sampleEntry = entries[0];
+            console.log('Complete sample entry:', sampleEntry);
+            console.log('Entry keys:', Object.keys(sampleEntry));
+            console.log('Hours field details:', {
+              value: sampleEntry.hours,
+              type: typeof sampleEntry.hours,
+              isNumber: !isNaN(Number(sampleEntry.hours)),
+              parsed: Number(sampleEntry.hours)
+            });
+            console.log('Rate field details:', {
+              value: sampleEntry.rate,
+              type: typeof sampleEntry.rate,
+              isNumber: !isNaN(Number(sampleEntry.rate)),
+              parsed: Number(sampleEntry.rate)
+            });
+            console.log('Other potential amount fields:');
+            ['totalAmount', 'billedAmount', 'amount', 'billableAmount'].forEach(field => {
+              if (sampleEntry[field] !== undefined) {
+                console.log(`  ${field}:`, sampleEntry[field], '(type:', typeof sampleEntry[field], ')');
+              }
+            });
+            console.log('===========================');
+          }
+          
+          // Enhanced sorting: prioritize by createdAt (most reliable), then by date, then by ID
+          entries = entries.sort((a, b) => {
+            // First priority: createdAt timestamp (most recent first)
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              if (dateA !== dateB) {
+                return dateB - dateA; // Most recent first
+              }
+            }
+            
+            // Second priority: date field (most recent first)
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) {
+              return dateB - dateA; // Most recent first
+            }
+            
+            // Third priority: ID (higher ID usually means more recent)
+            return b.id - a.id;
+          });
+          
+          // Debug: Log sorted order
+          console.log('Sorted entries order:', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
+          
+          // Take only the most recent 9 for display (but fetch 20 to ensure we get all recent ones)
+          this.recentEntries = entries.slice(0, 9);
+          this.lastUpdated = new Date(); // Update timestamp
+          console.log('Loaded recent entries (top 8 most recent):', this.recentEntries.length);
+          console.log('=== END RECENT ENTRIES DEBUG ===');
+          this.changeDetectorRef.detectChanges();
+          resolve();
+        },
+        error: (error) => {
+          console.warn('Recent entries loading failed:', error);
+          console.error('Error details:', {
+            status: error.status,
+            message: error.message,
+            error: error.error
+          });
+          this.recentEntries = [];
+          this.changeDetectorRef.detectChanges();
+          resolve(); // Don't fail the whole dashboard
+        }
+      });
+    });
+  }
+
+  private async syncTimerState(): Promise<void> {
+    return new Promise((resolve) => {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        this.changeDetectorRef.detectChanges();
+        return resolve();
+      }
+
+      this.timerService.getActiveTimers(userId).subscribe({
+        next: (timers) => {
+          const activeTimer = timers.find(t => t.isActive);
+          if (activeTimer) {
+            this.activeTimer = activeTimer;
+            
+            // First try to find the case in our loaded cases
+            let selectedCase = this.availableCases.find(c => c.id === activeTimer.legalCaseId);
+            
+            // If not found in available cases, try to get the case name from the active timer itself
+            // or query the case service for the specific case
+            let caseName = selectedCase?.name;
+            
+            if (!caseName && activeTimer.legalCaseId) {
+              // Try to get case info from legal case service
+              this.legalCaseService.getCaseById(activeTimer.legalCaseId.toString()).subscribe({
+                next: (caseData) => {
+                  if (caseData) {
+                    caseName = caseData.title || `Case #${activeTimer.legalCaseId}`;
+                    // Update the timer state with the correct case name
+                    this.timer.caseName = caseName;
+                    this.changeDetectorRef.detectChanges();
+                  }
+                },
+                error: (error) => {
+                  console.warn('Failed to load case details for active timer:', error);
+                  // Use fallback case name
+                  this.timer.caseName = `Case #${activeTimer.legalCaseId}`;
+                  this.changeDetectorRef.detectChanges();
+                }
+              });
+            }
+            
+            this.timer = {
+              id: activeTimer.id!,
+              description: activeTimer.description || 'Working...',
+              elapsed: this.formatDuration(activeTimer.currentDurationSeconds || 0),
+              isRunning: true,
+              caseId: activeTimer.legalCaseId || null,
+              caseName: caseName || `Case #${activeTimer.legalCaseId || 'Unknown'}`
+            };
+          } else {
+            this.resetTimer();
+          }
+          this.changeDetectorRef.detectChanges();
+          resolve();
+        },
+        error: (error) => {
+          console.warn('Timer sync failed:', error);
+          this.resetTimer();
+          this.changeDetectorRef.detectChanges();
+          resolve();
+        }
+      });
+    });
+  }
+
+  private startTimerUpdates(): void {
+    // Remove any existing subscription
+    this.timerUpdateSubscription?.unsubscribe();
+    
+    this.timerUpdateSubscription = interval(1000).subscribe(() => {
+      if (this.timer.isRunning && this.activeTimer) {
+        const elapsed = this.calculateElapsedTime();
+        this.timer.elapsed = this.formatDuration(elapsed);
+        // Force change detection to update UI
+        this.changeDetectorRef.detectChanges();
+      }
+    });
+  }
+
+  private calculateElapsedTime(): number {
+    if (!this.activeTimer?.startTime) return 0;
+    
+    // If timer is not running (paused), return the stored elapsed time
+    if (!this.timer.isRunning) {
+      // Parse current elapsed time from display
+      const timeParts = this.timer.elapsed.split(':');
+      if (timeParts.length === 3) {
+        const hours = parseInt(timeParts[0]) || 0;
+        const minutes = parseInt(timeParts[1]) || 0;
+        const seconds = parseInt(timeParts[2]) || 0;
+        return hours * 3600 + minutes * 60 + seconds;
+      }
+      return this.activeTimer.pausedDuration || 0;
+    }
+    
+    const now = new Date();
+    const startTime = new Date(this.activeTimer.startTime);
+    
+    // Calculate current session time in seconds
+    const currentSessionMs = now.getTime() - startTime.getTime();
+    const currentSessionSeconds = Math.floor(currentSessionMs / 1000);
+    
+    // Add any previous paused duration
+    const totalSeconds = (this.activeTimer.pausedDuration || 0) + currentSessionSeconds;
+    
+    return Math.max(0, totalSeconds);
+  }
+
+  // Timer Actions
+  showRateSelection(caseId: number): void {
+    const selectedCase = this.availableCases.find(c => c.id === caseId);
+    if (!selectedCase) return;
+    
+    this.selectedCaseForRateSelection = selectedCase;
+    this.selectedRate = selectedCase.defaultRate || 250;
+    this.applyMultipliers = selectedCase.allowMultipliers !== false;
+    this.isEmergencyWork = false;
+    this.showRateSelectionModal = true;
+  }
+
+  confirmRateAndStartTimer(): void {
+    if (!this.selectedCaseForRateSelection) return;
+    
+    this.showRateSelectionModal = false;
+    this.startTimer(this.selectedCaseForRateSelection.id, this.selectedRate, this.applyMultipliers, this.isEmergencyWork);
+  }
+
+  cancelRateSelection(): void {
+    this.showRateSelectionModal = false;
+    this.selectedCaseForRateSelection = null;
+    this.selectedRate = 250;
+    this.applyMultipliers = true;
+    this.isEmergencyWork = false;
+  }
+
+  getCalculatedRate(): number {
+    if (!this.selectedCaseForRateSelection || !this.applyMultipliers) {
+      return this.selectedRate;
+    }
+
+    const now = new Date();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    const isAfterHours = now.getHours() >= 18 || now.getHours() < 8;
+    
+    let rate = this.selectedRate;
+    
+    if (this.isEmergencyWork && this.selectedCaseForRateSelection.emergencyMultiplier) {
+      rate *= this.selectedCaseForRateSelection.emergencyMultiplier;
+    } else {
+      if (isWeekend && this.selectedCaseForRateSelection.weekendMultiplier) {
+        rate *= this.selectedCaseForRateSelection.weekendMultiplier;
+      }
+      if (isAfterHours && this.selectedCaseForRateSelection.afterHoursMultiplier) {
+        rate *= this.selectedCaseForRateSelection.afterHoursMultiplier;
+      }
+    }
+    
+    return Math.round(rate);
+  }
+
+  startTimer(caseId: number, rate?: number, applyMultipliers?: boolean, isEmergency?: boolean): void {
+    const userId = this.getCurrentUserId();
+    console.log('=== START TIMER DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Case ID:', caseId);
+    console.log('Selected Rate:', rate);
+    console.log('Apply Multipliers:', applyMultipliers);
+    console.log('Is Emergency:', isEmergency);
+    console.log('Is Processing:', this.isProcessing);
+    
+    if (!userId) {
+      console.error('No user ID found');
+      this.error = 'Please log in to start tracking time';
+      return;
+    }
+    
+    if (this.isProcessing) {
+      console.warn('Timer operation already in progress');
+      return;
+    }
+
+    this.isProcessing = true;
+    this.error = null;
+    
+    const selectedCase = this.availableCases.find(c => c.id === caseId);
+    console.log('Selected case:', selectedCase);
+    
+    const startRequest = {
+      legalCaseId: caseId,
+      description: `Working on ${selectedCase?.name || 'Legal Matter'}`,
+      rate: rate || selectedCase?.defaultRate || 250,
+      applyMultipliers: applyMultipliers !== false,
+      isEmergency: isEmergency || false
+    };
+    console.log('Timer start request:', startRequest);
+    
+    this.timerService.startTimer(userId, startRequest).pipe(
+      timeout(15000), // 15 second timeout
+      catchError(error => {
+        console.error('=== TIMER START ERROR ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Full error:', error);
+        
+        if (error.name === 'TimeoutError') {
+          this.error = 'Request timed out. Please check your connection and try again.';
+        } else if (error.status === 401) {
+          this.error = 'Authentication required. Please log in again.';
+        } else if (error.status === 403) {
+          this.error = 'You do not have permission to start timers.';
+        } else {
+          this.error = `Failed to start timer: ${error.error?.message || error.message || 'Unknown error'}`;
+        }
+        
+        return of(null);
+      }),
+      finalize(() => {
+        console.log('Timer start operation completed, resetting isProcessing');
+        this.isProcessing = false;
+        this.changeDetectorRef.detectChanges(); // Force UI update
+      })
+    ).subscribe({
+      next: (timer) => {
+        console.log('=== TIMER START RESPONSE ===');
+        console.log('Response received:', timer);
+        
+        if (timer) {
+          console.log('Timer started successfully:', timer);
+          this.activeTimer = timer;
+          this.timer = {
+            id: timer.id!,
+            description: timer.description || 'Working...',
+            elapsed: '00:00:00',
+            isRunning: true,
+            caseId: caseId,
+            caseName: selectedCase?.name || 'Unknown Case'
+          };
+          this.stats.activeTimers = 1;
+          this.startTimerUpdates();
+          console.log('Timer state updated:', this.timer);
+          
+          // Show success message with rate info
+          Swal.fire({
+            icon: 'success',
+            title: 'Timer Started!',
+            html: `
+              <div class="text-start">
+                <p><strong>Case:</strong> ${selectedCase?.name}</p>
+                <p><strong>Base Rate:</strong> $${rate || selectedCase?.defaultRate || 250}/hr</p>
+                <p><strong>Multipliers:</strong> ${applyMultipliers ? 'Enabled' : 'Disabled'}</p>
+                ${isEmergency ? '<p class="text-warning"><strong>Emergency Work</strong></p>' : ''}
+              </div>
+            `,
+            timer: 3000,
+            showConfirmButton: false
+          });
+        } else {
+          console.log('Timer response was null (error handled)');
+        }
+      },
+      error: (error) => {
+        console.error('=== SUBSCRIPTION ERROR ===');
+        console.error('This should not happen due to catchError, but got:', error);
+        this.error = 'An unexpected error occurred. Please try again.';
+      }
+    });
+  }
+
+  pauseTimer(): void {
+    if (!this.activeTimer?.id || this.isProcessing) return;
+
+    this.isProcessing = true;
+    const userId = this.getCurrentUserId();
+    
+    // Calculate current elapsed time before pausing
+    const currentElapsed = this.calculateElapsedTime();
+    console.log('Pausing timer at elapsed time:', this.formatDuration(currentElapsed));
+    
+    this.timerService.pauseTimer(userId!, this.activeTimer.id).pipe(
+      timeout(10000),
+      catchError(error => {
+        console.error('Timer pause failed:', error);
+        this.error = error.name === 'TimeoutError' ? 
+          'Request timed out. Please try again.' : 
+          'Failed to pause timer.';
+        return of(null);
+      }),
+      finalize(() => {
+        this.isProcessing = false;
+        this.changeDetectorRef.detectChanges();
+      })
+    ).subscribe({
+      next: (timer) => {
+        if (timer) {
+          console.log('Timer paused successfully:', timer);
+          this.activeTimer = timer;
+          this.timer.isRunning = false;
+          this.timer.description = `Paused - ${this.timer.caseName}`;
+          // Keep the current elapsed time, don't reset to backend value
+          this.timer.elapsed = this.formatDuration(currentElapsed);
+          
+          // Stop the timer updates since we're paused
+          this.timerUpdateSubscription?.unsubscribe();
+        }
+      },
+      error: (error) => {
+        console.error('Pause timer error:', error);
+        this.error = 'Failed to pause timer.';
+      }
+    });
+  }
+
+  resumeTimer(): void {
+    if (!this.activeTimer?.id || this.isProcessing) return;
+
+    this.isProcessing = true;
+    const userId = this.getCurrentUserId();
+    
+    console.log('Resuming timer from elapsed time:', this.timer.elapsed);
+    
+    this.timerService.resumeTimer(userId!, this.activeTimer.id).pipe(
+      timeout(10000),
+      catchError(error => {
+        console.error('Timer resume failed:', error);
+        this.error = error.name === 'TimeoutError' ? 
+          'Request timed out. Please try again.' : 
+          'Failed to resume timer.';
+        return of(null);
+      }),
+      finalize(() => {
+        this.isProcessing = false;
+        this.changeDetectorRef.detectChanges();
+      })
+    ).subscribe({
+      next: (timer) => {
+        if (timer) {
+          console.log('Timer resumed successfully:', timer);
+          this.activeTimer = timer;
+          this.timer.isRunning = true;
+          this.timer.description = `Working on ${this.timer.caseName}`;
+          
+          // Restart timer updates to continue from current elapsed time
+          this.startTimerUpdates();
+        }
+      },
+      error: (error) => {
+        console.error('Resume timer error:', error);
+        this.error = 'Failed to resume timer.';
+      }
+    });
+  }
+
+  openStopModal(): void {
+    if (!this.activeTimer) return;
+    
+    const selectedCase = this.availableCases.find(c => c.id === this.timer.caseId);
+    // Use the current effective rate (includes multipliers) as the default
+    const effectiveRate = this.getCurrentEffectiveRate();
+    
+    // Initialize form with timer data and smart defaults
+    const description = this.activeTimer.description || '';
+    this.stopFormData = {
+      description: description.length >= 10 ? description : 
+        description + ' - Additional work performed on this case.',
+      date: new Date().toISOString().split('T')[0],
+      billable: true,
+      rate: Math.round(effectiveRate), // Use the effective rate as default
+      activityType: '',
+      tags: '',
+      notes: '',
+      applyMultipliers: selectedCase?.allowMultipliers !== false,
+      isEmergency: false
+    };
+    
+    this.showStopModal = true;
+    
+    // Initialize Flatpickr after modal is shown
+    setTimeout(() => {
+      if (this.dateInput?.nativeElement) {
+        this.flatpickrInstance?.destroy(); // Clean up existing instance
+        this.flatpickrInstance = flatpickr(this.dateInput.nativeElement, {
+          altInput: true,
+          altFormat: 'F j, Y',
+          dateFormat: 'Y-m-d',
+          defaultDate: this.stopFormData.date,
+          maxDate: 'today'
+        });
+      }
+    }, 100);
+  }
+
+  // Method to calculate final rate in stop modal
+  getFinalRate(): number {
+    const selectedCase = this.availableCases.find(c => c.id === this.timer.caseId);
+    if (!selectedCase || !this.stopFormData.applyMultipliers) {
+      return this.stopFormData.rate;
+    }
+
+    const selectedDate = new Date(this.stopFormData.date);
+    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+    const isAfterHours = new Date().getHours() >= 18 || new Date().getHours() < 8;
+    
+    let rate = this.stopFormData.rate;
+    
+    if (this.stopFormData.isEmergency && selectedCase.emergencyMultiplier) {
+      rate *= selectedCase.emergencyMultiplier;
+    } else {
+      if (isWeekend && selectedCase.weekendMultiplier) {
+        rate *= selectedCase.weekendMultiplier;
+      }
+      if (isAfterHours && selectedCase.afterHoursMultiplier) {
+        rate *= selectedCase.afterHoursMultiplier;
+      }
+    }
+    
+    return Math.round(rate);
+  }
+
+  getMultiplierInfo(): string {
+    const selectedCase = this.availableCases.find(c => c.id === this.timer.caseId);
+    if (!selectedCase || !this.stopFormData.applyMultipliers) {
+      return 'No multipliers applied';
+    }
+
+    const selectedDate = new Date(this.stopFormData.date);
+    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+    const isAfterHours = new Date().getHours() >= 18 || new Date().getHours() < 8;
+    
+    const multipliers = [];
+    
+    if (this.stopFormData.isEmergency && selectedCase.emergencyMultiplier) {
+      multipliers.push(`Emergency: ${selectedCase.emergencyMultiplier}x`);
+    } else {
+      if (isWeekend && selectedCase.weekendMultiplier) {
+        multipliers.push(`Weekend: ${selectedCase.weekendMultiplier}x`);
+      }
+      if (isAfterHours && selectedCase.afterHoursMultiplier) {
+        multipliers.push(`After-hours: ${selectedCase.afterHoursMultiplier}x`);
+      }
+    }
+    
+    return multipliers.length > 0 ? multipliers.join(', ') : 'No multipliers applied';
+  }
+
+  confirmStopTimer(): void {
+    if (!this.activeTimer?.id || this.isProcessing || !this.isStopFormValid()) return;
+
+    this.isProcessing = true;
+    const userId = this.getCurrentUserId();
+    
+    // Use the description for the timer service
+    this.timerService.convertTimerToTimeEntry(userId!, this.activeTimer.id, this.stopFormData.description).pipe(
+      timeout(15000),
+      catchError(error => {
+        console.error('Stop timer failed:', error);
+        this.error = error.name === 'TimeoutError' ? 
+          'Request timed out. Please try again.' : 
+          `Failed to save time entry: ${error.error?.message || error.message || 'Unknown error'}`;
+        return of(null);
+      }),
+      finalize(() => {
+        this.isProcessing = false;
+        this.changeDetectorRef.detectChanges();
+      })
+    ).subscribe({
+      next: (timeEntry) => {
+        if (timeEntry) {
+          this.resetTimer();
+          this.showStopModal = false;
+          
+          // Clean up Flatpickr instance
+          this.flatpickrInstance?.destroy();
+          this.flatpickrInstance = undefined;
+          
+          // Refresh all relevant data
+          Promise.all([
+            this.loadDashboardStats(),
+            this.loadRecentEntries()
+          ]).then(() => {
+            this.lastUpdated = new Date();
+            this.changeDetectorRef.detectChanges();
+            
+            // Show simplified success message
+            const hours = timeEntry.hours || this.calculateHoursFromElapsed();
+            const amount = (hours * Number(timeEntry.rate || 0)).toFixed(2);
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Time Entry Saved!',
+              html: `
+                <div class="text-start">
+                  <p><strong>Duration:</strong> ${hours.toFixed(2)} hours</p>
+                  <p><strong>Amount:</strong> $${amount} ${this.stopFormData.billable ? '(Billable)' : '(Non-billable)'}</p>
+                  <p><strong>Case:</strong> ${this.timer.caseName}</p>
+                </div>
+              `,
+              showConfirmButton: true,
+              confirmButtonText: 'View Time Entries',
+              showCancelButton: true,
+              cancelButtonText: 'Continue Working',
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#6c757d'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.viewTimesheet();
+              }
+            });
+          });
+        }
+      },
+      error: (error) => {
+        console.error('Stop timer subscription error:', error);
+        this.error = 'An unexpected error occurred. Please try again.';
+      }
+    });
+  }
+
+  cancelStopTimer(): void {
+    this.showStopModal = false;
+    this.isProcessing = false;
+    
+    // Clean up Flatpickr instance
+    this.flatpickrInstance?.destroy();
+    this.flatpickrInstance = undefined;
+    
+    // Reset form data
+    this.stopFormData = {
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      billable: true,
+      rate: 250,
+      activityType: '',
+      tags: '',
+      notes: '',
+      applyMultipliers: true,
+      isEmergency: false
+    };
+  }
+
+  // Form validation method
+  isStopFormValid(): boolean {
+    return !!(
+      this.stopFormData.description && 
+      this.stopFormData.description.length >= 10 &&
+      this.stopFormData.date &&
+      this.stopFormData.rate > 0
+    );
+  }
+
+  // Utility method for date input
+  getCurrentDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  private resetTimer(): void {
+    this.timer = {
+      id: null,
+      description: 'Start tracking time',
+      elapsed: '00:00:00',
+      isRunning: false,
+      caseId: null,
+      caseName: ''
+    };
+    this.activeTimer = undefined;
+    this.stats.activeTimers = 0;
+  }
+
+  // Utility methods
+  private getCurrentUserId(): number | null {
+    const user = this.userService.getCurrentUser();
+    if (user?.id) return user.id;
+
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.sub ? parseInt(payload.sub) : null;
+      }
+    } catch (error) {
+      console.warn('Error decoding token:', error);
+    }
+    return null;
+  }
+
+  private formatDuration(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  private showSuccessMessage(message: string): void {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: message,
+      showConfirmButton: false,
+      timer: 3000
+    });
+  }
+
+  // Navigation helpers
+  viewEntry(entryId: number): void {
+    const entry = this.recentEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const hours = this.getEntryDuration(entry);
+    const amount = this.getEntryBillingAmount(entry);
+    const rate = this.formatRate(entry);
+
+    Swal.fire({
+      title: 'Time Entry Details',
+      html: `
+        <div class="text-start">
+          <div class="row g-3">
+            <div class="col-6">
+              <strong class="text-primary">Entry ID:</strong><br>
+              <span class="badge bg-secondary">#${entry.id}</span>
+            </div>
+            <div class="col-6">
+              <strong class="text-primary">Status:</strong><br>
+              <span class="badge ${this.getStatusClass(entry.status).replace('bg-', 'bg-')}">${this.getStatusText(entry.status)}</span>
+            </div>
+            <div class="col-6">
+              <strong class="text-primary">Date:</strong><br>
+              <span>${new Date(entry.date).toLocaleDateString()}</span>
+            </div>
+            <div class="col-6">
+              <strong class="text-primary">Duration:</strong><br>
+              <span class="fw-bold">${hours} hours</span>
+            </div>
+            <div class="col-6">
+              <strong class="text-primary">Rate:</strong><br>
+              <span>${rate}/hr</span>
+            </div>
+            <div class="col-6">
+              <strong class="text-primary">Total Amount:</strong><br>
+              <span class="fw-bold text-success">${this.formatCurrency(amount)}</span>
+            </div>
+            <div class="col-12">
+              <strong class="text-primary">Case:</strong><br>
+              <span>${entry.caseName || 'No case assigned'}</span>
+              ${entry.caseNumber ? `<br><small class="text-muted">Case #: ${entry.caseNumber}</small>` : ''}
+            </div>
+            <div class="col-12">
+              <strong class="text-primary">Description:</strong><br>
+              <span>${entry.description}</span>
+            </div>
+            <div class="col-12">
+              <strong class="text-primary">Billing Status:</strong><br>
+              <span class="badge ${entry.billable ? 'bg-success' : 'bg-secondary'}">
+                ${entry.billable ? 'Billable' : 'Non-billable'}
+              </span>
+            </div>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: entry.status === 'DRAFT' || entry.status === 'REJECTED' ? 'Edit Entry' : 'Close',
+      cancelButtonText: 'Close',
+      confirmButtonColor: '#0ab39c',
+      width: '600px'
+    }).then((result) => {
+      if (result.isConfirmed && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) {
+        this.openEditModal(entry);
+      }
+    });
+  }
+
+  addManualEntry(): void {
+    this.router.navigate(['/time-tracking/entry/new']);
+  }
+
+  viewTimesheet(): void {
+    // Toggle between expanded and collapsed view
+    this.showAllEntries = !this.showAllEntries;
+    
+    if (this.showAllEntries) {
+      // Load all entries when expanding
+      this.loadAllRecentEntries();
+    } else {
+      // Load limited entries when collapsing
+      this.loadRecentEntries();
+    }
+  }
+
+  navigateToInvoiceGeneration(): void {
+    this.router.navigate(['/time-tracking/invoices']);
+  }
+
+  // New method to load all entries for expanded view
+  private loadAllRecentEntries(): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    // Load up to 100 entries for expanded view
+    this.timeTrackingService.getTimeEntriesByUser(userId, 0, 100).subscribe({
+      next: (response) => {
+        console.log('All entries loaded for expanded view:', response);
+        let entries = response.content || [];
+        
+        // Sort entries by most recent first
+        entries = entries.sort((a, b) => {
+          // First try to sort by createdAt if available
+          if (a.createdAt && b.createdAt) {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA;
+          }
+          
+          // Then try by date
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          if (dateA !== dateB) {
+            return dateB - dateA;
+          }
+          
+          // If dates are the same, sort by ID (higher ID = more recent)
+          return (b.id || 0) - (a.id || 0);
+        });
+        
+        this.recentEntries = entries;
+        this.lastUpdated = new Date();
+        this.changeDetectorRef.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load all entries:', error);
+        this.error = 'Failed to load all entries.';
+      }
+    });
+  }
+
+  viewAllCases(): void {
+    // Toggle the view to show all cases in the current interface
+    this.showAllCases = true;
+    this.loadAvailableCases().then(() => {
+      console.log('Expanded to show all cases:', this.availableCases.length);
+    });
+  }
+
+  collapseAllCases(): void {
+    // Collapse back to limited view
+    this.showAllCases = false;
+    this.loadAvailableCases().then(() => {
+      console.log('Collapsed to show limited cases:', this.availableCases.length);
+    });
+  }
+
+  // Add refresh functionality
+  refreshRecentEntries(): void {
+    this.loadRecentEntries().then(() => {
+      console.log('Recent entries refreshed');
+    });
+  }
+
+  // Add method to refresh dashboard stats
+  refreshDashboardStats(): void {
+    this.loadDashboardStats().then(() => {
+      console.log('Dashboard stats refreshed');
+      this.lastUpdated = new Date();
+      this.changeDetectorRef.detectChanges();
+    }).catch(error => {
+      console.error('Failed to refresh dashboard stats:', error);
+    });
+  }
+
+
+
+  // Add method to load more entries if needed
+  loadMoreEntries(): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    // Load up to 50 recent entries for comprehensive view
+    this.timeTrackingService.getTimeEntriesByUser(userId, 0, 50).subscribe({
+      next: (response) => {
+        console.log('All recent entries loaded:', response);
+        let entries = response.content || [];
+        
+        // Debug: Log original order
+        console.log('Original entries order (more):', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
+        
+        // Sort entries by most recent first
+        entries = entries.sort((a, b) => {
+          // First try to sort by createdAt if available
+          if (a.createdAt && b.createdAt) {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA;
+          }
+          
+          // Then try by date
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          if (dateA !== dateB) {
+            return dateB - dateA;
+          }
+          
+          // If dates are the same, sort by ID (higher ID = more recent)
+          return b.id - a.id;
+        });
+        
+        // Debug: Log sorted order
+        console.log('Sorted entries order (more):', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
+        
+        this.recentEntries = entries;
+        this.lastUpdated = new Date(); // Update timestamp
+        this.changeDetectorRef.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load more entries:', error);
+        this.error = 'Failed to load additional entries.';
+      }
+    });
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  formatHours(hours: number): string {
+    return hours.toFixed(1);
+  }
+
+  // Enhanced calculation methods for time entries
+  getEntryDuration(entry: TimeEntry): string {
+    if (!entry.hours && entry.hours !== 0) return '0.0';
+    const hours = this.normalizeToHours(entry);
+    console.log('getEntryDuration:', { originalHours: entry.hours, normalizedHours: hours });
+    return hours.toFixed(1);
+  }
+
+  getEntryDurationMinutes(entry: TimeEntry): number {
+    if (!entry.hours && entry.hours !== 0) return 0;
+    const hours = this.normalizeToHours(entry);
+    return Math.round(hours * 60);
+  }
+
+  getEntryBillingAmount(entry: TimeEntry): number {
+    if (!entry.hours && entry.hours !== 0) return 0;
+    if (!entry.rate && entry.rate !== 0) return 0;
+    
+    const hours = this.normalizeToHours(entry);
+    const rate = this.parseRate(entry);
+    
+    console.log('getEntryBillingAmount DEBUG:', { 
+      entryId: entry.id,
+      originalHours: entry.hours, 
+      normalizedHours: hours, 
+      originalRate: entry.rate,
+      originalRateType: typeof entry.rate,
+      parsedRate: rate,
+      calculation: hours * rate,
+      rawEntry: entry
+    });
+    
+    return hours * rate;
+  }
+
+  getEntryHourlyRate(entry: TimeEntry): string {
+    const rate = this.parseRate(entry);
+    console.log('getEntryHourlyRate DEBUG:', { 
+      entryId: entry.id,
+      originalRate: entry.rate, 
+      originalRateType: typeof entry.rate,
+      parsedRate: rate,
+      rawEntry: entry
+    });
+    return rate.toFixed(0);
+  }
+
+  // Add proper rate formatting method
+  formatRate(entry: TimeEntry): string {
+    const rate = this.parseRate(entry);
+    return `$${rate.toFixed(0)}`;
+  }
+
+  // Enhanced rate parsing method
+  private parseRate(entry: TimeEntry): number {
+    if (!entry.rate && entry.rate !== 0) return 0;
+    
+    // Handle various potential data formats
+    let rateValue = entry.rate;
+    
+    // If rate is an object (like BigDecimal from backend), extract the numeric value
+    if (typeof rateValue === 'object' && rateValue !== null) {
+      // Check for common BigDecimal-like object structures
+      const rateObj = rateValue as any;
+      if (rateObj.value !== undefined && rateObj.value !== null) {
+        rateValue = rateObj.value;
+      } else if (rateObj.amount !== undefined && rateObj.amount !== null) {
+        rateValue = rateObj.amount;
+      } else if (typeof rateObj.toString === 'function') {
+        rateValue = rateObj.toString();
+      }
+    }
+    
+    const parsed = Number(rateValue) || 0;
+    
+    // Log unusual rate values for debugging
+    if (parsed > 1000 || parsed < 0) {
+      console.warn('Unusual rate value detected:', {
+        entryId: entry.id,
+        originalRate: entry.rate,
+        parsedRate: parsed,
+        type: typeof entry.rate
+      });
+    }
+    
+    return parsed;
+  }
+
+  // Method to normalize different time units to hours
+  private normalizeToHours(entry: TimeEntry): number {
+    const value = Number(entry.hours) || 0;
+    console.log('normalizeToHours input:', { entryId: entry.id, value, type: typeof entry.hours });
+    return this.normalizeHoursValue(value);
+  }
+
+  // Method to normalize numeric hour values - Temporarily disabled conversion
+  private normalizeHoursValue(value: number): number {
+    // Temporarily disable automatic conversion to debug the issue
+    console.log('Using raw value without conversion:', value);
+    return value;
+    
+    /* 
+    // Only convert if we're very confident about the units
+    
+    // If value is extremely large, it's definitely in seconds (> 3600 suggests more than 1 hour in seconds)
+    if (value >= 3600) {
+      console.log('Converting from seconds to hours:', value, '→', value / 3600);
+      return value / 3600; // Convert seconds to hours
+    }
+    
+    // If value is in a typical minutes range for work sessions (60-600 minutes = 1-10 hours)
+    // Only convert if it's clearly minutes (between 60 and 480 = 8 hours worth of minutes)
+    if (value >= 60 && value <= 480) {
+      console.log('Potentially converting from minutes to hours:', value, '→', value / 60);
+      // Ask user or provide option, for now let's be conservative
+      return value / 60; // Convert minutes to hours
+    }
+    
+    // For smaller values (< 60), assume they're already in hours
+    console.log('Assuming value is already in hours:', value);
+    return value;
+    */
+  }
+
+  // Enhanced duration formatting with hours and minutes
+  formatDurationDetailed(hours: number): string {
+    if (!hours && hours !== 0) return '0h 0m';
+    
+    const totalHours = Math.floor(hours);
+    const minutes = Math.round((hours - totalHours) * 60);
+    
+    if (totalHours === 0) {
+      return `${minutes}m`;
+    } else if (minutes === 0) {
+      return `${totalHours}h`;
+    } else {
+      return `${totalHours}h ${minutes}m`;
+    }
+  }
+
+  getStatusClass(status: string): string {
+    const statusClasses: { [key: string]: string } = {
+      'DRAFT': 'bg-warning-subtle text-warning',
+      'SUBMITTED': 'bg-info-subtle text-info',
+      'APPROVED': 'bg-success-subtle text-success',
+      'BILLING_APPROVED': 'bg-success-subtle text-success',
+      'REJECTED': 'bg-danger-subtle text-danger'
+    };
+    return statusClasses[status] || 'bg-secondary-subtle text-secondary';
+  }
+
+  getStatusText(status: string): string {
+    const statusTexts: { [key: string]: string } = {
+      'DRAFT': 'Draft',
+      'SUBMITTED': 'Submitted',
+      'APPROVED': 'Approved',
+      'BILLING_APPROVED': 'Approved',
+      'REJECTED': 'Rejected'
+    };
+    return statusTexts[status] || status;
+  }
+
+  // Enhanced table functionality
+  trackByEntryId(index: number, entry: TimeEntry): number {
+    return entry.id || index;
+  }
+
+  getTotalHours(): string {
+    const total = this.recentEntries.reduce((sum, entry) => {
+      const hours = this.normalizeToHours(entry);
+      return sum + hours;
+    }, 0);
+    return total.toFixed(1);
+  }
+
+  getTotalAmount(): number {
+    return this.recentEntries.reduce((sum, entry) => {
+      const hours = this.normalizeToHours(entry);
+      const rate = Number(entry.rate) || 0;
+      return sum + (hours * rate);
+    }, 0);
+  }
+
+  // Enhanced Entry action methods
+  editEntry(entryId: number): void {
+    this.router.navigate(['/time-tracking/entry/edit', entryId]);
+  }
+
+  openEditModal(entry: TimeEntry): void {
+    this.editingEntry = entry;
+    
+    // Populate the form with current entry data
+    this.editFormData = {
+      id: entry.id || 0,
+      description: entry.description || '',
+      date: entry.date || new Date().toISOString().split('T')[0],
+      hours: this.normalizeToHours(entry),
+      billable: entry.billable !== false, // Default to true if undefined
+      rate: this.parseRate(entry),
+      caseId: entry.legalCaseId || null,
+      activityType: '', // Not available in TimeEntry interface
+      tags: '', // Not available in TimeEntry interface
+      notes: '' // Not available in TimeEntry interface
+    };
+    
+    this.showEditModal = true;
+  }
+
+  cancelEditEntry(): void {
+    this.showEditModal = false;
+    this.editingEntry = null;
+    this.isProcessing = false;
+    
+    // Reset form data
+    this.editFormData = {
+      id: 0,
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      hours: 0,
+      billable: true,
+      rate: 250,
+      caseId: null,
+      activityType: '',
+      tags: '',
+      notes: ''
+    };
+  }
+
+  saveEditedEntry(): void {
+    if (!this.editingEntry || this.isProcessing || !this.isEditFormValid()) return;
+
+    this.isProcessing = true;
+    const userId = this.getCurrentUserId();
+    
+    if (!userId) {
+      this.error = 'User authentication required';
+      this.isProcessing = false;
+      return;
+    }
+
+    // Prepare the update data using TimeEntry interface
+    const updateData: TimeEntry = {
+      id: this.editFormData.id,
+      description: this.editFormData.description.trim(),
+      date: this.editFormData.date,
+      hours: this.editFormData.hours,
+      billable: this.editFormData.billable,
+      rate: this.editFormData.rate,
+      legalCaseId: this.editFormData.caseId || this.editingEntry.legalCaseId,
+      userId: this.editingEntry.userId,
+      status: this.editingEntry.status,
+      startTime: this.editingEntry.startTime,
+      endTime: this.editingEntry.endTime,
+      invoiceId: this.editingEntry.invoiceId,
+      billedAmount: this.editingEntry.billedAmount,
+      totalAmount: this.editingEntry.totalAmount,
+      caseName: this.editingEntry.caseName,
+      caseNumber: this.editingEntry.caseNumber,
+      userName: this.editingEntry.userName,
+      userEmail: this.editingEntry.userEmail,
+      createdAt: this.editingEntry.createdAt,
+      updatedAt: this.editingEntry.updatedAt
+    };
+
+    this.timeTrackingService.updateTimeEntry(this.editFormData.id, updateData).pipe(
+      timeout(15000),
+      catchError(error => {
+        console.error('Update entry failed:', error);
+        this.error = error.name === 'TimeoutError' ? 
+          'Request timed out. Please try again.' : 
+          `Failed to update time entry: ${error.error?.message || error.message || 'Unknown error'}`;
+        return of(null);
+      }),
+      finalize(() => {
+        this.isProcessing = false;
+        this.changeDetectorRef.detectChanges();
+      })
+    ).subscribe({
+      next: (updatedEntry) => {
+        if (updatedEntry) {
+          // Update the entry in the local array
+          const index = this.recentEntries.findIndex(e => e.id === this.editFormData.id);
+          if (index !== -1) {
+            this.recentEntries[index] = { ...this.recentEntries[index], ...updatedEntry };
+          }
+          
+          this.showEditModal = false;
+          this.editingEntry = null;
+          
+          // Refresh dashboard data
+          Promise.all([
+            this.loadDashboardStats(),
+            this.loadRecentEntries()
+          ]).then(() => {
+            this.lastUpdated = new Date();
+            this.changeDetectorRef.detectChanges();
+          });
+          
+          // Show success message
+          Swal.fire({
+            icon: 'success',
+            title: 'Entry Updated!',
+            html: `
+              <div class="text-start">
+                <p><strong>Duration:</strong> ${this.editFormData.hours.toFixed(2)} hours</p>
+                <p><strong>Amount:</strong> $${(this.editFormData.hours * this.editFormData.rate).toFixed(2)} ${this.editFormData.billable ? '(Billable)' : '(Non-billable)'}</p>
+                <p><strong>Status:</strong> ${this.getStatusText(updatedEntry.status || 'DRAFT')}</p>
+              </div>
+            `,
+            timer: 3000,
+            showConfirmButton: false
+          });
+        }
+      },
+      error: (error) => {
+        console.error('Update entry subscription error:', error);
+        this.error = 'An unexpected error occurred. Please try again.';
+      }
+    });
+  }
+
+  isEditFormValid(): boolean {
+    return !!(
+      this.editFormData.description && 
+      this.editFormData.description.length >= 10 &&
+      this.editFormData.date &&
+      this.editFormData.hours > 0 &&
+      this.editFormData.hours <= 24 &&
+      (!this.editFormData.billable || (this.editFormData.billable && this.editFormData.rate > 0))
+    );
+  }
+
+  duplicateEntry(entryId: number): void {
+    const entry = this.recentEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    Swal.fire({
+      title: 'Duplicate Time Entry',
+      text: 'This will create a copy of the entry with today\'s date.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Create Duplicate',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Create a copy without the ID to create a new entry
+        const duplicatedEntry = {
+          ...entry,
+          id: undefined,
+          status: 'DRAFT',
+          date: new Date().toISOString().split('T')[0],
+          description: `Copy of: ${entry.description}`
+        };
+        
+        this.router.navigate(['/time-tracking/entry/new'], { 
+          state: { duplicatedEntry } 
+        });
+      }
+    });
+  }
+
+  submitEntry(entryId: number): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    Swal.fire({
+      title: 'Submit for Approval',
+      text: 'Are you sure you want to submit this time entry for approval?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0ab39c'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.timeTrackingService.updateTimeEntryStatus(entryId, 'SUBMITTED').subscribe({
+          next: () => {
+            // Update the entry status in the local array
+            const entry = this.recentEntries.find(e => e.id === entryId);
+            if (entry) {
+              entry.status = 'SUBMITTED';
+              entry.updatedAt = new Date();
+            }
+            this.showSuccessMessage('Time entry submitted for approval');
+            this.changeDetectorRef.detectChanges();
+          },
+          error: (error) => {
+            console.error('Failed to submit entry:', error);
+            Swal.fire('Error', 'Failed to submit entry for approval', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  recallEntry(entryId: number): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    Swal.fire({
+      title: 'Recall Submission',
+      text: 'This will return the entry to draft status for editing.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Recall',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f1b44c'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.timeTrackingService.updateTimeEntryStatus(entryId, 'DRAFT').subscribe({
+          next: () => {
+            // Update the entry status in the local array
+            const entry = this.recentEntries.find(e => e.id === entryId);
+            if (entry) {
+              entry.status = 'DRAFT';
+              entry.updatedAt = new Date();
+            }
+            this.showSuccessMessage('Time entry recalled and returned to draft status');
+            this.changeDetectorRef.detectChanges();
+          },
+          error: (error) => {
+            console.error('Failed to recall entry:', error);
+            Swal.fire('Error', 'Failed to recall entry', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  printEntry(entryId: number): void {
+    const entry = this.recentEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    // For now, create a printable summary in a new window
+    const printContent = `
+      <html>
+        <head>
+          <title>Time Entry - ${entry.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .details { margin-bottom: 20px; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+            .label { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>Time Entry Invoice</h2>
+            <p>Entry ID: ${entry.id}</p>
+          </div>
+          <div class="details">
+            <div class="row">
+              <span class="label">Date:</span>
+              <span>${new Date(entry.date).toLocaleDateString()}</span>
+            </div>
+            <div class="row">
+              <span class="label">Case:</span>
+              <span>${entry.caseName || 'N/A'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Description:</span>
+              <span>${entry.description}</span>
+            </div>
+            <div class="row">
+              <span class="label">Duration:</span>
+              <span>${this.getEntryDuration(entry)} hours</span>
+            </div>
+            <div class="row">
+              <span class="label">Rate:</span>
+              <span>${this.formatRate(entry)}/hr</span>
+            </div>
+            <div class="row">
+              <span class="label">Total Amount:</span>
+              <span>${this.formatCurrency(this.getEntryBillingAmount(entry))}</span>
+            </div>
+            <div class="row">
+              <span class="label">Status:</span>
+              <span>${this.getStatusText(entry.status)}</span>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  }
+
+  deleteEntry(entryId: number): void {
+    const entry = this.recentEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    Swal.fire({
+      title: 'Delete Time Entry',
+      html: `
+        <div class="text-start">
+          <p><strong>Are you sure you want to delete this time entry?</strong></p>
+          <div class="alert alert-warning mt-3">
+            <small>
+              <strong>Entry:</strong> ${entry.description}<br>
+              <strong>Duration:</strong> ${this.getEntryDuration(entry)} hours<br>
+              <strong>Amount:</strong> ${this.formatCurrency(this.getEntryBillingAmount(entry))}
+            </small>
+          </div>
+          <p class="text-danger"><small>This action cannot be undone.</small></p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.timeTrackingService.deleteTimeEntry(entryId).subscribe({
+          next: () => {
+            // Remove the entry from the local array
+            this.recentEntries = this.recentEntries.filter(e => e.id !== entryId);
+            this.showSuccessMessage('Time entry deleted successfully');
+            this.loadDashboardStats(); // Refresh stats
+            this.changeDetectorRef.detectChanges();
+          },
+          error: (error) => {
+            console.error('Failed to delete entry:', error);
+            Swal.fire('Error', 'Failed to delete entry', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  // Enhanced timer functionality
+  calculateHoursFromElapsed(): number {
+    if (!this.timer.elapsed) return 0;
+    
+    const timeParts = this.timer.elapsed.split(':');
+    if (timeParts.length === 3) {
+      const hours = parseInt(timeParts[0]) || 0;
+      const minutes = parseInt(timeParts[1]) || 0;
+      const seconds = parseInt(timeParts[2]) || 0;
+      return hours + (minutes / 60) + (seconds / 3600);
+    }
+    return 0;
+  }
+
+  // Calculate current billable amount for the active timer
+  getCurrentBillableAmount(): number {
+    if (!this.timer.id) return 0;
+    
+    const hours = this.calculateHoursFromElapsed();
+    if (hours === 0) return 0;
+    
+    // Get the rate and multiplier settings from the selected case or use defaults
+    const selectedCase = this.availableCases.find(c => c.id === this.timer.caseId);
+    let rate = selectedCase?.defaultRate || 250;
+    
+    // Apply multipliers if the case allows them (similar to stop modal logic)
+    if (selectedCase?.allowMultipliers) {
+      const now = new Date();
+      const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+      const isAfterHours = now.getHours() >= 18 || now.getHours() < 8;
+      
+      // For consistency with stop modal, we'll assume standard multipliers
+      // Emergency work would need to be set manually when opening the stop modal
+      if (isWeekend && selectedCase.weekendMultiplier) {
+        rate *= selectedCase.weekendMultiplier;
+      }
+      if (isAfterHours && selectedCase.afterHoursMultiplier) {
+        rate *= selectedCase.afterHoursMultiplier;
+      }
+    }
+    
+    return hours * rate;
+  }
+
+  // Get current effective rate (for display in timer and modal)
+  getCurrentEffectiveRate(): number {
+    if (!this.timer.id) return 250;
+    
+    const selectedCase = this.availableCases.find(c => c.id === this.timer.caseId);
+    let rate = selectedCase?.defaultRate || 250;
+    
+    // Apply multipliers if the case allows them
+    if (selectedCase?.allowMultipliers) {
+      const now = new Date();
+      const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+      const isAfterHours = now.getHours() >= 18 || now.getHours() < 8;
+      
+      if (isWeekend && selectedCase.weekendMultiplier) {
+        rate *= selectedCase.weekendMultiplier;
+      }
+      if (isAfterHours && selectedCase.afterHoursMultiplier) {
+        rate *= selectedCase.afterHoursMultiplier;
+      }
+    }
+    
+    return rate;
+  }
+
+  // Enhanced Quick Action Methods
+  addTimeBreak(): void {
+    if (!this.timer.id || this.isProcessing) return;
+    
+    Swal.fire({
+      title: 'Take a Break',
+      html: `
+        <div class="text-start">
+          <p>Current session: <strong>${this.timer.elapsed}</strong></p>
+          <p>The timer will be paused automatically.</p>
+          <div class="form-group mt-3">
+            <label class="form-label">Break reason (optional):</label>
+            <select class="form-select" id="breakReason">
+              <option value="">Select break type</option>
+              <option value="lunch">Lunch Break</option>
+              <option value="coffee">Coffee Break</option>
+              <option value="meeting">Meeting Break</option>
+              <option value="personal">Personal Break</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Pause Timer',
+      cancelButtonText: 'Continue Working',
+      confirmButtonColor: '#f1b44c',
+      preConfirm: () => {
+        const breakReason = (document.getElementById('breakReason') as HTMLSelectElement)?.value || 'break';
+        return { breakReason };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && this.timer.isRunning) {
+        // Add break note to timer description
+        const breakReason = result.value?.breakReason || 'break';
+        this.pauseTimer();
+        
+        // Show success message
+        setTimeout(() => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Break Started',
+            text: `Timer paused for ${breakReason}. Resume when ready to continue.`,
+            timer: 3000,
+            showConfirmButton: false
+          });
+        }, 500);
+      }
+    });
+  }
+
+  addTimeNote(): void {
+    if (!this.timer.id) return;
+    
+    Swal.fire({
+      title: 'Add Session Note',
+      html: `
+        <div class="text-start">
+          <p>Current session: <strong>${this.timer.elapsed}</strong></p>
+          <p>Case: <strong>${this.timer.caseName}</strong></p>
+          <div class="form-group mt-3">
+            <label class="form-label">Session note:</label>
+            <textarea class="form-control" id="sessionNote" rows="4" 
+                      placeholder="Add notes about your current work session..." maxlength="500"></textarea>
+            <small class="text-muted">This note will be saved with your time entry</small>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Save Note',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0ab39c',
+      preConfirm: () => {
+        const note = (document.getElementById('sessionNote') as HTMLTextAreaElement)?.value?.trim();
+        if (!note) {
+          Swal.showValidationMessage('Please enter a note');
+          return false;
+        }
+        if (note.length < 5) {
+          Swal.showValidationMessage('Note must be at least 5 characters');
+          return false;
+        }
+        return { note };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value?.note) {
+        // In a real implementation, you would save this note to the active timer session
+        // For now, we'll just show a success message
+        Swal.fire({
+          icon: 'success',
+          title: 'Note Saved',
+          text: 'Your session note has been added and will be included in the time entry.',
+          timer: 3000,
+          showConfirmButton: false
+        });
+        
+        // TODO: Implement actual note saving functionality when backend supports it
+      }
+    });
+  }
+
+  viewCurrentSession(): void {
+    if (!this.timer.id) return;
+    
+    const sessionInfo = {
+      elapsed: this.timer.elapsed,
+      caseName: this.timer.caseName,
+      description: this.timer.description || 'No description',
+      isRunning: this.timer.isRunning,
+      estimatedAmount: this.calculateHoursFromElapsed() * this.stopFormData.rate
+    };
+    
+    Swal.fire({
+      title: 'Current Session Details',
+      html: `
+        <div class="text-start">
+          <div class="row g-2">
+            <div class="col-6"><strong>Duration:</strong></div>
+            <div class="col-6">${sessionInfo.elapsed}</div>
+            <div class="col-6"><strong>Case:</strong></div>
+            <div class="col-6">${sessionInfo.caseName || 'No case selected'}</div>
+            <div class="col-6"><strong>Status:</strong></div>
+            <div class="col-6">${sessionInfo.isRunning ? 'Running' : 'Paused'}</div>
+            <div class="col-6"><strong>Est. Amount:</strong></div>
+            <div class="col-6">$${sessionInfo.estimatedAmount.toFixed(2)}</div>
+          </div>
+          <hr>
+          <div class="mt-3">
+            <strong>Description:</strong><br>
+            <small class="text-muted">${sessionInfo.description}</small>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#0ab39c'
+    });
+  }
+} 

@@ -15,7 +15,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     
     @Query("SELECT e FROM Expense e " +
            "LEFT JOIN FETCH e.vendor " +
-           "LEFT JOIN FETCH e.customer " + 
+           "LEFT JOIN FETCH e.client " + 
            "LEFT JOIN FETCH e.category " +
            "LEFT JOIN FETCH e.invoice " +
            "LEFT JOIN FETCH e.legalCase " +
@@ -25,7 +25,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     
     @Query(value = "SELECT e FROM Expense e " +
            "LEFT JOIN FETCH e.vendor " +
-           "LEFT JOIN FETCH e.customer " + 
+           "LEFT JOIN FETCH e.client " + 
            "LEFT JOIN FETCH e.category " +
            "LEFT JOIN FETCH e.receipt",
            countQuery = "SELECT COUNT(e) FROM Expense e")

@@ -12,11 +12,13 @@ import flatpickr from 'flatpickr';
 import { CaseNotesComponent } from '../case-notes/case-notes.component';
 import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
 import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
+import { CaseTimeEntriesComponent } from '../case-time-entries/case-time-entries.component';
 import { CalendarService } from '../../../services/calendar.service';
 import { CalendarEvent } from '../../../interfaces/calendar-event.interface';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { EventModalComponent } from '../../../components/calendar/event-modal/event-modal.component';
 import Swal from 'sweetalert2';
+import { RbacService } from '../../../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-case-detail',
@@ -30,11 +32,13 @@ import Swal from 'sweetalert2';
     FlatpickrModule,
     CaseNotesComponent,
     CaseDocumentsComponent,
-    CaseTimelineComponent
+    CaseTimelineComponent,
+    CaseTimeEntriesComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit {
   case: LegalCase | null = null;
+  caseId: string | null = null;
   isLoading = false;
   error: string | null = null;
   isEditing = false;
@@ -57,6 +61,13 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   
   private flatpickrInstances: any[] = [];
 
+  // Add role checking properties
+  isClient = false;
+  canViewBilling = false;
+  canViewInternalNotes = false;
+  canViewAllDocuments = false;
+  canViewPrivateActivities = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -65,7 +76,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     private modalService: NgbModal,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private rbacService: RbacService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -104,8 +116,30 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Check user permissions using comprehensive admin role checking
+    const isAdmin = this.rbacService.isAdmin();
+    const isAttorney = this.rbacService.isAttorneyLevel();
+    const isManager = this.rbacService.isManager();
+    
+    // Set role-based permissions based on current user's role
+    const isParalegal = this.rbacService.hasRole('ROLE_PARALEGAL');
+    const isSecretary = this.rbacService.hasRole('ROLE_SECRETARY');
+    
+    // Billing access: ADMIN, ATTORNEY, MANAGER
+    this.canViewBilling = isAdmin || isAttorney || isManager;
+    
+    // Internal notes access: All except CLIENT
+    this.canViewInternalNotes = !this.isClient;
+    
+    // Document access: Different levels based on role
+    this.canViewAllDocuments = !this.isClient;
+    
+    // Timeline/Activities access: All except CLIENT
+    this.canViewPrivateActivities = !this.isClient;
+    
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
+      this.caseId = id; // Store the case ID from route parameter
       this.loadCase(id);
     } else {
       this.error = 'Case ID not provided';
@@ -293,11 +327,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     this.error = null;
     this.cdr.detectChanges();
     
-    // Show loading state to user
-    this.snackBar.open('Loading case details...', '', { 
-      duration: 2000,
-    });
-    
     // Use the service to get real data from the API
     this.caseService.getCaseById(id).subscribe({
       next: (response) => {
@@ -439,11 +468,15 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     }, 5000); // 5 second timeout
     
     this.calendarService.getEventsByCaseId(caseId).subscribe({
-      next: (events) => {
+      next: (response: any) => {
         clearTimeout(loadingTimeout);
         
+        // Handle both direct array and wrapped response
+        let events = Array.isArray(response) ? response : 
+                    (response && response.data && response.data.events) ? response.data.events : [];
+        
         if (!Array.isArray(events)) {
-          console.warn('Events data is not an array:', events);
+          console.warn('Events data is not an array:', response);
           this.caseEvents = [];
           this.isLoadingEvents = false;
           this.cdr.detectChanges();
@@ -452,10 +485,20 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         
         console.log('Received events for case:', events);
         
+        // Filter events based on user role
+        if (this.isClient) {
+          // Clients only see certain event types
+          const clientVisibleEventTypes = ['HEARING', 'APPOINTMENT', 'COURT_DATE', 'CLIENT_MEETING'];
+          events = events.filter((event: any) => 
+            clientVisibleEventTypes.includes(event.eventType) &&
+            event.caseId === Number(caseId)  // Ensure events are only for this case
+          );
+        }
+        
         // Sort events by date (most recent first)
-        this.caseEvents = events.sort((a, b) => {
-          const dateA = new Date(a.start).getTime();
-          const dateB = new Date(b.start).getTime();
+        this.caseEvents = events.sort((a: any, b: any) => {
+          const dateA = new Date(a.start || a.startTime).getTime();
+          const dateB = new Date(b.start || b.startTime).getTime();
           return dateA - dateB;
         });
         
@@ -463,7 +506,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         this.caseEvents = this.caseEvents.filter(event => {
-          const eventDate = new Date(event.start);
+          const eventDate = new Date(event.start || event.startTime);
           return eventDate >= today;
         });
         
@@ -1003,18 +1046,58 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   // Get badge class based on deadline status
   getDeadlineStatusBadgeClass(deadline: CalendarEvent): string {
     const status = this.getDeadlineStatus(deadline);
-    
     switch (status) {
-      case 'Completed':
-        return 'bg-success-subtle text-success';
-      case 'Overdue':
+      case 'OVERDUE':
         return 'bg-danger-subtle text-danger';
-      case 'Approaching':
+      case 'DUE_SOON':
         return 'bg-warning-subtle text-warning';
-      case 'Upcoming':
+      case 'UPCOMING':
         return 'bg-info-subtle text-info';
+      case 'COMPLETED':
+        return 'bg-success-subtle text-success';
       default:
-        return 'bg-light text-dark';
+        return 'bg-secondary-subtle text-secondary';
     }
+  }
+
+  // Method to get initials from a name
+  getInitials(name: string): string {
+    if (!name) return '';
+    return name
+      .split(' ')
+      .map(part => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
+  }
+
+  // Method to duplicate an event
+  duplicateEvent(event: CalendarEvent): void {
+    const modalRef = this.modalService.open(EventModalComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      size: 'lg'
+    });
+
+    // Create a duplicate with modified title and new date
+    const duplicatedEvent = {
+      ...event,
+      id: null, // Remove ID so it gets treated as new
+      title: `${event.title} (Copy)`,
+      start: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to one week later
+      end: event.end ? new Date(new Date(event.end).getTime() + 7 * 24 * 60 * 60 * 1000) : null
+    };
+
+    modalRef.componentInstance.event = duplicatedEvent;
+    modalRef.componentInstance.caseId = this.caseId;
+    modalRef.componentInstance.isEditMode = false;
+
+    modalRef.result.then((result) => {
+      if (result && result.success) {
+        this.loadCaseEvents(this.caseId!);
+        this.snackBar.open('Event duplicated successfully', 'Close', { duration: 3000 });
+      }
+    }).catch(() => {
+      // Modal dismissed
+    });
   }
 }

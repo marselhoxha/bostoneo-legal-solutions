@@ -1,7 +1,9 @@
 package com.***REMOVED***.***REMOVED***solutions.service.implementation;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
+import com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper;
 import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
+import com.***REMOVED***.***REMOVED***solutions.model.Permission;
 import com.***REMOVED***.***REMOVED***solutions.model.Role;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
 import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
@@ -11,13 +13,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import static com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper.fromUser;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository<User> userRepository;
-    private final RoleRepository<Role> roleRoleRepository;
+    private final RoleRepository<Role> roleRepository;
 
     @Override
     public UserDTO createUser(User user) {
@@ -76,7 +80,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUserRole(Long userId, String roleName) {
-        roleRoleRepository.updateUserRole(userId, roleName);
+        roleRepository.updateUserRole(userId, roleName);
     }
 
     @Override
@@ -94,7 +98,23 @@ public class UserServiceImpl implements UserService {
         userRepository.updateImage(user, image);
     }
 
+    /**
+     * Get a list of users with pagination
+     */
+    public Collection<User> getUsers(int page, int pageSize) {
+        return userRepository.list(page, pageSize);
+    }
+
     private UserDTO mapToUserDTO(User user) {
-        return fromUser(user, roleRoleRepository.getRoleByUserId(user.getId()));
+        // Get roles for this user
+        Set<Role> roles = roleRepository.getRolesByUserId(user.getId());
+        
+        // Get permissions for all roles
+        Set<Permission> permissions = new HashSet<>();
+        for (Role role : roles) {
+            permissions.addAll(roleRepository.getPermissionsByRoleId(role.getId()));
+        }
+        
+        return UserDTOMapper.fromUser(user, roles, permissions);
     }
 }

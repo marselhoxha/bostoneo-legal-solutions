@@ -38,7 +38,7 @@ public class CaseCalendarController {
     private final LegalCaseService legalCaseService;
 
     @GetMapping("/events")
-    @PreAuthorize("hasAuthority('READ:CALENDAR') and hasAuthority('READ:CASE')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW') and hasAuthority('CASE:VIEW')")
     public ResponseEntity<HttpResponse> getCaseEvents(@PathVariable Long caseId) {
         log.info("Fetching calendar events for case ID: {}", caseId);
         

@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,7 @@ import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 @RestController
 @RequestMapping("/api/legal/cases/{caseId}/notes")
@@ -35,6 +38,19 @@ public class CaseNoteController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> getNotesByCaseId(@PathVariable("caseId") Long caseId) {
+        // Check if user is a client - clients cannot see case notes
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"))) {
+            return ResponseEntity.status(FORBIDDEN)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Clients do not have access to case notes")
+                            .status(FORBIDDEN)
+                            .statusCode(FORBIDDEN.value())
+                            .build());
+        }
+        
         log.info("Getting notes for case ID: {}", caseId);
         List<CaseNoteDTO> notes = noteService.getNotesByCaseId(caseId);
         
@@ -53,6 +69,19 @@ public class CaseNoteController {
     public ResponseEntity<HttpResponse> getNoteById(
             @PathVariable("caseId") Long caseId,
             @PathVariable("noteId") Long noteId) {
+        // Check if user is a client - clients cannot see case notes
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"))) {
+            return ResponseEntity.status(FORBIDDEN)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Clients do not have access to case notes")
+                            .status(FORBIDDEN)
+                            .statusCode(FORBIDDEN.value())
+                            .build());
+        }
+        
         log.info("Getting note ID: {} for case ID: {}", noteId, caseId);
         CaseNoteDTO note = noteService.getNoteById(caseId, noteId);
         
@@ -67,7 +96,7 @@ public class CaseNoteController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
     public ResponseEntity<HttpResponse> createNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,
@@ -98,7 +127,7 @@ public class CaseNoteController {
     }
 
     @PutMapping("/{noteId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
     public ResponseEntity<HttpResponse> updateNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,
@@ -129,7 +158,7 @@ public class CaseNoteController {
     }
 
     @DeleteMapping("/{noteId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
     public ResponseEntity<HttpResponse> deleteNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,

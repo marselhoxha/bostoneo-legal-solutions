@@ -1,0 +1,354 @@
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">Workflow Details</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices/workflows']">Workflows</a></li>
+          <li class="breadcrumb-item active">{{ workflowRule?.name || 'Details' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="card-title mb-0">{{ workflowRule?.name }}</h5>
+          <div class="d-flex gap-2">
+            <button class="btn btn-light btn-sm" (click)="goBack()">
+              <i class="ri-arrow-left-line me-1"></i> Back
+            </button>
+            <button class="btn btn-info btn-sm" [routerLink]="['/invoices/workflows', workflowRule?.id, 'config']" *ngIf="workflowRule">
+              <i class="ri-settings-3-line me-1"></i> Configure
+            </button>
+            <button class="btn btn-primary btn-sm" (click)="toggleRule()" *ngIf="workflowRule">
+              <i class="ri-toggle-line me-1"></i> 
+              {{ workflowRule.isActive ? 'Deactivate' : 'Activate' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card-body">
+        <!-- Loading State -->
+        <div *ngIf="isLoading$ | async" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Workflow Details -->
+        <div *ngIf="workflowRule && !(isLoading$ | async)">
+          <!-- Tabs -->
+          <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-3" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'details'" 
+                 (click)="switchTab('details')" role="tab">
+                <i class="ri-information-line me-1"></i> Details
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'configuration'" 
+                 (click)="switchTab('configuration')" role="tab">
+                <i class="ri-settings-3-line me-1"></i> Configuration
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'executions'" 
+                 (click)="switchTab('executions')" role="tab">
+                <i class="ri-history-line me-1"></i> Execution History
+              </a>
+            </li>
+          </ul>
+
+          <!-- Details Tab -->
+          <div *ngIf="activeTab === 'details'" class="tab-pane active">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="mb-3">General Information</h6>
+                <table class="table table-borderless">
+                  <tbody>
+                    <tr>
+                      <td class="text-muted" width="40%">Name:</td>
+                      <td><strong>{{ workflowRule.name }}</strong></td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Description:</td>
+                      <td>{{ workflowRule.description || 'No description' }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Status:</td>
+                      <td>
+                        <span class="badge" [ngClass]="workflowRule.isActive ? 'bg-success' : 'bg-secondary'">
+                          {{ workflowRule.isActive ? 'Active' : 'Inactive' }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Created:</td>
+                      <td>{{ workflowRule.createdAt | date:'medium' }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Last Updated:</td>
+                      <td>{{ workflowRule.updatedAt | date:'medium' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="mb-3">Workflow Settings</h6>
+                <table class="table table-borderless">
+                  <tbody>
+                    <tr>
+                      <td class="text-muted" width="40%">Trigger:</td>
+                      <td>
+                        <span class="badge bg-info-subtle text-info">
+                          {{ getTriggerDescription() }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Action:</td>
+                      <td>
+                        <span class="badge bg-primary-subtle text-primary">
+                          {{ getActionDescription() }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="workflowRule.executionTime">
+                      <td class="text-muted">Execution Time:</td>
+                      <td>{{ workflowRule.executionTime }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted">Max Executions:</td>
+                      <td>{{ workflowRule.maxExecutions || 'Unlimited' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration Tab -->
+          <div *ngIf="activeTab === 'configuration'" class="tab-pane active">
+            <h6 class="mb-3">Action Configuration</h6>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th width="30%">Configuration Key</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngIf="hasConfigData()">
+                    <tr *ngFor="let key of getConfigKeys()">
+                      <td><code>{{ key }}</code></td>
+                      <td>
+                        <pre class="mb-0" *ngIf="isObjectValue(key)">{{ formatConfigValue(getConfigValue(key)) }}</pre>
+                        <span *ngIf="!isObjectValue(key)">{{ formatConfigValue(getConfigValue(key)) }}</span>
+                      </td>
+                    </tr>
+                  </ng-container>
+                  <tr *ngIf="!hasConfigData()">
+                    <td colspan="2" class="text-center text-muted">No configuration data</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-4" *ngIf="workflowRule?.triggerEvent === 'SCHEDULED'">
+              <h6 class="mb-3">Schedule Configuration</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <p *ngIf="workflowRule?.daysBeforeDue">
+                    <i class="ri-calendar-line me-2"></i>
+                    Triggers <strong>{{ workflowRule.daysBeforeDue }} days</strong> before invoice due date
+                  </p>
+                  <p *ngIf="workflowRule?.daysAfterDue">
+                    <i class="ri-calendar-line me-2"></i>
+                    Triggers <strong>{{ workflowRule.daysAfterDue }} days</strong> after invoice due date
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Execution History Tab -->
+          <div *ngIf="activeTab === 'executions'" class="tab-pane active">
+            <!-- Summary Stats -->
+            <div class="row mb-4" *ngIf="executions.length > 0">
+              <div class="col-md-3">
+                <div class="card border-success">
+                  <div class="card-body">
+                    <h5 class="card-title text-success mb-2">Successful</h5>
+                    <h3 class="mb-0">{{ getExecutionCount('SUCCESS') }}</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-danger">
+                  <div class="card-body">
+                    <h5 class="card-title text-danger mb-2">Failed</h5>
+                    <h3 class="mb-0">{{ getExecutionCount('FAILED') }}</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-warning">
+                  <div class="card-body">
+                    <h5 class="card-title text-warning mb-2">Skipped</h5>
+                    <h3 class="mb-0">{{ getExecutionCount('SKIPPED') }}</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-primary">
+                  <div class="card-body">
+                    <h5 class="card-title text-primary mb-2">Total</h5>
+                    <h3 class="mb-0">{{ executions.length }}</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Execution History Table -->
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Execution Time</th>
+                    <th>Invoice</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Result</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let execution of executions">
+                    <td>
+                      <i class="ri-time-line text-muted me-1"></i>
+                      {{ execution.executedAt | date:'short' }}
+                    </td>
+                    <td>
+                      <a [routerLink]="['/invoices', execution.invoiceId]" class="text-primary">
+                        #{{ execution.invoiceId }}
+                      </a>
+                    </td>
+                    <td>
+                      <span class="text-muted">{{ execution.invoice?.clientName || 'N/A' }}</span>
+                    </td>
+                    <td>
+                      <span class="badge" 
+                            [ngClass]="{
+                              'bg-success-subtle text-success': execution.status === 'SUCCESS',
+                              'bg-danger-subtle text-danger': execution.status === 'FAILED',
+                              'bg-warning-subtle text-warning': execution.status === 'SKIPPED'
+                            }">
+                        <i [class]="getStatusIcon(execution.status)" class="me-1"></i>
+                        {{ execution.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="text-muted" [title]="execution.resultMessage || ''">
+                        {{ (execution.resultMessage || 'No details') | slice:0:50 }}
+                        <span *ngIf="execution.resultMessage && execution.resultMessage.length > 50">...</span>
+                      </span>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-light" 
+                              [title]="'View full details'"
+                              (click)="showExecutionDetails(execution)">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="executions.length === 0">
+                    <td colspan="6" class="text-center py-4">
+                      <i class="ri-inbox-line display-4 text-muted d-block mb-2"></i>
+                      <span class="text-muted">No execution history available for this workflow</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Pagination could be added here if needed -->
+            <div class="mt-3" *ngIf="executions.length > 20">
+              <nav>
+                <ul class="pagination justify-content-center">
+                  <li class="page-item disabled">
+                    <a class="page-link">Previous</a>
+                  </li>
+                  <li class="page-item active">
+                    <a class="page-link">1</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link">Next</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Workflow Examples Card -->
+<div class="row" *ngIf="workflowRule">
+  <div class="col-lg-12">
+    <div class="card border card-border-info">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="ri-lightbulb-line align-middle me-1"></i> How This Workflow Works
+        </h6>
+      </div>
+      <div class="card-body">
+        <div [ngSwitch]="workflowRule?.actionType">
+          <div *ngSwitchCase="'SEND_EMAIL'">
+            <p class="mb-2">This workflow sends automated emails:</p>
+            <ul>
+              <li>Template: <code>{{ getConfigValue('email_template') }}</code></li>
+              <li>Send to client: {{ formatConfigValue(getConfigValue('send_to_client')) }}</li>
+              <li>Attach PDF: {{ formatConfigValue(getConfigValue('attach_pdf')) }}</li>
+              <li *ngIf="getConfigValue('cc_accounting')">CC to accounting: Yes</li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'UPDATE_STATUS'">
+            <p class="mb-2">This workflow automatically updates invoice status:</p>
+            <ul>
+              <li>New status: <strong>{{ getConfigValue('new_status') }}</strong></li>
+              <li *ngIf="getConfigValue('condition_status')">
+                Only for invoices with status: {{ formatConfigValue(getConfigValue('condition_status')) }}
+              </li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'APPLY_LATE_FEE'">
+            <p class="mb-2">This workflow applies late fees to overdue invoices:</p>
+            <ul>
+              <li>Fee percentage: <strong>{{ getConfigValue('fee_percentage') }}%</strong></li>
+              <li>Maximum fee: <strong>${{ getConfigValue('max_fee_amount') }}</strong></li>
+              <li>Fee description: {{ getConfigValue('fee_description') }}</li>
+            </ul>
+          </div>
+          
+          <div *ngSwitchCase="'CREATE_REMINDER'">
+            <p>This workflow creates reminders for invoice follow-ups.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

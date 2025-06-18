@@ -17,7 +17,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 @AllArgsConstructor
 //@JsonInclude(NON_DEFAULT)
 public class Stats {
-    private int totalCustomers;
+    private int totalClients;
     private int totalInvoices;
     private double totalBilled;
 }

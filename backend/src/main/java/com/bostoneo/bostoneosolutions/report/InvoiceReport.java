@@ -1,7 +1,7 @@
 package com.***REMOVED***.***REMOVED***solutions.report;
 
 import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.Customer;
+import com.***REMOVED***.***REMOVED***solutions.model.Client;
 import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
@@ -24,7 +24,7 @@ public class InvoiceReport {
     private XSSFWorkbook workbook;
     private XSSFSheet sheet;
     private List<Invoice> invoices;
-    private static String[] HEADERS = { "ID", "Date", "Invoice Number", "Services", "Status", "Total", "Customer ID"};
+    private static String[] HEADERS = { "ID", "Date", "Invoice Number", "Services", "Status", "Total", "Client ID"};
 
 
    public InvoiceReport(List<Invoice> invoices) {
@@ -63,12 +63,12 @@ public class InvoiceReport {
             for(Invoice invoice: invoices) {
                 Row row = sheet.createRow(rowIndex++);
                 row.createCell(0).setCellValue(invoice.getId());
-                row.createCell(1).setCellValue(format(invoice.getDate(), DATE_FORMATTER));
+                row.createCell(1).setCellValue(invoice.getIssueDate().toString());
                 row.createCell(2).setCellValue(invoice.getInvoiceNumber());
-                row.createCell(3).setCellValue(invoice.getServices());
-                row.createCell(4).setCellValue(invoice.getStatus());
-                row.createCell(5).setCellValue(invoice.getTotal());
-                row.createCell(6).setCellValue(invoice.getCustomer().getId());
+                row.createCell(3).setCellValue(invoice.getClientName());
+                row.createCell(4).setCellValue(invoice.getStatus().toString());
+                row.createCell(5).setCellValue(invoice.getTotalAmount().doubleValue());
+                row.createCell(6).setCellValue(invoice.getClientId());
 
             }
             workbook.write(out);

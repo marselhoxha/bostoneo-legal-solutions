@@ -3,13 +3,13 @@ package com.***REMOVED***.***REMOVED***solutions.mapper;
 import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseDTO;
 import com.***REMOVED***.***REMOVED***solutions.model.Expense;
 import com.***REMOVED***.***REMOVED***solutions.model.ExpenseCategory;
-import com.***REMOVED***.***REMOVED***solutions.model.Customer;
+import com.***REMOVED***.***REMOVED***solutions.model.Client;
 import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
 import com.***REMOVED***.***REMOVED***solutions.model.Vendor;
 import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
 import com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.CustomerRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository;
@@ -24,7 +24,7 @@ import java.util.Date;
 @Component
 public class ExpenseMapper {
     private final ExpenseCategoryRepository categoryRepository;
-    private final CustomerRepository customerRepository;
+    private final ClientRepository clientRepository;
     private final VendorRepository vendorRepository;
     private final InvoiceRepository invoiceRepository;
     private final LegalCaseRepository legalCaseRepository;
@@ -32,13 +32,13 @@ public class ExpenseMapper {
 
     public ExpenseMapper(
             ExpenseCategoryRepository categoryRepository,
-            CustomerRepository customerRepository,
+            ClientRepository clientRepository,
             VendorRepository vendorRepository,
             InvoiceRepository invoiceRepository,
             LegalCaseRepository legalCaseRepository,
             ReceiptRepository receiptRepository) {
         this.categoryRepository = categoryRepository;
-        this.customerRepository = customerRepository;
+        this.clientRepository = clientRepository;
         this.vendorRepository = vendorRepository;
         this.invoiceRepository = invoiceRepository;
         this.legalCaseRepository = legalCaseRepository;
@@ -70,10 +70,10 @@ public class ExpenseMapper {
             dto.setVendorId(expense.getVendor().getId());
         }
         
-        // Handle customer
-        if (expense.getCustomer() != null) {
-            dto.setCustomerId(expense.getCustomer().getId());
-            dto.setCustomerName(expense.getCustomer().getName());
+        // Handle client
+        if (expense.getClient() != null) {
+            dto.setClientId(expense.getClient().getId());
+            dto.setClientName(expense.getClient().getName());
         }
         
         // Handle invoice
@@ -123,9 +123,9 @@ public class ExpenseMapper {
             vendorRepository.findById(dto.getVendorId())
                 .ifPresent(expense::setVendor);
         }
-        if (dto.getCustomerId() != null) {
-            customerRepository.findById(dto.getCustomerId())
-                .ifPresent(expense::setCustomer);
+        if (dto.getClientId() != null) {
+            clientRepository.findById(dto.getClientId())
+                .ifPresent(expense::setClient);
         }
         if (dto.getInvoiceId() != null) {
             invoiceRepository.findById(dto.getInvoiceId())

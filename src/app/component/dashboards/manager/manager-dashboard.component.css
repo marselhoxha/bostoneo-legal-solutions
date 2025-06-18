@@ -1,0 +1,32 @@
+/* Manager Dashboard Styles */
+.card-animate {
+  transition: all 0.3s ease;
+}
+
+.card-animate:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.ff-secondary {
+  font-family: inherit;
+}
+
+.bg-white-subtle {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.display-4 {
+  font-size: 2.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .d-flex.flex-wrap {
+    flex-direction: column;
+  }
+  
+  .badge {
+    align-self: flex-start;
+  }
+} 

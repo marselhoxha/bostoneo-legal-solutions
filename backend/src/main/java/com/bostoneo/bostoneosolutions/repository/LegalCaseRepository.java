@@ -22,4 +22,6 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
     List<LegalCase> findByStatus(CaseStatus status);
     
     Page<LegalCase> findByType(String type, Pageable pageable);
+    
+    Page<LegalCase> findByIdIn(List<Long> ids, Pageable pageable);
 } 

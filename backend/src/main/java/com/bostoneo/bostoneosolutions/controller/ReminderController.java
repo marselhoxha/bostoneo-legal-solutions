@@ -32,13 +32,13 @@ public class ReminderController {
     private CalendarEventRepository calendarEventRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<List<ReminderQueueItem>> getAllReminders() {
         return ResponseEntity.ok(reminderQueueRepository.findAll());
     }
     
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<List<ReminderQueueItem>> getPendingReminders() {
         return ResponseEntity.ok(reminderQueueService.getPendingReminders());
     }
@@ -103,7 +103,7 @@ public class ReminderController {
     }
     
     @PostMapping("/process")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<?> processReminderQueue() {
         try {
             reminderQueueService.processReminderQueue();

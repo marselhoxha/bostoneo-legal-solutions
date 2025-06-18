@@ -1,20 +1,32 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthenticationGuard } from '@app/guard/authentication.guard';
+import { PermissionGuard } from '@app/guard/permission.guard';
 
 const routes: Routes = [
   {
     path: 'cases',
-    loadChildren: () => import('@app/modules/legal/components/case/case.module').then(m => m.CaseModule)
+    loadChildren: () => import('@app/modules/legal/components/case/case.module').then(m => m.CaseModule),
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'CASE', action: 'VIEW' }
+    }
   },
   {
     path: 'documents',
-    loadChildren: () => import('@app/modules/legal/components/document/document.module').then(m => m.DocumentModule)
+    loadChildren: () => import('@app/modules/legal/components/document/document.module').then(m => m.DocumentModule),
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'DOCUMENT', action: 'VIEW' }
+    }
   },
   {
     path: 'calendar',
     loadChildren: () => import('@app/modules/legal/components/calendar/calendar.module').then(m => m.CalendarModule),
-    canActivate: [AuthenticationGuard]
+    canActivate: [AuthenticationGuard, PermissionGuard],
+    data: {
+      permission: { resource: 'CALENDAR', action: 'VIEW' }
+    }
   }
 ];
 

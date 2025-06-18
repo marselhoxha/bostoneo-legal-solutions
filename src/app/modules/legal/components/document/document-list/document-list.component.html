@@ -516,15 +516,128 @@
         
         <!-- Version history content -->
         <div *ngIf="documentForVersionHistory?.versions" class="timeline-2">
-          <!-- All versions -->
-          <div *ngIf="documentForVersionHistory.versions?.length > 0">
+          <!-- Current version -->
+          <div class="timeline-item">
+            <div class="version-detail">
+              <div class="version-heading">
+                <h6>Current Version</h6>
+                <span class="version-label version-current ms-2">Latest</span>
+              </div>
+              
+              <div class="document-info mt-2 mb-2">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">File name:</span>
+                      <span class="meta-value">{{ getVersionFileName(documentForVersionHistory) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">Size:</span>
+                      <span class="meta-value">{{ formatFileSize(getVersionFileSize(documentForVersionHistory)) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">Uploaded by:</span>
+                      <span class="meta-value">{{ getVersionUserDisplayName(documentForVersionHistory) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">Uploaded on:</span>
+                      <span class="meta-value">{{ getVersionDate(documentForVersionHistory) | date:'MMM d, yyyy, h:mm a' }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12" *ngIf="hasVersionChanges(documentForVersionHistory)">
+                    <div class="document-meta">
+                      <span class="meta-label">Description:</span>
+                      <span class="meta-value">{{ getVersionChanges(documentForVersionHistory) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="d-flex align-items-center justify-content-between mt-2">
+                <div>
+                  <button type="button" class="btn btn-sm btn-soft-primary me-2" (click)="previewDocument(documentForVersionHistory); versionHistoryModalInstance?.hide()">
+                    <i class="ri-eye-line me-1"></i> Preview
+                  </button>
+                  <button type="button" class="btn btn-sm btn-soft-primary" (click)="downloadDocument(documentForVersionHistory.id)">
+                    <i class="ri-download-2-line me-1"></i> Download
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Current version -->
+          <div class="timeline-item">
+            <div class="version-detail">
+              <div class="version-heading">
+                <h6>Current Version</h6>
+                <span class="version-label version-current ms-2">Latest</span>
+              </div>
+              
+              <div class="document-info mt-2 mb-2">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">File name:</span>
+                      <span class="meta-value">{{ getVersionFileName(documentForVersionHistory) || 'Unknown' }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="document-meta">
+                      <span class="meta-label">Size:</span>
+                      <span class="meta-value">{{ formatFileSize(getVersionFileSize(documentForVersionHistory)) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="document-meta">
+                      <span class="meta-label">Uploaded by:</span>
+                      <span class="meta-value">{{ getVersionUserDisplayName(documentForVersionHistory) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="document-meta">
+                      <span class="meta-label">Date:</span>
+                      <span class="meta-value">{{ getVersionDate(documentForVersionHistory) | date:'medium' }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12" *ngIf="hasVersionChanges(documentForVersionHistory)">
+                    <div class="version-changes">
+                      <div class="version-changes-header">
+                        <span class="meta-label">Changes:</span>
+                      </div>
+                      <div class="version-changes-content">
+                        {{ getVersionChanges(documentForVersionHistory) }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <div class="d-flex">
+                      <button type="button" class="btn btn-sm btn-secondary me-2" (click)="previewDocument(documentForVersionHistory); versionHistoryModalInstance?.hide()">
+                        <i class="ri-eye-line me-1"></i> Preview
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="downloadDocument(documentForVersionHistory.id)">
+                        <i class="ri-download-line me-1"></i> Download
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Previous versions -->
+          <div *ngIf="documentForVersionHistory.versions.length > 0">
             <div class="timeline-item" *ngFor="let version of documentForVersionHistory.versions; let i = index">
               <div class="version-detail">
                 <div class="version-heading">
                   <h6>Version {{ documentForVersionHistory.versions.length - i }}</h6>
-                  <span class="version-label ms-2" [ngClass]="{'version-current': i === 0}">
-                    {{ i === 0 ? 'Current' : 'Previous' }}
-                  </span>
+                  <span class="version-label ms-2">Previous</span>
                 </div>
                 
                 <div class="document-info mt-2 mb-2">
@@ -532,54 +645,47 @@
                     <div class="col-md-6">
                       <div class="document-meta">
                         <span class="meta-label">File name:</span>
-                        <span class="meta-value">{{ version.fileName || 'Unknown' }}</span>
+                        <span class="meta-value">{{ getVersionFileName(version) || 'Unknown' }}</span>
                       </div>
                     </div>
                     <div class="col-md-6">
                       <div class="document-meta">
                         <span class="meta-label">Size:</span>
-                        <span class="meta-value">{{ formatFileSize(version.fileSize || 0) }}</span>
+                        <span class="meta-value">{{ formatFileSize(getVersionFileSize(version)) }}</span>
                       </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12">
                       <div class="document-meta">
                         <span class="meta-label">Uploaded by:</span>
-                        <span class="meta-value" *ngIf="version.userInfo?.firstName && version.userInfo?.lastName">
-                          {{ version.userInfo.firstName }} {{ version.userInfo.lastName }}
-                        </span>
-                        <span class="meta-value" *ngIf="version.userInfo?.displayName">
-                          {{ version.userInfo.displayName }}
-                        </span>
-                        <span class="meta-value" *ngIf="(!version.userInfo || (!version.userInfo.firstName && !version.userInfo.lastName && !version.userInfo.displayName))">
-                          {{ getUserDisplayName(version) || 'Unknown' }}
-                        </span>
+                        <span class="meta-value">{{ getVersionUserDisplayName(version) }}</span>
                       </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12">
                       <div class="document-meta">
-                        <span class="meta-label">Uploaded on:</span>
-                        <span class="meta-value">{{ version.date | date:'MMM d, yyyy, h:mm a' }}</span>
+                        <span class="meta-label">Date:</span>
+                        <span class="meta-value">{{ getVersionDate(version) | date:'medium' }}</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-                
-                <!-- Changes info section -->
-                <div class="version-comment" *ngIf="version.changeInfo">
-                  <div class="meta-label mb-1">Changes:</div>
-                  <p class="p-2 bg-light-subtle rounded">{{ version.changeInfo }}</p>
-                </div>
-                
-                <div class="d-flex align-items-center justify-content-between mt-2">
-                  <div>
-                    <button type="button" class="btn btn-sm btn-soft-primary me-2" 
-                            (click)="i === 0 ? previewDocument(documentForVersionHistory) : previewVersionDocument(documentForVersionHistory.id, version.id); versionHistoryModalInstance?.hide()">
-                      <i class="ri-eye-line me-1"></i> Preview
-                    </button>
-                    <button type="button" class="btn btn-sm btn-soft-primary" 
-                            (click)="i === 0 ? downloadDocument(documentForVersionHistory.id) : downloadVersion(documentForVersionHistory.id, version.id)">
-                      <i class="ri-download-2-line me-1"></i> Download
-                    </button>
+                    <div class="col-12" *ngIf="hasVersionChanges(version)">
+                      <div class="version-changes">
+                        <div class="version-changes-header">
+                          <span class="meta-label">Changes:</span>
+                        </div>
+                        <div class="version-changes-content">
+                          {{ getVersionChanges(version) }}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-12 mt-2">
+                      <div class="d-flex">
+                        <button type="button" class="btn btn-sm btn-secondary me-2" (click)="previewVersionDocument(documentForVersionHistory.id, version.id)">
+                          <i class="ri-eye-line me-1"></i> Preview
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="downloadVersion(documentForVersionHistory.id, version.id)">
+                          <i class="ri-download-line me-1"></i> Download
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

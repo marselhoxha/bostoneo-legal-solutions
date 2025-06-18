@@ -1,0 +1,838 @@
+<!-- Enhanced Rate Management Dashboard -->
+<div class="container-fluid" style="margin-top: 100px;">
+  
+  <!-- Page Header -->
+  <div class="page-title-box d-sm-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="mb-sm-0 fw-semibold">
+        <i class="ri-money-dollar-circle-line me-2 text-primary"></i>Advanced Rate Management
+      </h4>
+      <p class="text-muted mb-0">Comprehensive billing rate configuration and analytics</p>
+    </div>
+    <div class="page-title-right">
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" (click)="openRateModal(undefined, $event)">
+          <i class="ri-add-line me-1"></i>New Rate
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="openTemplateModal($event)">
+          <i class="ri-file-add-line me-1"></i>New Template
+        </button>
+        <button class="btn btn-outline-info" (click)="exportRates()">
+          <i class="ri-download-line me-1"></i>Export
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="alert alert-danger" role="alert" *ngIf="error">
+    <i class="ri-error-warning-line me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Loading rate management data...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading">
+    
+    <!-- Analytics Overview -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary bg-gradient text-white border-0 shadow-sm">
+        <div class="card-body text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <i class="ri-money-dollar-circle-line fs-24 me-2"></i>
+              <h4 class="text-white mb-0">{{ analytics.totalRates }}</h4>
+            </div>
+            <p class="text-white-75 mb-0 fs-14">Total Rate Configurations</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-success bg-gradient text-white border-0 shadow-sm">
+          <div class="card-body text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <i class="ri-check-double-line fs-24 me-2"></i>
+              <h4 class="text-white mb-0">{{ analytics.activeRates }}</h4>
+            </div>
+            <p class="text-white-75 mb-0 fs-14">Active Rates</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning bg-gradient text-white border-0 shadow-sm">
+        <div class="card-body text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <i class="ri-line-chart-line fs-24 me-2"></i>
+              <h4 class="text-white mb-0">{{ formatCurrency(analytics.averageRate) }}</h4>
+            </div>
+            <p class="text-white-75 mb-0 fs-14">Average Rate</p>
+          </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info bg-gradient text-white border-0 shadow-sm">
+        <div class="card-body text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <i class="ri-refresh-line fs-24 me-2"></i>
+              <h4 class="text-white mb-0">{{ analytics.recentChanges }}</h4>
+            </div>
+            <p class="text-white-75 mb-0 fs-14">Recent Changes (7 days)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rate Templates Section -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light border-0">
+            <h5 class="mb-0 fw-semibold">
+              <i class="ri-file-list-line me-2 text-primary"></i>Rate Templates
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4" *ngFor="let template of rateTemplates">
+                <div class="card border border-primary border-opacity-25 h-100">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <h6 class="card-title text-primary mb-1">{{ template.name }}</h6>
+                        <p class="text-muted mb-0 fs-13">{{ template.description }}</p>
+                      </div>
+                      <div class="dropdown">
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                          <i class="ri-more-2-line"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" href="#" (click)="$event.preventDefault()">
+                            <i class="ri-eye-line me-1"></i>View Details
+                          </a></li>
+                          <li><a class="dropdown-item" href="#" (click)="$event.preventDefault()">
+                            <i class="ri-edit-line me-1"></i>Edit Template
+                          </a></li>
+                          <li><a class="dropdown-item" href="#" (click)="$event.preventDefault()">
+                            <i class="ri-file-copy-line me-1"></i>Duplicate
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="template-rates mb-3">
+                      <div class="row g-2">
+                        <div class="col-6">
+                          <small class="text-muted">Standard:</small>
+                          <div class="fw-semibold">{{ formatCurrency(template.rates.standard) }}</div>
+                        </div>
+                        <div class="col-6">
+                          <small class="text-muted">Litigation:</small>
+                          <div class="fw-semibold">{{ formatCurrency(template.rates.litigation) }}</div>
+                        </div>
+                        <div class="col-6">
+                          <small class="text-muted">Court:</small>
+                          <div class="fw-semibold">{{ formatCurrency(template.rates.court) }}</div>
+                        </div>
+                        <div class="col-6">
+                          <small class="text-muted">Emergency:</small>
+                          <div class="fw-semibold">{{ formatCurrency(template.rates.emergency) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm w-100" 
+                            (click)="applyTemplate(template, 0)">
+                      <i class="ri-download-line me-1"></i>Apply Template
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rate Management Tabs -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 bg-light">
+        <ul class="nav nav-tabs nav-tabs-custom border-0" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" 
+               [class.active]="activeTab === 'attorney-rates'"
+               (click)="setActiveTab('attorney-rates')"
+               role="tab">
+            <i class="ri-user-line me-1"></i>Attorney Rates
+          </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" 
+               [class.active]="activeTab === 'rate-history'"
+               (click)="setActiveTab('rate-history')"
+               role="tab">
+              <i class="ri-history-line me-1"></i>Rate History
+          </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" 
+               [class.active]="activeTab === 'bulk-operations'"
+               (click)="setActiveTab('bulk-operations')"
+               role="tab">
+              <i class="ri-settings-line me-1"></i>Bulk Operations
+          </a>
+        </li>
+      </ul>
+    </div>
+    
+    <div class="card-body">
+      <div class="tab-content">
+          
+        <!-- Attorney Rates Tab -->
+          <div class="tab-pane" [class.active]="activeTab === 'attorney-rates'" role="tabpanel">
+            
+            <!-- Filters and Search -->
+            <div class="row mb-4">
+              <div class="col-md-4">
+                <div class="search-box">
+                  <input type="text" 
+                         class="form-control" 
+                         placeholder="Search attorneys or rate types..."
+                         [(ngModel)]="searchTerm">
+                  <i class="ri-search-line search-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <select class="form-select" [(ngModel)]="statusFilter">
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select class="form-select" [(ngModel)]="rateTypeFilter">
+                  <option value="all">All Types</option>
+                  <option value="STANDARD">Standard</option>
+                  <option value="PREMIUM">Premium</option>
+                  <option value="EMERGENCY">Emergency</option>
+                  <option value="DISCOUNTED">Discounted</option>
+                </select>
+            </div>
+              <div class="col-md-4 text-end">
+                <div class="btn-group">
+                  <button class="btn btn-outline-secondary btn-sm" 
+                          [disabled]="selectedRates.length === 0"
+                          (click)="openBulkUpdateModal($event)">
+                    <i class="ri-edit-box-line me-1"></i>Bulk Update ({{ selectedRates.length }})
+              </button>
+                  <button class="btn btn-outline-primary btn-sm" (click)="openRateModal(undefined, $event)">
+                    <i class="ri-add-line me-1"></i>Add Rate
+              </button>
+                </div>
+            </div>
+          </div>
+
+            <!-- Attorney Rates Table -->
+          <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 40px;">
+                      <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               [(ngModel)]="selectAll"
+                               (change)="toggleSelectAll()">
+                      </div>
+                    </th>
+                    <th (click)="setSortBy('userName')" class="sortable">
+                      Attorney
+                      <i class="ri-arrow-up-down-line ms-1"></i>
+                    </th>
+                    <th (click)="setSortBy('rateType')" class="sortable">
+                      Rate Type
+                      <i class="ri-arrow-up-down-line ms-1"></i>
+                    </th>
+                    <th (click)="setSortBy('rateAmount')" class="sortable">
+                      Amount
+                      <i class="ri-arrow-up-down-line ms-1"></i>
+                    </th>
+                    <th (click)="setSortBy('effectiveDate')" class="sortable">
+                      Effective Date
+                      <i class="ri-arrow-up-down-line ms-1"></i>
+                    </th>
+                  <th>Status</th>
+                    <th>Usage</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let rate of filteredRates; trackBy: trackByRateId">
+                    <td>
+                      <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               [checked]="isRateSelected(rate.id!)"
+                               (change)="toggleRateSelection(rate.id!)">
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                          <div class="avatar-title rounded-circle bg-primary text-white fs-12">
+                            {{ (rate.userName || 'U').charAt(0).toUpperCase() }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="fw-medium">{{ rate.userName || 'Unknown User' }}</div>
+                          <small class="text-muted">{{ rate.userEmail }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge" 
+                            [class.bg-primary-subtle]="rate.rateType === 'STANDARD'"
+                            [class.text-primary]="rate.rateType === 'STANDARD'"
+                            [class.bg-success-subtle]="rate.rateType === 'PREMIUM'"
+                            [class.text-success]="rate.rateType === 'PREMIUM'"
+                            [class.bg-warning-subtle]="rate.rateType === 'EMERGENCY'"
+                            [class.text-warning]="rate.rateType === 'EMERGENCY'"
+                            [class.bg-info-subtle]="rate.rateType === 'DISCOUNTED'"
+                            [class.text-info]="rate.rateType === 'DISCOUNTED'">
+                        {{ formatRateType(rate.rateType) }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="fw-semibold">{{ formatCurrency(rate.rateAmount) }}</div>
+                      <small class="text-muted">per hour</small>
+                    </td>
+                    <td>
+                      <div>{{ rate.effectiveDate | date:'MMM d, y' }}</div>
+                      <small class="text-muted" *ngIf="rate.endDate">
+                        Ends: {{ rate.endDate | date:'MMM d, y' }}
+                      </small>
+                  </td>
+                    <td>
+                      <span class="badge" 
+                            [class.bg-success]="rate.isActive"
+                            [class.bg-secondary]="!rate.isActive">
+                        {{ rate.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                  </td>
+                    <td>
+                      <div class="text-muted">
+                        <small>0 entries</small>
+                        <div class="progress progress-sm mt-1" style="height: 3px;">
+                          <div class="progress-bar bg-primary" style="width: 0%"></div>
+                        </div>
+                    </div>
+                  </td>
+                    <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" 
+                                (click)="editRate(rate)"
+                                title="Edit Rate">
+                        <i class="ri-edit-line"></i>
+                      </button>
+                        <button class="btn btn-outline-info" 
+                                title="Rate History">
+                        <i class="ri-history-line"></i>
+                      </button>
+                        <button class="btn btn-outline-danger" 
+                                (click)="deleteRate(rate)"
+                                title="Delete Rate">
+                          <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+            <!-- Empty State -->
+            <div *ngIf="filteredRates.length === 0" class="text-center py-5">
+              <div class="empty-state">
+                <i class="ri-money-dollar-circle-line display-4 text-muted mb-3"></i>
+                <h5 class="text-muted">No billing rates found</h5>
+                <p class="text-muted">Create your first billing rate to get started</p>
+                <button class="btn btn-primary" (click)="openRateModal(undefined, $event)">
+                  <i class="ri-add-line me-1"></i>Create Rate
+                </button>
+        </div>
+            </div>
+
+          </div>
+
+          <!-- Rate History Tab -->
+          <div class="tab-pane" [class.active]="activeTab === 'rate-history'" role="tabpanel">
+            <div class="text-center py-5">
+              <i class="ri-history-line display-4 text-muted mb-3"></i>
+              <h5 class="text-muted">Rate History</h5>
+              <p class="text-muted">Track all rate changes and modifications over time</p>
+              <button class="btn btn-outline-primary">
+                <i class="ri-download-line me-1"></i>Export History
+              </button>
+            </div>
+          </div>
+
+          <!-- Bulk Operations Tab -->
+          <div class="tab-pane" [class.active]="activeTab === 'bulk-operations'" role="tabpanel">
+          <div class="row">
+              <div class="col-md-6">
+                <div class="card border border-primary border-opacity-25">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">
+                      <i class="ri-edit-box-line me-2"></i>Bulk Rate Update
+                    </h6>
+                    <p class="text-muted mb-3">Update multiple rates at once with percentage or fixed amounts</p>
+                    <button class="btn btn-primary" (click)="openBulkUpdateModal($event)">
+                      <i class="ri-edit-line me-1"></i>Start Bulk Update
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border border-success border-opacity-25">
+                  <div class="card-body">
+                    <h6 class="card-title text-success">
+                      <i class="ri-upload-line me-2"></i>Import Rates
+                    </h6>
+                    <p class="text-muted mb-3">Import rates from CSV file or external system</p>
+                    <button class="btn btn-success">
+                      <i class="ri-upload-line me-1"></i>Import Rates
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+                    </div>
+
+                    </div>
+                    </div>
+                  </div>
+
+                  </div>
+                </div>
+
+<!-- Rate Modal -->
+<div class="custom-modal" 
+     [class.show]="showRateModal" 
+     [style.display]="showRateModal ? 'block' : 'none'" 
+     [style.z-index]="showRateModal ? '1055' : 'auto'"
+     [attr.aria-hidden]="!showRateModal"
+     [attr.aria-modal]="showRateModal"
+     role="dialog"
+     tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary bg-opacity-10 border-0">
+        <h5 class="modal-title text-primary fw-semibold">
+          <i class="ri-money-dollar-circle-line me-2"></i>Billing Rate Configuration
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRateModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="rateForm" (ngSubmit)="saveRate()">
+          <div class="row g-3">
+            
+            <!-- User Selection -->
+            <div class="col-12">
+              <label class="form-label fw-semibold required">Attorney/User</label>
+              <select class="form-select" formControlName="userId">
+                <option value="">Select Attorney</option>
+                <option *ngFor="let attorney of attorneyRates" [value]="attorney.userId">
+                  {{ attorney.userName }} ({{ attorney.position }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Rate Type -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Rate Type</label>
+              <select class="form-select" formControlName="rateType">
+                <option value="STANDARD">Standard</option>
+                <option value="PREMIUM">Premium</option>
+                <option value="EMERGENCY">Emergency</option>
+                <option value="DISCOUNTED">Discounted</option>
+                <option value="PRO_BONO">Pro Bono</option>
+              </select>
+            </div>
+
+            <!-- Rate Amount -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Hourly Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="rateAmount"
+                       min="0" 
+                       max="2000"
+                       step="25"
+                       placeholder="250">
+                <span class="input-group-text">/hr</span>
+              </div>
+            </div>
+
+            <!-- Effective Date -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Effective Date</label>
+              <input type="date" 
+                     class="form-control" 
+                     formControlName="effectiveDate">
+            </div>
+
+            <!-- End Date -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">End Date (Optional)</label>
+              <input type="date" 
+                     class="form-control" 
+                     formControlName="endDate">
+            </div>
+
+            <!-- Status -->
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" 
+                       type="checkbox" 
+                       formControlName="isActive"
+                       id="rateActiveSwitch">
+                <label class="form-check-label fw-medium" for="rateActiveSwitch">
+                  Active Rate
+                </label>
+              </div>
+              <div class="form-text">Inactive rates won't be available for new time entries</div>
+            </div>
+
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-light" (click)="closeRateModal()">
+          <i class="ri-close-line me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-primary" 
+                (click)="saveRate()" 
+                [disabled]="rateForm.invalid || isProcessing">
+          <span *ngIf="!isProcessing">
+            <i class="ri-save-line me-1"></i>Save Rate
+          </span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Saving...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Modal -->
+<div class="custom-modal" 
+     [class.show]="showTemplateModal" 
+     [style.display]="showTemplateModal ? 'block' : 'none'" 
+     [style.z-index]="showTemplateModal ? '1055' : 'auto'"
+     [attr.aria-hidden]="!showTemplateModal"
+     [attr.aria-modal]="showTemplateModal"
+     role="dialog"
+     tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-success bg-opacity-10 border-0">
+        <h5 class="modal-title text-success fw-semibold">
+          <i class="ri-file-add-line me-2"></i>Create Rate Template
+        </h5>
+        <button type="button" class="btn-close" (click)="closeTemplateModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="templateForm" (ngSubmit)="saveTemplate()">
+          <div class="row g-3">
+            
+            <!-- Template Info -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Template Name</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="name"
+                     placeholder="e.g., Senior Partner Rates">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Description</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="description"
+                     placeholder="Brief description of this template">
+                    </div>
+
+            <!-- Rate Structure -->
+            <div class="col-12">
+              <h6 class="fw-semibold text-primary mt-3 mb-3">Rate Structure</h6>
+                    </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Standard Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="standardRate"
+                       min="1" 
+                       step="25">
+                <span class="input-group-text">/hr</span>
+                    </div>
+                  </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Litigation Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="litigationRate"
+                       min="1" 
+                       step="25">
+                <span class="input-group-text">/hr</span>
+                  </div>
+                </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Court Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="courtRate"
+                       min="1" 
+                       step="25">
+                <span class="input-group-text">/hr</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Consultation Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="consultationRate"
+                       min="1" 
+                       step="25">
+                <span class="input-group-text">/hr</span>
+          </div>
+        </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Emergency Rate</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="emergencyRate"
+                       min="1" 
+                       step="25">
+                <span class="input-group-text">/hr</span>
+              </div>
+            </div>
+
+            <!-- Multipliers -->
+            <div class="col-12">
+              <h6 class="fw-semibold text-primary mt-3 mb-3">Rate Multipliers</h6>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Weekend Multiplier</label>
+              <div class="input-group">
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="weekendMultiplier"
+                       min="1" 
+                       step="0.1">
+                <span class="input-group-text">x</span>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">After Hours Multiplier</label>
+              <div class="input-group">
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="afterHoursMultiplier"
+                       min="1" 
+                       step="0.1">
+                <span class="input-group-text">x</span>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Emergency Multiplier</label>
+              <div class="input-group">
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="emergencyMultiplier"
+                       min="1" 
+                       step="0.1">
+                <span class="input-group-text">x</span>
+              </div>
+            </div>
+
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-light" (click)="closeTemplateModal()">
+          <i class="ri-close-line me-1"></i>Cancel
+                    </button>
+        <button type="button" 
+                class="btn btn-success" 
+                (click)="saveTemplate()" 
+                [disabled]="templateForm.invalid || isProcessing">
+          <span *ngIf="!isProcessing">
+            <i class="ri-save-line me-1"></i>Create Template
+          </span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Creating...
+          </span>
+                    </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Update Modal -->
+<div class="custom-modal" 
+     [class.show]="showBulkUpdateModal" 
+     [style.display]="showBulkUpdateModal ? 'block' : 'none'" 
+     [style.z-index]="showBulkUpdateModal ? '1055' : 'auto'"
+     [attr.aria-hidden]="!showBulkUpdateModal"
+     [attr.aria-modal]="showBulkUpdateModal"
+     role="dialog"
+     tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning bg-opacity-10 border-0">
+        <h5 class="modal-title text-warning fw-semibold">
+          <i class="ri-edit-box-line me-2"></i>Bulk Rate Update
+        </h5>
+        <button type="button" class="btn-close" (click)="closeBulkUpdateModal()" aria-label="Close"></button>
+          </div>
+      <div class="modal-body">
+        
+        <!-- Selection Summary -->
+        <div class="alert alert-info border-0 bg-info bg-opacity-10 mb-4">
+          <h6 class="text-info mb-2">Update Summary</h6>
+          <p class="mb-0">You are about to update <strong>{{ selectedRates.length }}</strong> selected billing rates.</p>
+        </div>
+
+        <form [formGroup]="bulkUpdateForm" (ngSubmit)="applyBulkUpdate()">
+          <div class="row g-3">
+            
+            <!-- Update Type -->
+            <div class="col-12">
+              <label class="form-label fw-semibold required">Update Type</label>
+              <div class="form-check">
+                <input class="form-check-input" 
+                       type="radio" 
+                       formControlName="updateType"
+                       value="percentage"
+                       id="percentageUpdate">
+                <label class="form-check-label" for="percentageUpdate">
+                  Percentage Increase/Decrease
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" 
+                       type="radio" 
+                       formControlName="updateType"
+                       value="fixed"
+                       id="fixedUpdate">
+                <label class="form-check-label" for="fixedUpdate">
+                  Set Fixed Amount
+                </label>
+              </div>
+            </div>
+
+            <!-- Percentage Input -->
+            <div class="col-md-6" *ngIf="bulkUpdateForm.get('updateType')?.value === 'percentage'">
+              <label class="form-label fw-semibold required">Percentage Change</label>
+              <div class="input-group">
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="percentage"
+                       placeholder="10"
+                       step="0.1">
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="form-text">Use negative values for decreases (e.g., -5 for 5% decrease)</div>
+            </div>
+
+            <!-- Fixed Amount Input -->
+            <div class="col-md-6" *ngIf="bulkUpdateForm.get('updateType')?.value === 'fixed'">
+              <label class="form-label fw-semibold required">Fixed Amount</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="fixedAmount"
+                       min="1"
+                       step="25">
+                <span class="input-group-text">/hr</span>
+              </div>
+            </div>
+
+            <!-- Effective Date -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold required">Effective Date</label>
+              <input type="date" 
+                     class="form-control" 
+                     formControlName="effectiveDate">
+            </div>
+
+            <!-- Reason -->
+            <div class="col-12">
+              <label class="form-label fw-semibold required">Reason for Change</label>
+              <textarea class="form-control" 
+                        rows="3" 
+                        formControlName="reason"
+                        placeholder="Describe the reason for this rate change..."></textarea>
+          </div>
+
+          </div>
+        </form>
+        </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-light" (click)="closeBulkUpdateModal()">
+          <i class="ri-close-line me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-warning" 
+                (click)="applyBulkUpdate()" 
+                [disabled]="bulkUpdateForm.invalid || isProcessing">
+          <span *ngIf="!isProcessing">
+            <i class="ri-edit-line me-1"></i>Update {{ selectedRates.length }} Rates
+          </span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Updating...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 
+
+<!-- Modal Backdrops -->
+<div class="modal-backdrop" [class.show]="showRateModal" 
+     [style.display]="showRateModal ? 'block' : 'none'"
+     [style.z-index]="showRateModal ? '1050' : 'auto'"
+     (click)="closeRateModal()"></div>
+<div class="modal-backdrop" [class.show]="showTemplateModal" 
+     [style.display]="showTemplateModal ? 'block' : 'none'"
+     [style.z-index]="showTemplateModal ? '1050' : 'auto'"
+     (click)="closeTemplateModal()"></div>
+<div class="modal-backdrop" [class.show]="showBulkUpdateModal" 
+     [style.display]="showBulkUpdateModal ? 'block' : 'none'"
+     [style.z-index]="showBulkUpdateModal ? '1050' : 'auto'"
+     (click)="closeBulkUpdateModal()"></div> 

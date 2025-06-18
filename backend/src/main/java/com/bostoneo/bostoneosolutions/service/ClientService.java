@@ -1,0 +1,39 @@
+package com.***REMOVED***.***REMOVED***solutions.service;
+
+import com.***REMOVED***.***REMOVED***solutions.model.Client;
+import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.***REMOVED***.***REMOVED***solutions.model.Stats;
+import org.springframework.data.domain.Page;
+
+
+public interface ClientService {
+
+    //Client functions
+    Client createClient(Client client);
+    Client updateClient(Client client);
+    Page<Client> getClients(int page, int size);
+    Iterable<Client> getClients();
+    Client getClient(Long id);
+    Page<Client> searchClients(String name, int page, int size);
+    
+    // Role-based access methods
+    Page<Client> getClientsForUser(Long userId, int page, int size);
+    Page<Client> getEmptyPage(int page, int size);
+    Stats getEmptyStats();
+    Stats getLimitedStats();
+
+    //Invoice functions
+    Invoice createInvoice(Invoice invoice);
+    Page<Invoice> getInvoices(int page, int size);
+    Page<Invoice> getInvoicesForClient(Long clientId, int page, int size);
+    void addInvoiceToClient(Long id, Invoice invoice);
+
+    Invoice getInvoice(Long id);
+
+
+    void deleteInvoice(Long id);
+
+    void deleteClient(Long id);
+
+    Stats getStats();
+}

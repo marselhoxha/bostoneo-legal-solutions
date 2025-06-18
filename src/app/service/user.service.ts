@@ -180,6 +180,16 @@ export class UserService {
         catchError(this.handleError)
       );
 
+  /**
+   * Get all users
+   */
+  getUsers(): Observable<CustomHttpResponse<any>> {
+    return this.http.get<CustomHttpResponse<any>>(`${this.server}/api/users`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   logOut() {
     this.httpCache.evictAll();
     this.clearUserCache();
@@ -190,21 +200,39 @@ export class UserService {
   }
 
   isAuthenticated = (): boolean => {
-    const token = localStorage.getItem(Key.TOKEN);
-    return token ? (this.jwtHelper.decodeToken<string>(token) && !this.jwtHelper.isTokenExpired(token)) : false;
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return false;
       
       // Check if token has valid JWT format (should have 3 parts separated by dots)
       const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) return false;
+      if (tokenParts.length !== 3) {
+        console.warn('Invalid JWT token format - expected 3 parts, got:', tokenParts.length);
+        this.clearInvalidToken();
+        return false;
+      }
       
-      return !this.jwtHelper.isTokenExpired(token);
+      // Check if token is expired using jwt-helper
+      if (this.jwtHelper.isTokenExpired(token)) {
+        console.warn('JWT token is expired');
+        this.clearInvalidToken();
+        return false;
+      }
+      
+      return true;
     } catch (error) {
-      console.error('Error validating token:', error);
+      console.error('Error validating JWT token:', error);
+      this.clearInvalidToken();
       return false;
     }
+  }
+
+  // Clear invalid or expired tokens
+  private clearInvalidToken(): void {
+    console.log('Clearing invalid JWT tokens from localStorage');
+    localStorage.removeItem(Key.TOKEN);
+    localStorage.removeItem(Key.REFRESH_TOKEN);
+    this.clearUserCache();
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

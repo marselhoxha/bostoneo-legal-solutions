@@ -6,6 +6,11 @@ export interface MenuItem {
     subItems?: any;
     isTitle?: boolean;
     badge?: any;
-    parentId?: number;
+    parentId?: number | string;
     isLayout?: boolean;
+    requiredPermission?: {
+      resource: string;
+      action: string;
+    };
+    childItem?: any;
   }

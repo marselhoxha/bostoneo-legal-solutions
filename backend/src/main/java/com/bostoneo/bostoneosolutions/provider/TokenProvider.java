@@ -21,7 +21,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import static com.auth0.jwt.algorithms.Algorithm.HMAC512;
 import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.*;
@@ -35,21 +39,48 @@ public class TokenProvider {
 
     private final UserService userService;
 
-
     @Value("${jwt.secret}")
     private String secret;
 
     public String createAccessToken(UserPrincipal userPrincipal){
-	System.out.println("#################################");
-	System.out.println("SECRET VALUE IS: " + secret);
-	System.out.println("#################################");
-        return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CUSTOMER_MANAGEMENT_SERVICE)
-                .withIssuedAt(new Date()).withSubject(String.valueOf(userPrincipal.getUser().getId())).withArrayClaim(AUTHORITIES, getClaimsFromUser(userPrincipal))
+        // Extract permissions and roles for JWT claims - put all authorities into permissions array
+        List<String> allAuthorities = userPrincipal.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .collect(Collectors.toList());
+            
+        // Extract just the roles (for backwards compatibility)
+        List<String> roles = userPrincipal.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(auth -> auth.startsWith("ROLE_"))
+            .collect(Collectors.toList());
+            
+        // Add case-specific roles
+        Map<String, Object> caseRoles = new HashMap<>();
+        userPrincipal.getCaseRoleAssignments().forEach(assignment -> {
+            Long caseId = assignment.getLegalCase().getId();
+            String roleName = assignment.getRole().getName();
+            if (caseRoles.containsKey(caseId.toString())) {
+                ((List<String>) caseRoles.get(caseId.toString())).add(roleName);
+            } else {
+                List<String> caseRolesList = new ArrayList<>();
+                caseRolesList.add(roleName);
+                caseRoles.put(caseId.toString(), caseRolesList);
+            }
+        });
+            
+        return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
+                .withIssuedAt(new Date())
+                .withSubject(String.valueOf(userPrincipal.getUser().getId()))
+                .withArrayClaim(AUTHORITIES, getClaimsFromUser(userPrincipal))
+                .withArrayClaim("permissions", allAuthorities.toArray(new String[0]))
+                .withArrayClaim("roles", roles.toArray(new String[0]))
+                .withClaim("caseRoles", caseRoles)
                 .withExpiresAt(new Date(currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_TIME))
                 .sign(HMAC512(secret.getBytes()));
     }
+    
     public String createRefreshToken(UserPrincipal userPrincipal){
-        return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CUSTOMER_MANAGEMENT_SERVICE)
+        return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date()).withSubject(String.valueOf(userPrincipal.getUser().getId()))
                 .withExpiresAt(new Date(currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_TIME))
                 .sign(HMAC512(secret.getBytes()));

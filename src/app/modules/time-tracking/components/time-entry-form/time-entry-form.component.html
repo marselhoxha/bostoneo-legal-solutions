@@ -1,0 +1,395 @@
+<div class="container-fluid" style="margin-top: 115px;">
+  
+  <!-- Enhanced Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <div class="page-title-left">
+          <h4 class="mb-sm-0 fw-semibold">
+            <i class="ri-add-circle-line me-2 text-primary"></i>
+            {{ isEditMode ? 'Edit Time Entry' : 'New Time Entry' }}
+          </h4>
+          <p class="text-muted mb-0 mt-1">{{ isEditMode ? 'Update your time entry details' : 'Track your billable time with precision' }}</p>
+        </div>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Time & Billing</a></li>
+            <li class="breadcrumb-item"><a routerLink="/time-tracking/timesheet">Timesheet</a></li>
+            <li class="breadcrumb-item active">{{ isEditMode ? 'Edit Entry' : 'New Entry' }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Timer Alert -->
+  <div class="row" *ngIf="hasActiveTimer && !isEditMode">
+    <div class="col-12">
+      <div class="alert alert-warning border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0 me-3">
+            <i class="ri-timer-line fs-20 text-warning"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="alert-heading mb-1">Active Timer Detected</h6>
+            <p class="mb-2">You have an active timer running for <strong>{{ currentTimer?.description || 'Untitled Task' }}</strong></p>
+            <div class="d-flex gap-2">
+              <button class="btn btn-warning btn-sm" (click)="stopTimerAndUse()">
+                <i class="ri-stop-line me-1"></i>Stop & Use This Time
+              </button>
+              <button class="btn btn-outline-warning btn-sm" (click)="checkActiveTimer()">
+                <i class="ri-refresh-line me-1"></i>Refresh Status
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="row" *ngIf="loading">
+    <div class="col-12">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-2 text-muted">{{ isEditMode ? 'Loading time entry...' : 'Preparing form...' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="row" *ngIf="error">
+    <div class="col-12">
+      <div class="alert alert-danger border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+          <i class="ri-error-warning-line me-2 fs-18"></i>
+          <span>{{ error }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Form -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0 bg-primary bg-opacity-10">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0 me-3">
+              <div class="avatar-sm">
+                <span class="avatar-title bg-primary text-white rounded">
+                  <i class="ri-file-edit-line fs-18"></i>
+                </span>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="card-title mb-0 text-primary fw-semibold">Time Entry Details</h5>
+              <p class="text-muted mb-0 fs-13">Fill in the details for your time entry</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <form [formGroup]="timeEntryForm" (ngSubmit)="onSubmit()">
+            
+            <!-- Date and Case Selection -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold required">Date</label>
+                <input type="date" 
+                       class="form-control" 
+                       formControlName="date"
+                       [class.is-invalid]="isFieldInvalid('date')"
+                       [max]="getCurrentDate()">
+                <div class="invalid-feedback" *ngIf="isFieldInvalid('date')">
+                  {{ getFieldError('date') }}
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label fw-semibold required">Matter/Case</label>
+                <select class="form-select" 
+                        formControlName="legalCaseId"
+                        [class.is-invalid]="isFieldInvalid('legalCaseId')"
+                        (change)="onCaseSelectionChange($event)">
+                  <option value="">Select a matter</option>
+                  <option *ngFor="let case of legalCases" [value]="case.id">
+                    {{ case.caseNumber }} - {{ case.title }}
+                    {{ case.defaultRate ? ' ($' + case.defaultRate + '/hr)' : '' }}
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="isFieldInvalid('legalCaseId')">
+                  {{ getFieldError('legalCaseId') }}
+                </div>
+                <div class="form-text">
+                  <i class="ri-information-line me-1"></i>Select the matter this time relates to
+                </div>
+              </div>
+            </div>
+
+            <!-- Time Tracking Section -->
+            <div class="card bg-light border-0 mb-4">
+              <div class="card-body p-3">
+                <h6 class="card-title mb-3">
+                  <i class="ri-time-line me-2 text-info"></i>Time Tracking
+                </h6>
+                
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Start Time</label>
+                    <input type="text" 
+                           class="form-control" 
+                           formControlName="startTime"
+                           [class.is-invalid]="isFieldInvalid('startTime')"
+                           placeholder="Select start time"
+                           mwlFlatpickr
+                           [enableTime]="true"
+                           [noCalendar]="true"
+                           [dateFormat]="'H:i'"
+                           [time_24hr]="false"
+                           [minuteIncrement]="15"
+                           [defaultHour]="9"
+                           [defaultMinute]="0">
+                    <div class="form-text">Optional - for time range tracking</div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">End Time</label>
+                    <input type="text" 
+                           class="form-control" 
+                           formControlName="endTime"
+                           [class.is-invalid]="isFieldInvalid('endTime')"
+                           placeholder="Select end time"
+                           mwlFlatpickr
+                           [enableTime]="true"
+                           [noCalendar]="true"
+                           [dateFormat]="'H:i'"
+                           [time_24hr]="false"
+                           [minuteIncrement]="15"
+                           [defaultHour]="17"
+                           [defaultMinute]="0">
+                    <div class="form-text">Auto-calculates duration</div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold required">Duration (hours)</label>
+                    <div class="input-group">
+                      <input type="number" 
+                             class="form-control" 
+                             formControlName="hours"
+                             [class.is-invalid]="isFieldInvalid('hours')"
+                             step="0.25" 
+                             min="0.1" 
+                             max="24"
+                             placeholder="0.00">
+                      <span class="input-group-text">hrs</span>
+                    </div>
+                    <div class="invalid-feedback" *ngIf="isFieldInvalid('hours')">
+                      {{ getFieldError('hours') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold required">Work Description</label>
+              <textarea class="form-control" 
+                        rows="4" 
+                        formControlName="description"
+                        [class.is-invalid]="isFieldInvalid('description')"
+                        placeholder="Describe the work performed in detail (minimum 5 characters)..."
+                        maxlength="1000"></textarea>
+              <div class="invalid-feedback" *ngIf="isFieldInvalid('description')">
+                {{ getFieldError('description') }}
+              </div>
+              <div class="form-text d-flex justify-content-between">
+                <span>Be specific about the work performed for accurate billing</span>
+                <span [class.text-danger]="timeEntryForm.get('description')?.value?.length > 900">
+                  {{ timeEntryForm.get('description')?.value?.length || 0 }}/1000 characters
+                </span>
+              </div>
+            </div>
+
+            <!-- Billing Information -->
+            <div class="card bg-success bg-opacity-10 border-0 mb-4">
+              <div class="card-body p-3">
+                <h6 class="card-title mb-3">
+                  <i class="ri-money-dollar-circle-line me-2 text-success"></i>Billing Information
+                </h6>
+                
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold required">Hourly Rate</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input type="number" 
+                             class="form-control" 
+                             formControlName="rate"
+                             [class.is-invalid]="isFieldInvalid('rate')"
+                             min="0" 
+                             step="1"
+                             placeholder="250">
+                      <span class="input-group-text">/hour</span>
+                    </div>
+                    <div class="invalid-feedback" *ngIf="isFieldInvalid('rate')">
+                      {{ getFieldError('rate') }}
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Billing Status</label>
+                    <div class="form-check form-switch mt-2">
+                      <input class="form-check-input" 
+                             type="checkbox" 
+                             formControlName="billable"
+                             id="billableSwitch">
+                      <label class="form-check-label fw-medium" for="billableSwitch">
+                        {{ timeEntryForm.get('billable')?.value ? 'Billable Time' : 'Non-billable Time' }}
+                      </label>
+                    </div>
+                    <div class="form-text">
+                      {{ timeEntryForm.get('billable')?.value ? 'This time will be billed to the client' : 'This time will not be billed' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total Amount Display -->
+                <div class="mt-3 p-3 bg-white rounded border" *ngIf="timeEntryForm.get('hours')?.value && timeEntryForm.get('rate')?.value">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Total Amount:</span>
+                    <span class="fs-18 fw-bold text-success">
+                      ${{ (timeEntryForm.get('hours')?.value * timeEntryForm.get('rate')?.value).toFixed(2) }}
+                    </span>
+                  </div>
+                  <small class="text-muted">
+                    {{ timeEntryForm.get('hours')?.value }} hours × ${{ timeEntryForm.get('rate')?.value }}/hour
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex flex-wrap gap-2 justify-content-between">
+              <div class="d-flex gap-2">
+                <button type="submit" 
+                        class="btn btn-primary"
+                        [disabled]="timeEntryForm.invalid || loading">
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line me-1"></i>{{ isEditMode ? 'Update Entry' : 'Save Entry' }}
+                  </span>
+                  <span *ngIf="loading">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Saving...
+                  </span>
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-success"
+                        *ngIf="!isEditMode"
+                        (click)="onSubmitForApproval()"
+                        [disabled]="timeEntryForm.invalid || loading">
+                  <i class="ri-send-plane-line me-1"></i>Save & Submit for Approval
+                </button>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <button type="button" 
+                        class="btn btn-outline-secondary"
+                        (click)="onCancel()">
+                  <i class="ri-arrow-left-line me-1"></i>Back to Timesheet
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enhanced Sidebar -->
+    <div class="col-lg-4">
+      
+      <!-- Form Summary -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header border-0 bg-info bg-opacity-10">
+          <h6 class="card-title mb-0 text-info fw-semibold">
+            <i class="ri-file-list-line me-2"></i>Entry Summary
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Duration:</span>
+            <span class="fw-medium">{{ timeEntryForm.get('hours')?.value || '0' }} hours</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Rate:</span>
+            <span class="fw-medium">${{ timeEntryForm.get('rate')?.value || '0' }}/hour</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Status:</span>
+            <span class="badge" [class.bg-success]="timeEntryForm.get('billable')?.value" [class.bg-secondary]="!timeEntryForm.get('billable')?.value">
+              {{ timeEntryForm.get('billable')?.value ? 'Billable' : 'Non-billable' }}
+            </span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+            <span class="fw-semibold">Total Amount:</span>
+            <span class="fw-bold text-success fs-16">
+              ${{ (timeEntryForm.get('hours')?.value * timeEntryForm.get('rate')?.value || 0).toFixed(2) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Matters -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0 bg-secondary bg-opacity-10">
+          <h6 class="card-title mb-0 text-secondary fw-semibold">
+            <i class="ri-history-line me-2"></i>Recent Matters
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            <a href="#" 
+               class="list-group-item list-group-item-action"
+               *ngFor="let case of recentCases"
+               (click)="selectCase(case.id)">
+              <div class="d-flex w-100 justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <h6 class="mb-1 fw-semibold">{{ case.title }}</h6>
+                  <p class="mb-1 text-muted fs-13">{{ case.caseNumber }}</p>
+                  <small class="text-primary">{{ case.clientName }}</small>
+                </div>
+                <div class="text-end">
+                  <small class="text-muted">
+                    <i class="ri-arrow-right-s-line"></i>
+                  </small>
+                  <div class="mt-1" *ngIf="case.defaultRate">
+                    <small class="text-success fw-medium">${{ case.defaultRate }}/hr</small>
+                  </div>
+                </div>
+              </div>
+            </a>
+            
+            <!-- Empty state -->
+            <div class="list-group-item text-center py-4" *ngIf="recentCases.length === 0 && !loading">
+              <i class="ri-folder-open-line fs-24 text-muted mb-2 d-block"></i>
+              <small class="text-muted">No recent cases found</small>
+            </div>
+            
+            <!-- Loading state -->
+            <div class="list-group-item text-center py-4" *ngIf="loading">
+              <div class="spinner-border spinner-border-sm text-primary"></div>
+              <small class="text-muted ms-2">Loading cases...</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div> 
+ 

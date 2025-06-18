@@ -48,8 +48,8 @@ public class Expense {
     private BigDecimal tax;
 
     @ManyToOne(fetch = LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @JoinColumn(name = "client_id", nullable = false)
+    private Client client;
 
     @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "invoice_id")

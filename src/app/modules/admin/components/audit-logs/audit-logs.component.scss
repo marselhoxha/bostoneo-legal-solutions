@@ -1,0 +1,148 @@
+.activity-timeline {
+  .activity-item {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1rem;
+    
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+  }
+  
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    i {
+      font-size: 16px;
+    }
+  }
+}
+
+.table-responsive {
+  .table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+  }
+  
+  .table td {
+    vertical-align: middle;
+    border-color: #e9ecef;
+  }
+}
+
+// Badge styling
+.badge {
+  font-size: 0.75rem;
+  
+  &.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: #198754 !important;
+  }
+  
+  &.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+  }
+  
+  &.bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+    color: #0dcaf0 !important;
+  }
+}
+
+// Filter form styling
+.card-header {
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    i {
+      color: #6c757d;
+    }
+  }
+}
+
+// Loading spinner
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+// Pagination styling
+.pagination {
+  .page-link {
+    border-radius: 0.375rem;
+    margin: 0 0.125rem;
+    border: 1px solid #dee2e6;
+    
+    &:hover {
+      background-color: #e9ecef;
+    }
+  }
+  
+  .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .activity-timeline {
+    .activity-item {
+      .d-flex {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    
+    .btn {
+      margin-bottom: 0.25rem;
+    }
+  }
+}
+
+// Dark theme support (if needed)
+[data-bs-theme="dark"] {
+  .activity-icon {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+  }
+  
+  .table th {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+  }
+  
+  .badge {
+    &.bg-success-subtle {
+      background-color: rgba(25, 135, 84, 0.2) !important;
+    }
+    
+    &.bg-danger-subtle {
+      background-color: rgba(220, 53, 69, 0.2) !important;
+    }
+    
+    &.bg-info-subtle {
+      background-color: rgba(13, 202, 240, 0.2) !important;
+    }
+  }
+} 

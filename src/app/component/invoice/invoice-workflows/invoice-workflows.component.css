@@ -1,0 +1,190 @@
+/* Invoice Workflows Component Styles */
+
+/* Tab Navigation */
+.nav-tabs-custom .nav-link {
+  color: #74788d;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs-custom .nav-link.active {
+  color: #5664d2;
+  background: transparent;
+  border-bottom: 2px solid #5664d2;
+}
+
+.nav-tabs-custom .nav-link:hover:not(.active) {
+  color: #5664d2;
+}
+
+/* Table Styling */
+.table-hover tbody tr {
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Workflow Rule Details */
+.table td h5 {
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 0.25rem;
+}
+
+.table td p {
+  font-size: 0.875rem;
+  color: #74788d;
+}
+
+/* Badges */
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+/* Switch Styling */
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+  margin-top: 0;
+  cursor: pointer;
+}
+
+.form-switch .form-check-label {
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  color: #495057;
+  cursor: pointer;
+}
+
+/* Action Buttons */
+.btn-light {
+  background-color: #f3f6f9;
+  border-color: #f3f6f9;
+  color: #495057;
+}
+
+.btn-light:hover {
+  background-color: #e7ecf1;
+  border-color: #e7ecf1;
+  color: #495057;
+}
+
+/* Info Card */
+.card-border-info {
+  border-left: 3px solid #3577f1;
+}
+
+.card-border-info .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eff2f7;
+}
+
+.card-border-info .card-title {
+  color: #3577f1;
+  font-weight: 600;
+}
+
+/* Loading State */
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Empty State */
+.text-muted.text-center {
+  padding: 3rem 0;
+  font-size: 0.9375rem;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .nav-tabs-custom .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .table {
+    font-size: 0.875rem;
+  }
+  
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .form-switch .form-check-input {
+    width: 2rem;
+    height: 1rem;
+  }
+}
+
+/* Animation for tab switching */
+.tab-pane {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Execution Status Colors */
+.bg-success-subtle {
+  background-color: rgba(34, 192, 60, 0.1) !important;
+}
+
+.text-success {
+  color: #22c03c !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(240, 101, 72, 0.1) !important;
+}
+
+.text-danger {
+  color: #f06548 !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(251, 188, 11, 0.1) !important;
+}
+
+.text-warning {
+  color: #fbbc0b !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(53, 119, 241, 0.1) !important;
+}
+
+.text-info {
+  color: #3577f1 !important;
+}
+
+.bg-primary-subtle {
+  background-color: rgba(86, 100, 210, 0.1) !important;
+}
+
+.text-primary {
+  color: #5664d2 !important;
+}

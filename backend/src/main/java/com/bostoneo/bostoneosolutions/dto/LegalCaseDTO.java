@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
 
@@ -72,7 +73,63 @@ public class LegalCaseDTO {
     @NotNull(message = "Payment status is required")
     @ValidEnum(enumClass = PaymentStatus.class)
     private PaymentStatus paymentStatus;
+
+    // Enhanced Rate Configuration Fields
+    private BigDecimal defaultRate;
+    private Boolean allowMultipliers;
+    private BigDecimal weekendMultiplier;
+    private BigDecimal afterHoursMultiplier;
+    private BigDecimal emergencyMultiplier;
+
+    // Rate configuration summary for frontend display
+    private String rateConfigurationSummary;
     
     private Date createdAt;
     private Date updatedAt;
+
+    // Helper method to generate rate configuration summary
+    public String getRateConfigurationSummary() {
+        if (defaultRate == null) {
+            return "No rate configuration";
+        }
+        
+        StringBuilder summary = new StringBuilder();
+        summary.append("$").append(defaultRate).append("/hr");
+        
+        if (Boolean.TRUE.equals(allowMultipliers)) {
+            summary.append(" (with multipliers)");
+        } else {
+            summary.append(" (fixed rate)");
+        }
+        
+        return summary.toString();
+    }
+
+    // Helper method to check if multipliers are enabled
+    public boolean hasMultipliers() {
+        return Boolean.TRUE.equals(allowMultipliers);
+    }
+
+    // Helper method to get effective rate for a given context
+    public BigDecimal getEffectiveRate(boolean isWeekend, boolean isAfterHours, boolean isEmergency) {
+        BigDecimal rate = defaultRate != null ? defaultRate : new BigDecimal("250.00");
+        
+        if (!Boolean.TRUE.equals(allowMultipliers)) {
+            return rate;
+        }
+        
+        if (isEmergency && emergencyMultiplier != null) {
+            return rate.multiply(emergencyMultiplier);
+        }
+        
+        if (isWeekend && weekendMultiplier != null) {
+            rate = rate.multiply(weekendMultiplier);
+        }
+        
+        if (isAfterHours && afterHoursMultiplier != null) {
+            rate = rate.multiply(afterHoursMultiplier);
+        }
+        
+        return rate;
+    }
 } 

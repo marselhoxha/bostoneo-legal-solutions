@@ -4,9 +4,12 @@ import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.VerificationType;
 import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
 import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
+import com.***REMOVED***.***REMOVED***solutions.model.Permission;
 import com.***REMOVED***.***REMOVED***solutions.model.Role;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
 import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
+import com.***REMOVED***.***REMOVED***solutions.query.RoleQuery;
 import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
 import com.***REMOVED***.***REMOVED***solutions.rowmapper.UserRowMapper;
@@ -32,8 +35,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.List;
+import java.util.Map;
 
 import static com.***REMOVED***.***REMOVED***solutions.enumeration.RoleType.ROLE_USER;
 import static com.***REMOVED***.***REMOVED***solutions.enumeration.VerificationType.ACCOUNT;
@@ -81,7 +88,23 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
     @Override
     public Collection<User> list(int page, int pageSize) {
-        return null;
+        try {
+            log.info("Fetching users with pagination: page={}, pageSize={}", page, pageSize);
+            
+            if (pageSize <= 0) pageSize = 20; // Default page size
+            if (page < 0) page = 0; // Default page
+            
+            int offset = page * pageSize;
+            
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("pageSize", pageSize)
+                .addValue("offset", offset);
+            
+            return jdbc.query(SELECT_ALL_USERS_QUERY, params, new UserRowMapper());
+        } catch (Exception exception) {
+            log.error("Error fetching users: {}", exception.getMessage(), exception);
+            throw new ApiException("An error occurred while fetching users: " + exception.getMessage());
+        }
     }
 
     @Override
@@ -118,7 +141,24 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             throw new UsernameNotFoundException("User not found in the database");
         } else {
             log.info("User found in the database: {}", email);
-            return new UserPrincipal(user, roleRepository.getRoleByUserId(user.getId()));
+            
+            // Get all roles for the user
+            Set<Role> roles = roleRepository.getRolesByUserId(user.getId());
+            
+            // Get permissions for all the user's roles
+            Set<Permission> permissions = new HashSet<>();
+            for (Role role : roles) {
+                permissions.addAll(roleRepository.getPermissionsByRoleId(role.getId()));
+            }
+            
+            log.info("User has {} roles and {} permissions", roles.size(), permissions.size());
+            log.info("Roles: {}", roles.stream().map(Role::getName).collect(java.util.stream.Collectors.toList()));
+            log.info("Permissions: {}", permissions.stream().map(Permission::getName).collect(java.util.stream.Collectors.toList()));
+            
+            // Create UserPrincipal with full RBAC information
+            UserPrincipal principal = new UserPrincipal(user, roles, permissions, new HashSet<>());
+            log.info("UserPrincipal authorities: {}", principal.getAuthorities().stream().map(org.springframework.security.core.GrantedAuthority::getAuthority).collect(java.util.stream.Collectors.toList()));
+            return principal;
         }
     }
 
@@ -296,7 +336,34 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         user.setImageUrl(userImageUrl);
         saveImage(user.getEmail(), image);
         jdbc.update(UPDATE_USER_IMAGE_QUERY, of("imageUrl", userImageUrl, "id", user.getId()));
+    }
 
+    @Override
+    public List<User> getUsersByRoleId(Long roleId) {
+        try {
+            return jdbc.query(RoleQuery.SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new UserRowMapper());
+        } catch (Exception exception) {
+            log.error("Error fetching users by role id: {}", exception.getMessage());
+            throw new ApiException("An error occurred while fetching users by role");
+        }
+    }
+
+    @Override
+    public User findByIdWithRoles(Long id) {
+        try {
+            User user = jdbc.queryForObject(SELECT_USER_BY_ID_QUERY, of("id", id), new UserRowMapper());
+            if (user != null) {
+                // Load roles for the user
+                Set<Role> roles = roleRepository.getRolesByUserId(user.getId());
+                user.setRoles(roles);
+            }
+            return user;
+        } catch (EmptyResultDataAccessException exception) {
+            throw new ApiException("No User found by id: " + id);
+        } catch (Exception exception) {
+            log.error(exception.getMessage());
+            throw new ApiException("An error occurred. Please try again.");
+        }
     }
 
     private void sendEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {

@@ -63,7 +63,7 @@ public class ExternalCalendarController {
     }
 
     @GetMapping("/export/ical")
-    @PreAuthorize("hasAuthority('READ:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW')")
     public ResponseEntity<String> exportAsICal(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @RequestParam(required = false, defaultValue = "30") int days) {
@@ -86,7 +86,7 @@ public class ExternalCalendarController {
     }
 
     @GetMapping("/export/ical/case/{caseId}")
-    @PreAuthorize("hasAuthority('READ:CALENDAR') and hasAuthority('READ:CASE')")
+    @PreAuthorize("hasAuthority('CALENDAR:VIEW') and hasAuthority('CASE:VIEW')")
     public ResponseEntity<String> exportCaseEventsAsICal(
             @PathVariable Long caseId) {
         log.info("Exporting calendar events as iCal for case ID: {}", caseId);

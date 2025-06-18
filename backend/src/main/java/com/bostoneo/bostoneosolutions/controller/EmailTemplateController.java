@@ -28,19 +28,19 @@ public class EmailTemplateController {
     private EmailService emailService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<List<EmailTemplate>> getAllTemplates() {
         return ResponseEntity.ok(emailTemplateRepository.findAll());
     }
     
     @GetMapping("/active")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<List<EmailTemplate>> getActiveTemplates() {
         return ResponseEntity.ok(emailTemplateRepository.findByIsActiveTrue());
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<EmailTemplate> getTemplate(@PathVariable Long id) {
         Optional<EmailTemplate> template = emailTemplateRepository.findById(id);
         return template.map(ResponseEntity::ok)
@@ -48,7 +48,7 @@ public class EmailTemplateController {
     }
     
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<EmailTemplate> createTemplate(@Valid @RequestBody EmailTemplate template) {
         // Check if a template with the same name exists
         Optional<EmailTemplate> existingTemplate = emailTemplateRepository.findByName(template.getName());
@@ -72,7 +72,7 @@ public class EmailTemplateController {
     }
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<EmailTemplate> updateTemplate(@PathVariable Long id, 
                                                        @Valid @RequestBody EmailTemplate template) {
         if (!emailTemplateRepository.existsById(id)) {
@@ -98,7 +98,7 @@ public class EmailTemplateController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<Void> deleteTemplate(@PathVariable Long id) {
         if (!emailTemplateRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -109,7 +109,7 @@ public class EmailTemplateController {
     }
     
     @PostMapping("/{id}/test")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
     public ResponseEntity<?> testTemplate(@PathVariable Long id, 
                                         @RequestParam String testEmail) {
         Optional<EmailTemplate> templateOpt = emailTemplateRepository.findById(id);
@@ -144,5 +144,19 @@ public class EmailTemplateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Failed to send test email"));
         }
+    }
+
+    @PostMapping("/{id}/send")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
+    public ResponseEntity<String> sendEmail(@PathVariable Long id, @RequestParam String recipient) {
+        // Implementation of sendEmail method
+        return null; // Placeholder return, actual implementation needed
+    }
+
+    @GetMapping("/categories")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_SYSADMIN')")
+    public ResponseEntity<List<String>> getCategories() {
+        // Implementation of getCategories method
+        return null; // Placeholder return, actual implementation needed
     }
 } 

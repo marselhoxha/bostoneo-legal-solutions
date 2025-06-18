@@ -96,20 +96,20 @@
                 <div class="invalid-feedback">Vendor is required</div>
               </div>
 
-              <!-- Customer -->
+              <!-- Client -->
               <div class="col-md-6">
-                <label for="customerId" class="form-label mb-2">Customer*</label>
+                <label for="clientId" class="form-label mb-2">Client*</label>
                 <div class="input-group">
                   <span class="input-group-text bg-light dark:bg-dark border-end-0">
                     <i class="bi bi-person"></i>
                   </span>
-                  <select class="form-select border-start-0" id="customerId" formControlName="customerId"
-                  [class.is-invalid]="expenseForm.get('customerId')?.invalid && expenseForm.get('customerId')?.touched">
-                    <option [ngValue]="''">Select a customer</option>
-                    <option *ngFor="let customer of customers" [ngValue]="customer.id.toString()">{{ customer.name }}</option>
+                  <select class="form-select border-start-0" id="clientId" formControlName="clientId"
+                  [class.is-invalid]="expenseForm.get('clientId')?.invalid && expenseForm.get('clientId')?.touched">
+                    <option [ngValue]="''">Select a client</option>
+                    <option *ngFor="let client of clients" [ngValue]="client.id.toString()">{{ client.name }}</option>
                 </select>
                 </div>
-                <div class="invalid-feedback">Customer is required</div>
+                <div class="invalid-feedback">Client is required</div>
             </div>
 
               <!-- Category -->

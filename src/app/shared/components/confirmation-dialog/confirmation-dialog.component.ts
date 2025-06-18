@@ -14,44 +14,18 @@ export interface ConfirmationDialogData {
   selector: 'app-confirmation-dialog',
   standalone: true,
   imports: [CommonModule, MatDialogModule],
-  template: `
-    <div class="confirmation-dialog">
-      <h2 mat-dialog-title>{{ data.title }}</h2>
-      <mat-dialog-content>
-        <p [innerHTML]="data.message"></p>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button class="btn btn-secondary" (click)="onCancel()">
-          {{ data.cancelButtonText || 'Cancel' }}
-        </button>
-        <button 
-          class="btn" 
-          [ngClass]="data.isDestructive ? 'btn-danger' : 'btn-primary'" 
-          (click)="onConfirm()">
-          {{ data.confirmButtonText || 'Confirm' }}
-        </button>
-      </mat-dialog-actions>
-    </div>
-  `,
-  styles: [`
-    .confirmation-dialog {
-      padding: 1rem;
-    }
-    mat-dialog-content {
-      margin-bottom: 1rem;
-    }
-    mat-dialog-actions {
-      margin-top: 0.5rem;
-    }
-    button {
-      margin-left: 0.5rem;
-    }
-  `]
+  templateUrl: './confirmation-dialog.component.html',
+  styleUrls: ['./confirmation-dialog.component.scss']
 })
 export class ConfirmationDialogComponent {
   constructor(
     public dialogRef: MatDialogRef<ConfirmationDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ConfirmationDialogData
+    @Inject(MAT_DIALOG_DATA) public data: {
+      title: string;
+      message: string;
+      confirmText: string;
+      cancelText: string;
+    }
   ) {}
 
   onConfirm(): void {

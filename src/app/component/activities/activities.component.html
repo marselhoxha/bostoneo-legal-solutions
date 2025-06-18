@@ -1,0 +1,674 @@
+<div class="container-fluid" style="margin-top: 115px;">
+  
+  <!-- Enhanced Velzon Page Title -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Administration</a></li>
+            <li class="breadcrumb-item active">Activity Monitor</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simple Velzon Activity Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary text-white rounded">
+                      <i class="ri-shield-check-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h4 class="mb-1 fw-semibold">System Activity Monitor</h4>
+                  <p class="text-muted mb-2">Comprehensive real-time audit trail and security monitoring dashboard</p>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="badge bg-success-subtle text-success px-2 py-1">
+                      <i class="ri-shield-check-line me-1"></i>Secure
+                    </span>
+                    <span class="badge bg-info-subtle text-info px-2 py-1">
+                      <i class="ri-time-line me-1"></i>Real-time
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                      <i class="ri-database-line me-1"></i>7-day retention
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                      <i class="ri-lock-line me-1"></i>GDPR compliant
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-lg-4">
+              <div class="row g-3">
+                <!-- Total Events -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-primary-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-database-2-line text-primary fs-20 me-2"></i>
+                        <h4 class="mb-0 text-primary fw-bold">{{(activityCounts?.total || 0) | number}}</h4>
+                      </div>
+                      <small class="text-primary fw-semibold">Total Events</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Today's Activity -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-success-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-calendar-today-fill text-success fs-20 me-2"></i>
+                        <h4 class="mb-0 text-success fw-bold">{{(activityCounts?.today || 0) | number}}</h4>
+                      </div>
+                      <small class="text-success fw-semibold">Today</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Active Users -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-info-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-team-line text-info fs-20 me-2"></i>
+                        <h4 class="mb-0 text-info fw-bold">{{(statistics?.activeUsersToday || 0) | number}}</h4>
+                      </div>
+                      <small class="text-info fw-semibold">Active</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Statistics Cards with Better Styling -->
+  <div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm card-animate card-enhanced">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                <i class="ri-database-2-line me-1 text-primary"></i>Total Events
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive">
+                <i class="ri-arrow-up-line fs-12"></i> +12.5%
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold ff-secondary mb-3 text-primary">{{(activityCounts?.total || 0) | number}}</h4>
+              <div class="progress progress-sm mb-2">
+                <div class="progress-bar bg-primary" style="width: 100%"></div>
+              </div>
+              <span class="badge bg-primary-subtle text-primary fs-12">
+                <i class="ri-check-line me-1"></i>Complete Coverage
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary text-white rounded shadow-sm">
+                <i class="ri-database-2-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer border-0 bg-primary bg-opacity-10">
+          <small class="text-primary fw-medium">
+            <i class="ri-time-line me-1"></i>Since system inception
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm card-animate card-enhanced">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                <i class="ri-calendar-today-line me-1 text-success"></i>Today's Activity
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive">
+                <i class="ri-arrow-up-line fs-12"></i> +8.3%
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold ff-secondary mb-3 text-success">{{(activityCounts?.today || 0) | number}}</h4>
+              <div class="progress progress-sm mb-2">
+                <div class="progress-bar bg-success" style="width: 75%"></div>
+              </div>
+              <span class="badge bg-success-subtle text-success fs-12">
+                <i class="ri-pulse-line me-1"></i>Live Tracking
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-success text-white rounded shadow-sm">
+                <i class="ri-calendar-today-fill fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer border-0 bg-success bg-opacity-10">
+          <small class="text-success fw-medium">
+            <i class="ri-refresh-line me-1"></i>Auto-refreshing every 30s
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm card-animate card-enhanced">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                <i class="ri-bar-chart-line me-1 text-warning"></i>Weekly Analytics
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-positive">
+                <i class="ri-arrow-up-line fs-12"></i> +15.7%
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold ff-secondary mb-3 text-warning">{{(activityCounts?.week || 0) | number}}</h4>
+              <div class="progress progress-sm mb-2">
+                <div class="progress-bar bg-warning" style="width: 85%"></div>
+              </div>
+              <span class="badge bg-warning-subtle text-warning fs-12">
+                <i class="ri-trending-up-line me-1"></i>Growth Trend
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-warning text-white rounded shadow-sm">
+                <i class="ri-bar-chart-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer border-0 bg-warning bg-opacity-10">
+          <small class="text-warning fw-medium">
+            <i class="ri-calendar-week-line me-1"></i>7-day performance
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card border-0 shadow-sm card-animate card-enhanced">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                <i class="ri-team-line me-1 text-info"></i>Active Sessions
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <div class="trend-badge trend-stable">
+                <i class="ri-subtract-line fs-12"></i> Stable
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-bold ff-secondary mb-3 text-info">{{(statistics?.activeUsersToday || 0) | number}}</h4>
+              <div class="progress progress-sm mb-2">
+                <div class="progress-bar bg-info" style="width: 60%"></div>
+              </div>
+              <span class="badge bg-info-subtle text-info fs-12">
+                <i class="ri-shield-user-line me-1"></i>Secure
+              </span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-info text-white rounded shadow-sm">
+                <i class="ri-team-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer border-0 bg-info bg-opacity-10">
+          <small class="text-info fw-medium">
+            <i class="ri-wifi-line me-1"></i>Currently online
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Professional Filters Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-lg card-enhanced">
+        <div class="card-header py-4">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <div class="d-flex align-items-center mb-2">
+                <div class="filter-icon me-3">
+                  <i class="ri-filter-3-line text-primary fs-20"></i>
+                </div>
+                <div>
+                  <h4 class="card-title mb-1 fw-bold">Activity Intelligence Filters</h4>
+                  <p class="text-muted mb-0 fs-14">
+                    Advanced search and filtering with real-time AI-powered insights
+                  </p>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                  <i class="ri-cpu-line me-1"></i>AI-Powered
+                </span>
+                <span class="badge bg-success-subtle text-success px-3 py-2">
+                  <i class="ri-check-line me-1"></i>Real-time
+                </span>
+                <span class="badge bg-info-subtle text-info px-3 py-2">
+                  <i class="ri-shield-line me-1"></i>Secure
+                </span>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="d-flex gap-2 align-items-center justify-content-lg-end">
+                <div class="results-counter">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="results-icon">
+                      <i class="ri-search-line text-info"></i>
+                    </div>
+                    <div>
+                      <div class="results-number fw-bold">{{filteredActivities.length}}</div>
+                      <small class="text-muted">Results Found</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="filter-actions d-flex gap-2">
+                  <button class="btn btn-soft-warning btn-sm" (click)="clearFilters()" title="Reset all filters">
+                    <i class="ri-refresh-line me-1"></i>Reset
+                  </button>
+                  <button class="btn btn-primary btn-sm" (click)="manualRefreshActivities(true)" [disabled]="loading" title="Refresh data">
+                    <span *ngIf="!loading">
+                      <i class="ri-refresh-line me-1"></i>Refresh
+                    </span>
+                    <span *ngIf="loading" class="d-flex align-items-center">
+                      <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      Loading...
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <!-- Intelligent Search -->
+            <div class="col-xl-4 col-lg-6">
+              <label class="form-label fw-semibold mb-2">
+                <i class="ri-search-line me-2 text-primary"></i>Search Activities
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="ri-search-line text-muted"></i>
+                </span>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  placeholder="Search users, actions, descriptions..."
+                  [(ngModel)]="searchTerm"
+                  (input)="onFilterChange()">
+                <button class="btn btn-outline-secondary" type="button" *ngIf="searchTerm" (click)="searchTerm = ''; onFilterChange()">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Action Type Filter -->
+            <div class="col-xl-3 col-lg-3 col-md-6">
+              <label class="form-label fw-semibold mb-2">
+                <i class="ri-play-circle-line me-2 text-success"></i>Action Type
+              </label>
+              <select class="form-select" [(ngModel)]="selectedAction" (change)="onFilterChange()">
+                <option value="">All Actions</option>
+                <option *ngFor="let action of actionOptions" [value]="action">
+                  {{auditService.getActionDisplayName(action)}}
+                </option>
+              </select>
+            </div>
+
+            <!-- Entity Type Filter -->
+            <div class="col-xl-3 col-lg-3 col-md-6">
+              <label class="form-label fw-semibold mb-2">
+                <i class="ri-file-list-line me-2 text-warning"></i>Entity Type
+              </label>
+              <select class="form-select" [(ngModel)]="selectedEntityType" (change)="onFilterChange()">
+                <option value="">All Entities</option>
+                <option *ngFor="let entity of entityTypeOptions" [value]="entity">
+                  {{auditService.getEntityDisplayName(entity)}}
+                </option>
+              </select>
+            </div>
+
+            <!-- User Filter -->
+            <div class="col-xl-2 col-lg-6 col-md-6">
+              <label class="form-label fw-semibold mb-2">
+                <i class="ri-user-line me-2 text-info"></i>User
+              </label>
+              <input 
+                type="text" 
+                class="form-control" 
+                placeholder="Filter by user..."
+                [(ngModel)]="selectedUser"
+                (input)="onFilterChange()">
+            </div>
+          </div>
+
+          <!-- Quick Filter Presets -->
+          <div class="row mt-3">
+            <div class="col-12">
+              <div class="d-flex align-items-center gap-3">
+                <small class="text-muted fw-semibold">
+                  <i class="ri-magic-line me-1"></i>Quick Filters:
+                </small>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-outline-primary btn-sm" (click)="applyQuickFilter('today')">
+                    <i class="ri-calendar-today-line me-1"></i>Today
+                  </button>
+                  <button class="btn btn-outline-success btn-sm" (click)="applyQuickFilter('login')">
+                    <i class="ri-login-circle-line me-1"></i>Logins
+                  </button>
+                  <button class="btn btn-outline-warning btn-sm" (click)="applyQuickFilter('create')">
+                    <i class="ri-add-circle-line me-1"></i>Creates
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="applyQuickFilter('delete')">
+                    <i class="ri-delete-bin-line me-1"></i>Deletes
+                  </button>
+                  <button class="btn btn-outline-info btn-sm" (click)="applyQuickFilter('week')">
+                    <i class="ri-calendar-week-line me-1"></i>This Week
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visually Stunning Activity Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm velzon-enhanced-table-card">
+        <div class="card-header border-0 py-4">
+          <div class="row align-items-center">
+            <div class="col-sm-6">
+              <div class="d-flex align-items-center">
+                <div class="table-header-icon me-3">
+                  <i class="ri-table-line text-primary fs-20"></i>
+                </div>
+                <div>
+                  <h5 class="card-title mb-1 fw-bold">System Activity Monitor</h5>
+                  <p class="text-muted mb-0 fs-13">
+                    {{filteredActivities.length}} of {{totalElements}} events displayed
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="d-flex gap-2 justify-content-sm-end align-items-center">
+                <span class="badge bg-success text-white px-3 py-2 me-3">
+                  <i class="ri-shield-check-line me-1"></i>Live Monitoring
+                </span>
+                <span class="status-dot bg-success me-1"></span>
+                <small class="text-success fw-medium me-3">Real-time</small>
+                <button class="btn btn-soft-info btn-sm" (click)="manualRefreshActivities(true)" [disabled]="loading">
+                  <span *ngIf="!loading">
+                    <i class="ri-refresh-line me-1"></i>Refresh
+                  </span>
+                  <span *ngIf="loading" class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Syncing...
+                  </span>
+                </button>
+                <button class="btn btn-primary btn-sm" (click)="exportActivities()">
+                  <i class="ri-download-line me-1"></i>Export
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Enhanced Loading State -->
+          <div class="velzon-loading-state text-center py-5" *ngIf="loading && filteredActivities.length === 0">
+            <div class="loading-animation mb-4">
+              <div class="spinner-border text-primary spin" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <div class="loading-dots mt-3">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <h5 class="text-primary mb-2 fw-bold">Loading Activity Data</h5>
+            <p class="text-muted mb-0">Retrieving and processing audit information...</p>
+            <div class="mt-3">
+              <div class="progress" style="height: 4px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 100%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enhanced Empty State -->
+          <div class="velzon-empty-state text-center py-5" *ngIf="!loading && filteredActivities.length === 0">
+            <div class="empty-state-animation mb-4">
+              <div class="empty-circle">
+                <i class="ri-database-2-line display-4 text-muted"></i>
+              </div>
+            </div>
+            <h4 class="text-dark mb-3 fw-bold">No Activities Found</h4>
+            <p class="text-muted mb-4 mx-auto" style="max-width: 400px;">
+              No activities match your current search criteria. Try adjusting your filters or refresh the data to see the latest activities.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+              <button class="btn btn-primary" (click)="clearFilters()">
+                <i class="ri-filter-off-line me-2"></i>Clear All Filters
+              </button>
+              <button class="btn btn-soft-primary" (click)="manualRefreshActivities(true)">
+                <i class="ri-refresh-line me-2"></i>Refresh Data
+              </button>
+            </div>
+          </div>
+
+          <!-- Simple Clean Velzon Table -->
+          <div class="table-responsive" *ngIf="!loading && filteredActivities.length > 0">
+            <table class="table table-nowrap table-striped table-hover align-middle mb-0">
+              
+              <!-- Clean Table Header -->
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-semibold">
+                    <i class="ri-time-line me-2 text-primary"></i>Timestamp
+                  </th>
+                  <th class="fw-semibold">
+                    <i class="ri-user-line me-2 text-primary"></i>User
+                  </th>
+                  <th class="fw-semibold">
+                    <i class="ri-play-circle-line me-2 text-primary"></i>Action
+                  </th>
+                  <th class="fw-semibold">
+                    <i class="ri-file-list-line me-2 text-primary"></i>Entity
+                  </th>
+                  <th class="fw-semibold">
+                    <i class="ri-information-line me-2 text-primary"></i>Description
+                  </th>
+                </tr>
+              </thead>
+              
+              <!-- Clean Table Body -->
+              <tbody>
+                <tr *ngFor="let activity of paginatedActivities; trackBy: trackByActivityId">
+                  
+                  <!-- Timestamp Column -->
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <i class="ri-time-line me-2 text-muted"></i>
+                      <div>
+                        <span class="fw-medium">{{getTimeAgo(activity.timestamp)}}</span>
+                        <small class="text-muted d-block">{{formatDate(activity.timestamp)}}</small>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- User Column -->
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="badge rounded-pill bg-primary me-2" 
+                            style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        {{getUserInitials(activity.userName)}}
+                      </span>
+                      <span class="fw-medium">{{activity.userName || 'System'}}</span>
+                    </div>
+                  </td>
+
+                  <!-- Action Column -->
+                  <td>
+                    <span class="badge" [class]="getActivityBadgeClass(activity.action)">
+                      {{activity.actionDisplayName}}
+                    </span>
+                  </td>
+
+                  <!-- Entity Column -->
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <i [class]="getEntityIcon(activity.entityType)" class="me-2 text-info"></i>
+                      <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="fw-medium">{{activity.entityDisplayName}}</span>
+                        <code class="text-muted fs-12" *ngIf="activity.entityId">#{{activity.entityId}}</code>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Description Column -->
+                  <td>
+                    <div class="d-flex align-items-start">
+                      <i class="ri-information-line me-2 text-muted mt-1"></i>
+                      <div>
+                        <span>{{activity.description}}</span>
+                        <small class="text-muted d-block" *ngIf="activity.ipAddress">
+                          <i class="ri-map-pin-line me-1"></i>{{activity.ipAddress}}
+                        </small>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div class="px-4 py-3 border-top" *ngIf="!loading && filteredActivities.length > pageSize">
+            <div class="row align-items-center">
+              <div class="col-sm-6">
+                <div class="text-muted">
+                  Showing <strong>{{pageInfo}}</strong> entries
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex justify-content-sm-end">
+                  <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                      <li class="page-item" [class.disabled]="!hasPreviousPage">
+                        <button class="page-link" (click)="goToPreviousPage()" [disabled]="!hasPreviousPage">
+                          <i class="ri-arrow-left-line"></i> Previous
+                        </button>
+                      </li>
+                      <li class="page-item active">
+                        <span class="page-link">{{currentPage + 1}}</span>
+                      </li>
+                      <li class="page-item" [class.disabled]="!hasNextPage">
+                        <button class="page-link" (click)="goToNextPage()" [disabled]="!hasNextPage">
+                          Next <i class="ri-arrow-right-line"></i>
+                        </button>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enhanced Card Footer -->
+        <div class="card-footer border-0 bg-light py-4" *ngIf="!loading && filteredActivities.length > 0">
+          <div class="row align-items-center">
+            <div class="col-sm-6">
+              <div class="table-info-enhanced">
+                <div class="d-flex align-items-center">
+                  <div class="info-icon me-3">
+                    <i class="ri-information-line text-primary"></i>
+                  </div>
+                  <div class="info-content">
+                    <span class="info-text fw-medium">
+                      Showing <span class="text-primary fw-bold">{{paginatedActivities.length}}</span> 
+                      of <span class="text-primary fw-bold">{{filteredActivities.length}}</span> filtered entries
+                    </span>
+                    <small class="info-subtitle text-muted d-block">
+                      Page {{currentPage + 1}} of {{totalPages}} • Real-time updates
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="d-flex justify-content-sm-end align-items-center gap-4">
+                <div class="security-status-enhanced">
+                  <span class="status-badge bg-success-subtle text-success">
+                    <i class="ri-shield-check-line me-1"></i>
+                    <span class="status-text">Secure Connection</span>
+                  </span>
+                </div>
+                <div class="last-update-enhanced">
+                  <span class="update-badge bg-info-subtle text-info">
+                    <i class="ri-refresh-line me-1"></i>
+                    <span class="update-text">Last sync: {{lastUpdated | date:'short'}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> 

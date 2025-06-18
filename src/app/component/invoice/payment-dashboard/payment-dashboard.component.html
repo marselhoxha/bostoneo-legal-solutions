@@ -1,0 +1,275 @@
+<!-- Start Breadcrumbs -->
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">Payment Dashboard</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/invoices']">Invoices</a></li>
+          <li class="breadcrumb-item active">Payment Dashboard</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End Breadcrumbs -->
+
+<!-- Payment Statistics -->
+<ng-container *ngIf="(statsState$ | async) as statsState">
+  <div class="row">
+    <!-- Total Received Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Total Received</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="ri-money-dollar-circle-line display-6 text-success"></i>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                <span class="counter-value" *ngIf="statsState.dataState === DataState.LOADED">
+                  ${{ statsState.appData?.totalReceived | number:'1.2-2' }}
+                </span>
+                <span *ngIf="statsState.dataState === DataState.LOADING">
+                  <i class="mdi mdi-loading mdi-spin"></i>
+                </span>
+              </h4>
+              <a [routerLink]="['/invoices']" [queryParams]="{status: 'PAID'}" class="text-decoration-underline">View paid invoices</a>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-success-subtle rounded fs-3">
+                <i class="bx bx-dollar-circle text-success"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Payments Count Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1 overflow-hidden">
+              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Recent Payments</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="ri-file-list-3-line display-6 text-info"></i>
+            </div>
+          </div>
+          <div class="d-flex align-items-end justify-content-between mt-4">
+            <div>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                <span class="counter-value" *ngIf="statsState.dataState === DataState.LOADED">
+                  {{ statsState.appData?.recentPaymentsCount }}
+                </span>
+                <span *ngIf="statsState.dataState === DataState.LOADING">
+                  <i class="mdi mdi-loading mdi-spin"></i>
+                </span>
+              </h4>
+              <span class="text-muted">Last {{ selectedDateRange }} days</span>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-info-subtle rounded fs-3">
+                <i class="bx bx-receipt text-info"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Methods Breakdown -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Payment Methods</h5>
+        </div>
+        <div class="card-body">
+          <div *ngIf="statsState.dataState === DataState.LOADED && statsState.appData?.paymentMethodBreakdown?.length > 0">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <tbody>
+                  <tr *ngFor="let method of statsState.appData.paymentMethodBreakdown">
+                    <td>
+                      <i [class]="getPaymentMethodIcon(method.method) + ' ' + getPaymentMethodColor(method.method) + ' me-2'"></i>
+                      {{ method.method }}
+                    </td>
+                    <td class="text-end">{{ method.count }} payments</td>
+                    <td class="text-end fw-semibold">${{ method.amount | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div *ngIf="statsState.dataState === DataState.LOADING" class="text-center py-3">
+            <i class="mdi mdi-loading mdi-spin fs-3"></i>
+          </div>
+          <div *ngIf="statsState.dataState === DataState.LOADED && (!statsState.appData?.paymentMethodBreakdown || statsState.appData.paymentMethodBreakdown.length === 0)" 
+               class="text-center text-muted py-3">
+            No payment data available for the selected period
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<!-- Filters Section -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Date Range</label>
+            <select class="form-select" [(ngModel)]="selectedDateRange" (change)="onDateRangeChange()">
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="365">Last year</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Payment Method</label>
+            <select class="form-select" [(ngModel)]="selectedPaymentMethod" (change)="onPaymentMethodChange()">
+              <option value="all">All Methods</option>
+              <option value="CHECK">Check</option>
+              <option value="CREDIT_CARD">Credit Card</option>
+              <option value="ACH">ACH Transfer</option>
+              <option value="WIRE_TRANSFER">Wire Transfer</option>
+              <option value="CASH">Cash</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" [(ngModel)]="selectedStatus" (change)="onStatusChange()">
+              <option value="all">All Statuses</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-primary w-100" (click)="exportPayments()">
+              <i class="ri-download-line me-1"></i> Export Payments
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment History Table -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Payment History</h5>
+      </div>
+      <div class="card-body">
+        <ng-container *ngIf="(paymentState$ | async) as paymentState">
+          <!-- Loading State -->
+          <div *ngIf="paymentState.dataState === DataState.LOADING" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading payments...</p>
+          </div>
+
+          <!-- Loaded State -->
+          <div *ngIf="paymentState.dataState === DataState.LOADED">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Invoice #</th>
+                    <th>Client</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let payment of paymentState.appData?.data?.content">
+                    <td>{{ payment.paymentDate | date:'shortDate' }}</td>
+                    <td>
+                      <a href="javascript:void(0)" (click)="viewInvoice(payment)" class="text-primary">
+                        {{ payment.invoiceNumber || 'N/A' }}
+                      </a>
+                    </td>
+                    <td>{{ payment.clientName || 'N/A' }}</td>
+                    <td class="text-success fw-semibold">${{ payment.amount | number:'1.2-2' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="{
+                        'bg-info-subtle text-info': payment.paymentMethod === 'CHECK',
+                        'bg-primary-subtle text-primary': payment.paymentMethod === 'CREDIT_CARD',
+                        'bg-success-subtle text-success': payment.paymentMethod === 'ACH',
+                        'bg-warning-subtle text-warning': payment.paymentMethod === 'WIRE_TRANSFER',
+                        'bg-secondary-subtle text-secondary': payment.paymentMethod === 'CASH',
+                        'bg-light text-muted': payment.paymentMethod === 'OTHER'
+                      }">
+                        <i [class]="getPaymentMethodIcon(payment.paymentMethod) + ' me-1'"></i>
+                        {{ payment.paymentMethod }}
+                      </span>
+                    </td>
+                    <td>{{ payment.referenceNumber || '-' }}</td>
+                    <td>
+                      <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                            [title]="payment.notes || ''">
+                        {{ payment.notes || '-' }}
+                      </span>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-light" (click)="viewInvoice(payment)" title="View Invoice">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- No Data -->
+            <div *ngIf="!paymentState.appData?.data?.content || paymentState.appData.data.content.length === 0" 
+                 class="text-center py-5">
+              <i class="ri-file-list-3-line display-4 text-muted"></i>
+              <p class="mt-3 text-muted">No payments found for the selected criteria</p>
+            </div>
+
+            <!-- Pagination -->
+            <div *ngIf="paymentState.appData?.data?.totalPages > 1" class="mt-4">
+              <nav>
+                <ul class="pagination justify-content-center">
+                  <li class="page-item" [class.disabled]="currentPage === 0">
+                    <a class="page-link" (click)="loadPayments(currentPage - 1)" href="javascript:void(0)">Previous</a>
+                  </li>
+                  <li class="page-item" *ngFor="let page of [].constructor(paymentState.appData.data.totalPages); let i = index"
+                      [class.active]="i === currentPage">
+                    <a class="page-link" (click)="loadPayments(i)" href="javascript:void(0)">{{ i + 1 }}</a>
+                  </li>
+                  <li class="page-item" [class.disabled]="currentPage === paymentState.appData.data.totalPages - 1">
+                    <a class="page-link" (click)="loadPayments(currentPage + 1)" href="javascript:void(0)">Next</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,432 @@
+<!-- Welcome Section -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-lg overflow-hidden">
+      <div class="card-body bg-info bg-gradient text-white p-5">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <h1 class="text-white mb-3 fw-bold">Welcome back, {{currentUser?.firstName}}! ⚖️</h1>
+            <p class="mb-4 text-white-50 fs-16 lh-base">
+              <i class="ri-scales-3-line me-2 fs-18"></i>
+              Your legal practice dashboard - Cases, hearings, and client management
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="badge bg-white bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-briefcase-4-line me-1"></i>
+                {{activeCases}} Active Cases
+              </div>
+              <div class="badge bg-warning bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-calendar-event-line me-1"></i>
+                {{upcomingHearings}} This Week
+              </div>
+              <div class="badge bg-success bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-time-line me-1"></i>
+                2 Hours Billable Today
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-end">
+            <div class="position-relative">
+              <div class="avatar-xxl mx-auto">
+                <div class="avatar-title bg-white bg-opacity-15 rounded-circle border border-white border-opacity-25">
+                  <i class="ri-scales-3-line fs-1 text-white"></i>
+                </div>
+              </div>
+              <div class="position-absolute bottom-0 end-0">
+                <span class="badge bg-warning rounded-pill">Hearing Today</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attorney Metrics -->
+<div class="row g-4 mb-4">
+  <div class="col-xl-4 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">My Active Cases</p>
+            <h2 class="fw-bold text-primary mb-3">{{activeCases}}</h2>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="badge bg-success-subtle text-success">+3 New</span>
+              <span class="text-muted fs-13">this week</span>
+            </div>
+            
+            <!-- Case Breakdown -->
+            <div class="row g-2 text-center">
+              <div class="col-4">
+                <div class="p-2 bg-danger-subtle rounded">
+                  <h5 class="text-danger mb-1">8</h5>
+                  <p class="text-muted mb-0 fs-12">Criminal</p>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 bg-info-subtle rounded">
+                  <h5 class="text-info mb-1">12</h5>
+                  <p class="text-muted mb-0 fs-12">Civil</p>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 bg-warning-subtle rounded">
+                  <h5 class="text-warning mb-1">5</h5>
+                  <p class="text-muted mb-0 fs-12">Family</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-info-subtle text-info rounded shadow-sm">
+                <i class="ri-briefcase-4-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <a href="/legal/cases" class="btn btn-soft-info btn-sm w-100">
+            <i class="ri-eye-line me-1"></i>View All Cases
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Court Schedule</p>
+            <h2 class="fw-bold text-warning mb-3">{{upcomingHearings}}</h2>
+            <span class="badge bg-warning-subtle text-warning mb-3">This Week</span>
+            
+            <!-- Next Hearing Preview -->
+            <div class="p-3 bg-warning-subtle rounded-3">
+              <div class="d-flex align-items-center mb-2">
+                <i class="ri-calendar-event-line text-warning me-2"></i>
+                <h6 class="mb-0 fs-14 fw-semibold">Next: Tomorrow 10:00 AM</h6>
+              </div>
+              <p class="text-muted mb-1 fs-13">Case #2025-CV-123</p>
+              <p class="text-muted mb-0 fs-12">Johnson vs. State - Criminal Defense</p>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-warning-subtle text-warning rounded shadow-sm">
+                <i class="ri-calendar-event-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <a href="/legal/calendar" class="btn btn-soft-warning btn-sm w-100">
+            <i class="ri-calendar-check-line me-1"></i>Full Calendar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Pending Actions</p>
+            <h2 class="fw-bold text-danger mb-3">{{documentsToReview}}</h2>
+            <span class="badge bg-danger-subtle text-danger mb-3">Requires Attention</span>
+            
+            <!-- Action Items -->
+            <div class="vstack gap-2">
+              <div class="d-flex align-items-center p-2 bg-light rounded">
+                <i class="ri-file-text-line text-primary me-2"></i>
+                <div class="flex-grow-1">
+                  <span class="fs-13 fw-medium">3 Documents to review</span>
+                  <p class="text-muted mb-0 fs-12">Due by end of day</p>
+                </div>
+              </div>
+              <div class="d-flex align-items-center p-2 bg-light rounded">
+                <i class="ri-time-line text-warning me-2"></i>
+                <div class="flex-grow-1">
+                  <span class="fs-13 fw-medium">2 Deadlines this week</span>
+                  <p class="text-muted mb-0 fs-12">Motion filings</p>
+                </div>
+              </div>
+              <div class="d-flex align-items-center p-2 bg-light rounded">
+                <i class="ri-user-voice-line text-info me-2"></i>
+                <div class="flex-grow-1">
+                  <span class="fs-13 fw-medium">5 Client messages</span>
+                  <p class="text-muted mb-0 fs-12">Unread communications</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-danger-subtle text-danger rounded shadow-sm">
+                <i class="ri-alert-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <a href="/legal/documents" class="btn btn-soft-danger btn-sm w-100">
+            <i class="ri-file-edit-line me-1"></i>Review Items
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Cases & Today's Schedule -->
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <div class="d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1 fw-semibold">
+            <i class="ri-briefcase-line me-2 text-info"></i>Recent Cases
+          </h5>
+          <div class="flex-shrink-0">
+            <a href="/legal/cases" class="btn btn-soft-info btn-sm">
+              <i class="ri-external-link-line me-1"></i>View All
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-nowrap align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" class="fw-semibold">Case</th>
+                <th scope="col" class="fw-semibold">Client</th>
+                <th scope="col" class="fw-semibold">Type</th>
+                <th scope="col" class="fw-semibold">Status</th>
+                <th scope="col" class="fw-semibold">Next Action</th>
+                <th scope="col" class="fw-semibold text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-13">
+                          <i class="ri-file-text-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fs-14">#2025-LIT-001</h6>
+                      <p class="text-muted mb-0 fs-12">Personal Injury</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-2">
+                      <div class="avatar-title bg-info-subtle text-info rounded-circle fs-13">JD</div>
+                    </div>
+                    <span class="fw-medium">John Doe</span>
+                  </div>
+                </td>
+                <td><span class="badge bg-info-subtle text-info">Civil Litigation</span></td>
+                <td><span class="badge bg-success-subtle text-success">Discovery</span></td>
+                <td class="text-muted fs-13">Deposition - Jan 15</td>
+                <td class="text-center">
+                  <div class="dropdown">
+                    <button class="btn btn-soft-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                      <i class="ri-more-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="/legal/cases/1"><i class="ri-eye-line me-2"></i>View</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="ri-edit-line me-2"></i>Edit</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-13">
+                          <i class="ri-file-text-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fs-14">#2025-FAM-002</h6>
+                      <p class="text-muted mb-0 fs-12">Custody Dispute</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-2">
+                      <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-13">JS</div>
+                    </div>
+                    <span class="fw-medium">Jane Smith</span>
+                  </div>
+                </td>
+                <td><span class="badge bg-warning-subtle text-warning">Family Law</span></td>
+                <td><span class="badge bg-warning-subtle text-warning">Mediation</span></td>
+                <td class="text-muted fs-13">Settlement - Jan 20</td>
+                <td class="text-center">
+                  <div class="dropdown">
+                    <button class="btn btn-soft-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                      <i class="ri-more-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="/legal/cases/2"><i class="ri-eye-line me-2"></i>View</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="ri-edit-line me-2"></i>Edit</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar-xs">
+                        <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-13">
+                          <i class="ri-file-text-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fs-14">#2025-CRIM-003</h6>
+                      <p class="text-muted mb-0 fs-12">DUI Defense</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-2">
+                      <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-13">RJ</div>
+                    </div>
+                    <span class="fw-medium">Robert Johnson</span>
+                  </div>
+                </td>
+                <td><span class="badge bg-danger-subtle text-danger">Criminal</span></td>
+                <td><span class="badge bg-info-subtle text-info">Trial Prep</span></td>
+                <td class="text-muted fs-13">Court - Tomorrow</td>
+                <td class="text-center">
+                  <div class="dropdown">
+                    <button class="btn btn-soft-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                      <i class="ri-more-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="/legal/cases/3"><i class="ri-eye-line me-2"></i>View</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="ri-edit-line me-2"></i>Edit</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-bottom border-light bg-warning bg-opacity-10">
+        <h5 class="card-title mb-0 fw-semibold text-warning">
+          <i class="ri-calendar-check-line me-2"></i>Today's Schedule
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <!-- Calendar Widget -->
+        <div class="text-center mb-4">
+          <div class="bg-warning bg-opacity-10 rounded p-3">
+            <h4 class="text-warning mb-1">{{getCurrentDateFormatted()}}</h4>
+            <p class="text-muted mb-0">{{getCurrentDayFormatted()}}</p>
+          </div>
+        </div>
+        
+        <!-- Today's Agenda -->
+        <h6 class="text-uppercase fw-semibold mb-3 text-muted fs-13">
+          <i class="ri-time-line me-1"></i>Schedule
+        </h6>
+        
+        <div class="vstack gap-3">
+          <!-- Morning -->
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="avatar-sm">
+                <div class="avatar-title bg-success-subtle text-success rounded">
+                  <i class="ri-user-3-line"></i>
+                </div>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="fs-14 mb-1">Client Consultation</h6>
+              <p class="text-muted mb-1 fs-13">
+                <i class="ri-time-line me-1"></i>9:00 AM - 10:00 AM
+              </p>
+              <p class="text-muted mb-0 fs-12">John Doe - Case Review</p>
+            </div>
+          </div>
+          
+          <!-- Afternoon -->
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="avatar-sm">
+                <div class="avatar-title bg-warning-subtle text-warning rounded">
+                  <i class="ri-scales-3-line"></i>
+                </div>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="fs-14 mb-1">Court Hearing</h6>
+              <p class="text-muted mb-1 fs-13">
+                <i class="ri-time-line me-1"></i>2:00 PM - 3:30 PM
+              </p>
+              <p class="text-muted mb-0 fs-12">Case #2025-CV-123 - Motion Hearing</p>
+            </div>
+          </div>
+          
+          <!-- Evening -->
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="avatar-sm">
+                <div class="avatar-title bg-info-subtle text-info rounded">
+                  <i class="ri-file-text-line"></i>
+                </div>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="fs-14 mb-1">Document Review</h6>
+              <p class="text-muted mb-1 fs-13">
+                <i class="ri-time-line me-1"></i>4:00 PM - 5:30 PM
+              </p>
+              <p class="text-muted mb-0 fs-12">Contract Analysis - ABC Corp</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 pt-3 border-top">
+          <a href="/legal/calendar" class="btn btn-warning w-100">
+            <i class="ri-calendar-line me-1"></i>View Full Calendar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
+ 
+ 
+ 
+ 
+ 
+ 

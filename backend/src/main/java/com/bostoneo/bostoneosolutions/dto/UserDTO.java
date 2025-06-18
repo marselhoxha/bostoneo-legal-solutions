@@ -3,11 +3,14 @@ package com.***REMOVED***.***REMOVED***solutions.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class UserDTO {
 
     private Long id;
@@ -23,6 +26,18 @@ public class UserDTO {
     private boolean isNotLocked;
     private boolean isUsingMFA;
     private LocalDateTime createdAt;
+    
+    // List of role names for the new RBAC system
+    private List<String> roles = new ArrayList<>();
+    
+    // Legacy field for backward compatibility with frontend - derived from roles
     private String roleName;
+    
+    // Permissions as a comma-separated string
     private String permissions;
+    
+    // Helper method to get primary role
+    public String getPrimaryRoleName() {
+        return roles != null && !roles.isEmpty() ? roles.get(0) : roleName;
+    }
 }

@@ -16,32 +16,7 @@ export class CalendarService {
 
   constructor(private http: HttpClient, private modalService: ModalService) { }
 
-  getEvents(): Observable<CalendarEvent[]> {
-    return this.http.get<any>(`${this.apiUrl}/events?size=100`)
-      .pipe(
-        map(response => {
-          console.log('Fetched calendar events successfully', response);
-          
-          // Extract events from the nested response structure
-          if (response && response.data && Array.isArray(response.data.events)) {
-            return response.data.events.map(event => ({
-              ...event,
-              start: event.startTime || event.start,
-              end: event.endTime || event.end
-            }));
-          } else if (Array.isArray(response)) {
-            return response.map(event => ({
-              ...event,
-              start: event.startTime || event.start,
-              end: event.endTime || event.end
-            }));
-          }
-          
-          return [];
-        }),
-        catchError(this.handleError<CalendarEvent[]>('getEvents', []))
-      );
-  }
+
 
   getEventById(id: number | string): Observable<CalendarEvent> {
     return this.http.get<any>(`${this.apiUrl}/events/${id}`)
@@ -416,10 +391,22 @@ export class CalendarService {
             remindersSent: [...remindersSent, ...additionalRemindersToSend]
           };
           
-          return this.updateEvent(deadline.id.toString(), updatedDeadline);
+          // Add error handling to prevent infinite retries
+          return this.updateEvent(deadline.id.toString(), updatedDeadline).pipe(
+            catchError(error => {
+              console.error(`Failed to update reminder status for event ${deadline.id}:`, error);
+              // Return empty observable or a default value to continue processing
+              return of(null);
+            })
+          );
         });
         
         return forkJoin(reminderUpdates);
+      }),
+      catchError(error => {
+        console.error('Error in checkAdditionalReminders:', error);
+        // Return empty array to prevent infinite retries
+        return of([]);
       })
     );
   }
@@ -504,6 +491,40 @@ export class CalendarService {
           console.log('Test reminder response:', response);
         }),
         catchError(this.handleError<any>('testReminderEmail'))
+      );
+  }
+
+  /**
+   * Get all calendar events
+   */
+  getEvents(size: number = 100): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/api/calendar/events?size=${size}`)
+      .pipe(
+        map(response => {
+          console.log('Fetched calendar events successfully', response);
+          
+          // Extract events from the nested response structure
+          if (response && response.data && Array.isArray(response.data.events)) {
+            return response.data.events.map(event => ({
+              ...event,
+              start: event.startTime || event.start,
+              end: event.endTime || event.end
+            }));
+          } else if (Array.isArray(response)) {
+            return response.map(event => ({
+              ...event,
+              start: event.startTime || event.start,
+              end: event.endTime || event.end
+            }));
+          }
+          
+          return [];
+        }),
+        catchError(error => {
+          console.error('getEvents failed:', error);
+          // Return empty events array instead of propagating the error
+          return of([]);
+        })
       );
   }
 } 

@@ -736,7 +736,7 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
       const documentData = {
         title: this.uploadForm.get('title')?.value || 'Untitled Document',
         type: this.uploadForm.get('type')?.value || DocumentType.OTHER,
-        category: this.uploadForm.get('category')?.value || DocumentCategory.OTHER,
+        category: this.uploadForm.get('category')?.value || DocumentCategory.PUBLIC,
         description: this.uploadForm.get('description')?.value || '',
         status: DocumentStatus.DRAFT
       };
@@ -828,45 +828,37 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   downloadDocument(documentId: string, event?: Event): void {
     if (event) {
-      event.preventDefault(); // Prevent default if called from a link
+      event.preventDefault();
+      event.stopPropagation();
     }
-    this.previewError = null; // Clear preview error if download is clicked
-    console.log('Attempting to download document:', documentId);
 
-    const service = this.caseId ? this.caseDocumentsService : this.documentService;
+    // Use explicit service calls instead of union type
     const downloadMethod = this.caseId 
-      ? service.downloadDocument(this.caseId, documentId) 
-      : (service as DocumentService).downloadDocument(documentId);
+      ? this.caseDocumentsService.downloadDocument(this.caseId, documentId)
+      : this.documentService.downloadDocument(documentId);
 
     this.subscriptions.add(
       downloadMethod.subscribe({
-        next: (response: Blob) => {
-          if (response && response.size > 0) {
-            const url = window.URL.createObjectURL(response);
-            const link = document.createElement('a');
-            link.href = url;
-            // Use the original filename if available, otherwise generate one
-            const filename = this.documents.find(d => d.id === documentId)?.fileName || 
-                             this.selectedDocument?.fileName || 
-                             `${documentId}_document`;
-            link.download = filename;
-            document.body.appendChild(link); // Required for Firefox
-            link.click();
-            window.URL.revokeObjectURL(url);
-            link.remove();
-            console.log('Document downloaded successfully:', filename);
-          } else {
-            console.error('Download failed: Received empty blob.');
-            this.snackBar.open('Error downloading document (empty file).', 'Close', {
-              duration: 5000
-            });
-          }
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          
+          // Find document name
+          const foundDocument = this.documents.find(doc => doc.id.toString() === documentId);
+          const fileName = foundDocument?.originalFileName || foundDocument?.title || `document_${documentId}`;
+          
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+          this.toastr.success('Document downloaded successfully', 'Success');
         },
         error: (error) => {
-          console.error('Error downloading document:', error);
-          this.snackBar.open('Error downloading document. Please try again.', 'Close', {
-            duration: 5000
-          });
+          console.error('Download failed:', error);
+          this.toastr.error('Failed to download document', 'Error');
         }
       })
     );
@@ -929,10 +921,16 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
 
     console.log('Attempting to preview document:', document.id, document.title);
     
-    const service = this.caseId ? this.caseDocumentsService : this.documentService;
-    const downloadMethod = this.caseId 
-      ? service.downloadDocument(this.caseId, document.id) 
-      : (service as DocumentService).downloadDocument(document.id);
+    // Use preview parameter to distinguish from downloads
+    let downloadMethod;
+    
+    if (this.caseId) {
+      // For case documents, add preview parameter
+      downloadMethod = this.caseDocumentsService.downloadDocument(this.caseId, document.id, true);
+    } else {
+      // For standalone documents, use regular endpoint with preview param
+      downloadMethod = this.documentService.downloadDocument(document.id, true);
+    }
 
     this.subscriptions.add(
       downloadMethod.subscribe({
@@ -1248,24 +1246,23 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    * Get initials from user's name or return a default
    */
   getInitials(firstName?: string, lastName?: string): string {
-    // If both first and last names are missing, return default
-    if (!firstName && !lastName) return 'UN'; // Unknown user placeholder
+    if (!firstName && !lastName) {
+      return 'UN'; // Unknown
+    }
     
-    // Get first letter of first name if available
-    const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : '';
+    const first = firstName?.charAt(0)?.toUpperCase() || '';
+    const last = lastName?.charAt(0)?.toUpperCase() || '';
     
-    // Get first letter of last name if available
-    const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : '';
-    
-    // If no initials could be generated, return default
-    if (!firstInitial && !lastInitial) return 'UN';
-    
-    // If only one initial is available, duplicate it
-    if (firstInitial && !lastInitial) return `${firstInitial}${firstInitial}`;
-    if (!firstInitial && lastInitial) return `${lastInitial}${lastInitial}`;
-    
-    // Return both initials
-    return `${firstInitial}${lastInitial}`;
+    // Return at least one character, fall back to first available
+    if (!first && !last) {
+      return 'UN';
+    } else if (!first) {
+      return last + last; // Use last name initial twice if no first name
+    } else if (!last) {
+      return first + first; // Use first name initial twice if no last name
+    } else {
+      return first + last;
+    }
   }
 
   /**
@@ -1346,5 +1343,66 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       })
     );
+  }
+
+  /**
+   * Version-related helper methods for template
+   */
+  getVersionFileName(version: any): string {
+    if (!version) return 'Unknown';
+    return version.fileName || version.filename || version.originalName || version.name || 'Unknown';
+  }
+
+  getVersionFileSize(version: any): number {
+    if (!version) return 0;
+    return version.fileSize || version.size || 0;
+  }
+
+  getVersionUserDisplayName(version: any): string {
+    if (!version) return 'Unknown';
+    
+    // Try different possible structures for user info
+    const uploadedBy = version.uploadedBy || version.createdBy || version.user;
+    
+    if (uploadedBy) {
+      if (uploadedBy.firstName || uploadedBy.lastName) {
+        return `${uploadedBy.firstName || ''} ${uploadedBy.lastName || ''}`.trim();
+      }
+      if (uploadedBy.name) {
+        return uploadedBy.name;
+      }
+      if (uploadedBy.username) {
+        return uploadedBy.username;
+      }
+    }
+    
+    // Try version-level properties
+    if (version.uploaderName) {
+      return version.uploaderName;
+    }
+    
+    return 'Unknown';
+  }
+
+  getVersionDate(version: any): Date | null {
+    if (!version) return null;
+    
+    const dateString = version.uploadedAt || version.createdAt || version.date || version.timestamp;
+    
+    if (dateString) {
+      return new Date(dateString);
+    }
+    
+    return null;
+  }
+
+  getVersionChanges(version: any): string {
+    if (!version) return '';
+    return version.changes || version.comment || version.description || version.notes || '';
+  }
+
+  hasVersionChanges(version: any): boolean {
+    const changes = this.getVersionChanges(version);
+    return changes && changes.trim().length > 0;
   }
 } 

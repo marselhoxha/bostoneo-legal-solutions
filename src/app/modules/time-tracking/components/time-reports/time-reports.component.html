@@ -1,0 +1,265 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <div class="page-title-box d-sm-flex align-items-center justify-content-between mb-4">
+    <h4 class="mb-sm-0 fw-semibold">Time Reports</h4>
+    <div class="page-title-right">
+      <div class="btn-group">
+        <button class="btn btn-primary">
+          <i class="ri-download-line me-1"></i>Export Report
+        </button>
+        <button class="btn btn-outline-secondary">
+          <i class="ri-calendar-line me-1"></i>Schedule Report
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Filters -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Report Parameters</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Report Type</label>
+          <select class="form-select">
+            <option value="summary">Time Summary</option>
+            <option value="detailed">Detailed Time Log</option>
+            <option value="billing">Billing Report</option>
+            <option value="attorney">Attorney Performance</option>
+            <option value="matter">Matter Analysis</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Date Range</label>
+          <select class="form-select">
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month" selected>This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Attorney</label>
+          <select class="form-select">
+            <option value="">All Attorneys</option>
+            <option value="1">John Smith</option>
+            <option value="2">Sarah Johnson</option>
+            <option value="3">Mike Davis</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">&nbsp;</label>
+          <div class="d-grid">
+            <button class="btn btn-primary">
+              <i class="ri-search-line me-1"></i>Generate Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Results -->
+  <div class="row">
+    <!-- Summary Stats -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Time Summary Report - December 2024</h5>
+        </div>
+        <div class="card-body">
+          <!-- Summary Cards -->
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="text-center">
+                <h3 class="text-primary">125.5h</h3>
+                <p class="text-muted mb-0">Total Hours</p>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <h3 class="text-success">$31,250</h3>
+                <p class="text-muted mb-0">Total Billed</p>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <h3 class="text-info">$249</h3>
+                <p class="text-muted mb-0">Average Rate</p>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <h3 class="text-warning">89%</h3>
+                <p class="text-muted mb-0">Billable %</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Table -->
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Attorney</th>
+                  <th>Total Hours</th>
+                  <th>Billable Hours</th>
+                  <th>Non-Billable</th>
+                  <th>Total Billed</th>
+                  <th>Average Rate</th>
+                  <th>Efficiency</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                        <div class="avatar-title rounded-circle bg-primary text-white">JS</div>
+                      </div>
+                      <span>John Smith</span>
+                    </div>
+                  </td>
+                  <td>52.5h</td>
+                  <td>47.0h</td>
+                  <td>5.5h</td>
+                  <td>$14,100</td>
+                  <td>$300</td>
+                  <td><span class="badge bg-success">89.5%</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                        <div class="avatar-title rounded-circle bg-success text-white">SJ</div>
+                      </div>
+                      <span>Sarah Johnson</span>
+                    </div>
+                  </td>
+                  <td>48.0h</td>
+                  <td>43.5h</td>
+                  <td>4.5h</td>
+                  <td>$10,875</td>
+                  <td>$250</td>
+                  <td><span class="badge bg-success">90.6%</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                        <div class="avatar-title rounded-circle bg-info text-white">MD</div>
+                      </div>
+                      <span>Mike Davis</span>
+                    </div>
+                  </td>
+                  <td>25.0h</td>
+                  <td>21.5h</td>
+                  <td>3.5h</td>
+                  <td>$6,275</td>
+                  <td>$292</td>
+                  <td><span class="badge bg-warning">86.0%</span></td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="table-active">
+                  <th>Total</th>
+                  <th>125.5h</th>
+                  <th>112.0h</th>
+                  <th>13.5h</th>
+                  <th>$31,250</th>
+                  <th>$249</th>
+                  <th><span class="badge bg-success">89.2%</span></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Reports -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Quick Reports</h5>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Daily Time Summary</h6>
+                  <small class="text-muted">Today's time entries</small>
+                </div>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Unbilled Time</h6>
+                  <small class="text-muted">Pending billing entries</small>
+                </div>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Matter Profitability</h6>
+                  <small class="text-muted">Revenue by matter</small>
+                </div>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Attorney Performance</h6>
+                  <small class="text-muted">Billable hour analysis</small>
+                </div>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Client Activity</h6>
+                  <small class="text-muted">Time by client</small>
+                </div>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Scheduler -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0">Scheduled Reports</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-primary btn-sm">
+              <i class="ri-calendar-line me-1"></i>Weekly Summary
+            </button>
+            <button class="btn btn-outline-success btn-sm">
+              <i class="ri-calendar-line me-1"></i>Monthly Billing
+            </button>
+            <button class="btn btn-outline-info btn-sm">
+              <i class="ri-calendar-line me-1"></i>Quarterly Review
+            </button>
+          </div>
+          <hr>
+          <button class="btn btn-sm btn-primary w-100">
+            <i class="ri-add-line me-1"></i>New Scheduled Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

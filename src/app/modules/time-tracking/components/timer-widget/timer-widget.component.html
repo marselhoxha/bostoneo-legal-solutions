@@ -1,0 +1,278 @@
+<!-- Timer Widget with Enhanced Velzon Styling -->
+<div class="timer-widget" [class.expanded]="isExpanded()" [class.has-validation-errors]="hasValidationErrors()">
+  
+  <!-- Floating Action Button (Collapsed View) -->
+  <div *ngIf="!isExpanded()" class="timer-fab" (click)="toggleExpanded()">
+    <div class="fab-content">
+      <div class="timer-circle" [class.running]="hasActiveTimer()" [class.paused]="hasPausedTimer()">
+        <div class="timer-icon">
+          <i class="ri-time-line" *ngIf="!hasActiveTimer()"></i>
+          <i class="ri-play-circle-line animate-pulse" *ngIf="hasActiveTimer()"></i>
+          <i class="ri-pause-circle-line" *ngIf="hasPausedTimer()"></i>
+        </div>
+        <div class="timer-duration">{{ getCurrentDuration() }}</div>
+      </div>
+      <div class="active-badge" *ngIf="activeTimersCount() > 0">
+        {{ activeTimersCount() }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Expanded Timer Panel -->
+  <div *ngIf="isExpanded()" class="timer-panel">
+    
+    <!-- Header with Gradient -->
+    <div class="timer-header">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="ri-time-line"></i>
+        </div>
+        <div class="header-text">
+          <h6 class="title mb-0">Time Tracker</h6>
+          <p class="subtitle mb-0">Professional time tracking</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost-light btn-sm close-btn" (click)="toggleExpanded()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Quick Timer Section -->
+    <div class="quick-timer-section" *ngIf="quickTimer().id === 0">
+      <div class="section-header">
+        <h6 class="mb-0">
+          <i class="ri-play-circle-line me-2 text-success"></i>
+          Start New Timer
+        </h6>
+      </div>
+
+      <div class="quick-form">
+        <!-- Case Selection with Search -->
+        <div class="form-group mb-3">
+          <label class="form-label fw-medium">Matter Selection</label>
+          <select class="form-select" [(ngModel)]="selectedCaseId" [class.is-invalid]="validationErrors().caseRequired">
+            <option value="">Choose a legal matter...</option>
+            <optgroup label="Recent Cases">
+              <option *ngFor="let case of recentCases()" [value]="case.id">
+                <span class="case-number">{{ case.caseNumber }}</span> - {{ case.name }}
+              </option>
+            </optgroup>
+            <optgroup label="All Cases" *ngIf="allCases().length > recentCases().length">
+              <option *ngFor="let case of allCases()" [value]="case.id">
+                <span class="case-number">{{ case.caseNumber }}</span> - {{ case.name }}
+              </option>
+            </optgroup>
+          </select>
+          <div class="invalid-feedback" *ngIf="validationErrors().caseRequired">
+            Please select a matter to track time against
+          </div>
+        </div>
+
+        <!-- Description with Character Counter -->
+        <div class="form-group mb-3">
+          <label class="form-label fw-medium">
+            Description 
+            <span class="text-muted">(minimum {{ minDescriptionLength }} characters)</span>
+          </label>
+          <div class="input-group">
+            <textarea
+              class="form-control"
+              [(ngModel)]="timerDescription"
+              placeholder="Brief description of work performed..."
+              rows="2"
+              maxlength="500"
+              [class.is-invalid]="validationErrors().descriptionTooShort"
+            ></textarea>
+          </div>
+          <div class="form-text d-flex justify-content-between">
+            <span *ngIf="validationErrors().descriptionTooShort" class="text-danger">
+              <i class="ri-error-warning-line me-1"></i>
+              Description must be at least {{ minDescriptionLength }} characters
+            </span>
+            <span class="char-counter" [class.text-warning]="timerDescription.length > 400">
+              {{ timerDescription.length }}/500
+            </span>
+          </div>
+        </div>
+
+        <!-- Rate Display -->
+        <div class="rate-preview mb-3" *ngIf="selectedCaseId && calculatedRate()">
+          <div class="rate-card">
+            <div class="rate-info">
+              <span class="rate-label">Effective Rate</span>
+              <span class="rate-value">${{ calculatedRate() | number:'1.2-2' }}/hr</span>
+            </div>
+            <div class="rate-modifiers" *ngIf="rateModifiers().length > 0">
+              <span *ngFor="let modifier of rateModifiers()" 
+                    class="badge" 
+                    [class.badge-soft-warning]="modifier.type === 'weekend'"
+                    [class.badge-soft-info]="modifier.type === 'after-hours'"
+                    [class.badge-soft-danger]="modifier.type === 'emergency'">
+                {{ modifier.label }} ({{ modifier.multiplier }}x)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button
+          type="button"
+          class="btn btn-success w-100 btn-lg start-timer-btn"
+          [disabled]="!canStartTimer()"
+          (click)="startQuickTimer()"
+        >
+          <i class="ri-play-circle-line me-2"></i>
+          Start Timer
+          <span class="btn-glow"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Timer Display -->
+    <div class="active-timer-display" *ngIf="quickTimer().id > 0">
+      <div class="timer-status-card">
+        
+        <!-- Timer Header -->
+        <div class="timer-card-header">
+          <div class="case-badge">
+            <i class="ri-briefcase-line me-1"></i>
+            {{ getSelectedCaseName() }}
+          </div>
+          <div class="timer-status" 
+               [class.status-running]="quickTimer().isRunning" 
+               [class.status-paused]="!quickTimer().isRunning">
+            <i class="ri-record-circle-line" *ngIf="quickTimer().isRunning"></i>
+            <i class="ri-pause-circle-line" *ngIf="!quickTimer().isRunning"></i>
+            {{ quickTimer().isRunning ? 'RUNNING' : 'PAUSED' }}
+          </div>
+        </div>
+
+        <!-- Large Timer Display -->
+        <div class="timer-main-display">
+          <div class="timer-circle-large" 
+               [class.animate-pulse]="quickTimer().isRunning"
+               [class.circle-running]="quickTimer().isRunning"
+               [class.circle-paused]="!quickTimer().isRunning">
+            <div class="timer-time">{{ formatElapsedTime(quickTimer().elapsedSeconds) }}</div>
+            <div class="timer-sublabel">{{ quickTimer().isRunning ? 'Active' : 'Paused' }}</div>
+          </div>
+        </div>
+
+        <!-- Timer Controls -->
+        <div class="timer-controls" *ngIf="quickTimer().isRunning && quickTimer().id > 0">
+          <button type="button" 
+                  class="btn btn-warning btn-control"
+                  (click)="pauseQuickTimer()"
+                  title="Pause Timer">
+            <i class="ri-pause-circle-line"></i>
+            <span>Pause</span>
+          </button>
+          
+          <button type="button" 
+                  class="btn btn-danger btn-control"
+                  (click)="stopQuickTimer()"
+                  title="Stop Timer">
+            <i class="ri-stop-circle-line"></i>
+            <span>Stop</span>
+          </button>
+        </div>
+
+        <div class="timer-controls" *ngIf="!quickTimer().isRunning && quickTimer().id > 0">
+          <button type="button" 
+                  class="btn btn-success btn-control"
+                  (click)="resumeQuickTimer()"
+                  title="Resume Timer">
+            <i class="ri-play-circle-line"></i>
+            <span>Resume</span>
+          </button>
+          
+          <button type="button" 
+                  class="btn btn-danger btn-control"
+                  (click)="stopQuickTimer()"
+                  title="Stop Timer">
+            <i class="ri-stop-circle-line"></i>
+            <span>Stop</span>
+          </button>
+        </div>
+
+        <!-- Timer Description -->
+        <div class="timer-description" *ngIf="quickTimer().description">
+          <i class="ri-file-text-line me-2 text-muted"></i>
+          {{ quickTimer().description }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Time Entries -->
+    <div class="recent-entries-section" *ngIf="recentEntries().length > 0">
+      <div class="section-header">
+        <h6 class="mb-0">
+          <i class="ri-history-line me-2 text-primary"></i>
+          Recent Entries
+        </h6>
+        <a href="javascript:void(0)" class="text-primary text-decoration-none small" (click)="viewAllEntries()">
+          View All
+        </a>
+      </div>
+
+      <div class="entries-list">
+        <div class="entry-item" *ngFor="let entry of recentEntries().slice(0, 3)">
+          <div class="entry-header">
+            <div class="entry-case">{{ entry.caseNumber }}</div>
+            <div class="entry-date">{{ entry.date | date:'MMM dd' }}</div>
+          </div>
+          <div class="entry-details">
+            <div class="entry-description">{{ entry.description | slice:0:50 }}...</div>
+            <div class="entry-meta">
+              <span class="entry-duration">{{ entry.hours }}h</span>
+              <span class="entry-status" 
+                    [class.status-draft]="entry.status === 'DRAFT'"
+                    [class.status-submitted]="entry.status === 'SUBMITTED'"
+                    [class.status-approved]="entry.status === 'BILLING_APPROVED'">
+                {{ entry.status | titlecase }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Progress -->
+    <div class="daily-progress-section">
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-label">Today's Progress</span>
+          <span class="progress-value">{{ dailyHours() | number:'1.1-1' }}h / {{ maxDailyHours }}h</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress" style="height: 6px;">
+            <div class="progress-bar" 
+                 [class.bg-warning]="dailyHoursPercentage() > 75"
+                 [class.bg-danger]="dailyHoursPercentage() > 90"
+                 [class.bg-success]="dailyHoursPercentage() <= 75"
+                 [style.width.%]="dailyHoursPercentage()">
+            </div>
+          </div>
+        </div>
+        <div class="progress-warning" *ngIf="dailyHoursPercentage() > 90">
+          <i class="ri-error-warning-line text-warning me-1"></i>
+          <small class="text-warning">Approaching daily hour limit</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation Alerts -->
+    <div class="validation-alerts" *ngIf="hasValidationErrors()">
+      <div class="alert alert-warning alert-border-left alert-dismissible fade show mb-0" role="alert">
+        <i class="ri-error-warning-line me-3 align-middle fs-16"></i>
+        <strong>Validation Issues</strong>
+        <ul class="mb-0 mt-2">
+          <li *ngFor="let error of getValidationErrors()">{{ error }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Backdrop for mobile -->
+<div class="timer-backdrop" *ngIf="isExpanded()" (click)="toggleExpanded()"></div> 

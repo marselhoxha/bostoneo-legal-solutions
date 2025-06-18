@@ -1,0 +1,435 @@
+<!-- Velzon Time Tracking - Timesheet View -->
+<div class="container-fluid" style="margin-top: 115px;">
+  
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <div class="page-title-left">
+          <h4 class="mb-sm-0 fw-semibold">
+            <i class="ri-file-list-3-line me-2 text-primary"></i>
+            {{ getPageTitle() }}
+          </h4>
+          <p class="text-muted mb-0 mt-1">{{ getPageDescription() }}</p>
+        </div>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Time & Billing</a></li>
+            <li class="breadcrumb-item active">Timesheet</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="row" *ngIf="error">
+    <div class="col-12">
+      <div class="alert alert-danger border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+          <i class="ri-error-warning-line me-2 fs-18"></i>
+          <span>{{ error }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="row" *ngIf="loading">
+    <div class="col-12">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-2 text-muted">Loading timesheet...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row" *ngIf="!loading">
+    <!-- Statistics Cards -->
+    <div class="col-12 mb-4">
+      <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary text-white rounded">
+                      <i class="ri-time-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1 fs-13">Total Hours</p>
+                  <h5 class="mb-0 text-primary">{{ formatHours(totalHours) }}</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-info text-white rounded">
+                      <i class="ri-file-list-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1 fs-13">Total Entries</p>
+                  <h5 class="mb-0 text-info">{{ totalEntries }}</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-success text-white rounded">
+                      <i class="ri-money-dollar-circle-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1 fs-13">Total Amount</p>
+                  <h5 class="mb-0 text-success">{{ formatCurrency(totalAmount) }}</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-warning text-white rounded">
+                      <i class="ri-hourglass-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1 fs-13">Pending Review</p>
+                  <h5 class="mb-0 text-warning">{{ approvalStats.pendingReview }}</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Timesheet Card -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="card-title mb-0">Time Entries</h5>
+              <p class="text-muted mb-0 fs-13">Manage your time tracking records</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary btn-sm" 
+                      *ngIf="permissions.canCreateNew" 
+                      routerLink="/time-tracking/entry/new">
+                <i class="ri-add-line me-1"></i>New Entry
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="refreshData()">
+                <i class="ri-refresh-line me-1"></i>Refresh
+              </button>
+              <button class="btn btn-outline-info btn-sm" (click)="exportData()">
+                <i class="ri-download-line me-1"></i>Export
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Simplified Filters Section -->
+        <div class="card-body border-bottom">
+          <div class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+              <label class="form-label">Search</label>
+              <div class="position-relative">
+                <input type="text" 
+                       class="form-control" 
+                       placeholder="Search entries..."
+                       [(ngModel)]="searchQuery"
+                       (input)="onSearchChange()">
+                <i class="ri-search-line position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+              </div>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-md-2">
+              <label class="form-label">Status</label>
+              <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+                <option value="">All Status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            
+            <!-- Date Range -->
+            <div class="col-md-4">
+              <label class="form-label">Date Range</label>
+              <div class="d-flex gap-2">
+                <input type="date" class="form-control" [(ngModel)]="startDate" (change)="applyFilters()">
+                <input type="date" class="form-control" [(ngModel)]="endDate" (change)="applyFilters()">
+              </div>
+            </div>
+            
+            <!-- User Filter (for approval) -->
+            <div class="col-md-2" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
+              <label class="form-label">User</label>
+              <select class="form-select" [(ngModel)]="selectedUser" (change)="applyFilters()">
+                <option value="">All Users</option>
+                <option *ngFor="let member of teamMembers" [value]="member.id">
+                  {{ member.firstName }} {{ member.lastName }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Bulk Actions -->
+          <div class="mt-3" *ngIf="(viewMode === 'approval' || viewMode === 'admin') && selectedEntries.size > 0">
+            <div class="alert alert-info border-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>
+                  <i class="ri-information-line me-2"></i>
+                  {{ selectedEntries.size }} entries selected
+                </span>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-success btn-sm" (click)="bulkApprove()" [disabled]="isProcessing">
+                    <i class="ri-check-line me-1"></i>Approve
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="bulkReject()" [disabled]="isProcessing">
+                    <i class="ri-close-line me-1"></i>Reject
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" (click)="selectedEntries.clear(); updateSelectionState()">
+                    <i class="ri-close-line me-1"></i>Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!loading && !error && getFilteredEntriesForActiveTab().length === 0" class="card-body text-center py-5">
+          <div class="mb-4">
+            <i [class]="getEmptyStateIcon()" class="display-4 text-muted"></i>
+          </div>
+          <h5 class="text-muted mb-2">{{ getEmptyStateTitle() }}</h5>
+          <p class="text-muted mb-4">{{ getEmptyStateMessage() }}</p>
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-primary" *ngIf="permissions.canCreateNew" routerLink="/time-tracking/entry/new">
+              <i class="ri-add-line me-1"></i>Create Entry
+            </button>
+            <button class="btn btn-outline-secondary" (click)="clearAllFilters()" *ngIf="hasActiveFilters()">
+              <i class="ri-filter-off-line me-1"></i>Clear Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Time Entries Table -->
+        <div *ngIf="!loading && !error && getFilteredEntriesForActiveTab().length > 0" class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 40px;" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()" id="selectAll">
+                      <label class="form-check-label" for="selectAll"></label>
+                    </div>
+                  </th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Case</th>
+                  <th class="text-center">Hours</th>
+                  <th class="text-center">Amount</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of getFilteredEntriesForActiveTab(); trackBy: trackByEntryId">
+                  <!-- Checkbox Column -->
+                  <td *ngIf="viewMode === 'approval' || viewMode === 'admin'">
+                    <div class="form-check" *ngIf="canApproveEntry(entry)">
+                      <input class="form-check-input" type="checkbox" 
+                             [checked]="isEntrySelected(entry.id!)" 
+                             (change)="toggleEntrySelection(entry.id!)" 
+                             [id]="'entry-' + entry.id">
+                      <label class="form-check-label" [for]="'entry-' + entry.id"></label>
+                    </div>
+                  </td>
+                  
+                  <!-- Date Column -->
+                  <td>
+                    <div>{{ entry.date | date:'MMM d, y' }}</div>
+                    <small class="text-muted">{{ entry.date | date:'EEEE' }}</small>
+                  </td>
+
+                  <!-- Description Column -->
+                  <td>
+                    <div style="max-width: 300px;">{{ entry.description }}</div>
+                    <small class="text-muted" *ngIf="entry.userName && (viewMode === 'approval' || viewMode === 'admin')">
+                      <i class="ri-user-line me-1"></i>{{ entry.userName }}
+                    </small>
+                  </td>
+
+                  <!-- Case Column -->
+                  <td>
+                    <span *ngIf="entry.caseName" class="badge bg-primary-subtle text-primary">
+                      {{ entry.caseName }}
+                    </span>
+                    <span *ngIf="!entry.caseName" class="text-muted">-</span>
+                  </td>
+
+                  <!-- Hours Column -->
+                  <td class="text-center">
+                    <span class="badge bg-info-subtle text-info">
+                      {{ formatHours(entry.hours) }}
+                    </span>
+                  </td>
+
+                  <!-- Amount Column -->
+                  <td class="text-center">
+                    <div class="text-success">
+                      {{ formatCurrency(entry.hours * entry.rate) }}
+                    </div>
+                    <small class="text-muted">${{ entry.rate }}/hr</small>
+                  </td>
+
+                  <!-- Status Column -->
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="getStatusClass(entry.status)">
+                      {{ getStatusText(entry.status) }}
+                    </span>
+                  </td>
+
+                  <!-- Actions Column -->
+                  <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end align-items-center">
+                      <!-- Approval Actions for pending entries -->
+                      <button *ngIf="canApproveEntry(entry)" 
+                              class="btn btn-success btn-sm" 
+                              (click)="approveEntry(entry.id!)" 
+                              [disabled]="isProcessing">
+                        <i class="ri-check-line"></i>
+                      </button>
+                      <button *ngIf="canApproveEntry(entry)" 
+                              class="btn btn-outline-danger btn-sm" 
+                              (click)="rejectEntry(entry.id!)" 
+                              [disabled]="isProcessing">
+                        <i class="ri-close-line"></i>
+                      </button>
+
+                      <!-- Standard Actions -->
+                      <div class="dropdown" *ngIf="!canApproveEntry(entry)">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                type="button" 
+                                data-bs-toggle="dropdown">
+                          Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" (click)="viewEntry(entry)">View Details</a></li>
+                          <li *ngIf="permissions.canEditEntry(entry)">
+                            <a class="dropdown-item" (click)="editEntry(entry)">Edit</a>
+                          </li>
+                          <li *ngIf="permissions.canDeleteEntry(entry)">
+                            <hr class="dropdown-divider">
+                          </li>
+                          <li *ngIf="permissions.canDeleteEntry(entry)">
+                            <a class="dropdown-item text-danger" (click)="deleteEntry(entry)">Delete</a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer" *ngIf="!loading && !error && totalEntries > 0">
+          <div class="row align-items-center">
+            <div class="col-sm-6">
+              <div class="text-muted">
+                Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalEntries) }} of {{ totalEntries }} entries
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <nav>
+                <ngb-pagination
+                  [(page)]="currentPage"
+                  [pageSize]="pageSize"
+                  [collectionSize]="totalEntries"
+                  [maxSize]="5"
+                  [rotate]="true"
+                  [boundaryLinks]="true"
+                  (pageChange)="onPageChange($event)">
+                </ngb-pagination>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Entry Modal -->
+<div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" 
+     id="editEntryModal" tabindex="-1" role="dialog" *ngIf="showEditModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary bg-opacity-10 border-0">
+        <h5 class="modal-title text-primary fw-semibold">
+          <i class="ri-edit-line me-2"></i>Edit Time Entry
+        </h5>
+        <button type="button" class="btn-close" (click)="cancelEditEntry()"></button>
+      </div>
+      <div class="modal-body" *ngIf="editingEntry">
+        <!-- Modal content would go here -->
+        <p>Edit functionality for entry #{{ editingEntry.id }}</p>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-light" (click)="cancelEditEntry()" [disabled]="isProcessing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" [disabled]="isProcessing">
+          <span *ngIf="!isProcessing">Save Changes</span>
+          <span *ngIf="isProcessing">
+            <span class="spinner-border spinner-border-sm me-2"></span>Saving...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade" [class.show]="showEditModal" 
+     [style.display]="showEditModal ? 'block' : 'none'"></div> 

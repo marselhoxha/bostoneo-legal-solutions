@@ -1,30 +1,40 @@
 import { Component, OnInit } from '@angular/core';
 import {
   Router,
-  NavigationStart,
+  ActivatedRoute,
   NavigationEnd,
+  NavigationStart,
   NavigationCancel,
   NavigationError,
   Event,
-  UrlSerializer,
+  Params,
+  PRIMARY_OUTLET,
 } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { filter } from 'rxjs/operators';
 import { PreloaderService } from './service/preloader.service';
+import { UrlSerializer } from '@angular/router';
 import { UserService } from './service/user.service';
+import { RbacService } from './core/services/rbac.service';
 import { ReminderService } from './modules/legal/services/reminder.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
   showPreloader = false;
 
   constructor(
     private router: Router,
+    private activatedRoute: ActivatedRoute,
+    private titleService: Title,
     private preloaderService: PreloaderService,
     private urlSerializer: UrlSerializer,
     private userService: UserService,
+    private rbacService: RbacService,
     private reminderService: ReminderService,
     private pushNotificationService: PushNotificationService
   ) {
@@ -32,9 +42,17 @@ export class AppComponent implements OnInit {
       this.showPreloader = show;
     });
 
+    // Handle navigation events
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationStart) {
         console.log('NavigationStart:', event.url);
+        
+        // Redirect root URL to dashboard
+        if (event.url === '/' || event.url === '') {
+          this.router.navigate(['/home']);
+          return;
+        }
+        
         if (!this.isExcludedRoute(event.url)) {
           console.log('Showing preloader');
           this.preloaderService.show();
@@ -60,13 +78,36 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Initialize title service
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => {
+        let route = this.activatedRoute;
+        let routeTitle = '';
+        while (route!.firstChild) {
+          route = route.firstChild;
+        }
+        if (route!.snapshot.data['title']) {
+          routeTitle = route!.snapshot.data['title'];
+          this.titleService.setTitle(`${routeTitle} | Bostoneo Solutions`);
+        }
+      });
+
+    // Check if we're at the root URL and redirect to dashboard
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      this.router.navigate(['/home']);
+    }
+    
     // Preload user data if authenticated
     if (this.userService.isAuthenticated()) {
       this.userService.preloadUserData();
       
       // Start deadline reminder service for authenticated users
       this.reminderService.startReminders();
+      console.log('Reminder service started with improved error handling');
     }
+
+    console.log('App component initialized');
   }
 
   private isExcludedRoute(url: string): boolean {
@@ -80,7 +121,6 @@ export class AppComponent implements OnInit {
     return isExcluded;
   }
 
-  // Add method to initialize push notifications
   private initializePushNotifications(): void {
     if ('Notification' in window) {
       // Only request permission if the browser supports notifications

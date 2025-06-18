@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Checker</title>
+</head>
+<body>
+    <h1>JWT Token Checker</h1>
+    <button onclick="checkToken()">Check Token in LocalStorage</button>
+    <div id="result"></div>
+    
+    <script>
+    function checkToken() {
+        const tokenKey = '[KEY] TOKEN';
+        const refreshKey = '[REFRESH] REFRESH_TOKEN';
+        const token = localStorage.getItem(tokenKey);
+        const refreshToken = localStorage.getItem(refreshKey);
+        
+        let result = '<h2>Token Status:</h2>';
+        
+        if (!token) {
+            result += '<p style="color: red;">❌ No access token found in localStorage</p>';
+        } else {
+            result += '<p style="color: green;">✅ Access token found</p>';
+            result += '<p>Token length: ' + token.length + '</p>';
+            
+            // Check token format
+            const parts = token.split('.');
+            if (parts.length === 3) {
+                result += '<p style="color: green;">✅ Valid JWT format (3 parts)</p>';
+                
+                try {
+                    // Decode the payload
+                    const payload = JSON.parse(atob(parts[1]));
+                    result += '<h3>Token Payload:</h3>';
+                    result += '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+                    
+                    // Check expiration
+                    if (payload.exp) {
+                        const expDate = new Date(payload.exp * 1000);
+                        const now = new Date();
+                        if (expDate > now) {
+                            result += '<p style="color: green;">✅ Token is valid until: ' + expDate.toLocaleString() + '</p>';
+                        } else {
+                            result += '<p style="color: red;">❌ Token is expired since: ' + expDate.toLocaleString() + '</p>';
+                        }
+                    }
+                } catch (e) {
+                    result += '<p style="color: red;">❌ Error decoding token: ' + e.message + '</p>';
+                }
+            } else {
+                result += '<p style="color: red;">❌ Invalid JWT format (expected 3 parts, got ' + parts.length + ')</p>';
+            }
+        }
+        
+        result += '<h2>Refresh Token Status:</h2>';
+        if (!refreshToken) {
+            result += '<p style="color: red;">❌ No refresh token found</p>';
+        } else {
+            result += '<p style="color: green;">✅ Refresh token found</p>';
+        }
+        
+        document.getElementById('result').innerHTML = result;
+    }
+    
+    // Auto-check on load
+    window.onload = checkToken;
+    </script>
+</body>
+</html>
