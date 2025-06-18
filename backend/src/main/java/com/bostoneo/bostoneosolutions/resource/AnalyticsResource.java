@@ -29,6 +29,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/analytics")
@@ -1374,5 +1375,138 @@ public class AnalyticsResource {
         }
         
         return intelligence;
+    }
+
+    // Billing Dashboard Specific Endpoints
+    @GetMapping("/billing-summary")
+    public Map<String, Object> getBillingSummary() {
+        Map<String, Object> summary = new HashMap<>();
+        
+        try {
+            // Total revenue from paid invoices
+            String revenueSQL = "SELECT COALESCE(SUM(total_amount), 0) as total_revenue FROM invoices WHERE status = 'PAID'";
+            Double totalRevenue = jdbcTemplate.queryForObject(revenueSQL, Double.class);
+            
+            // Pending and overdue invoices
+            String pendingSQL = "SELECT COUNT(*) as pending_count, COALESCE(SUM(total_amount), 0) as pending_amount FROM invoices WHERE status = 'PENDING'";
+            Map<String, Object> pendingData = jdbcTemplate.queryForMap(pendingSQL);
+            
+            String overdueSQL = "SELECT COUNT(*) as overdue_count, COALESCE(SUM(total_amount), 0) as overdue_amount FROM invoices WHERE status = 'OVERDUE'";
+            Map<String, Object> overdueData = jdbcTemplate.queryForMap(overdueSQL);
+            
+            // Total clients
+            String clientSQL = "SELECT COUNT(*) as total_clients FROM clients";
+            Long totalClients = jdbcTemplate.queryForObject(clientSQL, Long.class);
+            
+            // Average rate calculation
+            String avgRateSQL = "SELECT COALESCE(AVG(total_amount), 0) as avg_rate FROM invoices WHERE status IN ('PAID', 'PENDING')";
+            Double averageRate = jdbcTemplate.queryForObject(avgRateSQL, Double.class);
+            
+            summary.put("totalRevenue", totalRevenue != null ? totalRevenue : 0.0);
+            summary.put("pendingInvoices", pendingData.get("pending_count"));
+            summary.put("pendingAmount", pendingData.get("pending_amount"));
+            summary.put("overdueInvoices", overdueData.get("overdue_count"));
+            summary.put("overdueAmount", overdueData.get("overdue_amount"));
+            summary.put("totalClients", totalClients != null ? totalClients : 0L);
+            summary.put("averageRate", averageRate != null ? averageRate : 0.0);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting billing summary: " + e.getMessage());
+            summary.put("totalRevenue", 0.0);
+            summary.put("pendingInvoices", 0);
+            summary.put("pendingAmount", 0.0);
+            summary.put("overdueInvoices", 0);
+            summary.put("overdueAmount", 0.0);
+            summary.put("totalClients", 0L);
+            summary.put("averageRate", 0.0);
+        }
+        
+        return summary;
+    }
+
+    @GetMapping("/top-clients")
+    public List<Map<String, Object>> getTopClientsByRevenue() {
+        List<Map<String, Object>> topClients = new ArrayList<>();
+        
+        try {
+            String sql = """
+                SELECT 
+                    c.id,
+                    c.name,
+                    c.type,
+                    COALESCE(SUM(CASE WHEN i.status = 'PAID' THEN i.total_amount END), 0) as total_revenue,
+                    COUNT(i.id) as invoice_count,
+                    COALESCE(AVG(i.total_amount), 0) as avg_invoice_value,
+                    MAX(i.issue_date) as last_invoice_date
+                FROM clients c
+                LEFT JOIN invoices i ON c.id = i.client_id
+                GROUP BY c.id, c.name, c.type
+                HAVING total_revenue > 0
+                ORDER BY total_revenue DESC
+                LIMIT 10
+                """;
+                
+            topClients = jdbcTemplate.queryForList(sql);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting top clients: " + e.getMessage());
+        }
+        
+        return topClients;
+    }
+
+    @GetMapping("/case-profitability")
+    public List<Map<String, Object>> getCaseProfitability() {
+        List<Map<String, Object>> caseProfitability = new ArrayList<>();
+        
+        try {
+            String sql = """
+                SELECT 
+                    lc.id as case_id,
+                    lc.title as case_name,
+                    lc.case_number,
+                    c.name as client_name,
+                    lc.total_amount as total_revenue,
+                    lc.status,
+                    COALESCE(SUM(i.total_amount), 0) as invoiced_amount,
+                    COUNT(i.id) as invoice_count
+                FROM legal_cases lc
+                LEFT JOIN clients c ON lc.client_id = c.id
+                LEFT JOIN invoices i ON lc.client_id = i.client_id
+                WHERE lc.total_amount IS NOT NULL AND lc.total_amount > 0
+                GROUP BY lc.id, lc.title, lc.case_number, c.name, lc.total_amount, lc.status
+                ORDER BY lc.total_amount DESC
+                LIMIT 20
+                """;
+                
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+            
+            for (Map<String, Object> row : results) {
+                Map<String, Object> caseData = new HashMap<>();
+                caseData.put("caseId", row.get("case_id"));
+                caseData.put("caseName", row.get("case_name"));
+                caseData.put("caseNumber", row.get("case_number"));
+                caseData.put("clientName", row.get("client_name"));
+                caseData.put("totalRevenue", row.get("total_revenue"));
+                caseData.put("invoicedAmount", row.get("invoiced_amount"));
+                caseData.put("invoiceCount", row.get("invoice_count"));
+                caseData.put("status", row.get("status"));
+                
+                // Calculate profit margin (simplified)
+                Number revenueNum = (Number) row.get("total_revenue");
+                Number invoicedNum = (Number) row.get("invoiced_amount");
+                double revenue = revenueNum != null ? revenueNum.doubleValue() : 0.0;
+                double invoiced = invoicedNum != null ? invoicedNum.doubleValue() : 0.0;
+                double profitMargin = revenue > 0 ? (invoiced / revenue * 100) : 0;
+                caseData.put("profitMargin", profitMargin);
+                
+                caseProfitability.add(caseData);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error getting case profitability: " + e.getMessage());
+        }
+        
+        return caseProfitability;
     }
 }

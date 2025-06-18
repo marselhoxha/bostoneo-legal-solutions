@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.Resource;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -44,6 +45,35 @@ public class EmailServiceImpl implements EmailService {
             return true;
         } catch (MessagingException e) {
             log.error("Failed to send email to: {}", to, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean sendEmailWithAttachment(String to, String subject, String body, Resource attachment, String attachmentName) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom("info@***REMOVED***.com");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true); // true indicates HTML content
+            
+            // Add attachment if provided
+            if (attachment != null && attachmentName != null) {
+                helper.addAttachment(attachmentName, attachment);
+                log.info("Added attachment: {} to email", attachmentName);
+            }
+            
+            mailSender.send(message);
+            log.info("Email with attachment sent successfully to: {}", to);
+            return true;
+        } catch (MessagingException e) {
+            log.error("Failed to send email with attachment to: {}", to, e);
+            return false;
+        } catch (Exception e) {
+            log.error("Unexpected error sending email with attachment to: {}", to, e);
             return false;
         }
     }

@@ -522,11 +522,22 @@ public class InvoiceServiceImpl {
         String emailBody = createProfessionalEmailTemplate(invoice, message);
         
         try {
-            // Use the EmailService to send the email
+            // Generate PDF attachment
+            Resource pdfAttachment = generateInvoicePdf(id);
+            String attachmentName = "Invoice-" + invoice.getInvoiceNumber() + ".pdf";
+            
+            // Use the EmailService to send the email with attachment
             if (emailService != null) {
-                boolean sent = emailService.sendEmail(recipientEmail, emailSubject, emailBody);
+                boolean sent = emailService.sendEmailWithAttachment(
+                    recipientEmail, 
+                    emailSubject, 
+                    emailBody, 
+                    pdfAttachment, 
+                    attachmentName
+                );
                 if (sent) {
-                    log.info("Invoice {} sent successfully to {}", invoice.getInvoiceNumber(), recipientEmail);
+                    log.info("Invoice {} with PDF attachment sent successfully to {}", 
+                            invoice.getInvoiceNumber(), recipientEmail);
                 } else {
                     log.error("Failed to send invoice {} to {}", invoice.getInvoiceNumber(), recipientEmail);
                     throw new RuntimeException("Failed to send email");
@@ -599,6 +610,15 @@ public class InvoiceServiceImpl {
         } else {
             emailContent.append("<p>We hope this email finds you well. Please find attached your invoice for the professional services rendered.</p>");
         }
+        
+        // PDF Attachment Notice
+        emailContent.append("<div style='background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 15px; margin: 20px 0;'>")
+                   .append("<p style='margin: 0; color: #0066cc;'>")
+                   .append("<i class='fas fa-paperclip' style='margin-right: 8px;'></i>")
+                   .append("<strong>📎 PDF Invoice Attached</strong><br>")
+                   .append("Your detailed invoice (Invoice-").append(invoice.getInvoiceNumber()).append(".pdf) is attached to this email for your records.")
+                   .append("</p>")
+                   .append("</div>");
         
         // Invoice Details
         emailContent.append("<div class='invoice-details'>")

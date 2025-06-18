@@ -3,12 +3,15 @@ package com.***REMOVED***.***REMOVED***solutions.service;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.VerificationType;
 import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
 import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import org.springframework.core.io.Resource;
 
 import java.util.Map;
 
 public interface EmailService {
     
     boolean sendEmail(String to, String subject, String body);
+    
+    boolean sendEmailWithAttachment(String to, String subject, String body, Resource attachment, String attachmentName);
     
     boolean sendTemplatedEmail(String to, String subject, String templateContent, Map<String, String> templateData);
     
