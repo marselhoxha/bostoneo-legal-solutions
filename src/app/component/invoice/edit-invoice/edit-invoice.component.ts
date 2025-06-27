@@ -223,11 +223,11 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadInvoice(): Promise<void> {
     return new Promise((resolve) => {
-      this.invoiceService.getInvoiceById(this.invoiceId).subscribe({
+    this.invoiceService.getInvoiceById(this.invoiceId).subscribe({
         next: async (response) => {
           const invoice = (response as any).data || response;
           this.currentInvoice = invoice;
-          
+        
           // Check if invoice can be edited
           if (invoice?.status === 'PAID') {
             Swal.fire({
@@ -261,7 +261,7 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
             totalAmount: invoice?.totalAmount || 0,
             notes: invoice?.notes || ''
           }, { emitEvent: false });
-
+          
           // Load line items if they exist
           if (invoice?.lineItems && Array.isArray(invoice.lineItems)) {
             const lineItemsArray = this.invoiceForm.get('lineItems') as FormArray;
@@ -288,19 +288,19 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
           this.cdr.markForCheck();
           
           resolve();
-        },
-        error: (error) => {
+      },
+      error: (error) => {
           const errorMessage = ApiResponseUtil.extractErrorMessage(error);
-          Swal.fire({
+        Swal.fire({
             title: 'Error',
             text: errorMessage,
             icon: 'error',
             confirmButtonText: 'OK'
-          }).then(() => {
-            this.router.navigate(['/invoices']);
-          });
+        }).then(() => {
+          this.router.navigate(['/invoices']);
+        });
           resolve();
-        }
+      }
       });
     });
   }
@@ -331,8 +331,8 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
               resolve();
             },
             error: () => {
-              this.cases = [];
-              resolve();
+          this.cases = [];
+          resolve();
             }
           });
         }
@@ -346,7 +346,7 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
       this.invoiceForm.patchValue({ legalCaseId: '' });
       this.cdr.markForCheck();
       return;
-    }
+  }
 
     this.loadCasesForClient(parseInt(clientId)).then(() => {
       this.cdr.markForCheck();
@@ -358,7 +358,7 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const template = this.templates.find(t => t.id === parseInt(templateId));
     if (template) {
-      this.invoiceForm.patchValue({
+      this.invoiceForm.patchValue({ 
         taxRate: template.taxRate || 0,
         notes: template.notesTemplate || ''
       });
@@ -403,31 +403,31 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
       notes: formValue.notes,
       lineItems: formValue.lineItems
     };
-
+      
     this.invoiceService.updateInvoice(this.invoiceId, invoiceData).subscribe({
-      next: () => {
+        next: () => {
         this.isLoadingSubject.next(false);
-        Swal.fire({
-          title: 'Success!',
-          text: 'Invoice updated successfully',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        }).then(() => {
-          this.router.navigate(['/invoices']);
-        });
-      },
-      error: (error) => {
+          Swal.fire({
+            title: 'Success!',
+            text: 'Invoice updated successfully',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            this.router.navigate(['/invoices']);
+          });
+        },
+        error: (error) => {
         this.isLoadingSubject.next(false);
         const errorMessage = ApiResponseUtil.extractErrorMessage(error);
-        Swal.fire({
-          title: 'Error!',
+          Swal.fire({
+            title: 'Error!',
           text: errorMessage,
           icon: 'error',
           confirmButtonText: 'OK'
-        });
-      }
-    });
+          });
+        }
+      });
   }
 
   onCancel(): void {
@@ -606,4 +606,4 @@ export class EditInvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     // Update form validity
     this.invoiceForm.updateValueAndValidity();
   }
-} 
+}

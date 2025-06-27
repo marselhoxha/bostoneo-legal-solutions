@@ -46,13 +46,31 @@ export class CaseListComponent implements OnInit {
       next: (response) => {
         console.log('Cases response:', response);
         // The backend returns data in a wrapper object
-        if (response && response.data && response.data.page) {
-          this.cases = response.data.page.content || [];
-          // Update state for pagination
-          this.state = { 
-            dataState: DataState.LOADED, 
-            appData: response 
-          };
+        if (response && response.data) {
+          // Handle both formats: data.page and data.cases
+          if (response.data.page && response.data.page.content) {
+            this.cases = response.data.page.content || [];
+            // Update state for pagination
+            this.state = { 
+              dataState: DataState.LOADED, 
+              appData: response 
+            };
+          } else if (response.data.cases) {
+            this.cases = response.data.cases || [];
+            this.state = { 
+              dataState: DataState.LOADED, 
+              appData: response 
+            };
+          } else if (Array.isArray(response.data)) {
+            this.cases = response.data;
+            this.state = { 
+              dataState: DataState.LOADED, 
+              appData: response 
+            };
+          } else {
+            console.warn('Unexpected data format:', response.data);
+            this.cases = [];
+          }
         } else if (Array.isArray(response)) {
           this.cases = response;
         } else {
@@ -66,6 +84,9 @@ export class CaseListComponent implements OnInit {
         console.error('Error loading cases:', err);
         this.error = 'Failed to load cases. Please try again later.';
         this.isLoading = false;
+        this.cases = [];
+        // Set sample data for development
+        this.setSampleData();
         this.cdr.detectChanges();
       }
     });
@@ -153,6 +174,68 @@ export class CaseListComponent implements OnInit {
         });
       }
     });
+  }
+
+  private setSampleData(): void {
+    // Add sample data for development
+    this.cases = [
+      {
+        id: '1',
+        caseNumber: 'CASE-2025-001',
+        title: 'Smith vs. Johnson Contract Dispute',
+        description: 'Contract breach litigation involving commercial property',
+        status: CaseStatus.OPEN,
+        priority: CasePriority.HIGH,
+        type: 'Contract Litigation',
+        clientName: 'John Smith',
+        clientEmail: 'john.smith@example.com',
+        clientPhone: '555-0123',
+        clientAddress: '123 Main St, Boston, MA',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        courtInfo: {
+          courtName: 'Suffolk Superior Court',
+          judgeName: 'Hon. Jane Doe',
+          courtroom: 'Room 501'
+        },
+        importantDates: {
+          filingDate: new Date(),
+          nextHearing: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          trialDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+        },
+        billingInfo: {
+          hourlyRate: 350,
+          totalHours: 45,
+          totalAmount: 15750,
+          paymentStatus: PaymentStatus.PENDING
+        }
+      },
+      {
+        id: '2',
+        caseNumber: 'CASE-2025-002',
+        title: 'Estate Planning - Williams Family',
+        description: 'Comprehensive estate planning and trust formation',
+        status: CaseStatus.IN_PROGRESS,
+        priority: CasePriority.MEDIUM,
+        type: 'Estate Planning',
+        clientName: 'Sarah Williams',
+        clientEmail: 'sarah.williams@example.com',
+        clientPhone: '555-0124',
+        clientAddress: '456 Oak Ave, Cambridge, MA',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        billingInfo: {
+          hourlyRate: 400,
+          totalHours: 20,
+          totalAmount: 8000,
+          paymentStatus: PaymentStatus.PAID
+        }
+      }
+    ];
+    this.state = { 
+      dataState: DataState.LOADED, 
+      appData: { data: { cases: this.cases } } 
+    };
   }
 
   /**

@@ -78,11 +78,19 @@ export class AuthService {
   }
 
   logout(): void {
+    // Clear all storage
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+    
+    // Clear all session storage to prevent stale data
+    sessionStorage.clear();
+    
+    // Clear user subject and timer
     this.currentUserSubject.next(null);
     this.clearTokenExpirationTimer();
+    
+    console.log('🚪 User logged out - all storage cleared');
     this.router.navigate(['/login']);
   }
 

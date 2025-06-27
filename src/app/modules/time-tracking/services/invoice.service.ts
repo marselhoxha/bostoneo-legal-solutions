@@ -63,6 +63,46 @@ export class InvoiceService {
     );
   }
 
+  // Create invoice from time entries - NEW METHOD
+  createInvoiceFromTimeEntries(invoice: any, timeEntryIds: number[]): Observable<Invoice> {
+    const requestBody = {
+      invoice: {
+        clientId: invoice.clientId,
+        clientName: invoice.clientName,
+        legalCaseId: invoice.legalCaseId,
+        caseName: invoice.caseName,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        taxRate: invoice.taxRate,
+        notes: invoice.notes
+      },
+      timeEntryIds: timeEntryIds
+    };
+
+    console.log('🚀 InvoiceService - Making request to:', `${this.baseUrl}/from-time-entries`);
+    console.log('🚀 InvoiceService - Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('🚀 InvoiceService - Base URL:', this.baseUrl);
+
+    return this.http.post<any>(`${this.baseUrl}/from-time-entries`, requestBody).pipe(
+      tap(response => {
+        console.log('✅ InvoiceService - Success response:', response);
+      }),
+      map(response => response.data),
+      tap(data => {
+        console.log('✅ InvoiceService - Mapped data:', data);
+        const currentInvoices = this.invoicesSubject.value;
+        this.invoicesSubject.next([...currentInvoices, data]);
+      }),
+      catchError(error => {
+        console.error('❌ InvoiceService - Error in createInvoiceFromTimeEntries:', error);
+        console.error('❌ InvoiceService - Error status:', error.status);
+        console.error('❌ InvoiceService - Error message:', error.message);
+        console.error('❌ InvoiceService - Error body:', error.error);
+        return this.handleError(error);
+      })
+    );
+  }
+
   // Get all invoices with pagination and filtering
   getInvoices(filter: InvoiceFilter = {}): Observable<any> {
     let params = new HttpParams();

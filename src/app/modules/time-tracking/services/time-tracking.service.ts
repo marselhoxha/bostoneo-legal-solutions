@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError, forkJoin } from 'rxjs';
+import { Observable, BehaviorSubject, throwError, forkJoin, of } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
@@ -12,7 +12,7 @@ export interface TimeEntry {
   hours: number;
   rate: number;
   description: string;
-  status: 'APPROVED' | 'SUBMITTED' | 'DRAFT' | 'REJECTED' | 'BILLED';
+  status: 'APPROVED' | 'SUBMITTED' | 'DRAFT' | 'REJECTED' | 'BILLED' | 'BILLING_APPROVED' | 'INVOICED';
   billable: boolean;
   userName?: string;
   caseName?: string;
@@ -242,23 +242,117 @@ export class TimeTrackingService {
   // Get all clients
   getClients(): Observable<any[]> {
     const url = `${environment.apiUrl}/client`;
-    return this.http.get<any>(url, { params: { page: 0, size: 1000 } }).pipe(
-      map(res => res?.data?.page?.content ?? []),
-      catchError(this.handleError)
+    const params = new HttpParams()
+      .set('page', '0')
+      .set('size', '1000'); // Get many clients to avoid pagination issues
+      
+    return this.http.get<any>(url, { params }).pipe(
+      map(res => {
+        // Handle paginated response from backend
+        if (res?.data?.page?.content) {
+          return res.data.page.content;
+        }
+        if (res?.data?.content) {
+          return res.data.content;
+        }
+        if (res?.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+        if (Array.isArray(res)) {
+          return res;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error fetching clients:', error);
+        return of([]);
+      })
     );
   }
 
   // Get unbilled time entries for a client and case
-  getUnbilledTimeEntries(clientId: number, caseId: number): Observable<TimeEntry[]> {
-    return this.http.get<TimeEntry[]>(`/time-entries/unbilled?clientId=${clientId}&caseId=${caseId}`);
+  getUnbilledTimeEntries(clientId: number, caseId?: number): Observable<TimeEntry[]> {
+    const url = `${environment.apiUrl}/api/invoices/unbilled-entries`;
+    let params = new HttpParams().set('clientId', clientId.toString());
+    
+    if (caseId) {
+      params = params.set('legalCaseId', caseId.toString());
+    }
+    
+    return this.http.get<any>(url, { params }).pipe(
+      map(res => {
+        // Handle the response format from InvoiceController
+        if (res?.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+        if (Array.isArray(res)) {
+          return res;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error fetching unbilled time entries:', error);
+        return of([]);
+      })
+    );
   }
 
   // Get cases for client
   getCasesForClient(clientId: number): Observable<any[]> {
-    const url = `${environment.apiUrl}/legal-case/list`;
-    return this.http.get<any>(url, { params: { page: 0, size: 1000 } }).pipe(
-      map(res => (res?.data?.page?.content ?? []).filter((c: any) => c.clientId === clientId)),
-      catchError(this.handleError)
+    // First try the client-specific endpoint
+    const clientUrl = `${environment.apiUrl}/legal-case/client/${clientId}`;
+    
+    return this.http.get<any>(clientUrl, { 
+      params: { 
+        page: '0', 
+        size: '100' 
+      } 
+    }).pipe(
+      map(res => {
+        // Handle paginated response
+        if (res?.data?.page?.content) {
+          return res.data.page.content;
+        }
+        // Handle direct array response
+        if (res?.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+        // Handle content array
+        if (res?.data?.content && Array.isArray(res.data.content)) {
+          return res.data.content;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error fetching cases by client ID, trying alternative approach:', error);
+        
+        // If client endpoint fails, try getting all cases and filter client-side
+        // This is a workaround for the backend issue
+        const allCasesUrl = `${environment.apiUrl}/legal-case/list`;
+        return this.http.get<any>(allCasesUrl, {
+          params: {
+            page: '0',
+            size: '1000'
+          }
+        }).pipe(
+          map(res => {
+            let allCases = [];
+            if (res?.data?.page?.content) {
+              allCases = res.data.page.content;
+            } else if (res?.data && Array.isArray(res.data)) {
+              allCases = res.data;
+            }
+            
+            // Filter cases by client ID on the frontend
+            // Note: This assumes cases have a client_id field
+            return allCases.filter((c: any) => c.client_id === clientId || c.clientId === clientId);
+          }),
+          catchError(innerError => {
+            console.error('Failed to get cases from any endpoint:', innerError);
+            return of([]);
+          })
+        );
+      })
     );
   }
 
@@ -283,57 +377,58 @@ export class TimeTrackingService {
     );
   }
 
-  // Get time entries statistics
+  // Get time entries statistics for dashboard
   getTimeEntriesStatistics(userId?: number): Observable<any> {
     let params = new HttpParams();
-    if (userId) params = params.set('userId', userId.toString());
-    
-    return this.http.get<any>(`${this.baseUrl}/statistics`, { params }).pipe(
-      map(response => response.data),
-      catchError(this.handleError)
+    if (userId) {
+      params = params.set('userId', userId.toString());
+    }
+
+    return this.http.get<any>(`${this.baseUrl}/analytics/summary`, { params }).pipe(
+      map(response => response.data || {}),
+      catchError(error => {
+        console.error('Error fetching time entries statistics:', error);
+        return of({});
+      })
     );
   }
 
   // Get time entries by case
   getTimeEntriesByCase(caseId: number, page: number = 0, size: number = 10): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/case/${caseId}`, {
-      params: new HttpParams()
-        .set('page', page.toString())
-        .set('size', size.toString())
-    }).pipe(
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.get<any>(`${this.baseUrl}/case/${caseId}`, { params }).pipe(
+      map(response => response.data || { timeEntries: [], totalElements: 0 }),
       catchError(this.handleError)
     );
   }
 
   // Get case time summary
   getCaseTimeSummary(caseId: number): Observable<any> {
-    const hoursObs = this.http.get<any>(`${this.baseUrl}/analytics/case/${caseId}/hours`);
-    const amountObs = this.http.get<any>(`${this.baseUrl}/analytics/case/${caseId}/amount`);
-    
-    return forkJoin({
-      hours: hoursObs,
-      amount: amountObs
-    }).pipe(
-      map(results => ({
-        data: {
-          totalHours: results.hours.data?.totalHours || 0,
-          totalAmount: results.amount.data?.totalAmount || 0
-        }
-      })),
-      catchError(this.handleError)
+    // Using the hours endpoint to get time summary
+    return this.http.get<any>(`${this.baseUrl}/analytics/case/${caseId}/hours`).pipe(
+      map(response => response.data || {}),
+      catchError(error => {
+        console.error('Error fetching case time summary:', error);
+        return of({});
+      })
     );
   }
 
   // Handle API errors
   private handleError(error: any): Observable<never> {
-    console.error('API error:', error);
-    let errorMessage = 'An unknown error occurred';
-    if (error.error?.message) {
+    console.error('TimeTrackingService error:', error);
+    let errorMessage = 'An error occurred';
+
+    if (error.error && error.error.message) {
       errorMessage = error.error.message;
     } else if (error.message) {
       errorMessage = error.message;
     }
-    return throwError(() => errorMessage);
+
+    return throwError(() => new Error(errorMessage));
   }
 } 
  

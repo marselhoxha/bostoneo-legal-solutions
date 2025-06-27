@@ -1,0 +1,210 @@
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="page-title">Revenue Analytics Dashboard</h4>
+          <p class="text-muted">Comprehensive financial insights and revenue tracking</p>
+        </div>
+        <div class="d-flex gap-2">
+          <select class="form-select" [(ngModel)]="dateRange" (change)="onDateRangeChange()">
+            <option value="1">Last Month</option>
+            <option value="3">Last 3 Months</option>
+            <option value="6">Last 6 Months</option>
+            <option value="12">Last 12 Months</option>
+            <option value="24">Last 24 Months</option>
+          </select>
+          <div class="btn-group">
+            <button class="btn btn-outline-primary" (click)="exportReport('pdf')">
+              <i class="fas fa-file-pdf"></i> PDF
+            </button>
+            <button class="btn btn-outline-primary" (click)="exportReport('excel')">
+              <i class="fas fa-file-excel"></i> Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading analytics...</span>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards -->
+  <div *ngIf="!loading" class="row mb-4">
+    <div class="col-md-3">
+      <div class="card metric-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-muted mb-2">Total Revenue</h6>
+              <h3 class="mb-0">{{ formatCurrency(metrics.totalRevenue) }}</h3>
+              <small class="text-success">
+                <i class="fas fa-arrow-up"></i> 12.5%
+              </small>
+            </div>
+            <div class="metric-icon bg-success-light">
+              <i class="fas fa-dollar-sign text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card metric-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-muted mb-2">Outstanding</h6>
+              <h3 class="mb-0">{{ formatCurrency(metrics.totalOutstanding) }}</h3>
+              <small class="text-warning">{{ metrics.totalOutstanding > 0 ? 'Pending' : 'Clear' }}</small>
+            </div>
+            <div class="metric-icon bg-warning-light">
+              <i class="fas fa-clock text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card metric-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-muted mb-2">Collection Rate</h6>
+              <h3 class="mb-0">{{ metrics.collectionRate }}%</h3>
+              <small class="text-info">Efficiency</small>
+            </div>
+            <div class="metric-icon bg-info-light">
+              <i class="fas fa-percentage text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card metric-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-muted mb-2">Avg Invoice Value</h6>
+              <h3 class="mb-0">{{ formatCurrency(metrics.averageInvoiceValue) }}</h3>
+              <small class="text-primary">Per invoice</small>
+            </div>
+            <div class="metric-icon bg-primary-light">
+              <i class="fas fa-file-invoice text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div *ngIf="!loading" class="row mb-4">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Revenue Trend</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height: 350px;">
+            <canvas #revenueChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Revenue by Practice Area</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height: 350px;">
+            <canvas #practiceAreaChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div *ngIf="!loading" class="row mb-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Top Clients by Revenue</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height: 300px;">
+            <canvas #clientChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Payment Collection Trend</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height: 300px;">
+            <canvas #paymentTrendChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Insights -->
+  <div *ngIf="!loading" class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Key Insights</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="insight-item">
+                <i class="fas fa-tachometer-alt text-primary"></i>
+                <div>
+                  <h6>Payment Velocity</h6>
+                  <p class="mb-0">Average {{ metrics.paymentVelocity }} days to payment</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="insight-item">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                <div>
+                  <h6>Overdue Amount</h6>
+                  <p class="mb-0">{{ formatCurrency(metrics.totalOverdue) }} past due</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="insight-item">
+                <i class="fas fa-chart-line text-success"></i>
+                <div>
+                  <h6>Revenue Growth</h6>
+                  <p class="mb-0">12.5% increase from last period</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

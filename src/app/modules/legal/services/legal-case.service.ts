@@ -115,7 +115,6 @@ export class LegalCaseService {
    */
   getCasesByClient(clientId: number, page = 0, size = 100): Observable<any> {
     const params = new HttpParams()
-      .set('clientId', clientId.toString())
       .set('page', page.toString())
       .set('size', size.toString());
     

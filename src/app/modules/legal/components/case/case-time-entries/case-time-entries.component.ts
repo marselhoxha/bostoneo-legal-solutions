@@ -61,13 +61,20 @@ export class CaseTimeEntriesComponent implements OnInit {
     this.timeTrackingService.getTimeEntriesByCase(Number(this.caseId), this.pageIndex, this.pageSize)
       .subscribe({
         next: (response) => {
-          this.timeEntries = response.data.timeEntries;
-          this.totalElements = response.data.totalElements;
+          if (response && response.data) {
+            this.timeEntries = response.data.timeEntries || response.data || [];
+            this.totalElements = response.data.totalElements || 0;
+          } else {
+            this.timeEntries = [];
+            this.totalElements = 0;
+          }
           this.isLoading = false;
         },
         error: (error) => {
           this.error = 'Failed to load time entries';
           this.isLoading = false;
+          this.timeEntries = [];
+          this.totalElements = 0;
           console.error('Error loading time entries:', error);
         }
       });
@@ -79,11 +86,21 @@ export class CaseTimeEntriesComponent implements OnInit {
     this.timeTrackingService.getCaseTimeSummary(Number(this.caseId))
       .subscribe({
         next: (response) => {
-          this.totalHours = response.data.totalHours || 0;
-          this.totalAmount = response.data.totalAmount || 0;
+          if (response && response.data) {
+            this.totalHours = response.data.totalHours || response.totalHours || 0;
+            this.totalAmount = response.data.totalAmount || response.totalAmount || 0;
+          } else if (response) {
+            this.totalHours = response.totalHours || 0;
+            this.totalAmount = response.totalAmount || 0;
+          } else {
+            this.totalHours = 0;
+            this.totalAmount = 0;
+          }
         },
         error: (error) => {
           console.error('Error loading case summary:', error);
+          this.totalHours = 0;
+          this.totalAmount = 0;
         }
       });
   }

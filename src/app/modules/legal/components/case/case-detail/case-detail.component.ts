@@ -19,6 +19,8 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { EventModalComponent } from '../../../components/calendar/event-modal/event-modal.component';
 import Swal from 'sweetalert2';
 import { RbacService } from '../../../../../core/services/rbac.service';
+import { CaseAssignmentService } from '../../../../../service/case-assignment.service';
+import { CaseAssignment, AssignmentHistory } from '../../../../../interface/case-assignment';
 
 @Component({
   selector: 'app-case-detail',
@@ -67,6 +69,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   canViewInternalNotes = false;
   canViewAllDocuments = false;
   canViewPrivateActivities = false;
+  canManageAssignments = false;
+  
+  // Team & Assignment properties
+  caseTeamMembers: any[] = [];
+  assignmentHistory: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -77,7 +84,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
-    private rbacService: RbacService
+    private rbacService: RbacService,
+    private caseAssignmentService: CaseAssignmentService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -423,6 +431,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         // Load associated events after case is loaded
         if (this.case && this.case.id) {
           this.loadCaseEvents(this.case.id);
+          this.loadCaseTeam(this.case.id);
         }
       },
       error: (err) => {
@@ -1099,5 +1108,105 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     }).catch(() => {
       // Modal dismissed
     });
+  }
+  
+  // Team & Assignment Methods
+  loadCaseTeam(caseId: string | number): void {
+    // Set permissions
+    this.rbacService.hasPermission('CASE', 'ASSIGN').subscribe({
+      next: (hasPermission) => {
+        this.canManageAssignments = hasPermission;
+      }
+    });
+    
+    // Load case assignments
+    this.caseAssignmentService.getCaseAssignments(Number(caseId)).subscribe({
+      next: (response) => {
+        if (response.data) {
+          const data = response.data as any;
+          const assignments = Array.isArray(data) ? data : data.content || [];
+          this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
+            id: assignment.userId,
+            name: assignment.userName || 'Unknown User',
+            title: assignment.roleType,
+            roleType: assignment.roleType,
+            imageUrl: null, // Will use default avatar
+            workloadStatus: 'OPTIMAL', // Default status
+            workloadPercentage: assignment.workloadWeight || 0,
+            assignmentId: assignment.id,
+            assignmentDate: assignment.assignedAt
+          }));
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading case team:', error);
+      }
+    });
+    
+    // Load assignment history
+    this.caseAssignmentService.getAssignmentHistory(Number(caseId)).subscribe({
+      next: (response) => {
+        if (response.data) {
+          this.assignmentHistory = Array.isArray(response.data) ? response.data : [];
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading assignment history:', error);
+      }
+    });
+  }
+  
+  openAssignmentModal(): void {
+    // TODO: Implement assignment modal
+    this.snackBar.open('Assignment modal will be implemented', 'Close', { duration: 3000 });
+  }
+  
+  viewMemberDetails(member: any): void {
+    this.router.navigate(['/admin/users', member.id]);
+  }
+  
+  transferAssignment(member: any): void {
+    // TODO: Implement transfer functionality
+    this.snackBar.open('Transfer functionality will be implemented', 'Close', { duration: 3000 });
+  }
+  
+  removeAssignment(member: any): void {
+    Swal.fire({
+      title: 'Remove Team Member?',
+      text: `Are you sure you want to remove ${member.name} from this case?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, remove',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const reason = 'Removed from case team';
+        this.caseAssignmentService.unassignCase(Number(this.caseId), member.id, reason).subscribe({
+          next: () => {
+            this.snackBar.open('Team member removed successfully', 'Close', { duration: 3000 });
+            this.loadCaseTeam(this.caseId!);
+          },
+          error: (error) => {
+            console.error('Error removing assignment:', error);
+            this.snackBar.open('Failed to remove team member', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
+  }
+  
+  getAverageWorkload(): number {
+    if (!this.caseTeamMembers || this.caseTeamMembers.length === 0) return 0;
+    const total = this.caseTeamMembers.reduce((sum, member) => sum + (member.workloadPercentage || 0), 0);
+    return Math.round(total / this.caseTeamMembers.length);
+  }
+  
+  getOverCapacityCount(): number {
+    if (!this.caseTeamMembers) return 0;
+    return this.caseTeamMembers.filter(member => member.workloadStatus === 'OVER_CAPACITY').length;
   }
 }

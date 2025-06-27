@@ -2,6 +2,7 @@ import { User } from 'src/app/interface/user';
 import { DocumentType, DocumentCategory } from './document.interface';
 
 export enum CaseStatus {
+  ACTIVE = 'ACTIVE',
   OPEN = 'OPEN',
   IN_PROGRESS = 'IN_PROGRESS',
   PENDING = 'PENDING',

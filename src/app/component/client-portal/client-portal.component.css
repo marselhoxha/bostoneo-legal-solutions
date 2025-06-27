@@ -1,0 +1,59 @@
+.invoice-list {
+  margin-top: 20px;
+}
+
+.invoice-details {
+  margin-bottom: 20px;
+}
+
+.invoice-details p {
+  margin-bottom: 8px;
+}
+
+.payment-form {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+#card-element {
+  background-color: white;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  min-height: 45px;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+.badge {
+  padding: 0.5em 0.75em;
+  font-size: 0.875rem;
+}
+
+.badge.text-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge.text-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.badge.text-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge.text-secondary {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.badge.text-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}

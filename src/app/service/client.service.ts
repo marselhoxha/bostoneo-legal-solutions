@@ -31,6 +31,14 @@ export class ClientService {
                 catchError(this.handleError)
             );
 
+    clientsWithUnbilledTimeEntries$ = () => <Observable<CustomHttpResponse<Client[] & User>>>
+        this.http.get<CustomHttpResponse<Client[] & User>>
+            (`${this.server}/client/with-unbilled-time-entries`)
+            .pipe(
+                tap(console.log),
+                catchError(this.handleError)
+            );
+
     client$ = (clientId: number) => <Observable<CustomHttpResponse<ClientState>>>
         this.http.get<CustomHttpResponse<ClientState>>
             (`${this.server}/client/get/${clientId}`)

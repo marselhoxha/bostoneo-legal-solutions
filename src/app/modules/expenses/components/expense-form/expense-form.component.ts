@@ -7,6 +7,7 @@ import { CustomHttpResponse, Page } from '../../../../interface/appstates';
 import { map, tap, catchError } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 import { ClientService } from '../../../../service/client.service';
+import { InvoiceService } from '../../../../service/invoice.service';
 import { CaseService } from '../../../legal/services/case.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -48,6 +49,7 @@ export class ExpenseFormComponent implements OnInit {
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
     private clientService: ClientService,
+    private invoiceService: InvoiceService,
     private caseService: CaseService,
     private http: HttpClient,
     private notificationService: NotificationService
@@ -122,8 +124,8 @@ export class ExpenseFormComponent implements OnInit {
   private loadInvoices() {
     console.log('Loading invoices separately');
     
-    // Use a direct HTTP call to fetch invoices with full error debugging
-    return this.clientService.invoices$(0).pipe(  // Only accepts page parameter
+    // Use the InvoiceService to fetch invoices
+    return this.invoiceService.getInvoices(0, 100).pipe(
       tap(response => {
         console.log('Raw invoices response:', JSON.stringify(response));
         
@@ -131,12 +133,12 @@ export class ExpenseFormComponent implements OnInit {
         const data = response?.data as any;
         
         // Try different paths to find the invoice array
-        if (data?.page?.content && Array.isArray(data.page.content)) {
-          this.invoices = data.page.content;
-          console.log(`Loaded ${this.invoices.length} invoices from page.content`, this.invoices);
-        } else if (data?.content && Array.isArray(data.content)) {
+        if (data?.content && Array.isArray(data.content)) {
           this.invoices = data.content;
           console.log(`Loaded ${this.invoices.length} invoices from content`, this.invoices);
+        } else if (data?.page?.content && Array.isArray(data.page.content)) {
+          this.invoices = data.page.content;
+          console.log(`Loaded ${this.invoices.length} invoices from page.content`, this.invoices);
         } else if (Array.isArray(data)) {
           this.invoices = data;
           console.log(`Loaded ${this.invoices.length} invoices from data array`, this.invoices);
@@ -149,6 +151,14 @@ export class ExpenseFormComponent implements OnInit {
           ];
           console.log('Using fallback test invoices:', this.invoices);
         }
+      }),
+      catchError(error => {
+        console.error('Error loading invoices:', error);
+        this.invoices = [
+          { id: 2001, invoiceNumber: 'INV-ERROR-2001' },
+          { id: 2002, invoiceNumber: 'INV-ERROR-2002' }
+        ];
+        return of(null);
       })
     );
   }

@@ -55,7 +55,7 @@ export class InvoiceDetailComponent implements OnInit {
     quantity: 1,
     rate: 0,
     subtotal: 0,
-    taxRate: 8.25, // Default tax rate
+    taxRate: 0, // Default tax rate
     taxAmount: 0,
     totalAmount: 0
   };
@@ -188,7 +188,7 @@ export class InvoiceDetailComponent implements OnInit {
       quantity: 1,
       rate: 0,
       subtotal: 0,
-      taxRate: 8.25,
+      taxRate: 0,
       taxAmount: 0,
       totalAmount: 0
     };
@@ -239,7 +239,7 @@ export class InvoiceDetailComponent implements OnInit {
       quantity: 1,
       rate: invoice.subtotal || 0,
       subtotal: invoice.subtotal || 0,
-      taxRate: invoice.taxRate || 8.25,
+      taxRate: invoice.taxRate || 0,
       taxAmount: invoice.taxAmount || 0,
       totalAmount: invoice.totalAmount || 0
     };
@@ -635,8 +635,17 @@ export class InvoiceDetailComponent implements OnInit {
   }
   
   initializeInvoiceItems(invoice: any): void {
-    // Initialize with existing items or create default item
-    if (invoice.items && invoice.items.length > 0) {
+    // Initialize with existing line items (backend sends lineItems, not items)
+    if (invoice.lineItems && invoice.lineItems.length > 0) {
+      this.invoiceItems = invoice.lineItems.map((item: any) => ({
+        description: item.description || '',
+        details: item.details || '',
+        quantity: item.quantity || 1,
+        rate: item.unitPrice || item.rate || 0,
+        total: item.amount || ((item.quantity || 1) * (item.unitPrice || item.rate || 0))
+      }));
+    } else if (invoice.items && invoice.items.length > 0) {
+      // Fallback for old format
       this.invoiceItems = invoice.items.map((item: any) => ({
         description: item.description || '',
         details: item.details || '',

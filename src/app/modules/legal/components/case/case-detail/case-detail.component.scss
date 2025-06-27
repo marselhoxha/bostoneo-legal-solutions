@@ -295,4 +295,54 @@
 
 .bg-soft-primary {
   background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+}
+
+// Timeline styles for assignment history
+.timeline {
+  position: relative;
+  padding-left: 30px;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e9ecef;
+  }
+  
+  .timeline-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+    
+    &:last-child {
+      padding-bottom: 0;
+    }
+    
+    .timeline-marker {
+      position: absolute;
+      left: -21px;
+      top: 0;
+      width: 12px;
+      height: 12px;
+      background-color: #fff;
+      border: 2px solid var(--vz-primary);
+      border-radius: 50%;
+      z-index: 1;
+    }
+    
+    .timeline-content {
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border-left: 3px solid var(--vz-primary);
+    }
+  }
+}
+
+// Alert styles
+.alert-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 } 

@@ -1,0 +1,152 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title">Client Payment Portal</h4>
+          <p class="card-subtitle">View and pay your outstanding invoices</p>
+        </div>
+        <div class="card-body">
+          <!-- Loading State -->
+          <div *ngIf="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Invoice List -->
+          <div *ngIf="!loading && !selectedInvoice" class="invoice-list">
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Total Amount</th>
+                    <th>Balance Due</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let invoice of invoices">
+                    <td>{{ invoice.invoiceNumber }}</td>
+                    <td>{{ invoice.issueDate | date }}</td>
+                    <td>{{ invoice.dueDate | date }}</td>
+                    <td>{{ invoice.totalAmount | currency }}</td>
+                    <td>{{ invoice.balanceDue | currency }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getStatusClass(invoice.status)">
+                        {{ invoice.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-primary me-2" 
+                              (click)="selectInvoice(invoice)"
+                              [disabled]="invoice.balanceDue === 0">
+                        Pay Now
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" 
+                              (click)="downloadInvoice(invoice)">
+                        <i class="fas fa-download"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div *ngIf="invoices.length === 0" class="text-center py-5">
+              <p class="text-muted">No outstanding invoices</p>
+            </div>
+          </div>
+
+          <!-- Payment Form -->
+          <div *ngIf="selectedInvoice" class="payment-form">
+            <div class="row">
+              <div class="col-md-6">
+                <h5>Invoice Details</h5>
+                <div class="invoice-details bg-light p-3 rounded">
+                  <p><strong>Invoice Number:</strong> {{ selectedInvoice.invoiceNumber }}</p>
+                  <p><strong>Case:</strong> {{ selectedInvoice.caseName }}</p>
+                  <p><strong>Issue Date:</strong> {{ selectedInvoice.issueDate | date }}</p>
+                  <p><strong>Due Date:</strong> {{ selectedInvoice.dueDate | date }}</p>
+                  <p><strong>Total Amount:</strong> {{ selectedInvoice.totalAmount | currency }}</p>
+                  <p><strong>Balance Due:</strong> {{ selectedInvoice.balanceDue | currency }}</p>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h5>Payment Information</h5>
+                <form (ngSubmit)="processPayment()">
+                  <div class="mb-3">
+                    <label class="form-label">Payment Amount</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input type="number" 
+                             class="form-control" 
+                             [(ngModel)]="paymentAmount"
+                             name="paymentAmount"
+                             [max]="selectedInvoice.balanceDue"
+                             min="0.01"
+                             step="0.01"
+                             required>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select class="form-select" [(ngModel)]="paymentMethod" name="paymentMethod">
+                      <option value="card">Credit/Debit Card</option>
+                      <option value="ach">Bank Transfer (ACH)</option>
+                    </select>
+                  </div>
+                  
+                  <div class="mb-3" *ngIf="paymentMethod === 'card'">
+                    <!-- Stripe Card Element would be mounted here -->
+                    <div id="card-element" class="form-control py-3">
+                      <!-- Stripe.js injects the card element here -->
+                      <p class="text-muted small">Card details form would appear here</p>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3" *ngIf="paymentMethod === 'ach'">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <label class="form-label">Routing Number</label>
+                        <input type="text" class="form-control" placeholder="9 digits">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Account Number</label>
+                        <input type="text" class="form-control" placeholder="Account number">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="d-flex justify-content-between">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            (click)="selectedInvoice = null"
+                            [disabled]="paymentProcessing">
+                      Cancel
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-primary"
+                            [disabled]="paymentProcessing">
+                      <span *ngIf="!paymentProcessing">Process Payment</span>
+                      <span *ngIf="paymentProcessing">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Processing...
+                      </span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

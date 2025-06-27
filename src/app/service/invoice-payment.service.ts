@@ -8,7 +8,7 @@ import { CustomHttpResponse } from '../interface/custom-http-response';
   providedIn: 'root'
 })
 export class InvoicePaymentService {
-  private readonly apiUrl = '/api/invoices';
+  private readonly apiUrl = 'http://localhost:8085/api/invoices';
 
   constructor(private http: HttpClient) { }
 
