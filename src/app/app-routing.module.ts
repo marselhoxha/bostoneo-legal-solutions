@@ -36,6 +36,13 @@ const routes: Routes = [
       // Time tracking module
       { path: 'time-tracking', loadChildren: () => import('./modules/time-tracking/time-tracking.module').then(m => m.TimeTrackingModule) },
 
+      // Case management module
+      { 
+        path: 'case-management', 
+        loadChildren: () => import('./modules/case-management/case-management.module').then(m => m.CaseManagementModule),
+        canActivate: [AuthenticationGuard]
+      },
+
       // Activities module (lazy loaded)
       { 
         path: 'activities', 

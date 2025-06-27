@@ -109,6 +109,27 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
             link: '/legal/documents',
             parentId: 2,
             permission: { resource: 'DOCUMENT', action: 'VIEW' }
+          },
+          {
+            id: 25,
+            label: 'Case Assignments',
+            link: '/case-management/assignments',
+            parentId: 2,
+            permission: { resource: 'CASE', action: 'VIEW' }
+          },
+          {
+            id: 26,
+            label: 'Assignment Management',
+            link: '/case-management/assignments/management',
+            parentId: 2,
+            permission: { resource: 'CASE', action: 'EDIT', hierarchyLevel: 30 }
+          },
+          {
+            id: 27,
+            label: 'Task Management',
+            link: '/case-management/tasks',
+            parentId: 2,
+            permission: { resource: 'CASE', action: 'VIEW' }
           }
         ]
       },

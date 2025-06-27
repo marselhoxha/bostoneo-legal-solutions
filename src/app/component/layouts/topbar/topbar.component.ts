@@ -19,6 +19,9 @@ import { Observable, BehaviorSubject, map, Subject, takeUntil } from 'rxjs';
 import { CustomHttpResponse, Profile } from 'src/app/interface/appstates';
 import { NavigationEnd } from '@angular/router';
 import { PushNotificationService } from 'src/app/core/services/push-notification.service';
+import { CaseAssignmentService } from 'src/app/service/case-assignment.service';
+import { CaseTaskService } from 'src/app/service/case-task.service';
+import { CaseAssignment } from 'src/app/interface/case-assignment';
 
 @Component({
   selector: 'app-topbar',
@@ -57,10 +60,18 @@ export class TopbarComponent implements OnInit, OnDestroy {
   unreadNotificationCount = 0;
   activeNotification: any = null;
   @ViewChild('notificationDropdown') notificationDropdown!: NgbDropdown;
+  
+  // Case Management Properties
+  pendingAssignments = 0;
+  myCasesCount = 0;
+  myTasksCount = 0;
+  teamWorkloadPercentage = 0;
+  recentAssignments: any[] = [];
 
   constructor(@Inject(DOCUMENT) private document: any,   private modalService: NgbModal,
     public _cookiesService: CookieService, private userService: UserService, private notificationService: NotificationService,
-    private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService) {
+    private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
+    private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService) {
       
      }
 
@@ -110,6 +121,90 @@ export class TopbarComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.cdr.detectChanges();
     }, 100);
+    
+    // Load case management data
+    this.loadCaseManagementData();
+  }
+  
+  /**
+   * Load case management data for dropdown
+   */
+  private loadCaseManagementData(): void {
+    // Skip if user not authenticated
+    if (!this.userService.isAuthenticated()) return;
+    
+    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      if (!user) return;
+      
+      // Load user's case assignments
+      this.caseAssignmentService.getUserAssignments(user.id, 0, 10)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response.data) {
+              // Handle paginated response
+              const data = response.data as any;
+              const assignments = data.content ? data.content : 
+                                 Array.isArray(data) ? data : [];
+              if (assignments.length > 0) {
+                this.recentAssignments = assignments.slice(0, 3).map((assignment: CaseAssignment) => ({
+                  id: assignment.id,
+                  caseId: assignment.caseId,
+                  caseTitle: assignment.caseTitle || 'Case #' + assignment.caseId,
+                  assignmentDate: assignment.assignedAt,
+                  roleType: assignment.roleType
+                }));
+                this.myCasesCount = assignments.length;
+                // Count active assignments as pending (no workloadStatus property exists)
+                this.pendingAssignments = assignments.filter((a: CaseAssignment) => 
+                  a.active === true
+                ).length;
+              }
+            }
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Error loading case assignments:', error);
+          }
+        });
+      
+      // Load user's workload
+      this.caseAssignmentService.calculateUserWorkload(user.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response.data) {
+              this.teamWorkloadPercentage = Math.round(response.data.capacityPercentage || 0);
+            }
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Error loading workload:', error);
+          }
+        });
+      
+      // Load active tasks count
+      this.caseTaskService.getUserTasks(user.id, { page: 0, size: 100 })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response.data) {
+              const data = response.data as any;
+              const tasks = data.content ? data.content : 
+                           Array.isArray(data) ? data : [];
+              if (tasks.length > 0) {
+                this.myTasksCount = tasks.filter((task: any) => 
+                  task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
+                ).length;
+              }
+            }
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Error loading tasks:', error);
+          }
+        });
+    });
   }
   
   /**

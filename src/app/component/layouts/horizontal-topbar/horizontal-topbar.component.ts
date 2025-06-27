@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter, Output, ViewChild, ElementRef, Input } from '@angular/core';
+import { Component, OnInit, EventEmitter, Output, ViewChild, ElementRef, Input, HostListener } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { filter } from 'rxjs/operators';
@@ -58,6 +58,9 @@ export class HorizontalTopbarComponent implements OnInit {
       console.log('User does not have admin access');
       this.showAdminNavigation = false;
     }
+
+    // Initialize responsive menu
+    this.updateMenuResponsiveness();
   }
 
   /**
@@ -248,5 +251,62 @@ export class HorizontalTopbarComponent implements OnInit {
     }
   }
 
- 
+  /**
+   * Check if screen is in laptop mode (for responsive menu behavior)
+   */
+  isLaptopMode(): boolean {
+    return window.innerWidth <= 1366 && window.innerWidth >= 1024;
+  }
+
+  /**
+   * Check if screen is in compact mode (for icon-only menu)
+   */
+  isCompactMode(): boolean {
+    return window.innerWidth <= 1200;
+  }
+
+  /**
+   * Get menu item display text based on screen size
+   */
+  getMenuDisplayText(item: MenuItem): string {
+    if (this.isCompactMode()) {
+      return ''; // Return empty string for icon-only mode
+    }
+    return item.label;
+  }
+
+  /**
+   * Handle window resize for responsive menu
+   */
+  @HostListener('window:resize', ['$event'])
+  onWindowResize(event: any): void {
+    // Update menu display based on new window size
+    this.updateMenuResponsiveness();
+  }
+
+  /**
+   * Update menu responsiveness based on screen size
+   */
+  private updateMenuResponsiveness(): void {
+    const menuElements = document.querySelectorAll('.navbar-nav .nav-link .menu-text');
+    
+    if (this.isCompactMode()) {
+      // Hide text in compact mode
+      menuElements.forEach(element => {
+        (element as HTMLElement).style.display = 'none';
+      });
+    } else {
+      // Show text in normal mode
+      menuElements.forEach(element => {
+        (element as HTMLElement).style.display = 'inline';
+      });
+    }
+  }
+
+  /**
+   * Get tooltip text for menu item (used in compact mode)
+   */
+  getTooltipText(item: MenuItem): string {
+    return item.label;
+  }
 }

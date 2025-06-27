@@ -50,9 +50,48 @@ export const MENU: MenuItem[] = [
     ]
   },
   
-  // ===== TIME TRACKING & BILLING =====
+  // ===== CASE MANAGEMENT =====
   {
     id: 4,
+    label: 'Cases',
+    icon: 'ri-briefcase-4-line',
+    link: '/case-management/dashboard',
+    requiredPermission: { resource: 'CASE', action: 'VIEW' },
+    subItems: [
+      {
+        id: 'case-dashboard',
+        label: 'Dashboard',
+        link: '/case-management/dashboard',
+        parentId: 4,
+        requiredPermission: { resource: 'CASE', action: 'VIEW' }
+      },
+      {
+        id: 'case-assignments',
+        label: 'Assignments',
+        link: '/case-management/assignments',
+        parentId: 4,
+        requiredPermission: { resource: 'CASE', action: 'VIEW' }
+      },
+      {
+        id: 'assignment-management',
+        label: 'Assign Mgmt',
+        link: '/case-management/assignments/management',
+        parentId: 4,
+        requiredPermission: { resource: 'CASE', action: 'EDIT' }
+      },
+      {
+        id: 'task-management',
+        label: 'Tasks',
+        link: '/case-management/tasks',
+        parentId: 4,
+        requiredPermission: { resource: 'TASK', action: 'VIEW_ALL' }
+      }
+    ]
+  },
+  
+  // ===== TIME TRACKING & BILLING =====
+  {
+    id: 5,
     label: 'Time & Billing',
     icon: 'ri-time-line',
     link: '/time-tracking/dashboard',
@@ -62,56 +101,56 @@ export const MENU: MenuItem[] = [
         id: 'time-dashboard',
         label: 'Dashboard',
         link: '/time-tracking/dashboard',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'timesheet',
         label: 'Timesheet',
         link: '/time-tracking/entry',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'new-entry',
         label: 'New Entry',
         link: '/time-tracking/entry/new',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'CREATE' }
       },
       {
         id: 'approval',
         label: 'Approval',
         link: '/time-tracking/approval',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'APPROVE' }
       },
       {
         id: 'billing-rates',
-        label: 'Billing Rates',
+        label: 'Rates',
         link: '/time-tracking/rates',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' }
       },
       {
         id: 'invoice-generation',
-        label: 'Invoice Generation',
+        label: 'Invoices',
         link: '/time-tracking/billing/invoice-generation',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'BILLING', action: 'CREATE' }
       },
       {
         id: 'time-reports',
         label: 'Reports',
         link: '/time-tracking/reports',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'billing-analytics',
         label: 'Analytics',
         link: '/time-tracking/billing/analytics',
-        parentId: 4,
+        parentId: 5,
         requiredPermission: { resource: 'BILLING', action: 'EDIT' }
       }
     ]
@@ -119,7 +158,7 @@ export const MENU: MenuItem[] = [
   
   // ===== FINANCIAL MODULE =====
   {
-    id: 5,
+    id: 6,
     label: 'Financial',
     icon: 'ri-money-dollar-circle-line',
     link: '/invoices',
@@ -127,16 +166,16 @@ export const MENU: MenuItem[] = [
     subItems: [
       {
         id: 'billing-dashboard',
-        label: 'Billing Dashboard',
+        label: 'Dashboard',
         link: '/billing-dashboard',
-        parentId: 5,
+        parentId: 6,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' }
       },
       {
         id: 'invoices',
         label: 'Invoices',
         link: '/invoices',
-        parentId: 5,
+        parentId: 6,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' },
         subItems: [
           {
@@ -163,7 +202,7 @@ export const MENU: MenuItem[] = [
         id: 'expenses',
         label: 'Expenses',
         link: '/expenses',
-        parentId: 5,
+        parentId: 6,
         requiredPermission: { resource: 'EXPENSE', action: 'VIEW' },
         subItems: [
           {
@@ -190,7 +229,7 @@ export const MENU: MenuItem[] = [
         id: 'analytics',
         label: 'Analytics',
         link: '/analytics',
-        parentId: 5,
+        parentId: 6,
         requiredPermission: { resource: 'BILLING', action: 'EDIT' }
       }
     ]
@@ -198,38 +237,38 @@ export const MENU: MenuItem[] = [
   
   // ===== ADMINISTRATION (Admin/Manager only) =====
   {
-    id: 6,
-    label: 'Administration',
+    id: 7,
+    label: 'Admin',
     icon: 'ri-admin-line',
     link: '/admin',
     requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
     subItems: [
       {
         id: 'role-hierarchy',
-        label: 'Role Hierarchy',
+        label: 'Roles',
         link: '/admin/role-hierarchy',
-        parentId: 6,
+        parentId: 7,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       },
       {
         id: 'roles',
-        label: 'Role Management',
+        label: 'Management',
         link: '/admin/roles',
-        parentId: 6,
+        parentId: 7,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       },
       {
         id: 'user-roles',
-        label: 'User Assignments',
+        label: 'Users',
         link: '/admin/user-roles',
-        parentId: 6,
+        parentId: 7,
         requiredPermission: { resource: 'SYSTEM', action: 'EDIT' }
       },
       {
         id: 'audit-logs',
-        label: 'Audit Logs',
+        label: 'Audit',
         link: '/admin/audit-logs',
-        parentId: 6,
+        parentId: 7,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       }
     ]
@@ -237,15 +276,15 @@ export const MENU: MenuItem[] = [
   
   // ===== USER PROFILE & SUPPORT =====
   {
-    id: 7,
+    id: 8,
     label: 'Profile',
     icon: 'ri-user-settings-line',
     link: '/profile'
   },
   
   {
-    id: 8,
-    label: 'Help & FAQ',
+    id: 9,
+    label: 'Help',
     icon: 'ri-question-answer-line',
     link: '/faq'
   }

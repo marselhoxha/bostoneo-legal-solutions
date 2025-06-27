@@ -53,6 +53,136 @@
                 </div>
 
            
+                <!-- Case Management Dropdown -->
+                <div class="dropdown topbar-head-dropdown ms-1 header-item" ngbDropdown>
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative" 
+                            data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <i class='ri-briefcase-4-line fs-22'></i>
+                        <span *ngIf="pendingAssignments > 0" class="position-absolute topbar-badge fs-9 translate-middle badge rounded-pill bg-warning">
+                            {{ pendingAssignments }}
+                            <span class="visually-hidden">pending assignments</span>
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-lg p-0 dropdown-menu-end" ngbDropdownMenu style="width: 360px;">
+                        <div class="p-3 border-top-0 border-start-0 border-end-0 border-dashed border bg-primary bg-pattern">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="m-0 fw-semibold fs-15 text-white">
+                                        <i class="ri-briefcase-4-line me-2"></i>Case Management
+                                    </h6>
+                                </div>
+                                <div class="col-auto">
+                                    <a [routerLink]="['/case-management/dashboard']" class="btn btn-sm btn-light">
+                                        View Dashboard
+                                        <i class="ri-arrow-right-s-line align-middle"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="p-3 border-bottom">
+                            <div class="row g-3 text-center">
+                                <div class="col-4">
+                                    <div class="p-2">
+                                        <h5 class="mb-1 text-primary">{{ myCasesCount || 0 }}</h5>
+                                        <p class="text-muted mb-0 fs-12">My Cases</p>
+                                    </div>
+                                </div>
+                                <div class="col-4 border-start border-end">
+                                    <div class="p-2">
+                                        <h5 class="mb-1 text-warning">{{ myTasksCount || 0 }}</h5>
+                                        <p class="text-muted mb-0 fs-12">Active Tasks</p>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2">
+                                        <h5 class="mb-1 text-info">{{ teamWorkloadPercentage || 0 }}%</h5>
+                                        <p class="text-muted mb-0 fs-12">Team Load</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="p-3 border-bottom">
+                            <h6 class="text-muted text-uppercase fs-11 fw-semibold mb-3">Quick Actions</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <a [routerLink]="['/legal/cases/create']" class="btn btn-soft-primary btn-sm w-100">
+                                        <i class="ri-add-line me-1"></i>New Case
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a [routerLink]="['/case-management/tasks/new']" class="btn btn-soft-success btn-sm w-100">
+                                        <i class="ri-task-line me-1"></i>New Task
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a [routerLink]="['/case-management/assignments']" class="btn btn-soft-info btn-sm w-100">
+                                        <i class="ri-user-add-line me-1"></i>Assign Case
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a [routerLink]="['/case-management/assignments/management']" class="btn btn-soft-info btn-sm w-100">
+                                        <i class="ri-user-settings-line me-1"></i>Assignment Mgmt
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a [routerLink]="['/case-management/workload']" class="btn btn-soft-warning btn-sm w-100">
+                                        <i class="ri-dashboard-line me-1"></i>Workload
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Assignments -->
+                        <div class="p-3">
+                            <h6 class="text-muted text-uppercase fs-11 fw-semibold mb-3">Recent Assignments</h6>
+                            <div class="recent-assignments-list" style="max-height: 200px; overflow-y: auto;">
+                                <div *ngIf="recentAssignments && recentAssignments.length > 0; else noAssignments">
+                                    <a *ngFor="let assignment of recentAssignments.slice(0, 3)" 
+                                       [routerLink]="['/legal/cases', assignment.caseId]"
+                                       class="d-flex align-items-center p-2 rounded hover-bg-light text-decoration-none text-body mb-2">
+                                        <div class="flex-shrink-0 me-3">
+                                            <div class="avatar-xs rounded-circle bg-primary-subtle text-primary">
+                                                <i class="ri-briefcase-line"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fs-13">{{ assignment.caseTitle }}</h6>
+                                            <p class="mb-0 fs-12 text-muted">
+                                                Assigned {{ assignment.assignmentDate | date:'shortDate' }}
+                                            </p>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <span class="badge bg-primary-subtle text-primary fs-11">
+                                                {{ assignment.roleType }}
+                                            </span>
+                                        </div>
+                                    </a>
+                                </div>
+                                <ng-template #noAssignments>
+                                    <div class="text-center py-3">
+                                        <div class="avatar-md mx-auto mb-3">
+                                            <div class="avatar-title bg-light-subtle text-muted rounded-circle fs-24">
+                                                <i class="ri-briefcase-line"></i>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted mb-0">No recent assignments</p>
+                                    </div>
+                                </ng-template>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <a [routerLink]="['/case-management/assignments']" class="btn btn-soft-primary btn-sm">
+                                    View All Assignments <i class="ri-arrow-right-line ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Web Apps Dropdown (existing) -->
                 <div class="dropdown topbar-head-dropdown ms-1 header-item" ngbDropdown>
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
                         <i class='bx bx-category-alt fs-22'></i>
