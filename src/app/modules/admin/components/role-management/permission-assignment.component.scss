@@ -1,76 +1,89 @@
-/* Permission Assignment Dialog - Velzon Theme Compatible */
-.permission-assignment-dialog {
-  min-width: 320px;
-  width: 95vw;
-  max-width: 1000px;
-  max-height: 90vh;
+/* Permission Assignment Dialog - Angular Material Dialog Compatible */
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.permission-dialog-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 85vh;
+  width: 100%;
   background-color: var(--vz-body-bg);
   color: var(--vz-body-color);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Dialog Header */
+.dialog-header {
+  flex-shrink: 0;
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: linear-gradient(135deg, var(--vz-primary), rgba(var(--vz-primary-rgb), 0.8));
   
-  @media (min-width: 576px) {
-    width: 90vw;
-    max-height: 85vh;
+  h5 {
+    color: white !important;
+    font-weight: 600;
+    margin: 0;
   }
   
-  @media (min-width: 768px) {
-    width: 85vw;
-    min-width: 700px;
-    max-height: 80vh;
+  p {
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin: 0;
   }
   
-  @media (min-width: 992px) {
-    width: 80vw;
-    min-width: 800px;
+  .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+/* Dialog Body */
+.dialog-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--vz-body-bg);
+}
+
+/* Permissions Content - Scrollable Area */
+.permissions-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(85vh - 250px); // Adjust based on header and footer height
+  
+  /* Custom scrollbar for better UX */
+  &::-webkit-scrollbar {
+    width: 6px;
   }
   
-  .dialog-header {
-    border-radius: 0.5rem 0.5rem 0 0;
-    background-color: var(--vz-card-cap-bg);
-    border-bottom: 1px solid var(--vz-border-color);
-    
-    h5 {
-      color: var(--vz-heading-color);
-      font-weight: 600;
-    }
-    
-    .text-muted {
-      color: var(--vz-secondary-color) !important;
-    }
+  &::-webkit-scrollbar-track {
+    background: var(--vz-gray-100);
   }
   
-  .dialog-body {
-    max-height: 65vh;
-    overflow-y: auto;
-    background-color: var(--vz-body-bg);
-    
-    @media (min-width: 768px) {
-      max-height: 60vh;
-    }
-    
-    /* Custom scrollbar for better UX */
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: var(--vz-gray-100);
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: var(--vz-gray-400);
-      border-radius: 3px;
-    }
-    
-    &::-webkit-scrollbar-thumb:hover {
-      background: var(--vz-gray-500);
-    }
+  &::-webkit-scrollbar-thumb {
+    background: var(--vz-gray-400);
+    border-radius: 3px;
   }
   
-  .dialog-footer {
-    border-radius: 0 0 0.5rem 0.5rem;
-    background-color: var(--vz-card-cap-bg);
-    border-top: 1px solid var(--vz-border-color);
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--vz-gray-500);
   }
+}
+
+/* Dialog Footer */
+.dialog-footer {
+  flex-shrink: 0;
+  border-radius: 0 0 0.75rem 0.75rem;
+  background-color: var(--vz-card-cap-bg);
+  border-top: 1px solid var(--vz-border-color);
 }
 
 /* Search box styling - Velzon theme */
@@ -108,499 +121,282 @@
   }
 }
 
-/* Professional Group Headers */
-.permissions-groups {
-  .permission-group {
-    margin-bottom: 1.5rem;
-    
-    .group-header {
-      transition: all 0.2s ease;
-      
-      &:hover {
-        transform: translateY(-1px);
-        
-        .card {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-        }
-      }
-      
-      .card {
-        transition: all 0.2s ease;
-        border: 1px solid var(--vz-border-color);
-        
-        &:hover {
-          border-color: var(--vz-primary);
-        }
-      }
-      
-      .avatar-sm {
-        width: 2.5rem;
-        height: 2.5rem;
-        
-        .avatar-title {
-          font-size: 1rem;
-        }
-      }
-      
-      .expand-indicator {
-        .ri-arrow-down-s-line {
-          transition: transform 0.3s ease;
-        }
-      }
-      
-      .progress {
-        border-radius: 3px;
-        background-color: var(--vz-gray-200);
-        
-        .progress-bar {
-          border-radius: 3px;
-          transition: width 0.3s ease;
-        }
-      }
-    }
-    
-    .group-permissions {
-      .permissions-container {
-        background-color: var(--vz-gray-50);
-        border: 1px solid var(--vz-border-color);
-        margin-top: 0.5rem;
-      }
-      
-      .permission-item {
-        transition: all 0.2s ease;
-        cursor: pointer;
-        background-color: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color) !important;
-        
-        &:hover {
-          background-color: var(--vz-gray-50);
-          border-color: var(--vz-primary) !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        &.permission-assigned {
-          background-color: var(--vz-success-bg-subtle);
-          border-color: var(--vz-success-border-subtle) !important;
-          
-          &:hover {
-            background-color: rgba(var(--vz-success-rgb), 0.15);
-            border-color: var(--vz-success) !important;
-          }
-        }
-        
-        &.permission-disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-          
-          &:hover {
-            transform: none;
-            box-shadow: none;
-          }
-        }
-        
-        .form-check-input {
-          border-color: var(--vz-border-color);
-          width: 1.125rem;
-          height: 1.125rem;
-          
-          &:checked {
-            background-color: var(--vz-success);
-            border-color: var(--vz-success);
-          }
-          
-          &:focus {
-            box-shadow: 0 0 0 0.2rem rgba(var(--vz-success-rgb), 0.25);
-          }
-        }
-        
-        h6 {
-          color: var(--vz-heading-color);
-          font-weight: 600;
-          line-height: 1.3;
-        }
-        
-        p {
-          color: var(--vz-secondary-color);
-          line-height: 1.4;
-        }
-        
-        .badge {
-          font-size: 0.7rem;
-          padding: 0.25rem 0.5rem;
-        }
-      }
-    }
-  }
-}
-
-/* Soft background colors - Velzon theme */
-.bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-  border: 1px solid rgba(var(--vz-primary-rgb), 0.2);
-}
-
-.bg-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1) !important;
-  border: 1px solid rgba(var(--vz-success-rgb), 0.2);
-}
-
-.bg-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
-  border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
-}
-
-.bg-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1) !important;
-  border: 1px solid rgba(var(--vz-info-rgb), 0.2);
-}
-
-/* Badge styling - Velzon theme */
-.badge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.375rem;
+/* Permission Cards Enhanced Styling */
+.card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color) !important;
   
-  &.bg-soft-info {
-    background-color: var(--vz-info-bg-subtle) !important;
-    color: var(--vz-info-text-emphasis) !important;
-    border: 1px solid var(--vz-info-border-subtle);
-  }
-}
-
-/* Avatar styling - Velzon theme */
-.avatar-xs, .avatar-sm, .avatar-md, .avatar-lg {
-  .avatar-title {
-    width: 100%;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    font-weight: 600;
+    background: linear-gradient(90deg, transparent, rgba(var(--vz-primary-rgb), 0.1), transparent);
+    transition: width 0.3s ease;
+    z-index: 1;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: var(--vz-primary) !important;
+    
+    &::before {
+      width: 100%;
+    }
+  }
+  
+  &.border-success {
+    background: linear-gradient(135deg, var(--vz-success-bg-subtle), rgba(var(--vz-success-rgb), 0.1));
+    border-color: var(--vz-success) !important;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-top: 20px solid var(--vz-success);
+    }
+    
+    .check-icon {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      color: white;
+      font-size: 12px;
+      z-index: 2;
+    }
   }
 }
 
-.avatar-xs {
-  width: 1.5rem;
-  height: 1.5rem;
+/* Form Check Enhancements */
+.form-check {
+  .form-check-input {
+    cursor: pointer;
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+    
+    &:checked {
+      background-color: var(--vz-success);
+      border-color: var(--vz-success);
+      transform: scale(1.2);
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(var(--vz-success-rgb), 0.25);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+  
+  .form-check-label {
+    cursor: pointer;
+    user-select: none;
+    
+    &:hover {
+      color: var(--vz-primary);
+    }
+  }
+}
+
+/* Badge Styling */
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  
+  &.fs-11 {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* Accordion Enhancements */
+.accordion {
+  .accordion-item {
+    border: 1px solid var(--vz-border-color);
+    border-radius: 0.5rem !important;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    
+    .accordion-header {
+      .accordion-button {
+        background: linear-gradient(135deg, var(--vz-card-bg), var(--vz-gray-50));
+        border: none;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        
+        &:not(.collapsed) {
+          background: linear-gradient(135deg, var(--vz-primary-bg-subtle), rgba(var(--vz-primary-rgb), 0.1));
+          color: var(--vz-primary);
+          box-shadow: none;
+        }
+        
+        &:hover {
+          background: linear-gradient(135deg, var(--vz-primary-bg-subtle), rgba(var(--vz-primary-rgb), 0.05));
+        }
+        
+        &:focus {
+          box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+          border-color: transparent;
+        }
+        
+        &::after {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='currentColor'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+          transition: transform 0.2s ease;
+        }
+        
+        &:not(.collapsed)::after {
+          transform: rotate(180deg);
+        }
+      }
+    }
+    
+    .accordion-body {
+      background-color: var(--vz-body-bg);
+      border-top: 1px solid var(--vz-border-color);
+    }
+  }
+}
+
+/* Progress Bar Enhancements */
+.progress {
+  height: 6px;
+  background-color: var(--vz-gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+  
+  .progress-bar {
+    transition: width 0.6s ease;
+    border-radius: 3px;
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent 33%, rgba(255,255,255,0.3) 33%, rgba(255,255,255,0.3) 66%, transparent 66%);
+      animation: progress-shine 2s infinite;
+    }
+  }
+}
+
+@keyframes progress-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Loading State */
+.spinner-border {
+  animation: spinner-border 0.75s linear infinite;
+}
+
+/* Empty State Styling */
+.avatar-lg {
+  width: 4rem;
+  height: 4rem;
   
   .avatar-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .permission-dialog-container {
+    max-height: 90vh;
+  }
+  
+  .permissions-content {
+    max-height: calc(90vh - 200px);
+  }
+  
+  .row.g-3 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+  }
+  
+  .col-lg-6 {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
   }
 }
 
-.avatar-sm {
-  width: 2rem;
-  height: 2rem;
-  
-  .avatar-title {
-    font-size: 0.875rem;
-  }
-}
-
-.avatar-md {
-  width: 3rem;
-  height: 3rem;
-  
-  .avatar-title {
-    font-size: 1.125rem;
-  }
-}
-
-/* Form styling - Velzon theme */
-.form-check-input {
-  cursor: pointer;
-  border-color: var(--vz-border-color);
-  background-color: var(--vz-input-bg);
-  
-  &:checked {
-    background-color: var(--vz-primary);
-    border-color: var(--vz-primary);
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .permission-dialog-container {
+    background-color: var(--vz-dark-bg, #1a1a1a);
+    color: var(--vz-dark-color, #ffffff);
   }
   
-  &:focus {
-    box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+  .card {
+    background-color: var(--vz-dark-card-bg, #2a2a2a);
+    border-color: var(--vz-dark-border, #404040);
   }
   
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .form-control {
+    background-color: var(--vz-dark-input-bg, #2a2a2a);
+    border-color: var(--vz-dark-border, #404040);
+    color: var(--vz-dark-color, #ffffff);
   }
 }
 
-/* Cursor pointer for labels */
-.cursor-pointer {
-  cursor: pointer;
+/* Accessibility Improvements */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
-label.cursor-pointer {
-  cursor: pointer;
-  user-select: none;
+/* Focus Management */
+.btn:focus,
+.form-control:focus,
+.form-check-input:focus {
+  outline: 2px solid var(--vz-primary);
+  outline-offset: 2px;
 }
 
-.form-select,
-.form-control {
-  border: 1px solid var(--vz-border-color);
-  border-radius: 0.375rem;
-  transition: all 0.2s ease;
-  background-color: var(--vz-input-bg);
-  color: var(--vz-body-color);
-  
-  &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
-    outline: none;
-    background-color: var(--vz-input-focus-bg);
-  }
-  
-  &::placeholder {
-    color: var(--vz-input-placeholder-color);
-  }
-}
-
-/* Button styling - Velzon theme */
-.btn {
-  border-radius: 0.375rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  
-  &.btn-primary {
-    background-color: var(--vz-primary);
-    border-color: var(--vz-primary);
-    color: #fff;
-    
-    &:hover {
-      background-color: var(--vz-primary-hover);
-      border-color: var(--vz-primary-hover);
-    }
-    
-    &:focus {
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.5);
-    }
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .card {
+    border-width: 2px;
   }
   
-  &.btn-outline-secondary {
-    border-color: var(--vz-border-color);
-    color: var(--vz-secondary-color);
-    
-    &:hover {
-      background-color: var(--vz-secondary);
-      border-color: var(--vz-secondary);
-      color: #fff;
-    }
+  .btn {
+    border-width: 2px;
   }
   
-  &.btn-soft-primary {
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
-    border-color: transparent;
-    color: var(--vz-primary);
-    
-    &:hover {
-      background-color: var(--vz-primary);
-      color: #fff;
-    }
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  
-  &:focus {
-    outline: none;
+  .form-control {
+    border-width: 2px;
   }
 }
-
-// Text utilities
-.fw-medium {
-  font-weight: 500;
-}
-
-.fw-semibold {
-  font-weight: 600;
-}
-
-.fs-13 {
-  font-size: 0.8125rem;
-}
-
-.fs-18 {
-  font-size: 1.125rem;
-}
-
-.fs-20 {
-  font-size: 1.25rem;
-}
-
-/* Dark mode support - Velzon theme */
-[data-layout-mode="dark"] {
-  .permission-assignment-dialog {
-    .dialog-header {
-      background-color: var(--vz-header-bg);
-      border-bottom-color: var(--vz-border-color);
-    }
-    
-    .dialog-body {
-      background-color: var(--vz-body-bg);
-    }
-    
-    .dialog-footer {
-      background-color: var(--vz-header-bg);
-      border-top-color: var(--vz-border-color);
-    }
-  }
-  
-  .permissions-groups {
-    .permission-group {
-      .group-header {
-        background-color: var(--vz-gray-800);
-        border-color: var(--vz-border-color);
-      }
-      
-      .permission-item {
-        background-color: var(--vz-card-bg);
-        border-color: var(--vz-border-color);
-        
-        &:hover {
-          background-color: var(--vz-gray-800);
-        }
-        
-        &.permission-assigned {
-          background-color: rgba(var(--vz-success-rgb), 0.2);
-          
-          &:hover {
-            background-color: rgba(var(--vz-success-rgb), 0.3);
-          }
-        }
-      }
-    }
-  }
-}
-
-/* Additional color classes for permission groups */
-.bg-primary-subtle {
-  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-}
-
-.text-primary {
-  color: var(--vz-primary) !important;
-}
-
-.bg-info-subtle {
-  background-color: rgba(var(--vz-info-rgb), 0.1) !important;
-}
-
-.text-info {
-  color: var(--vz-info) !important;
-}
-
-.bg-success-subtle {
-  background-color: rgba(var(--vz-success-rgb), 0.1) !important;
-}
-
-.text-success {
-  color: var(--vz-success) !important;
-}
-
-.bg-warning-subtle {
-  background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
-}
-
-.text-warning {
-  color: var(--vz-warning) !important;
-}
-
-.bg-danger-subtle {
-  background-color: rgba(var(--vz-danger-rgb), 0.1) !important;
-}
-
-.text-danger {
-  color: var(--vz-danger) !important;
-}
-
-.bg-secondary-subtle {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1) !important;
-}
-
-.text-secondary {
-  color: var(--vz-secondary) !important;
-}
-
-/* Animation for group expansion */
-.rotate-180 {
-  transform: rotate(180deg);
-}
-
-.transition-all {
-  transition: all 0.3s ease;
-}
-
-/* Global dialog panel class */
-:host ::ng-deep .permission-dialog-panel {
-  .mat-mdc-dialog-container {
-    padding: 0;
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 767px) {
-  .permissions-groups {
-    .permission-group {
-      .group-header {
-        .avatar-sm {
-          width: 2rem;
-          height: 2rem;
-          
-          .avatar-title {
-            font-size: 0.875rem;
-          }
-        }
-      }
-      
-      .group-permissions {
-        .permissions-container {
-          margin-left: 0;
-          padding: 1rem;
-        }
-        
-        .permission-item {
-          margin-bottom: 0.75rem;
-          
-          .card-body {
-            padding: 1rem;
-          }
-          
-          h6 {
-            font-size: 0.875rem;
-          }
-          
-          p {
-            font-size: 0.8rem;
-          }
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 575px) {
-  .permissions-groups {
-    .permission-group {
-      .group-permissions {
-        .permissions-container {
-          padding: 0.75rem;
-        }
-        
-        .permission-item {
-          .card-body {
-            padding: 0.75rem;
-          }
-        }
-      }
-    }
-  }
-} 

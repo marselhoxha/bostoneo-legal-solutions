@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ChangeDetec
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTabGroup } from '@angular/material/tabs';
-import { RbacService } from '@app/core/services/rbac.service';
+import { RbacService, Role as RbacRole, Permission as RbacPermission } from '@app/core/services/rbac.service';
 import { RoleFormComponent } from './role-form.component';
 import { PermissionAssignmentComponent } from './permission-assignment.component';
 import { CustomHttpResponse } from '@app/core/models/custom-http-response';
@@ -13,30 +13,34 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { Subject, takeUntil, finalize, forkJoin } from 'rxjs';
+import { trigger, state, style, transition, animate } from '@angular/animations';
+import Swal from 'sweetalert2';
 
-interface Role {
-  id: number;
-  name: string;
-  description: string;
-  hierarchyLevel: number;
-  systemRole: boolean;
-  permissions?: Permission[];
+// Use the interfaces from RBAC service to avoid type conflicts
+interface Role extends RbacRole {
   userCount?: number;
 }
 
-interface Permission {
-  id: number;
-  name: string;
-  description: string;
-  resourceType: string;
-  actionType: string;
+interface Permission extends RbacPermission {
+  // Already compatible with RbacPermission
 }
 
 @Component({
   selector: 'app-role-admin',
   templateUrl: './role-admin.component.html',
   styleUrls: ['./role-admin.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms ease-in-out', style({ transform: 'translateX(0)', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('300ms ease-in-out', style({ transform: 'translateX(100%)', opacity: 0 }))
+      ])
+    ])
+  ]
 })
 export class RoleAdminComponent implements OnInit, OnDestroy {
   @ViewChild('tabGroup') tabGroup!: MatTabGroup;
@@ -64,6 +68,8 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
   // Filters
   searchTerm = '';
   filterType = 'all';
+  hierarchyFilter = '';
+  sortByField = 'name';
   
   // Pagination
   currentPage = 0;
@@ -136,10 +142,25 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
     // Apply type filter
     if (this.filterType !== 'all') {
       if (this.filterType === 'system') {
-        filteredData = filteredData.filter(role => role.systemRole);
+        filteredData = filteredData.filter(role => role.isSystemRole);
       } else if (this.filterType === 'custom') {
-        filteredData = filteredData.filter(role => !role.systemRole);
+        filteredData = filteredData.filter(role => !role.isSystemRole);
       }
+    }
+
+    // Apply hierarchy filter
+    if (this.hierarchyFilter) {
+      filteredData = filteredData.filter(role => {
+        const level = role.hierarchyLevel || 0;
+        switch (this.hierarchyFilter) {
+          case '1-20': return level >= 1 && level <= 20;
+          case '21-40': return level >= 21 && level <= 40;
+          case '41-60': return level >= 41 && level <= 60;
+          case '61-80': return level >= 61 && level <= 80;
+          case '81-100': return level >= 81 && level <= 100;
+          default: return true;
+        }
+      });
     }
     
     // Apply search filter
@@ -151,11 +172,29 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
         role.hierarchyLevel?.toString().includes(searchLower)
       );
     }
+
+    // Apply sorting based on sortByField
+    if (this.sortByField !== 'name') {
+      filteredData.sort((a, b) => {
+        switch (this.sortByField) {
+          case 'hierarchyLevel':
+            return (a.hierarchyLevel || 0) - (b.hierarchyLevel || 0);
+          case 'userCount':
+            return (a.userCount || 0) - (b.userCount || 0);
+          case 'isSystemRole':
+            return (a.isSystemRole ? 1 : 0) - (b.isSystemRole ? 1 : 0);
+          default:
+            return a.name.localeCompare(b.name);
+        }
+      });
+    } else {
+      filteredData.sort((a, b) => a.name.localeCompare(b.name));
+    }
     
     this.filteredRoles = filteredData;
     this.updateDataSource();
     this.cdr.markForCheck();
-      }
+  }
 
   clearFilter(): void {
     this.searchTerm = '';
@@ -200,7 +239,7 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
     
     for (let i = start; i < end; i++) {
       pages.push(i);
-      }
+    }
     
     return pages;
   }
@@ -221,7 +260,7 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
     if (this.currentPage < this.getTotalPages() - 1) {
       this.currentPage++;
       this.updateDataSource();
-      }
+    }
   }
   
   selectRole(role: Role): void {
@@ -236,12 +275,12 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
         next: (response: any) => {
           this.selectedRole = response.data?.role;
           this.cdr.detectChanges();
-      },
-      error: (error) => {
+        },
+        error: (error) => {
           console.error('Error loading role details:', error);
           this.showError('Failed to load role details');
-      }
-    });
+        }
+      });
   }
   
   createRole(): void {
@@ -255,7 +294,7 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
   }
   
   deleteRole(role: Role): void {
-    if (role.systemRole) {
+    if (role.isSystemRole) {
       this.showError('System roles cannot be deleted');
       return;
     }
@@ -295,13 +334,13 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
           this.showRoleForm = false;
           this.selectedRole = null;
           this.loadData();
-      },
-      error: (error) => {
+        },
+        error: (error) => {
           console.error('Error saving role:', error);
           this.showError('Failed to save role');
           this.loading = false;
-      }
-    });
+        }
+      });
   }
   
   onRoleFormCancel(): void {
@@ -356,15 +395,15 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
       duration: 5000,
       panelClass: ['bg-danger', 'text-white']
     });
-      }
+  }
 
   // Utility methods
   getRoleTypeLabel(role: Role): string {
-    return role.systemRole ? 'System' : 'Custom';
+    return role.isSystemRole ? 'System' : 'Custom';
   }
   
   getRoleTypeBadgeClass(role: Role): string {
-    return role.systemRole ? 'badge bg-primary' : 'badge bg-secondary';
+    return role.isSystemRole ? 'system' : 'custom';
   }
 
   getHierarchyBadgeClass(level: number): string {
@@ -382,8 +421,8 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
 
   // Stats methods
   private updateCachedCounts(): void {
-    this.systemRolesCount = this.roles.filter(role => role.systemRole).length;
-    this.customRolesCount = this.roles.filter(role => !role.systemRole).length;
+    this.systemRolesCount = this.roles.filter(role => role.isSystemRole).length;
+    this.customRolesCount = this.roles.filter(role => !role.isSystemRole).length;
   }
 
   getSystemRolesCount(): number {
@@ -399,7 +438,7 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
     if (level >= 70) return 'manager';
     if (level >= 50) return 'staff';
     return 'basic';
-    }
+  }
     
   // Cache role descriptions to avoid repeated object creation
   private readonly roleDescriptions: { [key: string]: string } = {
@@ -438,5 +477,138 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
 
   trackByIndex(index: number): number {
     return index;
+  }
+
+  // Additional methods for the enhanced UI
+  refreshData(): void {
+    this.loading = true;
+    this.loadData();
+    this.showSuccess('Data refreshed successfully');
+  }
+
+  exportRoles(): void {
+    const exportData = this.roles.map(role => ({
+      name: role.name,
+      description: this.getRoleDescription(role),
+      hierarchyLevel: role.hierarchyLevel,
+      isSystemRole: role.isSystemRole,
+      userCount: role.userCount || 0,
+      permissionCount: role.permissions?.length || 0,
+      permissions: role.permissions?.map(p => p.name) || []
+    }));
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `roles-export-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    this.showSuccess('Roles exported successfully');
+  }
+
+  clearAllFilters(): void {
+    this.searchTerm = '';
+    this.filterType = 'all';
+    this.hierarchyFilter = '';
+    this.sortByField = 'name';
+    this.applyFilter();
+    
+    // Show success message
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Filters Cleared',
+        text: 'All filters have been reset.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  }
+
+  hasActiveFilters(): boolean {
+    return this.searchTerm !== '' || 
+           this.filterType !== 'all' || 
+           this.hierarchyFilter !== '' ||
+           this.sortByField !== 'name';
+  }
+
+  getEmptyStateTitle(): string {
+    if (this.hasActiveFilters()) {
+      return 'No Matching Roles Found';
+    }
+    return 'No Roles Available';
+  }
+
+  getEmptyStateMessage(): string {
+    if (this.hasActiveFilters()) {
+      return 'Try adjusting your search criteria or clearing the filters to see more results.';
+    }
+    return 'Get started by creating your first role to manage user permissions effectively.';
+  }
+
+  getAccessLevel(hierarchyLevel: number): string {
+    if (hierarchyLevel >= 90) return 'High';
+    if (hierarchyLevel >= 70) return 'Medium';
+    if (hierarchyLevel >= 50) return 'Standard';
+    return 'Basic';
+  }
+
+  closeRoleDetails(): void {
+    this.selectedRole = null;
+  }
+
+  applySorting(): void {
+    this.applyFilter();
+  }
+
+  // New methods for redesigned role cards
+  viewRoleDetails(role: Role): void {
+    this.selectedRole = role;
+  }
+
+  openPermissionManager(role: Role): void {
+    console.log('Opening permission manager for role:', role);
+    
+    const dialogRef = this.dialog.open(PermissionAssignmentComponent, {
+      width: '90vw',
+      maxWidth: '1200px',
+      height: '85vh',
+      data: { role: role },
+      disableClose: false,
+      panelClass: 'permission-dialog',
+      position: {
+        top: '80px'  // Increased top position to ensure dialog appears below the topbar
+      }
+    });
+    
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('Permission dialog closed with result:', result);
+      if (result) {
+        this.loadData(); // Refresh data if changes were made
+        this.showSuccess('Permissions updated successfully');
+      }
+    });
+
+    // Close role details if open
+    this.closeRoleDetails();
+  }
+
+  confirmDeleteRole(role: Role): void {
+    if (role.isSystemRole) {
+      this.showError('System roles cannot be deleted');
+      return;
+    }
+
+    const confirmed = confirm(`Are you sure you want to delete the role "${role.name}"?\n\nThis action cannot be undone.`);
+    if (confirmed) {
+      this.deleteRole(role);
+    }
+
+    // Close role details if open
+    this.closeRoleDetails();
   }
 } 

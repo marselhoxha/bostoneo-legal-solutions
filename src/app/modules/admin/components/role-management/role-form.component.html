@@ -1,87 +1,249 @@
-<h2 mat-dialog-title>{{ isEditMode ? 'Edit Role' : 'Add Role' }}</h2>
+<!-- Clean Role Form -->
+<div class="role-form-container">
+  <form [formGroup]="roleForm" (ngSubmit)="onSubmit()" class="needs-validation" novalidate>
+    
+    <!-- Form Header -->
+    <div class="form-header mb-4">
+      <div class="d-flex align-items-center mb-3">
+        <div class="avatar-md me-3">
+          <div class="avatar-title bg-primary rounded-circle">
+            <i class="ri-shield-user-line fs-20 text-white"></i>
+          </div>
+        </div>
+        <div>
+          <h5 class="mb-1 fw-bold">{{ role ? 'Edit Role' : 'Create New Role' }}</h5>
+          <p class="text-muted mb-0">{{ role ? 'Modify role settings and permissions' : 'Set up a new role with specific permissions' }}</p>
+        </div>
+      </div>
+    </div>
 
-<div *ngIf="isLoading" class="text-center p-5">
-  <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">Loading...</span>
-  </div>
-</div>
+    <!-- Basic Information -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="card-title fw-bold mb-3">
+          <i class="ri-information-line me-2 text-primary"></i>Basic Information
+        </h6>
+        
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="roleName" class="form-label fw-semibold">Role Name <span class="text-danger">*</span></label>
+            <input type="text" 
+                   id="roleName"
+                   class="form-control" 
+                   formControlName="name"
+                   placeholder="Enter role name"
+                   [class.is-invalid]="roleForm.get('name')?.invalid && roleForm.get('name')?.touched">
+            <div class="invalid-feedback" *ngIf="roleForm.get('name')?.invalid && roleForm.get('name')?.touched">
+              <small *ngIf="roleForm.get('name')?.errors?.['required']">Role name is required</small>
+              <small *ngIf="roleForm.get('name')?.errors?.['minlength']">Role name must be at least 2 characters</small>
+            </div>
+            <div class="form-text">Choose a clear, descriptive name for this role</div>
+          </div>
 
-<form [formGroup]="roleForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
-  <mat-dialog-content>
-    <div class="mb-3">
-      <label for="name" class="form-label">Name *</label>
-      <input type="text" class="form-control" id="name" formControlName="name">
-      <div class="text-danger" *ngIf="roleForm.get('name')?.invalid && roleForm.get('name')?.touched">
-        <small *ngIf="roleForm.get('name')?.errors?.['required']">Name is required</small>
-        <small *ngIf="roleForm.get('name')?.errors?.['maxlength']">Name cannot exceed 50 characters</small>
+          <div class="col-md-6">
+            <label for="hierarchyLevel" class="form-label fw-semibold">Hierarchy Level <span class="text-danger">*</span></label>
+            <select id="hierarchyLevel" 
+                    class="form-select" 
+                    formControlName="hierarchyLevel"
+                    [class.is-invalid]="roleForm.get('hierarchyLevel')?.invalid && roleForm.get('hierarchyLevel')?.touched">
+              <option value="">Select hierarchy level</option>
+              <option value="100">Executive (100) - Highest level access</option>
+              <option value="95">Senior Executive (95) - Executive management</option>
+              <option value="90">Managing Partner (90) - Top management</option>
+              <option value="85">Senior Partner (85) - Senior leadership</option>
+              <option value="80">Partner (80) - Partnership level</option>
+              <option value="75">Director (75) - Department head</option>
+              <option value="70">Manager (70) - Team management</option>
+              <option value="65">Senior Supervisor (65) - Senior oversight</option>
+              <option value="60">Supervisor (60) - Team supervision</option>
+              <option value="55">Team Lead (55) - Team leadership</option>
+              <option value="50">Senior Staff (50) - Experienced staff</option>
+              <option value="45">Staff (45) - Regular staff</option>
+              <option value="40">Junior Staff (40) - Entry-level staff</option>
+              <option value="35">Associate (35) - Associate level</option>
+              <option value="30">Junior Associate (30) - Junior level</option>
+              <option value="25">Trainee (25) - Training level</option>
+              <option value="20">Intern (20) - Internship level</option>
+              <option value="15">Temp (15) - Temporary access</option>
+              <option value="10">Guest (10) - Limited access</option>
+              <option value="5">Basic (5) - Minimal access</option>
+            </select>
+            <div class="invalid-feedback" *ngIf="roleForm.get('hierarchyLevel')?.invalid && roleForm.get('hierarchyLevel')?.touched">
+              <small>Please select a hierarchy level</small>
+            </div>
+            <div class="form-text">Higher numbers indicate greater authority and access</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+          <div class="col-12">
+            <label for="description" class="form-label fw-semibold">Description</label>
+            <textarea id="description" 
+                      class="form-control" 
+                      formControlName="description"
+                      rows="3"
+                      placeholder="Describe the role's purpose and responsibilities"></textarea>
+            <div class="form-text">Provide a clear description of what this role is responsible for</div>
+          </div>
+        </div>
       </div>
     </div>
-    
-    <div class="mb-3">
-      <label for="description" class="form-label">Description</label>
-      <textarea class="form-control" id="description" rows="3" formControlName="description"></textarea>
-      <div class="text-danger" *ngIf="roleForm.get('description')?.invalid && roleForm.get('description')?.touched">
-        <small *ngIf="roleForm.get('description')?.errors?.['maxlength']">Description cannot exceed 255 characters</small>
+
+    <!-- System Role Configuration -->
+    <div class="card border-0 shadow-sm mb-4" *ngIf="!role || !role.id">
+      <div class="card-body">
+        <h6 class="card-title fw-bold mb-3">
+          <i class="ri-settings-3-line me-2 text-warning"></i>System Configuration
+        </h6>
+        
+        <div class="form-check form-switch">
+          <input class="form-check-input" 
+                 type="checkbox" 
+                 id="isSystemRole"
+                 formControlName="isSystemRole">
+          <label class="form-check-label fw-semibold" for="isSystemRole">
+            System Role
+          </label>
+        </div>
+        <div class="form-text mt-2">
+          <i class="ri-information-line me-1 text-info"></i>
+          System roles are protected from deletion and have special privileges
+        </div>
       </div>
     </div>
-    
-    <div class="mb-3">
-      <label for="hierarchyLevel" class="form-label">Hierarchy Level *</label>
-      <input type="number" class="form-control" id="hierarchyLevel" formControlName="hierarchyLevel">
-      <small class="form-text text-muted">Lower number means higher position in hierarchy (0 is highest)</small>
-      <div class="text-danger" *ngIf="roleForm.get('hierarchyLevel')?.invalid && roleForm.get('hierarchyLevel')?.touched">
-        <small *ngIf="roleForm.get('hierarchyLevel')?.errors?.['required']">Hierarchy level is required</small>
-        <small *ngIf="roleForm.get('hierarchyLevel')?.errors?.['min']">Hierarchy level must be at least 0</small>
-      </div>
-    </div>
-    
-    <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="isSystemRole" formControlName="isSystemRole">
-      <label class="form-check-label" for="isSystemRole">System Role</label>
-      <small class="form-text text-muted d-block">System roles cannot be deleted and are essential for the application</small>
-    </div>
-    
-    <div class="mb-3">
-      <label class="form-label">Permissions</label>
-      
-      <div class="accordion" id="permissionsAccordion">
-        <div class="accordion-item" *ngFor="let resourceType of resourceTypes">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                    [attr.data-bs-target]="'#collapse' + resourceType">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" 
-                       [checked]="isAllResourcePermissionsSelected(resourceType)"
-                       [indeterminate]="isSomeResourcePermissionsSelected(resourceType)"
-                       (change)="toggleAllPermissionsForResource(resourceType, $event.target.checked)">
-                <label class="form-check-label ms-2">
-                  <strong>{{ resourceType }}</strong>
-                </label>
+
+    <!-- Permission Assignment -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="card-title fw-bold mb-0">
+            <i class="ri-shield-check-line me-2 text-success"></i>Permissions
+          </h6>
+          <span class="badge bg-primary-subtle text-primary">
+            {{ getSelectedPermissionsCount() }} selected
+          </span>
+        </div>
+
+        <!-- Permission Search and Quick Actions -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="position-relative">
+              <input type="text" 
+                     class="form-control ps-5" 
+                     placeholder="Search permissions..."
+                     [(ngModel)]="permissionSearchTerm"
+                     [ngModelOptions]="{standalone: true}"
+                     (input)="filterPermissions()">
+              <i class="ri-search-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="selectAllPermissions()">
+                <i class="ri-check-double-line me-1"></i>Select All
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" (click)="deselectAllPermissions()">
+                <i class="ri-close-line me-1"></i>Clear All
+              </button>
+              <button type="button" class="btn btn-outline-info btn-sm" (click)="selectBasicPermissions()">
+                <i class="ri-shield-line me-1"></i>Basic Set
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permissions Grid -->
+        <div class="permissions-grid" *ngIf="filteredPermissions.length > 0">
+          <div class="row g-2">
+            <div class="col-md-6 col-lg-4" *ngFor="let permission of filteredPermissions; trackBy: trackByPermissionId">
+              <div class="permission-item">
+                <div class="form-check">
+                  <input class="form-check-input" 
+                         type="checkbox" 
+                         [id]="'perm-' + permission.id"
+                         [checked]="isPermissionSelected(permission)"
+                         (change)="togglePermission(permission)">
+                  <label class="form-check-label" [for]="'perm-' + permission.id">
+                    <div class="permission-info">
+                      <h6 class="permission-name">{{ permission.name }}</h6>
+                      <div class="permission-details">
+                        <span class="badge bg-light text-dark me-1">{{ permission.actionType }}</span>
+                        <span class="badge bg-light text-dark">{{ permission.resourceType }}</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
-            </button>
-          </h2>
-          <div [id]="'collapse' + resourceType" class="accordion-collapse collapse" data-bs-parent="#permissionsAccordion">
-            <div class="accordion-body">
-              <div class="form-check mb-2" *ngFor="let permission of permissionsByResource[resourceType]">
-                <input class="form-check-input" type="checkbox" [id]="'permission-' + permission.id"
-                       [value]="permission.id"
-                       [checked]="roleForm.get('permissions')?.value?.includes(permission.id)"
-                       (change)="handlePermissionChange(permission.id, $event.target.checked)">
-                <label class="form-check-label" [for]="'permission-' + permission.id">
-                  {{ permission.name }} - {{ permission.description }}
-                </label>
-              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Permissions Found -->
+        <div class="text-center py-4" *ngIf="filteredPermissions.length === 0">
+          <div class="avatar-md mx-auto mb-3">
+            <div class="avatar-title bg-light text-muted rounded-circle">
+              <i class="ri-search-line fs-20"></i>
+            </div>
+          </div>
+          <h6 class="text-muted">No permissions found</h6>
+          <p class="text-muted mb-0 small">Try adjusting your search terms</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Summary -->
+    <div class="card border-0 bg-light mb-4" *ngIf="roleForm.valid">
+      <div class="card-body">
+        <h6 class="card-title fw-bold mb-3">
+          <i class="ri-file-list-3-line me-2 text-info"></i>Summary
+        </h6>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="text-center">
+              <h5 class="text-primary mb-1">{{ roleForm.get('name')?.value || 'N/A' }}</h5>
+              <small class="text-muted">Role Name</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-center">
+              <h5 class="text-success mb-1">{{ getHierarchyLabel(roleForm.get('hierarchyLevel')?.value) }}</h5>
+              <small class="text-muted">Access Level</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-center">
+              <h5 class="text-info mb-1">{{ getSelectedPermissionsCount() }}</h5>
+              <small class="text-muted">Permissions</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-center">
+              <h5 class="text-warning mb-1">{{ roleForm.get('isSystemRole')?.value ? 'System' : 'Custom' }}</h5>
+              <small class="text-muted">Role Type</small>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </mat-dialog-content>
-  
-  <mat-dialog-actions align="end">
-    <button type="button" class="btn btn-secondary me-2" (click)="onCancel()">Cancel</button>
-    <button type="submit" class="btn btn-primary" [disabled]="roleForm.invalid">
-      {{ isEditMode ? 'Update' : 'Create' }}
-    </button>
-  </mat-dialog-actions>
-</form> 
+
+    <!-- Form Actions -->
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" 
+              class="btn btn-outline-secondary" 
+              (click)="onCancel()"
+              [disabled]="isSubmitting">
+        <i class="ri-close-line me-1"></i>Cancel
+      </button>
+      <button type="submit" 
+              class="btn btn-primary"
+              [disabled]="roleForm.invalid || isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </span>
+        <i class="ri-save-line me-1" *ngIf="!isSubmitting"></i>
+        {{ isSubmitting ? 'Saving...' : (role ? 'Update Role' : 'Create Role') }}
+      </button>
+    </div>
+
+  </form>
+</div> 

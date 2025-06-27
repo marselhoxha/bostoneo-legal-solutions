@@ -1,41 +1,21 @@
-<div class="container-fluid" style="margin-top: 120px;">
-  <!-- Page title with improved styling -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0 fw-semibold text-primary">Role Management</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Admin</a></li>
-            <li class="breadcrumb-item active text-primary">Roles</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Premium Role Management Interface -->
+<div class="container-fluid" style="margin-top: 100px;">
 
-  <!-- Role Management Guide -->
-  <div class="row mb-4">
+  <!-- Clean Page Header -->
+  <div class="row">
     <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body bg-soft-info rounded">
-          <div class="d-flex align-items-start">
-            <div class="flex-shrink-0">
-              <div class="avatar-sm">
-                <span class="avatar-title bg-info-subtle rounded-circle fs-3">
-                  <i class="ri-information-line text-info"></i>
-                </span>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="mb-2 text-info">Role Management Guide</h6>
-              <p class="text-muted mb-0 fs-13">
-                Roles define user permissions and access levels. <strong>System roles</strong> are built-in and cannot be deleted. 
-                <strong>Custom roles</strong> can be created, modified, and deleted. Hierarchy levels (0-100) determine role priority: 
-                Admin (90-100), Manager (70-89), Staff (50-69), Basic (0-49).
-              </p>
-            </div>
-          </div>
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h4 class="mb-1 fw-bold ">Role Management</h4>
+          <p class="text-muted mb-0">Manage user roles and permissions across your organization</p>
+        </div>
+        <div class="page-title-right">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a href="javascript: void(0);">Admin</a></li>
+              <li class="breadcrumb-item active">Roles</li>
+            </ol>
+          </nav>
         </div>
       </div>
     </div>
@@ -54,12 +34,12 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-3">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-2">{{ roles.length }}</h4>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="roles.length">0</span></h4>
               <a href="javascript:void(0);" class="text-decoration-underline text-primary fs-12">View all</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-primary-subtle rounded-circle fs-3">
-                <i class="ri-shield-user-line text-primary"></i>
+                <i class="ri-shield-line text-primary"></i>
               </span>
             </div>
           </div>
@@ -70,7 +50,7 @@
     <!-- System Roles Card -->
     <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
       <div class="card card-animate shadow-sm border-0 h-100">
-         <div class="card-body bg-soft-warning rounded">
+        <div class="card-body bg-soft-warning rounded">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
               <p class="text-uppercase fw-medium text-warning text-truncate mb-0 fs-12">System Roles</p>
@@ -78,8 +58,8 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-3">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-2">{{ getSystemRolesCount() }}</h4>
-              <span class="text-muted fs-12">Built-in roles</span>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="getSystemRolesCount()">0</span></h4>
+              <span class="text-muted fs-12">Protected roles</span>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-warning-subtle rounded-circle fs-3">
@@ -88,13 +68,13 @@
             </div>
           </div>
         </div>
-            </div>
-          </div>
+      </div>
+    </div>
 
     <!-- Custom Roles Card -->
     <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
       <div class="card card-animate shadow-sm border-0 h-100">
-         <div class="card-body bg-soft-success rounded">
+        <div class="card-body bg-soft-success rounded">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
               <p class="text-uppercase fw-medium text-success text-truncate mb-0 fs-12">Custom Roles</p>
@@ -102,12 +82,12 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-3">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-2">{{ getCustomRolesCount() }}</h4>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="getCustomRolesCount()">0</span></h4>
               <a href="javascript:void(0);" class="text-decoration-underline text-success fs-12">Manage roles</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-success-subtle rounded-circle fs-3">
-                <i class="ri-user-settings-line text-success"></i>
+                <i class="ri-user-add-line text-success"></i>
               </span>
             </div>
           </div>
@@ -118,16 +98,16 @@
     <!-- Total Permissions Card -->
     <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
       <div class="card card-animate shadow-sm border-0 h-100">
-         <div class="card-body bg-soft-info rounded">
+        <div class="card-body bg-soft-info rounded">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
-              <p class="text-uppercase fw-medium text-info text-truncate mb-0 fs-12">Permissions</p>
+              <p class="text-uppercase fw-medium text-info text-truncate mb-0 fs-12">Total Permissions</p>
             </div>
           </div>
           <div class="d-flex align-items-end justify-content-between mt-3">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-2">{{permissions.length}}</h4>
-              <span class="text-muted fs-12">Available</span>
+              <h4 class="fs-22 fw-semibold ff-secondary mb-2"><span [countUp]="permissions.length">0</span></h4>
+              <span class="text-muted fs-12">Available permissions</span>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-info-subtle rounded-circle fs-3">
@@ -140,326 +120,304 @@
     </div>
   </div>
 
-  <!-- Filters & Actions Card -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-soft-light py-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <h5 class="card-title mb-0 flex-grow-1 text-primary">
-              <i class="ri-filter-2-line align-bottom me-1"></i> Filters & Actions
-            </h5>
-            <div class="flex-shrink-0 d-flex flex-wrap gap-2">
-              <button class="btn btn-soft-danger btn-sm" (click)="clearFilter()">
-                <i class="ri-refresh-line align-bottom me-1"></i> Reset
-              </button>
-              <button type="button" class="btn btn-primary btn-sm" (click)="createRole()">
-                <i class="ri-add-line align-bottom me-1"></i> Add Role
-              </button>
-            </div>
-          </div>
-            </div>
-            <div class="card-body">
-          <div class="row g-3">
-            <div class="col-xl-4 col-lg-6 col-md-4 col-sm-6">
-              <div class="search-box">
-                <input type="text" class="form-control form-select-sm search-input" placeholder="Search roles..."
-                  [(ngModel)]="searchTerm" (input)="applyFilter()">
-                <i class="ri-search-line search-icon"></i>
-              </div>
-            </div>
-            <div class="col-xl-4 col-lg-6 col-md-4 col-sm-6">
-              <select class="form-select form-select-sm" [(ngModel)]="filterType" (change)="applyFilter()">
-                <option value="all">All Role Types</option>
-                <option value="system">System Roles</option>
-                <option value="custom">Custom Roles</option>
-              </select>
-            </div>
-            <div class="col-xl-4 col-lg-6 col-md-4 col-sm-6">
-              <select class="form-select form-select-sm">
-                <option value="">All Hierarchy Levels</option>
-                <option value="admin">Admin (90-100)</option>
-                <option value="manager">Manager (70-89)</option>
-                <option value="staff">Staff (50-69)</option>
-                <option value="basic">Basic (0-49)</option>
-              </select>
-            </div>
-          </div>
+  <!-- Main Content Card -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header border-0 pb-0">
+      <div class="row align-items-center">
+        <div class="col">
+          <h5 class="card-title mb-0 fw-bold">All Roles</h5>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-primary" (click)="createRole()">
+            <i class="ri-add-line me-1"></i> New Role
+          </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Role List Header -->
-              <div class="row">
-                <div class="col-12">
-      <div class="d-flex align-items-center mb-3">
-        <div class="flex-grow-1">
-          <h5 class="mb-0 text-muted">
-            Roles 
-            <span class="badge rounded-pill bg-primary-subtle text-primary fs-12 ms-1">{{ dataSource.data.length }}</span>
-          </h5>
+    <div class="card-body pt-3">
+      <!-- Search and Filters -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="position-relative">
+            <input type="text" 
+                   class="form-control ps-5" 
+                   placeholder="Search roles..."
+                   [(ngModel)]="searchTerm"
+                   (input)="applyFilter()">
+            <i class="ri-search-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="filterType" (change)="applyFilter()">
+            <option value="all">All Types</option>
+            <option value="system">System</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="hierarchyFilter" (change)="applyFilter()">
+            <option value="">All Levels</option>
+            <option value="admin">Admin (90+)</option>
+            <option value="manager">Manager (70-89)</option>
+            <option value="staff">Staff (50-69)</option>
+            <option value="basic">Basic (0-49)</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="sortByField" (change)="applySorting()">
+            <option value="name">Sort by Name</option>
+            <option value="hierarchyLevel">Sort by Level</option>
+            <option value="userCount">Sort by Users</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" (click)="refreshData()" title="Refresh">
+              <i class="ri-refresh-line"></i>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="exportRoles()" title="Export">
+              <i class="ri-download-line"></i>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-                            </div>
 
-  <!-- Roles Card View -->
-  <div class="row" *ngIf="!loading && dataSource.data.length > 0">
-    <div class="col-xxl-4 col-xl-6 col-lg-6 col-md-6 mb-4" *ngFor="let role of dataSource.data; trackBy: trackByRoleId">
-      <div class="card h-100 shadow-sm role-card border-0">
-        <!-- Card Header -->
-        <div class="card-header bg-soft-light border-0 position-relative py-3">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="avatar-sm">
-                <span class="avatar-title rounded bg-primary-subtle text-primary">
-                  <i class="ri-shield-user-line"></i>
-                </span>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted">Loading roles...</p>
+      </div>
+
+      <!-- Roles Table -->
+      <div *ngIf="!loading && dataSource.data.length > 0" class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="fw-bold">Role</th>
+              <th class="fw-bold">Type</th>
+              <th class="fw-bold">Level</th>
+              <th class="fw-bold">Users</th>
+              <th class="fw-bold">Permissions</th>
+              <th class="fw-bold text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let role of dataSource.data; trackBy: trackByRoleId" class="role-row">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar-sm me-3">
+                    <div class="avatar-title rounded"
+                         [ngClass]="{
+                           'bg-danger-subtle text-danger': role.hierarchyLevel >= 90,
+                           'bg-warning-subtle text-warning': role.hierarchyLevel >= 70 && role.hierarchyLevel < 90,
+                           'bg-info-subtle text-info': role.hierarchyLevel >= 50 && role.hierarchyLevel < 70,
+                           'bg-success-subtle text-success': role.hierarchyLevel < 50
+                         }">
+                      <i class="ri-shield-user-line"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fw-semibold">{{ role.name }}</h6>
+                    <p class="text-muted mb-0 small">{{ getRoleDescription(role) | slice:0:60 }}...</p>
                   </div>
                 </div>
-            <div class="flex-grow-1 ms-3 overflow-hidden">
-              <h5 class="card-title mb-1 text-truncate fs-15">{{role.name}}</h5>
-              <div class="d-flex align-items-center gap-2">
-                <span class="text-muted fs-12">
-                  <i class="ri-bar-chart-line me-1"></i>
-                  Hierarchy Level: <strong>{{role.hierarchyLevel}}</strong>
-                  <span class="ms-1" 
-                    [ngClass]="{
-                      'text-danger': role.hierarchyLevel >= 90,
-                      'text-warning': role.hierarchyLevel >= 70 && role.hierarchyLevel < 90,
-                      'text-info': role.hierarchyLevel >= 50 && role.hierarchyLevel < 70,
-                      'text-success': role.hierarchyLevel < 50
-                    }">
-                    ({{ getHierarchyLabel(role.hierarchyLevel) }})
+              </td>
+              <td>
+                <span class="badge"
+                      [ngClass]="{
+                        'bg-warning-subtle text-warning': role.isSystemRole,
+                        'bg-primary-subtle text-primary': !role.isSystemRole
+                      }">
+                  {{ role.isSystemRole ? 'System' : 'Custom' }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <span class="badge me-2"
+                        [ngClass]="{
+                          'bg-danger': role.hierarchyLevel >= 90,
+                          'bg-warning': role.hierarchyLevel >= 70 && role.hierarchyLevel < 90,
+                          'bg-info': role.hierarchyLevel >= 50 && role.hierarchyLevel < 70,
+                          'bg-success': role.hierarchyLevel < 50
+                        }">
+                    {{ role.hierarchyLevel }}
                   </span>
-                </span>
-              </div>
-            </div>
-          </div>
-          <!-- Card Action Button -->
-          <div class="card-widgets position-absolute top-0 end-0 p-2">
-            <div class="dropdown">
-              <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.35rem 0.75rem; cursor: pointer;">
-                <i class="ri-more-2-fill" style="pointer-events: none;"></i>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="javascript:void(0);" (click)="selectRole(role)">
-                  <i class="ri-eye-line fs-16 me-2 text-muted"></i>View Details
-                </a></li>
-                <li><a class="dropdown-item" href="javascript:void(0);" (click)="assignPermissions(role)">
-                  <i class="ri-shield-check-line fs-16 me-2 text-muted"></i>Manage Permissions
-                </a></li>
-                <li><hr class="dropdown-divider" *ngIf="!role.systemRole"></li>
-                <li *ngIf="!role.systemRole"><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteRole(role)">
-                  <i class="ri-delete-bin-line fs-16 me-2"></i>Delete
-                </a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Card Body -->
-        <div class="card-body p-3">
-          <!-- Role description -->
-          <div class="role-description mb-3">
-            <div class="description-content p-2 rounded">
-              <div class="d-flex align-items-start">
-                <i class="ri-file-text-line me-2 text-primary fs-16 mt-1"></i>
-                <p class="text-muted mb-0 fs-13" [title]="getRoleDescription(role)">
-                  {{ getRoleDescription(role) }}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Role Stats -->
-          <div class="row g-2">
-            <div class="col-6">
-              <div class="text-center p-2 border rounded bg-light-subtle">
-                <div class="d-flex align-items-center justify-content-center gap-1">
-                  <div class="avatar-xs flex-shrink-0">
-                    <div class="avatar-title bg-primary-subtle rounded-circle text-primary">
-                      <i class="ri-user-line fs-6"></i>
-                    </div>
-                  </div>
-                  <div>
-                    <h6 class="mb-0 fs-13">{{ role.userCount || 0 }}</h6>
-                    <p class="mb-0 text-muted fs-11">Users</p>
-                  </div>
+                  <small class="text-muted">{{ getHierarchyLabel(role.hierarchyLevel) }}</small>
                 </div>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="text-center p-2 border rounded bg-light-subtle">
-                <div class="d-flex align-items-center justify-content-center gap-1">
-                  <div class="avatar-xs flex-shrink-0">
-                    <div class="avatar-title bg-info-subtle rounded-circle text-info">
-                      <i class="ri-shield-check-line fs-6"></i>
-                    </div>
-                  </div>
-                  <div>
-                    <h6 class="mb-0 fs-13">{{ role.permissions?.length || 0 }}</h6>
-                    <p class="mb-0 text-muted fs-11">Permissions</p>
+              </td>
+              <td>
+                <span class="fw-semibold">{{ role.userCount || 0 }}</span>
+              </td>
+              <td>
+                <span class="fw-semibold">{{ role.permissions?.length || 0 }}</span>
+              </td>
+              <td>
+                <div class="d-flex justify-content-end gap-1">
+                  <button class="btn btn-sm btn-outline-primary" 
+                          (click)="viewRoleDetails(role)"
+                          title="View Details">
+                    <i class="ri-eye-line"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-info" 
+                          (click)="openPermissionManager(role)"
+                          title="Manage Permissions">
+                    <i class="ri-settings-line"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-warning" 
+                          (click)="editRole(role)"
+                          *ngIf="!role.isSystemRole"
+                          title="Edit Role">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" 
+                          (click)="confirmDeleteRole(role)"
+                          *ngIf="!role.isSystemRole"
+                          title="Delete Role">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
                 </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Card Footer with Actions -->
-        <div class="card-footer d-flex justify-content-between align-items-center py-2 px-3 bg-light border-top-dashed">
-          <div class="text-muted fs-11">
-            <i class="ri-shield-line me-1"></i> {{ role.systemRole ? 'System Role' : 'Custom Role' }}
-          </div>
-          <div class="d-flex gap-1">
-            <button type="button" class="btn btn-icon btn-sm btn-soft-primary" (click)="selectRole(role)" title="View Details">
-              <i class="ri-eye-line"></i>
-            </button>
-            <button type="button" class="btn btn-icon btn-sm btn-soft-info" (click)="assignPermissions(role)" title="Manage Permissions">
-              <i class="ri-shield-check-line"></i>
-            </button>
-          </div>
-        </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
-  </div>
 
-  <!-- No Roles - Enhanced empty state -->
-  <div class="row mt-4" *ngIf="!loading && dataSource.data.length === 0">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <div class="text-center py-5">
-            <div class="avatar-lg mx-auto mb-4">
-              <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-1">
-                <i class="ri-shield-user-line"></i>
-              </div>
-            </div>
-            <h5>No Roles Found</h5>
-            <p class="text-muted mb-4">No roles match your search criteria or no roles have been created yet.</p>
-            <button class="btn btn-primary btn-sm" (click)="createRole()">
-                <i class="ri-add-line align-bottom me-1"></i> Add New Role
-            </button>
+      <!-- Empty State -->
+      <div *ngIf="!loading && dataSource.data.length === 0" class="text-center py-5">
+        <div class="avatar-xl mx-auto mb-4">
+          <div class="avatar-title bg-light text-muted rounded-circle">
+            <i class="ri-shield-user-line display-6"></i>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading State - Enhanced with spinner -->
-  <div class="row mt-4" *ngIf="loading">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <div class="d-flex justify-content-center align-items-center py-5">
-            <div class="spinner-border text-primary me-2" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <span class="text-muted">Loading roles...</span>
-          </div>
-        </div>
+        <h5 class="mb-3">{{ getEmptyStateTitle() }}</h5>
+        <p class="text-muted mb-4">{{ getEmptyStateMessage() }}</p>
+        <button class="btn btn-primary" (click)="createRole()" *ngIf="!hasActiveFilters()">
+          <i class="ri-add-line me-1"></i>Create First Role
+        </button>
+        <button class="btn btn-outline-primary" (click)="clearAllFilters()" *ngIf="hasActiveFilters()">
+          <i class="ri-refresh-line me-1"></i>Clear Filters
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Role Details Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="roleDetailsOffcanvas"
-     [class.show]="selectedRole" [style.visibility]="selectedRole ? 'visible' : 'hidden'">
-  <div class="offcanvas-header border-bottom">
-    <h5 class="offcanvas-title">Role Details</h5>
-    <button type="button" class="btn-close" (click)="selectedRole = null"></button>
+<!-- Role Details Sidebar -->
+<div class="offcanvas offcanvas-end" 
+     [class.show]="selectedRole" 
+     [style.visibility]="selectedRole ? 'visible' : 'hidden'"
+     style="width: 400px;">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title fw-bold">Role Details</h5>
+    <button type="button" class="btn-close" (click)="closeRoleDetails()"></button>
   </div>
   <div class="offcanvas-body" *ngIf="selectedRole">
     <!-- Role Header -->
     <div class="text-center mb-4">
-      <div class="avatar-lg mx-auto mb-3">
-        <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle">
+      <div class="avatar-xl mx-auto mb-3">
+        <div class="avatar-title rounded-circle"
+             [ngClass]="{
+               'bg-danger-subtle text-danger': selectedRole.hierarchyLevel >= 90,
+               'bg-warning-subtle text-warning': selectedRole.hierarchyLevel >= 70 && selectedRole.hierarchyLevel < 90,
+               'bg-info-subtle text-info': selectedRole.hierarchyLevel >= 50 && selectedRole.hierarchyLevel < 70,
+               'bg-success-subtle text-success': selectedRole.hierarchyLevel < 50
+             }">
           <i class="ri-shield-user-line fs-1"></i>
         </div>
       </div>
-      <h5 class="mb-1">{{ selectedRole.name }}</h5>
-      <p class="text-muted mb-2">{{ getRoleDescription(selectedRole) }}</p>
-      <span class="badge text-uppercase fw-semibold"
-        [ngClass]="{
-          'bg-warning-subtle text-warning': selectedRole.systemRole,
-          'bg-success-subtle text-success': !selectedRole.systemRole
-        }">
-        {{ selectedRole.systemRole ? 'System Role' : 'Custom Role' }}
-      </span>
-    </div>
-
-    <!-- Hierarchy Level Info -->
-    <div class="alert alert-info border-0 bg-info-subtle mb-4">
-      <div class="d-flex align-items-center">
-        <div class="flex-shrink-0">
-          <i class="ri-bar-chart-line fs-4 text-info"></i>
-        </div>
-        <div class="flex-grow-1 ms-3">
-          <h6 class="mb-1 text-info">Hierarchy Level: {{ selectedRole.hierarchyLevel }}</h6>
-          <p class="mb-0 text-muted fs-13">
-            <strong>{{ getHierarchyLabel(selectedRole.hierarchyLevel) }}</strong> - 
-            {{ getHierarchyDescription(selectedRole.hierarchyLevel) }}
-          </p>
-        </div>
-      </div>
+      <h5 class="fw-bold mb-2">{{ selectedRole.name }}</h5>
+      <p class="text-muted">{{ getRoleDescription(selectedRole) }}</p>
     </div>
 
     <!-- Role Stats -->
     <div class="row g-3 mb-4">
-      <div class="col-6">
-        <div class="text-center p-3 border rounded bg-light-subtle">
-          <h5 class="mb-1 fw-semibold">{{ selectedRole.permissions?.length || 0 }}</h5>
-          <p class="text-muted mb-0 fs-6">Permissions</p>
+      <div class="col-4">
+        <div class="text-center p-3 bg-light rounded">
+          <h5 class="mb-1 text-primary">{{ selectedRole.userCount || 0 }}</h5>
+          <small class="text-muted">Users</small>
         </div>
       </div>
-      <div class="col-6">
-        <div class="text-center p-3 border rounded bg-light-subtle">
-          <h5 class="mb-1 fw-semibold">{{ selectedRole.userCount || 0 }}</h5>
-          <p class="text-muted mb-0 fs-6">Users</p>
+      <div class="col-4">
+        <div class="text-center p-3 bg-light rounded">
+          <h5 class="mb-1 text-success">{{ selectedRole.permissions?.length || 0 }}</h5>
+          <small class="text-muted">Permissions</small>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="text-center p-3 bg-light rounded">
+          <h5 class="mb-1 text-info">{{ selectedRole.hierarchyLevel }}</h5>
+          <small class="text-muted">Level</small>
         </div>
       </div>
     </div>
 
-    <!-- Permissions List -->
+    <!-- Role Info -->
+    <div class="mb-4">
+      <h6 class="fw-bold mb-3">Information</h6>
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label text-muted small">Type</label>
+          <p class="fw-semibold mb-0">{{ selectedRole.isSystemRole ? 'System Role' : 'Custom Role' }}</p>
+        </div>
+        <div class="col-6">
+          <label class="form-label text-muted small">Access Level</label>
+          <p class="fw-semibold mb-0">{{ getHierarchyLabel(selectedRole.hierarchyLevel) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permissions Preview -->
     <div class="mb-4" *ngIf="selectedRole.permissions && selectedRole.permissions.length > 0">
-      <h6 class="mb-3">Assigned Permissions</h6>
+      <h6 class="fw-bold mb-3">Permissions ({{ selectedRole.permissions.length }})</h6>
       <div class="list-group list-group-flush">
-        <div class="list-group-item px-0 py-2" *ngFor="let permission of selectedRole.permissions; trackBy: trackByIndex">
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="flex-grow-1">
-              <h6 class="mb-1 fs-6">{{ permission.name }}</h6>
-              <p class="mb-0 text-muted fs-6">{{ permission.description }}</p>
+        <div class="list-group-item px-0 py-2" 
+             *ngFor="let permission of selectedRole.permissions | slice:0:5; trackBy: trackByIndex">
+          <div class="d-flex align-items-center">
+            <i class="ri-check-line text-success me-2"></i>
+            <div>
+              <h6 class="mb-0 small fw-semibold">{{ permission.name }}</h6>
+              <small class="text-muted">{{ permission.actionType }} · {{ permission.resourceType }}</small>
             </div>
-            <span class="badge bg-info-subtle text-info">{{ permission.resourceType }}:{{ permission.actionType }}</span>
           </div>
         </div>
+        <div class="text-center mt-2" *ngIf="selectedRole.permissions.length > 5">
+          <small class="text-muted">... and {{ selectedRole.permissions.length - 5 }} more</small>
+        </div>
       </div>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- Actions -->
     <div class="d-grid gap-2">
-      <button type="button" class="btn btn-soft-info btn-animation waves-effect waves-light" 
-              (click)="assignPermissions(selectedRole); selectedRole = null">
-        <i class="ri-shield-check-line me-1"></i>Manage Permissions
+      <button type="button" class="btn btn-primary" (click)="openPermissionManager(selectedRole)">
+        <i class="ri-settings-line me-2"></i>Manage Permissions
       </button>
-      <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" 
-              (click)="deleteRole(selectedRole)" [disabled]="selectedRole.systemRole">
-        <i class="ri-delete-bin-line me-1"></i>Delete Role
+      <button type="button" class="btn btn-outline-warning" 
+              (click)="editRole(selectedRole)" *ngIf="!selectedRole.isSystemRole">
+        <i class="ri-edit-line me-2"></i>Edit Role
+      </button>
+      <button type="button" class="btn btn-outline-danger" 
+              (click)="confirmDeleteRole(selectedRole)" 
+              [disabled]="selectedRole.isSystemRole">
+        <i class="ri-delete-bin-line me-2"></i>Delete Role
       </button>
     </div>
   </div>
 </div>
 
 <!-- Role Form Modal -->
-<div class="modal fade" id="roleFormModal" tabindex="-1" 
-     [class.show]="showRoleForm" [style.display]="showRoleForm ? 'block' : 'none'">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-light p-3">
-        <h5 class="modal-title">{{ selectedRole ? 'Edit Role' : 'Create New Role' }}</h5>
+<div class="modal fade" 
+     [class.show]="showRoleForm" 
+     [style.display]="showRoleForm ? 'block' : 'none'"
+     data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">
+          {{ selectedRole ? 'Edit Role' : 'Create New Role' }}
+        </h5>
         <button type="button" class="btn-close" (click)="onRoleFormCancel()"></button>
       </div>
       <div class="modal-body">
@@ -473,7 +431,7 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
 
 <!-- Modal Backdrop -->
 <div class="modal-backdrop fade" [class.show]="showRoleForm" *ngIf="showRoleForm"></div> 

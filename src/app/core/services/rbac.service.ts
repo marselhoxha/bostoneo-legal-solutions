@@ -660,10 +660,21 @@ export class RbacService {
   // Role Management Methods
 
   /**
-   * Get all available roles
+   * Get all roles
    */
   getAllRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.baseUrl}/rbac/roles`).pipe(
+    return this.http.get<any>(`${this.baseUrl}/rbac/roles`).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && Array.isArray(response)) {
+          return response;
+        }
+        // Handle HttpResponse wrapper
+        if (response && response.data && response.data.roles) {
+          return response.data.roles;
+        }
+        return [];
+      }),
       catchError(error => {
         console.error('Failed to load roles:', error);
         return of([]);
@@ -682,7 +693,18 @@ export class RbacService {
    * Get role by ID
    */
   getRoleById(roleId: number): Observable<Role | null> {
-    return this.http.get<Role>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+    return this.http.get<any>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && response.data && response.data.role) {
+          return response.data.role;
+        }
+        // Handle direct response
+        if (response && response.id) {
+          return response;
+        }
+        return null;
+      }),
       catchError(error => {
         console.error('Failed to load role:', error);
         return of(null);
@@ -694,7 +716,18 @@ export class RbacService {
    * Create new role
    */
   createRole(roleData: Partial<Role>): Observable<Role> {
-    return this.http.post<Role>(`${this.baseUrl}/rbac/roles`, roleData).pipe(
+    return this.http.post<any>(`${this.baseUrl}/rbac/roles`, roleData).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && response.data && response.data.role) {
+          return response.data.role;
+        }
+        // Handle direct response
+        if (response && response.id) {
+          return response;
+        }
+        return response;
+      }),
       tap(() => this.loadRoles()),
       catchError(error => {
         console.error('Failed to create role:', error);
@@ -707,7 +740,18 @@ export class RbacService {
    * Update existing role
    */
   updateRole(roleId: number, roleData: Partial<Role>): Observable<Role> {
-    return this.http.put<Role>(`${this.baseUrl}/rbac/roles/${roleId}`, roleData).pipe(
+    return this.http.put<any>(`${this.baseUrl}/rbac/roles/${roleId}`, roleData).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && response.data && response.data.role) {
+          return response.data.role;
+        }
+        // Handle direct response
+        if (response && response.id) {
+          return response;
+        }
+        return response;
+      }),
       tap(() => this.loadRoles()),
       catchError(error => {
         console.error('Failed to update role:', error);
@@ -720,7 +764,17 @@ export class RbacService {
    * Delete role
    */
   deleteRole(roleId: number): Observable<boolean> {
-    return this.http.delete<boolean>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+    return this.http.delete<any>(`${this.baseUrl}/rbac/roles/${roleId}`).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && typeof response === 'boolean') {
+          return response;
+        }
+        if (response && response.message) {
+          return true; // Success if there's a message
+        }
+        return false;
+      }),
       tap(() => this.loadRoles()),
       catchError(error => {
         console.error('Failed to delete role:', error);
@@ -735,7 +789,18 @@ export class RbacService {
    * Get all available permissions
    */
   getAllPermissions(): Observable<Permission[]> {
-    return this.http.get<Permission[]>(`${this.baseUrl}/rbac/permissions`).pipe(
+    return this.http.get<any>(`${this.baseUrl}/rbac/permissions`).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && response.data && response.data.permissions) {
+          return response.data.permissions;
+        }
+        // Handle direct array response
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return [];
+      }),
       catchError(error => {
         console.error('Failed to load permissions:', error);
         return of([]);
@@ -754,9 +819,20 @@ export class RbacService {
    * Assign permissions to role
    */
   assignPermissionsToRole(roleId: number, permissionIds: number[]): Observable<boolean> {
-    return this.http.post<boolean>(`${this.baseUrl}/rbac/roles/${roleId}/permissions`, {
-      permissionIds
-    }).pipe(
+    // Backend expects { permissionIds: [...] } not just the array
+    const payload = { permissionIds: permissionIds };
+    
+    return this.http.post<any>(`${this.baseUrl}/rbac/roles/${roleId}/permissions`, payload).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && typeof response === 'boolean') {
+          return response;
+        }
+        if (response && response.message) {
+          return true; // Success if there's a message
+        }
+        return false;
+      }),
       tap(() => this.loadRoles()),
       catchError(error => {
         console.error('Failed to assign permissions:', error);
@@ -771,7 +847,18 @@ export class RbacService {
    * Get all users
    */
   getAllUsers(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/users`).pipe(
+    return this.http.get<any>(`${this.baseUrl}/users`).pipe(
+      map(response => {
+        // Handle wrapped response from backend
+        if (response && response.data && response.data.users) {
+          return response.data.users;
+        }
+        // Handle direct array response
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return [];
+      }),
       catchError(error => {
         console.error('Failed to load users:', error);
         return of([]);
