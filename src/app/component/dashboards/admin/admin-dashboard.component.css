@@ -4,8 +4,6 @@
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-
-
 .activity-stream-horizontal {
   position: relative;
   overflow: hidden;
@@ -127,9 +125,6 @@
   position: relative;
 }
 
-
-
-
 .status-pulse-enhanced {
   position: absolute;
   top: 0px;
@@ -161,7 +156,6 @@
   padding: 0.25rem 0.5rem;
 }
 
-
 .activity-refresh-indicator-enhanced {
   display: flex;
   align-items: center;
@@ -182,8 +176,6 @@
 .refresh-text-enhanced {
   font-size: 0.75rem;
 }
-
-
 
 .footer-live-status {
   display: flex;
@@ -335,5 +327,519 @@
   .activity-ticker-container {
     animation-duration: 10s;
   }
-} 
+}
+
+/* Enhanced Professional Admin Dashboard Styles */
+
+/* Banner Background Animation */
+.admin-banner {
+  position: relative;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+  color: white;
+  overflow: hidden;
+}
+
+.banner-bg-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bg-element {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
+}
+
+.bg-element-1 {
+  width: 120px;
+  height: 120px;
+  top: 10%;
+  right: 15%;
+  animation-delay: 0s;
+}
+
+.bg-element-2 {
+  width: 80px;
+  height: 80px;
+  top: 60%;
+  right: 25%;
+  animation-delay: 2s;
+}
+
+.bg-element-3 {
+  width: 60px;
+  height: 60px;
+  top: 20%;
+  right: 5%;
+  animation-delay: 4s;
+}
+
+.bg-element-4 {
+  width: 40px;
+  height: 40px;
+  top: 80%;
+  right: 10%;
+  animation-delay: 1s;
+}
+
+/* Firm Branding Styles */
+.firm-branding {
+  position: relative;
+  z-index: 2;
+}
+
+.firm-logo-container {
+  position: relative;
+}
+
+.firm-logo-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.firm-logo {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.firm-logo:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.firm-info {
+  position: relative;
+  z-index: 2;
+}
+
+.firm-name {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.firm-tagline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tagline-highlight {
+  color: #fbbf24;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.tagline-separator {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+}
+
+.tagline-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+}
+
+.firm-credentials {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.credential-badge {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.credential-badge:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Welcome Section Styles */
+.welcome-section {
+  position: relative;
+  z-index: 2;
+}
+
+.welcome-header {
+  margin-bottom: 1rem;
+}
+
+.welcome-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.user-name {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.welcome-emoji {
+  display: inline-block;
+  animation: wave 2s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+.welcome-time {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-description {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Banner Actions Styles */
+.banner-actions {
+  position: relative;
+  z-index: 2;
+}
+
+.actions-header {
+  margin-bottom: 1rem;
+}
+
+.actions-title {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: white;
+}
+
+.action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.action-btn-primary .action-icon {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.action-btn-success .action-icon {
+  background: rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.action-btn-info .action-icon {
+  background: rgba(14, 165, 233, 0.3);
+  color: #7dd3fc;
+}
+
+.action-btn-warning .action-icon {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fde047;
+}
+
+.action-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.action-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.action-desc {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+/* Stats Overview Styles */
+.stats-overview {
+  position: relative;
+  z-index: 2;
+}
+
+.stats-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.stats-title {
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.stats-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse-status 2s ease-in-out infinite;
+}
+
+.status-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+  font-size: 1.2rem;
+}
+
+.stat-card-primary .stat-icon {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.stat-card-success .stat-icon {
+  background: rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.stat-card-warning .stat-icon {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fde047;
+}
+
+.stat-card-info .stat-icon {
+  background: rgba(14, 165, 233, 0.3);
+  color: #7dd3fc;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-trend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #10b981;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: rotate(14deg);
+  }
+  20%, 40%, 60%, 80% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes pulse-status {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .firm-name {
+    font-size: 2rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .firm-branding {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .firm-logo-container {
+    align-self: center;
+  }
+  
+  .firm-name {
+    font-size: 1.75rem;
+  }
+  
+  .welcome-title {
+    font-size: 1.5rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .firm-credentials {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-banner .card-body {
+    padding: 2rem 1.5rem;
+  }
+  
+  .firm-name {
+    font-size: 1.5rem;
+  }
+  
+  .welcome-title {
+    font-size: 1.25rem;
+  }
+  
+  .bg-element {
+    display: none;
+  }
+}
 

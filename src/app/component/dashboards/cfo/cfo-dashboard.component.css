@@ -1,0 +1,375 @@
+/* CFO Dashboard Styles */
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #f7b731, #f39c12, #e67e22) !important;
+}
+
+.hover-shadow {
+  transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.letter-spacing {
+  letter-spacing: 0.5px;
+}
+
+/* Financial KPI Cards */
+.card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card-body {
+  position: relative;
+}
+
+.card-header {
+  background: rgba(248, 249, 250, 0.6) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Avatar Styles */
+.avatar-xxl {
+  width: 120px;
+  height: 120px;
+}
+
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+}
+
+.avatar-xs {
+  width: 32px;
+  height: 32px;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+/* Progress Bars */
+.progress {
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.progress-bar {
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+/* Button Styles */
+.btn-soft-warning {
+  background-color: rgba(247, 183, 49, 0.1);
+  border-color: rgba(247, 183, 49, 0.2);
+  color: #f7b731;
+}
+
+.btn-soft-warning:hover {
+  background-color: rgba(247, 183, 49, 0.2);
+  border-color: rgba(247, 183, 49, 0.3);
+  color: #e67e22;
+}
+
+.btn-soft-info {
+  background-color: rgba(52, 152, 219, 0.1);
+  border-color: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+}
+
+.btn-soft-info:hover {
+  background-color: rgba(52, 152, 219, 0.2);
+  border-color: rgba(52, 152, 219, 0.3);
+  color: #2980b9;
+}
+
+.btn-soft-success {
+  background-color: rgba(39, 174, 96, 0.1);
+  border-color: rgba(39, 174, 96, 0.2);
+  color: #27ae60;
+}
+
+.btn-soft-success:hover {
+  background-color: rgba(39, 174, 96, 0.2);
+  border-color: rgba(39, 174, 96, 0.3);
+  color: #229954;
+}
+
+.btn-soft-primary {
+  background-color: rgba(74, 144, 226, 0.1);
+  border-color: rgba(74, 144, 226, 0.2);
+  color: #4a90e2;
+}
+
+.btn-soft-primary:hover {
+  background-color: rgba(74, 144, 226, 0.2);
+  border-color: rgba(74, 144, 226, 0.3);
+  color: #357abd;
+}
+
+.btn-soft-danger {
+  background-color: rgba(231, 76, 60, 0.1);
+  border-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.btn-soft-danger:hover {
+  background-color: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: #c0392b;
+}
+
+/* Badge Styles */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(247, 183, 49, 0.15) !important;
+}
+
+.text-warning {
+  color: #f7b731 !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(52, 152, 219, 0.15) !important;
+}
+
+.text-info {
+  color: #3498db !important;
+}
+
+.bg-success-subtle {
+  background-color: rgba(39, 174, 96, 0.15) !important;
+}
+
+.text-success {
+  color: #27ae60 !important;
+}
+
+.bg-primary-subtle {
+  background-color: rgba(74, 144, 226, 0.15) !important;
+}
+
+.text-primary {
+  color: #4a90e2 !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(231, 76, 60, 0.15) !important;
+}
+
+.text-danger {
+  color: #e74c3c !important;
+}
+
+/* Financial Metrics Styling */
+.financial-metric {
+  padding: 1.5rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff, #f8f9fa);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.financial-metric:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+}
+
+/* Revenue Target Styles */
+.target-progress {
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.target-progress .progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease-in-out;
+}
+
+/* Expense Category Styles */
+.expense-category {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 76, 60, 0.1);
+  background: linear-gradient(135deg, #fff, rgba(231, 76, 60, 0.02));
+  transition: all 0.3s ease;
+}
+
+.expense-category:hover {
+  border-color: rgba(231, 76, 60, 0.2);
+  background: linear-gradient(135deg, #fff, rgba(231, 76, 60, 0.05));
+}
+
+/* Quick Actions */
+.quick-actions .btn {
+  text-align: left;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.quick-actions .btn:hover {
+  transform: translateX(5px);
+}
+
+/* Table Styles */
+.table-hover tbody tr:hover {
+  background-color: rgba(74, 144, 226, 0.05);
+}
+
+.table tbody tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* Loading State */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1rem !important;
+  }
+  
+  .metric-value {
+    font-size: 1.5rem;
+  }
+  
+  .avatar-xxl {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-body {
+    padding: 0.75rem !important;
+  }
+  
+  .metric-value {
+    font-size: 1.25rem;
+  }
+  
+  .fs-16 {
+    font-size: 0.875rem !important;
+  }
+  
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Animation for counters */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-value {
+  animation: countUp 0.6s ease-out;
+}
+
+/* Financial Status Indicators */
+.status-positive {
+  color: #27ae60;
+}
+
+.status-negative {
+  color: #e74c3c;
+}
+
+.status-neutral {
+  color: #95a5a6;
+}
+
+/* Custom scrollbar for tables */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Financial chart container */
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+/* Practice area revenue bars */
+.practice-area-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4a90e2, #74b9ff);
+  transition: all 0.3s ease;
+}
+
+.practice-area-bar:hover {
+  height: 8px;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+}

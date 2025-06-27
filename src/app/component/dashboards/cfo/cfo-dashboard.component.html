@@ -1,0 +1,417 @@
+<!-- CFO Welcome Section -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-lg overflow-hidden">
+      <div class="card-body bg-gradient-warning text-white p-5">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <h1 class="text-white mb-3 fw-bold">Good {{getTimeOfDay()}}, {{getUserDisplayName()}}! 💰</h1>
+            <p class="mb-4 text-white-50 fs-16 lh-base">
+              <i class="ri-money-dollar-circle-line me-2 fs-18"></i>
+              Financial Management Dashboard - Revenue, Billing & Cash Flow
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="badge bg-white bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-money-dollar-circle-line me-1"></i>
+                {{getFormattedCurrency(totalRevenue)}} Total Revenue
+              </div>
+              <div class="badge bg-success bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-pie-chart-line me-1"></i>
+                {{collectionRate}}% Collection Rate
+              </div>
+              <div class="badge bg-info bg-opacity-20 text-white px-3 py-2 fs-14">
+                <i class="ri-file-list-line me-1"></i>
+                {{totalInvoices}} Total Invoices
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-end">
+            <div class="position-relative">
+              <div class="avatar-xxl mx-auto">
+                <div class="avatar-title bg-white bg-opacity-15 rounded-circle border border-white border-opacity-25">
+                  <i class="ri-money-dollar-circle-line fs-1 text-white"></i>
+                </div>
+              </div>
+              <div class="position-absolute bottom-0 end-0">
+                <span class="badge bg-success rounded-pill">{{getCollectionEfficiency()}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Financial KPIs -->
+<div class="row g-4 mb-4">
+  <!-- Total Revenue -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Total Revenue</p>
+            <h2 class="fw-bold text-warning mb-2">{{getFormattedCurrency(totalRevenue)}}</h2>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge" [ngClass]="'bg-' + getPerformanceColor(revenueGrowth, 5) + '-subtle text-' + getPerformanceColor(revenueGrowth, 5)">
+                <i [class]="getGrowthIcon(revenueGrowth)"></i> {{revenueGrowth}}%
+              </span>
+              <span class="text-muted fs-13">growth</span>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-warning-subtle text-warning rounded shadow-sm">
+                <i class="ri-money-dollar-circle-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <button class="btn btn-soft-warning btn-sm w-100" (click)="navigateToBilling()">
+            <i class="ri-bar-chart-line me-1"></i>Revenue Reports
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accounts Receivable -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Accounts Receivable</p>
+            <h2 class="fw-bold text-info mb-2">{{getFormattedCurrency(accountsReceivable)}}</h2>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-info-subtle text-info">
+                {{averageCollectionDays}} Days Avg
+              </span>
+            </div>
+            <div class="mt-2">
+              <small class="text-muted">{{overdueInvoices}} overdue invoices</small>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-info-subtle text-info rounded shadow-sm">
+                <i class="ri-money-dollar-box-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <button class="btn btn-soft-info btn-sm w-100" (click)="navigateToInvoices()">
+            <i class="ri-file-list-line me-1"></i>Manage AR
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Rate -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Collection Rate</p>
+            <h2 class="fw-bold text-success mb-2">{{collectionRate}}%</h2>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge" [ngClass]="'bg-' + getPerformanceColor(collectionRate, 85) + '-subtle text-' + getPerformanceColor(collectionRate, 85)">
+                {{paidInvoices}}/{{totalInvoices}} Paid
+              </span>
+            </div>
+            <div class="mt-2">
+              <small class="text-muted">{{pendingInvoices}} pending payment</small>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-success-subtle text-success rounded shadow-sm">
+                <i class="ri-check-double-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <button class="btn btn-soft-success btn-sm w-100" (click)="navigateToPayments()">
+            <i class="ri-secure-payment-line me-1"></i>Payment Portal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cash Flow -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 hover-shadow">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-start">
+          <div class="flex-grow-1">
+            <p class="text-uppercase fw-semibold text-muted mb-2 fs-13 letter-spacing">Net Cash Flow</p>
+            <h2 class="fw-bold text-primary mb-2">{{getFormattedCurrency(cashFlow)}}</h2>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge" [ngClass]="getVarianceClass(budgetVariance)">
+                <i [class]="getGrowthIcon(budgetVariance)"></i> {{budgetVariance}}%
+              </span>
+              <span class="text-muted fs-13">vs budget</span>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="avatar-sm">
+              <span class="avatar-title bg-primary-subtle text-primary rounded shadow-sm">
+                <i class="ri-line-chart-line fs-18"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <button class="btn btn-soft-primary btn-sm w-100" (click)="navigateToReports()">
+            <i class="ri-file-chart-line me-1"></i>Cash Flow Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue Targets & Practice Areas -->
+<div class="row g-4 mb-4">
+  <!-- Monthly Targets -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <h5 class="card-title mb-0 fw-semibold">
+          <i class="ri-target-line me-2 text-warning"></i>Revenue Targets
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-4">
+          <!-- Monthly Target -->
+          <div class="col-md-4">
+            <div class="text-center">
+              <h6 class="text-muted mb-2">Monthly</h6>
+              <h4 class="text-warning mb-2">{{getFormattedCurrency(monthlyRevenue)}}</h4>
+              <p class="text-muted mb-2">of {{getFormattedCurrency(monthlyTarget)}}</p>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-warning" [style.width.%]="getTargetProgress(monthlyRevenue, monthlyTarget)"></div>
+              </div>
+              <small class="text-muted">{{getTargetProgress(monthlyRevenue, monthlyTarget)}}% achieved</small>
+            </div>
+          </div>
+          <!-- Quarterly Target -->
+          <div class="col-md-4">
+            <div class="text-center">
+              <h6 class="text-muted mb-2">Quarterly</h6>
+              <h4 class="text-info mb-2">{{getFormattedCurrency(quarterlyRevenue)}}</h4>
+              <p class="text-muted mb-2">of {{getFormattedCurrency(quarterlyTarget)}}</p>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-info" [style.width.%]="getTargetProgress(quarterlyRevenue, quarterlyTarget)"></div>
+              </div>
+              <small class="text-muted">{{getTargetProgress(quarterlyRevenue, quarterlyTarget)}}% achieved</small>
+            </div>
+          </div>
+          <!-- Annual Target -->
+          <div class="col-md-4">
+            <div class="text-center">
+              <h6 class="text-muted mb-2">Annual</h6>
+              <h4 class="text-success mb-2">{{getFormattedCurrency(totalRevenue)}}</h4>
+              <p class="text-muted mb-2">of {{getFormattedCurrency(annualTarget)}}</p>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-success" [style.width.%]="getTargetProgress(totalRevenue, annualTarget)"></div>
+              </div>
+              <small class="text-muted">{{getTargetProgress(totalRevenue, annualTarget)}}% achieved</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Practice Area Revenue -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <div class="d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1 fw-semibold">
+            <i class="ri-pie-chart-line me-2 text-primary"></i>Practice Area Revenue
+          </h5>
+          <div class="flex-shrink-0">
+            <button class="btn btn-soft-primary btn-sm" (click)="navigateToReports()">
+              <i class="ri-external-link-line me-1"></i>Details
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <div class="vstack gap-3">
+          <div *ngFor="let area of practiceAreaRevenue" class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="mb-0 fs-14">{{area.name}}</h6>
+                <span class="text-muted fs-13">{{getFormattedCurrency(area.revenue)}}</span>
+              </div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar" [style.width.%]="area.percentage"></div>
+              </div>
+            </div>
+            <div class="flex-shrink-0 ms-3">
+              <span class="badge" [ngClass]="getGrowthClass(area.growth)">
+                <i [class]="getGrowthIcon(area.growth)"></i> {{area.growth}}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Breakdown & Quick Actions -->
+<div class="row g-4 mb-4">
+  <!-- Expense Categories -->
+  <div class="col-xl-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <div class="d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1 fw-semibold">
+            <i class="ri-money-dollar-box-line me-2 text-danger"></i>Operating Expenses
+          </h5>
+          <div class="flex-shrink-0">
+            <button class="btn btn-soft-danger btn-sm" (click)="navigateToExpenses()">
+              <i class="ri-edit-line me-1"></i>Manage
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-4">
+          <div class="col-md-6" *ngFor="let expense of expenseCategories">
+            <div class="p-3 border rounded-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-semibold mb-1">{{expense.name}}</h6>
+                <span class="badge bg-danger-subtle text-danger">{{expense.percentage}}%</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="text-danger mb-0">{{getFormattedCurrency(expense.amount)}}</h5>
+                <div class="progress" style="width: 60px; height: 6px;">
+                  <div class="progress-bar bg-danger" [style.width.%]="expense.percentage"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-top">
+          <div class="row text-center">
+            <div class="col-4">
+              <h6 class="text-muted mb-1">Total Expenses</h6>
+              <h5 class="text-danger mb-0">{{getFormattedCurrency(operatingExpenses)}}</h5>
+            </div>
+            <div class="col-4">
+              <h6 class="text-muted mb-1">Gross Margin</h6>
+              <h5 class="text-success mb-0">{{grossMargin}}%</h5>
+            </div>
+            <div class="col-4">
+              <h6 class="text-muted mb-1">Net Margin</h6>
+              <h5 class="text-primary mb-0">{{netMargin}}%</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Financial Actions -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <h5 class="card-title mb-0 fw-semibold">
+          <i class="ri-dashboard-line me-2 text-success"></i>Quick Actions
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <div class="vstack gap-3">
+          <button class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-start" (click)="navigateToBilling()">
+            <i class="ri-file-chart-line me-2"></i>
+            <span>Financial Reports</span>
+          </button>
+          <button class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-start" (click)="navigateToInvoices()">
+            <i class="ri-file-list-line me-2"></i>
+            <span>Invoice Management</span>
+          </button>
+          <button class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-start" (click)="navigateToPayments()">
+            <i class="ri-secure-payment-line me-2"></i>
+            <span>Payment Processing</span>
+          </button>
+          <button class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-start" (click)="navigateToReports()">
+            <i class="ri-bar-chart-line me-2"></i>
+            <span>Revenue Analytics</span>
+          </button>
+          <button class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-start" (click)="navigateToExpenses()">
+            <i class="ri-money-dollar-box-line me-2"></i>
+            <span>Expense Management</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Financial Transactions -->
+<div class="row" *ngIf="recentTransactions.length > 0">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
+        <div class="d-flex align-items-center">
+          <h5 class="card-title mb-0 flex-grow-1 fw-semibold">
+            <i class="ri-exchange-line me-2 text-info"></i>Recent Financial Activities
+          </h5>
+          <div class="flex-shrink-0">
+            <small class="text-muted">Last updated: {{getCurrentTime()}}</small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <tbody>
+              <tr *ngFor="let transaction of recentTransactions">
+                <td class="py-3 px-4">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-3">
+                      <span class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                        <i class="ri-money-dollar-circle-line fs-14"></i>
+                      </span>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fs-14">{{transaction.action || 'Financial Transaction'}}</h6>
+                      <p class="text-muted mb-0 fs-13">{{transaction.description || 'Financial activity recorded'}}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <small class="text-muted">{{transaction.timestamp | date:'short'}}</small>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="row" *ngIf="isLoading">
+  <div class="col-12">
+    <div class="text-center py-5">
+      <div class="spinner-border text-warning" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading financial dashboard...</p>
+    </div>
+  </div>
+</div>

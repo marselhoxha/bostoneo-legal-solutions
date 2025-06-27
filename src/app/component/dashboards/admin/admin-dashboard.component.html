@@ -1,114 +1,194 @@
-<!-- Enhanced Velzon Banner Section -->
+<!-- Page Title -->
+<div class="page-title-box d-sm-flex align-items-center justify-content-between">
+  <h4 class="mb-sm-0">Admin Dashboard</h4>
+  <div class="page-title-right">
+    <ol class="breadcrumb m-0">
+      <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboards</a></li>
+      <li class="breadcrumb-item active">Admin</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Enhanced Professional Banner -->
 <div class="row mb-4">
   <div class="col-12">
-    <div class="card border-0 shadow-lg overflow-hidden" [attr.data-bs-theme]="isDarkMode ? 'dark' : 'light'">
-      
-      <!-- Status Bar -->
-      <div class="card-header bg-light border-0 py-2">
-        <div class="row align-items-center">
-          <div class="col-md-6">
-            <div class="d-flex align-items-center gap-3">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-success-subtle text-success px-2 py-1">
-                  <i class="ri-checkbox-circle-line me-1"></i>System Online
-                </span>
-              </div>
-              <div class="text-muted fs-13">
-                <i class="ri-time-line me-1"></i>
-                Uptime: {{getSystemUptime()}}
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="d-flex align-items-center justify-content-md-end gap-3">
-              <div class="text-muted fs-13">
-                <i class="ri-map-pin-line me-1"></i>
-                {{getCurrentTime()}} EST
-              </div>
-              <div class="text-muted fs-13">
-                {{getWeatherInfo()}}
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="card border-0 shadow-lg overflow-hidden admin-banner">
+      <!-- Animated Background Elements -->
+      <div class="banner-bg-elements">
+        <div class="bg-element bg-element-1"></div>
+        <div class="bg-element bg-element-2"></div>
+        <div class="bg-element bg-element-3"></div>
+        <div class="bg-element bg-element-4"></div>
       </div>
 
       <!-- Main Banner Content -->
-      <div class="card-body bg-gradient bg-primary text-white p-5">
+      <div class="card-body position-relative p-5">
         <div class="row align-items-center">
+          <!-- Left Column - Main Content -->
           <div class="col-lg-8">
-            <!-- Firm Branding -->
-            <div class="d-flex align-items-center mb-4">
-              <div class="avatar-lg me-3">
-                <div class="avatar-title bg-white bg-opacity-15 rounded-circle fs-2">
-                  <i class="ri-scales-3-line text-white"></i>
+            <!-- Firm Branding with Enhanced Design -->
+            <div class="d-flex align-items-center mb-4 firm-branding">
+              <div class="firm-logo-container me-4">
+                <div class="firm-logo-wrapper">
+                  <div class="logo-glow"></div>
+                  <div class="firm-logo">
+                    <i class="ri-scales-3-line"></i>
+                  </div>
                 </div>
               </div>
-              <div>
-                <h1 class="text-white mb-1 fw-bold">Bostoneo Legal Solutions</h1>
-                <p class="text-white-50 mb-0 fs-15">Excellence in Legal Services • Professional Dashboard</p>
+              <div class="firm-info">
+                <h1 class="firm-name mb-2">Bostoneo Legal Solutions</h1>
+                <div class="firm-tagline mb-2">
+                  <span class="tagline-highlight">Excellence in Legal Services</span>
+                  <span class="tagline-separator">•</span>
+                  <span class="tagline-text">Professional Dashboard</span>
+                </div>
+                <div class="firm-credentials">
+                  <span class="credential-badge">
+                    <i class="ri-shield-check-line me-1"></i>Licensed & Certified
+                  </span>
+                  <span class="credential-badge">
+                    <i class="ri-award-line me-1"></i>25+ Years Experience
+                  </span>
+                  <span class="credential-badge">
+                    <i class="ri-global-line me-1"></i>Boston Metropolitan Area
+                  </span>
+                </div>
               </div>
             </div>
 
-            <!-- Welcome Message -->
-            <div class="mb-4">
-              <h2 class="text-white mb-2 fw-semibold">
-                Welcome back, {{currentUser?.firstName || 'Administrator'}}! 👋
-              </h2>
-              <p class="text-white-75 mb-0 fs-16">
-                <i class="ri-shield-check-line me-2"></i>
-                Comprehensive administrative dashboard with real-time legal practice analytics and insights
+            <!-- Enhanced Welcome Message -->
+            <div class="welcome-section mb-4">
+              <div class="welcome-header mb-3">
+                <h2 class="welcome-title">
+                  Welcome back, <span class="user-name">{{currentUser?.firstName || 'Administrator'}}</span>! 
+                  <span class="welcome-emoji">👋</span>
+                </h2>
+                <div class="welcome-time">
+                  <i class="ri-time-line me-2"></i>
+                  <span>Last login: Today at 9:30 AM</span>
+                </div>
+              </div>
+              <p class="welcome-description">
+                <i class="ri-dashboard-3-line me-2"></i>
+                Comprehensive administrative dashboard with real-time legal practice analytics, case management, and business intelligence insights
               </p>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="d-flex flex-wrap gap-2">
-              <a href="/admin/user-roles" class="btn btn-light btn-sm">
-                <i class="ri-user-settings-line me-1"></i>Manage Users
-              </a>
-              <a href="/legal/cases/new" class="btn btn-success btn-sm">
-                <i class="ri-add-circle-line me-1"></i>New Case
-              </a>
-              <a href="/invoices/new" class="btn btn-info btn-sm">
-                <i class="ri-bill-line me-1"></i>New Invoice
-              </a>
-              <a routerLink="/activities" class="btn btn-warning btn-sm">
-                <i class="ri-shield-check-line me-1"></i>Audit Logs
-              </a>
+            <!-- Enhanced Quick Actions in Banner -->
+            <div class="banner-actions">
+              <div class="actions-header mb-3">
+                <h6 class="actions-title">
+                  <i class="ri-rocket-line me-2"></i>Quick Actions
+                </h6>
+              </div>
+              <div class="actions-grid">
+                <a href="/admin/user-roles" class="action-btn action-btn-primary">
+                  <div class="action-icon">
+                    <i class="ri-user-settings-line"></i>
+                  </div>
+                  <div class="action-content">
+                    <span class="action-label">Manage Users</span>
+                    <small class="action-desc">User roles & permissions</small>
+                  </div>
+                </a>
+                <a href="/legal/cases/new" class="action-btn action-btn-success">
+                  <div class="action-icon">
+                    <i class="ri-add-circle-line"></i>
+                  </div>
+                  <div class="action-content">
+                    <span class="action-label">New Case</span>
+                    <small class="action-desc">Create legal case</small>
+                  </div>
+                </a>
+                <a href="/invoices/new" class="action-btn action-btn-info">
+                  <div class="action-icon">
+                    <i class="ri-bill-line"></i>
+                  </div>
+                  <div class="action-content">
+                    <span class="action-label">New Invoice</span>
+                    <small class="action-desc">Generate billing</small>
+                  </div>
+                </a>
+                <a routerLink="/activities" class="action-btn action-btn-warning">
+                  <div class="action-icon">
+                    <i class="ri-shield-check-line"></i>
+                  </div>
+                  <div class="action-content">
+                    <span class="action-label">Audit Logs</span>
+                    <small class="action-desc">System activity</small>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
 
-          <!-- Stats Overview -->
+          <!-- Right Column - Enhanced Stats Overview -->
           <div class="col-lg-4">
-            <div class="card bg-white bg-opacity-10 border-0">
-              <div class="card-body text-center p-4">
-                <h5 class="text-white mb-3">
-                  <i class="ri-dashboard-3-line me-2"></i>Quick Overview
+            <div class="stats-overview">
+              <div class="stats-header mb-4">
+                <h5 class="stats-title">
+                  <i class="ri-bar-chart-box-line me-2"></i>Live Overview
                 </h5>
+                <div class="stats-status">
+                  <span class="status-indicator"></span>
+                  <span class="status-text">All Systems Operational</span>
+                </div>
+              </div>
+              
+              <div class="stats-grid">
+                <div class="stat-card stat-card-primary">
+                  <div class="stat-icon">
+                    <i class="ri-user-line"></i>
+                  </div>
+                  <div class="stat-content">
+                    <h4 class="stat-number">{{getActiveUsersCount()}}</h4>
+                    <p class="stat-label">Active Users</p>
+                    <div class="stat-trend">
+                      <i class="ri-arrow-up-line"></i>
+                      <span>+12%</span>
+                    </div>
+                  </div>
+                </div>
                 
-                <div class="row g-3">
-                  <div class="col-6">
-                    <div class="p-2 bg-white bg-opacity-10 rounded">
-                      <h4 class="text-white mb-1">{{getActiveUsersCount()}}</h4>
-                      <p class="text-white-75 mb-0 fs-13">Active Users</p>
+                <div class="stat-card stat-card-success">
+                  <div class="stat-icon">
+                    <i class="ri-cpu-line"></i>
+                  </div>
+                  <div class="stat-content">
+                    <h4 class="stat-number">{{getSystemLoad()}}%</h4>
+                    <p class="stat-label">System Load</p>
+                    <div class="stat-trend">
+                      <i class="ri-arrow-down-line"></i>
+                      <span>-5%</span>
                     </div>
                   </div>
-                  <div class="col-6">
-                    <div class="p-2 bg-white bg-opacity-10 rounded">
-                      <h4 class="text-white mb-1">{{getSystemLoad()}}%</h4>
-                      <p class="text-white-75 mb-0 fs-13">System Load</p>
+                </div>
+                
+                <div class="stat-card stat-card-warning">
+                  <div class="stat-icon">
+                    <i class="ri-briefcase-line"></i>
+                  </div>
+                  <div class="stat-content">
+                    <h4 class="stat-number">{{activeCases}}</h4>
+                    <p class="stat-label">Active Cases</p>
+                    <div class="stat-trend">
+                      <i class="ri-arrow-up-line"></i>
+                      <span>+8%</span>
                     </div>
                   </div>
-                  <div class="col-6">
-                    <div class="p-2 bg-white bg-opacity-10 rounded">
-                      <h4 class="text-white mb-1">{{activeCases}}</h4>
-                      <p class="text-white-75 mb-0 fs-13">Active Cases</p>
-                    </div>
+                </div>
+                
+                <div class="stat-card stat-card-info">
+                  <div class="stat-icon">
+                    <i class="ri-team-line"></i>
                   </div>
-                  <div class="col-6">
-                    <div class="p-2 bg-white bg-opacity-10 rounded">
-                      <h4 class="text-white mb-1">{{totalClients}}</h4>
-                      <p class="text-white-75 mb-0 fs-13">Total Clients</p>
+                  <div class="stat-content">
+                    <h4 class="stat-number">{{totalClients}}</h4>
+                    <p class="stat-label">Total Clients</p>
+                    <div class="stat-trend">
+                      <i class="ri-arrow-up-line"></i>
+                      <span>+16%</span>
                     </div>
                   </div>
                 </div>
@@ -121,26 +201,25 @@
   </div>
 </div>
 
-<!-- Top Priority: Practice Summary -->
+<!-- Practice Summary -->
 <div class="row g-4 mb-4">
-  <!-- Practice Summary -->
   <div class="col-xl-12">
     <div class="card border-0 shadow-sm">
       <div class="card-header border-bottom border-light bg-secondary bg-opacity-10">
         <div class="d-flex align-items-center justify-content-between">
-              <div>
+          <div>
             <h5 class="card-title mb-1 fw-semibold text-secondary">
               <i class="ri-bar-chart-box-line me-2"></i>Practice Summary
             </h5>
             <p class="text-muted mb-0 fs-13">Key performance indicators and business metrics</p>
-              </div>
+          </div>
           <div class="d-flex gap-2">
             <span class="badge bg-success-subtle text-success">
               <i class="ri-check-line me-1"></i>All Systems Online
-                  </span>
-                </div>
-              </div>
-              </div>
+            </span>
+          </div>
+        </div>
+      </div>
       <div class="card-body p-4">
         <div class="row g-4 text-center">
           <div class="col-md-3">
@@ -181,35 +260,6 @@
   </div>
 </div>
 
-<!-- Quick Actions & System Health -->
-<div class="row g-4 mb-4">
-  <div class="col-xl-4">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-header border-bottom border-light bg-primary bg-opacity-10">
-        <h5 class="card-title mb-0 fw-semibold text-primary">
-          <i class="ri-rocket-line me-2"></i>Quick Actions
-        </h5>
-      </div>
-      <div class="card-body p-4">
-        <div class="d-grid gap-2">
-          <a href="/admin/user-roles" class="btn btn-primary btn-sm">
-            <i class="ri-user-settings-line me-2"></i>Manage Users
-          </a>
-          <a href="/legal/cases/new" class="btn btn-success btn-sm">
-            <i class="ri-add-circle-line me-2"></i>New Case
-          </a>
-          <a href="/invoices/new" class="btn btn-info btn-sm">
-            <i class="ri-bill-line me-2"></i>New Invoice
-          </a>
-          <a routerLink="/activities" class="btn btn-warning btn-sm">
-            <i class="ri-shield-check-line me-2"></i>Audit Logs
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-                
 <!-- Live Activity Feed & Performance Analytics -->
 <div class="row g-4 mb-4">
                 

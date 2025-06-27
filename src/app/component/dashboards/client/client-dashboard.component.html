@@ -1,31 +1,93 @@
-<!-- Welcome Section -->
-<div class="row mb-4">
+<!-- Client Dashboard -->
+<div class="row">
+  <!-- Dashboard Header -->
   <div class="col-12">
-    <div class="card border-0 shadow-lg overflow-hidden">
-      <div class="card-body bg-success bg-gradient text-white p-5">
-        <div class="row align-items-center">
-          <div class="col-lg-8">
-            <h1 class="text-white mb-3 fw-bold">Welcome, {{currentUser?.firstName}}! 🤝</h1>
-            <p class="mb-4 text-white-50 fs-16 lh-base">
-              <i class="ri-shield-check-line me-2 fs-18"></i>
-              Your secure legal portal - Stay informed about your case progress
-            </p>
-            <div class="alert alert-light border-0 bg-white bg-opacity-15 text-white mb-0">
-              <i class="ri-lock-line me-2"></i>
-              <strong>Attorney-Client Privilege Protected.</strong> All communications are confidential and secure.
-            </div>
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h4 class="mb-sm-0">Client Portal</h4>
+        <p class="text-muted mb-0">Welcome back, {{ currentUser?.firstName || 'Client' }}!</p>
+      </div>
+      <div class="page-title-right">
+        <button class="btn btn-primary btn-sm" (click)="refreshDashboard()">
+          <i class="ri-refresh-line me-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Metrics -->
+<div class="row">
+  <!-- My Cases -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card card-animate">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+              <i class="ri-briefcase-line"></i>
+            </span>
           </div>
-          <div class="col-lg-4 text-end">
-            <div class="position-relative">
-              <div class="avatar-xxl mx-auto">
-                <div class="avatar-title bg-white bg-opacity-15 rounded-circle border border-white border-opacity-25">
-                  <i class="ri-user-heart-line fs-1 text-white"></i>
-                </div>
-              </div>
-              <div class="position-absolute top-0 end-0">
-                <span class="badge bg-primary rounded-pill">Protected</span>
-              </div>
-            </div>
+          <div class="flex-grow-1 ms-3">
+            <p class="text-uppercase fw-medium text-muted mb-1">My Cases</p>
+            <h4 class="mb-0">{{ myCases }}</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Documents -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card card-animate">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+              <i class="ri-file-text-line"></i>
+            </span>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <p class="text-uppercase fw-medium text-muted mb-1">Documents</p>
+            <h4 class="mb-0">{{ activeDocuments }}</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Invoices -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card card-animate">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
+              <i class="ri-bill-line"></i>
+            </span>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <p class="text-uppercase fw-medium text-muted mb-1">Pending Bills</p>
+            <h4 class="mb-0">{{ pendingInvoices }}</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Appointments -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card card-animate">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm flex-shrink-0">
+            <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+              <i class="ri-calendar-check-line"></i>
+            </span>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <p class="text-uppercase fw-medium text-muted mb-1">Appointments</p>
+            <h4 class="mb-0">{{ upcomingAppointments }}</h4>
           </div>
         </div>
       </div>
@@ -33,252 +95,274 @@
   </div>
 </div>
 
-<!-- Client Info Cards -->
-<div class="row g-4 mb-4">
-<div class="col-xl-6">
-    <div class="card border-0 shadow-sm h-100 hover-shadow">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center mb-4">
-          <div class="avatar-lg me-3 flex-shrink-0">
-            <span class="avatar-title bg-primary-subtle text-primary rounded shadow-sm">
-              <i class="ri-briefcase-line fs-2"></i>
-            </span>
+<!-- Main Content Row -->
+<div class="row">
+  <!-- My Cases -->
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header align-items-center d-flex">
+        <h4 class="card-title mb-0 flex-grow-1">My Cases</h4>
+        <a href="javascript:void(0);" class="link-primary" (click)="navigateToCases()">View All</a>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Case Number</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Attorney</th>
+                <th>Next Hearing</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let case of clientCases">
+                <td>
+                  <a href="javascript:void(0);" (click)="viewCase(case.id)" class="fw-medium link-primary">
+                    {{ case.caseNumber }}
+                  </a>
+                </td>
+                <td>{{ case.title }}</td>
+                <td>
+                  <span [class]="getCaseStatusClass(case.status)">{{ case.status }}</span>
+                </td>
+                <td>{{ case.attorney }}</td>
+                <td>{{ case.nextHearing || 'TBD' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-link text-primary" (click)="viewCase(case.id)">
+                    <i class="ri-eye-line"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="clientCases.length === 0">
+                <td colspan="6" class="text-center text-muted">No active cases</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-          <div class="flex-grow-1">
-            <h4 class="mb-1 fw-semibold">My Cases</h4>
-            <p class="text-muted mb-0">Track your legal matters</p>
+      </div>
+    </div>
+
+    <!-- Case Timeline -->
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Case Timeline</h4>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="timeline-item" *ngFor="let event of caseTimeline; let i = index">
+            <div class="timeline-pin">
+              <i class="ri-checkbox-circle-fill text-primary"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="mb-0">{{ event.event }}</h6>
+                <small class="text-muted">{{ event.date | date:'MMM d, y' }}</small>
+              </div>
+              <p class="text-muted mb-0">{{ event.description }}</p>
+            </div>
           </div>
-          <div class="flex-shrink-0">
-            <h2 class="text-primary mb-0 fw-bold">{{myCases}}</h2>
+          <div *ngIf="caseTimeline.length === 0" class="text-center text-muted py-3">
+            No timeline events available
           </div>
         </div>
-        
-        <!-- Case Progress Card -->
-        <div class="bg-primary bg-opacity-10 rounded-3 p-4 mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h6 class="fw-semibold mb-1">Case #2025-LIT-001</h6>
-              <span class="badge bg-success-subtle text-success">Active</span>
-            </div>
-            <span class="text-primary fw-semibold">65%</span>
-          </div>
-          <div class="progress progress-lg mb-3">
-            <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" style="width: 65%"></div>
-          </div>
-          <div class="row text-center g-2">
-            <div class="col-6">
-              <p class="text-muted mb-1 fs-13">Current Phase</p>
-              <h6 class="fw-semibold mb-0">Discovery</h6>
-            </div>
-            <div class="col-6">
-              <p class="text-muted mb-1 fs-13">Est. Duration</p>
-              <h6 class="fw-semibold mb-0">6-8 Months</h6>
-            </div>
-          </div>
-        </div>
-        
-        <a href="/legal/cases" class="btn btn-primary w-100 btn-label">
-          <i class="ri-eye-line label-icon align-middle fs-16"></i>
-          View Case Details
-        </a>
       </div>
     </div>
   </div>
 
+  <!-- Right Sidebar -->
+  <div class="col-xl-4">
+    <!-- Next Appointment -->
+    <div class="card" *ngIf="nextAppointment">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Next Appointment</h4>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <div class="avatar-lg mx-auto mb-3">
+            <span class="avatar-title bg-info-subtle text-info rounded-circle">
+              <i class="ri-calendar-event-line fs-1"></i>
+            </span>
+          </div>
+          <h5 class="mb-1">{{ nextAppointment.title }}</h5>
+          <p class="text-muted mb-0">{{ nextAppointment.date | date:'fullDate' }}</p>
+          <p class="text-primary mb-0">{{ nextAppointment.time }}</p>
+        </div>
+        <div class="border-top pt-3">
+          <div class="d-flex align-items-center mb-2">
+            <i class="ri-user-3-line text-muted me-2"></i>
+            <span>{{ nextAppointment.attorney }}</span>
+          </div>
+          <div class="d-flex align-items-center">
+            <i [class]="getAppointmentTypeIcon(nextAppointment.type) + ' text-muted me-2'"></i>
+            <span>{{ nextAppointment.type }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Documents -->
+    <div class="card">
+      <div class="card-header align-items-center d-flex">
+        <h4 class="card-title mb-0 flex-grow-1">Recent Documents</h4>
+        <a href="javascript:void(0);" class="link-primary" (click)="navigateToDocuments()">View All</a>
+      </div>
+      <div class="card-body">
+        <div class="list-group list-group-flush">
+          <a *ngFor="let doc of recentDocuments" class="list-group-item list-group-item-action">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <i [class]="getDocumentTypeIcon(doc.type) + ' text-primary fs-4'"></i>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1">{{ doc.name }}</h6>
+                <small class="text-muted">{{ doc.uploadDate | date:'MMM d' }} • {{ doc.size }}</small>
+              </div>
+            </div>
+          </a>
+          <div *ngIf="recentDocuments.length === 0" class="text-center text-muted py-3">
+            No documents available
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Payment Summary</h4>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <h2 class="text-primary mb-1">{{ formatCurrency(totalDue) }}</h2>
+          <p class="text-muted mb-0">Total Amount Due</p>
+        </div>
+        <div class="d-grid">
+          <button class="btn btn-primary" (click)="navigateToInvoices()">
+            <i class="ri-bank-card-line me-1"></i> Make Payment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Quick Actions</h4>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <button class="btn btn-soft-primary" (click)="sendMessage()">
+            <i class="ri-message-3-line me-1"></i> Send Message
+          </button>
+          <button class="btn btn-soft-info" (click)="navigateToAppointments()">
+            <i class="ri-calendar-line me-1"></i> Schedule Appointment
+          </button>
+          <button class="btn btn-soft-success" (click)="navigateToDocuments()">
+            <i class="ri-file-upload-line me-1"></i> Upload Document
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoices Row -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header align-items-center d-flex">
+        <h4 class="card-title mb-0 flex-grow-1">Recent Invoices</h4>
+        <a href="javascript:void(0);" class="link-primary" (click)="navigateToInvoices()">View All</a>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let invoice of clientInvoices | slice:0:5">
+                <td>
+                  <a href="javascript:void(0);" (click)="viewInvoice(invoice.id)" class="fw-medium link-primary">
+                    {{ invoice.invoiceNumber }}
+                  </a>
+                </td>
+                <td>{{ invoice.createdDate | date:'MMM d, y' }}</td>
+                <td>{{ formatCurrency(invoice.totalAmount || invoice.amount) }}</td>
+                <td>
+                  <span [class]="getInvoiceStatusClass(invoice.status)">{{ invoice.status }}</span>
+                </td>
+                <td>{{ invoice.dueDate | date:'MMM d, y' }}</td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-link text-primary" (click)="viewInvoice(invoice.id)">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                    <button *ngIf="invoice.status !== 'PAID'" class="btn btn-link text-success" (click)="payInvoice(invoice.id)">
+                      <i class="ri-bank-card-line"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="clientInvoices.length === 0">
+                <td colspan="6" class="text-center text-muted">No invoices found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+  <!-- Case Progress -->
   <div class="col-xl-6">
-    <div class="card border-0 shadow-sm h-100 hover-shadow">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center mb-4">
-          <div class="avatar-lg me-3 flex-shrink-0">
-            <span class="avatar-title bg-info-subtle text-info rounded shadow-sm">
-              <i class="ri-calendar-line fs-2"></i>
-            </span>
-          </div>
-          <div class="flex-grow-1">
-            <h4 class="mb-1 fw-semibold">Next Appointment</h4>
-            <p class="text-muted mb-0">{{getNextAppointmentFormatted()}}</p>
-          </div>
-        </div>
-        
-        <!-- Appointment Details Card -->
-        <div class="bg-info bg-opacity-10 rounded-3 p-4 mb-4">
-          <h6 class="fw-semibold mb-3 text-info">
-            <i class="ri-video-chat-line me-2"></i>Attorney Consultation
-          </h6>
-          <div class="vstack gap-3">
-            <div class="d-flex align-items-center">
-              <i class="ri-time-line text-info me-3 fs-16"></i>
-              <div>
-                <span class="fw-medium">2:00 PM - 3:00 PM</span>
-                <p class="text-muted mb-0 fs-13">60-minute session</p>
-              </div>
-            </div>
-            <div class="d-flex align-items-center">
-              <i class="ri-map-pin-line text-info me-3 fs-16"></i>
-              <div>
-                <span class="fw-medium">Conference Room A</span>
-                <p class="text-muted mb-0 fs-13">Main Office, 2nd Floor</p>
-              </div>
-            </div>
-            <div class="d-flex align-items-center">
-              <i class="ri-user-3-line text-info me-3 fs-16"></i>
-              <div>
-                <span class="fw-medium">Attorney Jane Smith</span>
-                <p class="text-muted mb-0 fs-13">Lead Counsel</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <a href="/legal/calendar" class="btn btn-info w-100 btn-label">
-          <i class="ri-calendar-check-line label-icon align-middle fs-16"></i>
-          View Schedule
-        </a>
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Case Progress</h4>
+      </div>
+      <div class="card-body">
+        <apx-chart
+          *ngIf="caseProgressChart"
+          [series]="caseProgressChart.series"
+          [chart]="caseProgressChart.chart"
+          [plotOptions]="caseProgressChart.plotOptions"
+          [colors]="caseProgressChart.colors"
+          [labels]="caseProgressChart.labels"
+        ></apx-chart>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment History -->
+  <div class="col-xl-6">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Payment History</h4>
+      </div>
+      <div class="card-body">
+        <apx-chart
+          *ngIf="paymentHistoryChart"
+          [series]="paymentHistoryChart.series"
+          [chart]="paymentHistoryChart.chart"
+          [xaxis]="paymentHistoryChart.xaxis"
+          [stroke]="paymentHistoryChart.stroke"
+          [fill]="paymentHistoryChart.fill"
+          [colors]="paymentHistoryChart.colors"
+        ></apx-chart>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Resources & Communication -->
-<div class="row g-4">
-  <div class="col-12">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header border-bottom border-light bg-light bg-opacity-50">
-        <h5 class="card-title mb-0 fw-semibold">
-          <i class="ri-client-service-2-line me-2 text-primary"></i>Resources & Support
-        </h5>
-      </div>
-      <div class="card-body p-4">
-        <div class="row g-4">
-          <!-- Documents Access -->
-          <div class="col-lg-4">
-            <div class="card border h-100 hover-shadow transition-all">
-              <div class="card-body text-center p-4">
-                <div class="avatar-lg mx-auto mb-4">
-                  <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
-                    <i class="ri-file-text-line fs-1"></i>
-                  </div>
-                </div>
-                <h5 class="fw-semibold mb-3">Case Documents</h5>
-                <p class="text-muted mb-4 fs-14">Access documents, evidence, and filings shared by your attorney</p>
-                <div class="mb-4">
-                  <div class="row text-center g-2">
-                    <div class="col-6">
-                      <div class="p-2 bg-primary bg-opacity-10 rounded">
-                        <h6 class="text-primary mb-1">8</h6>
-                        <p class="text-muted mb-0 fs-12">Documents</p>
-                      </div>
-                    </div>
-                    <div class="col-6">
-                      <div class="p-2 bg-warning bg-opacity-10 rounded">
-                        <h6 class="text-warning mb-1">3</h6>
-                        <p class="text-muted mb-0 fs-12">New</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <a href="/legal/documents" class="btn btn-primary w-100">
-                  <i class="ri-download-line me-1"></i>Access Documents
-                </a>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Secure Messaging -->
-          <div class="col-lg-4">
-            <div class="card border h-100 hover-shadow transition-all">
-              <div class="card-body text-center p-4">
-                <div class="avatar-lg mx-auto mb-4">
-                  <div class="avatar-title bg-info-subtle text-info rounded-circle">
-                    <i class="ri-message-3-line fs-1"></i>
-                  </div>
-                </div>
-                <h5 class="fw-semibold mb-3">Secure Messaging</h5>
-                <p class="text-muted mb-4 fs-14">Communicate securely with your legal team through encrypted messaging</p>
-                <div class="mb-4">
-                  <div class="d-flex justify-content-center align-items-center gap-3">
-                    <div class="text-center">
-                      <h6 class="text-info mb-1">5</h6>
-                      <p class="text-muted mb-0 fs-12">Unread</p>
-                    </div>
-                    <div class="vr"></div>
-                    <div class="text-center">
-                      <h6 class="text-success mb-1">24/7</h6>
-                      <p class="text-muted mb-0 fs-12">Available</p>
-                    </div>
-                  </div>
-                </div>
-                <button class="btn btn-info w-100">
-                  <i class="ri-send-plane-line me-1"></i>Send Message
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Help & FAQ -->
-          <div class="col-lg-4">
-            <div class="card border h-100 hover-shadow transition-all">
-              <div class="card-body text-center p-4">
-                <div class="avatar-lg mx-auto mb-4">
-                  <div class="avatar-title bg-success-subtle text-success rounded-circle">
-                    <i class="ri-question-answer-line fs-1"></i>
-                  </div>
-                </div>
-                <h5 class="fw-semibold mb-3">Help & Support</h5>
-                <p class="text-muted mb-4 fs-14">Find answers to common questions and get help with portal navigation</p>
-                <div class="mb-4">
-                  <div class="d-flex justify-content-center align-items-center gap-3">
-                    <div class="text-center">
-                      <h6 class="text-success mb-1">50+</h6>
-                      <p class="text-muted mb-0 fs-12">Articles</p>
-                    </div>
-                    <div class="vr"></div>
-                    <div class="text-center">
-                      <h6 class="text-warning mb-1">Live</h6>
-                      <p class="text-muted mb-0 fs-12">Chat</p>
-                    </div>
-                  </div>
-                </div>
-                <a href="/faq" class="btn btn-success w-100">
-                  <i class="ri-question-line me-1"></i>Get Help
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Quick Actions Bar -->
-        <div class="mt-4 pt-4 border-top">
-          <div class="row g-2">
-            <div class="col-md-3">
-              <button class="btn btn-soft-primary w-100 btn-sm">
-                <i class="ri-phone-line me-1"></i>Request Call
-              </button>
-            </div>
-            <div class="col-md-3">
-              <button class="btn btn-soft-info w-100 btn-sm">
-                <i class="ri-calendar-line me-1"></i>Schedule Meeting
-              </button>
-            </div>
-            <div class="col-md-3">
-              <button class="btn btn-soft-warning w-100 btn-sm">
-                <i class="ri-file-upload-line me-1"></i>Upload Document
-              </button>
-            </div>
-            <div class="col-md-3">
-              <button class="btn btn-soft-success w-100 btn-sm">
-                <i class="ri-client-service-line me-1"></i>Live Support
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> 
- 
- 
- 
- 
- 
- 

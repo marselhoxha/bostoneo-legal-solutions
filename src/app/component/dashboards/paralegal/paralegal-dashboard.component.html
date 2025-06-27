@@ -127,6 +127,67 @@
   </div>
 </div>
 
+<!-- Assigned Cases -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header align-items-center d-flex">
+        <h4 class="card-title mb-0 flex-grow-1">My Assigned Cases</h4>
+        <button class="btn btn-sm btn-primary" (click)="navigateToCases()">View All</button>
+      </div>
+      <div class="card-body">
+        <div *ngIf="casesLoading" class="text-center py-3">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        
+        <div *ngIf="!casesLoading && assignedCases.length > 0" class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Case Number</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Attorney</th>
+                <th>My Role</th>
+                <th>Last Activity</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let case of assignedCases">
+                <td>
+                  <a href="javascript:void(0);" (click)="viewCase(case.id)" class="fw-medium link-primary">
+                    {{ case.caseNumber }}
+                  </a>
+                </td>
+                <td>{{ case.title }}</td>
+                <td>
+                  <span [class]="getCaseStatusClass(case.status)">{{ case.status }}</span>
+                </td>
+                <td>{{ case.attorney }}</td>
+                <td>{{ case.role || 'Paralegal' }}</td>
+                <td>{{ case.lastActivity | date:'short' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-link text-primary" (click)="viewCase(case.id)">
+                    <i class="ri-eye-line"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div *ngIf="!casesLoading && assignedCases.length === 0" class="text-center py-4">
+          <i class="ri-folder-open-line fs-1 text-muted"></i>
+          <p class="text-muted mt-2">No cases assigned yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Task Management & Research Tools -->
 <div class="row">
   <div class="col-xl-8">
@@ -143,42 +204,33 @@
               <tr>
                 <th>Task</th>
                 <th>Case</th>
-                <th>Attorney</th>
                 <th>Due Date</th>
+                <th>Priority</th>
                 <th>Status</th>
                 <th>Action</th>
-                </tr>
-              </thead>
+              </tr>
+            </thead>
             <tbody>
-              <tr>
+              <tr *ngFor="let task of upcomingTasks">
                 <td>
-                  <h6 class="mb-1 fs-14">Legal Research - Precedents</h6>
-                  <p class="text-muted mb-0 fs-12">Contract law research</p>
-                  </td>
-                <td><span class="badge bg-info-subtle text-info">#2025-CV-123</span></td>
-                <td>Jane Smith</td>
-                <td>Jan 20, 2025</td>
-                <td><span class="badge bg-warning">In Progress</span></td>
+                  <h6 class="mb-1 fs-14">{{ task.title }}</h6>
+                </td>
+                <td><span class="badge bg-info-subtle text-info">{{ task.caseNumber }}</span></td>
+                <td>{{ task.dueDate | date:'shortDate' }}</td>
                 <td>
-                  <button class="btn btn-sm btn-soft-primary">Update</button>
+                  <span [class]="getTaskPriorityClass(task.priority)">{{ task.priority }}</span>
+                </td>
+                <td><span class="badge" [class.bg-warning]="task.status === 'In Progress'" [class.bg-secondary]="task.status === 'Pending'">{{ task.status }}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-soft-primary" (click)="completeTask(task.id)">Update</button>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <h6 class="mb-1 fs-14">Draft Motion</h6>
-                  <p class="text-muted mb-0 fs-12">Motion to dismiss</p>
-                </td>
-                <td><span class="badge bg-info-subtle text-info">#2025-LIT-045</span></td>
-                <td>Mike Johnson</td>
-                <td>Jan 18, 2025</td>
-                <td><span class="badge bg-danger">Urgent</span></td>
-                <td>
-                  <button class="btn btn-sm btn-soft-primary">Update</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              <tr *ngIf="upcomingTasks.length === 0">
+                <td colspan="6" class="text-center text-muted">No tasks assigned</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
