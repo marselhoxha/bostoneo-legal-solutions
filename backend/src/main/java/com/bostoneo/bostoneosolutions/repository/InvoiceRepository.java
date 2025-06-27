@@ -58,6 +58,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     
     long countByInvoiceNumberStartingWith(String prefix);
     
+    @Query("SELECT i FROM Invoice i LEFT JOIN FETCH i.lineItems WHERE i.id = :id")
+    Optional<Invoice> findByIdWithLineItems(@Param("id") Long id);
+    
     // For workflows
     List<Invoice> findByDueDateAndStatusIn(LocalDate dueDate, List<InvoiceStatus> statuses);
     

@@ -4,9 +4,24 @@ import com.***REMOVED***.***REMOVED***solutions.model.Client;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface ClientRepository extends PagingAndSortingRepository<Client, Long>, ListCrudRepository<Client, Long> {
-    Page<Client> findByNameContaining(String name, Pageable pageable);
+    
+    // Use custom query with proper parameter binding to fix the SQL parameter issue
+    @Query("SELECT c FROM Client c WHERE c.name LIKE CONCAT('%', :name, '%')")
+    Page<Client> findByNameContaining(@Param("name") String name, Pageable pageable);
+    
+    // Get clients who have time entries
+    @Query("SELECT DISTINCT c FROM Client c " +
+           "JOIN LegalCase lc ON c.name = lc.clientName " +
+           "JOIN TimeEntry te ON lc.id = te.legalCaseId " +
+           "WHERE te.billable = true AND te.invoiceId IS NULL " +
+           "ORDER BY c.name")
+    List<Client> findClientsWithUnbilledTimeEntries();
 }

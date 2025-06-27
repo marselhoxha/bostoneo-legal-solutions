@@ -5,6 +5,8 @@ import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import com.***REMOVED***.***REMOVED***solutions.model.Stats;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 
 public interface ClientService {
 
@@ -15,6 +17,9 @@ public interface ClientService {
     Iterable<Client> getClients();
     Client getClient(Long id);
     Page<Client> searchClients(String name, int page, int size);
+    
+    // Get clients with unbilled time entries for invoice generation
+    List<Client> getClientsWithUnbilledTimeEntries();
     
     // Role-based access methods
     Page<Client> getClientsForUser(Long userId, int page, int size);

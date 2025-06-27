@@ -366,6 +366,37 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         }
     }
 
+    @Override
+    public List<User> findActiveAttorneys() {
+        try {
+            String query = "SELECT * FROM users u " +
+                          "INNER JOIN user_roles ur ON u.id = ur.user_id " +
+                          "INNER JOIN roles r ON ur.role_id = r.id " +
+                          "WHERE u.enabled = true AND u.not_locked = true " +
+                          "AND r.name IN ('ROLE_ATTORNEY', 'ROLE_SENIOR_ATTORNEY', 'ROLE_PARTNER', " +
+                          "'ROLE_SENIOR_PARTNER', 'ROLE_MANAGING_PARTNER') " +
+                          "ORDER BY u.first_name, u.last_name";
+            
+            List<User> attorneys = jdbc.query(query, new UserRowMapper());
+            
+            // Load roles for each attorney
+            attorneys.forEach(attorney -> {
+                Set<Role> roles = roleRepository.getRolesByUserId(attorney.getId());
+                attorney.setRoles(roles);
+            });
+            
+            return attorneys;
+        } catch (Exception exception) {
+            log.error("Error fetching active attorneys: {}", exception.getMessage());
+            throw new ApiException("An error occurred while fetching active attorneys");
+        }
+    }
+    
+    @Override
+    public User findByEmail(String email) {
+        return getUserByEmail(email);
+    }
+
     private void sendEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {
         CompletableFuture.runAsync(() -> emailService.sendVerificationEmail(firstName, email, verificationUrl, verificationType));
 

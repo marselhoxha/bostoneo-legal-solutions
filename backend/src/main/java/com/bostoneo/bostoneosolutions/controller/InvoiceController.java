@@ -1,9 +1,11 @@
 package com.***REMOVED***.***REMOVED***solutions.controller;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.CustomHttpResponse;
+import com.***REMOVED***.***REMOVED***solutions.dto.AgingReportDTO;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
 import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import com.***REMOVED***.***REMOVED***solutions.model.TimeEntry;
+import com.***REMOVED***.***REMOVED***solutions.service.InvoiceService;
 import com.***REMOVED***.***REMOVED***solutions.service.implementation.InvoiceServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,8 +14,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,15 +29,79 @@ import java.util.Map;
 public class InvoiceController {
 
     private final InvoiceServiceImpl invoiceService;
+    private final InvoiceService invoiceAnalyticsService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('CREATE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> createInvoice(@RequestBody Invoice invoice) {
         log.info("Creating new invoice for client ID: {}", invoice.getClientId());
         Invoice createdInvoice = invoiceService.createInvoice(invoice);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice created successfully", createdInvoice));
     }
 
+    @PostMapping("/from-time-entries")
+    @PreAuthorize("hasAuthority('CREATE:INVOICE')")
+    public ResponseEntity<CustomHttpResponse<Invoice>> createInvoiceFromTimeEntries(
+            @RequestBody Map<String, Object> request) {
+        
+        try {
+            // Extract invoice data
+            @SuppressWarnings("unchecked")
+            Map<String, Object> invoiceData = (Map<String, Object>) request.get("invoice");
+            
+            // Extract time entry IDs
+            @SuppressWarnings("unchecked")
+            List<Integer> timeEntryIdInts = (List<Integer>) request.get("timeEntryIds");
+            List<Long> timeEntryIds = timeEntryIdInts.stream()
+                .map(Integer::longValue)
+                .toList();
+            
+            log.info("Creating invoice from {} time entries", timeEntryIds.size());
+            
+            // Build invoice object from the data
+            Invoice invoice = new Invoice();
+            invoice.setClientId(((Number) invoiceData.get("clientId")).longValue());
+            invoice.setClientName((String) invoiceData.get("clientName"));
+            
+            if (invoiceData.get("legalCaseId") != null) {
+                invoice.setLegalCaseId(((Number) invoiceData.get("legalCaseId")).longValue());
+            }
+            invoice.setCaseName((String) invoiceData.get("caseName"));
+            
+            if (invoiceData.get("issueDate") != null) {
+                invoice.setIssueDate(LocalDate.parse((String) invoiceData.get("issueDate")));
+            } else {
+                invoice.setIssueDate(LocalDate.now());
+            }
+            
+            if (invoiceData.get("dueDate") != null) {
+                invoice.setDueDate(LocalDate.parse((String) invoiceData.get("dueDate")));
+            } else {
+                invoice.setDueDate(LocalDate.now().plusDays(30)); // Default 30 days
+            }
+            
+            if (invoiceData.get("taxRate") != null) {
+                invoice.setTaxRate(new BigDecimal(invoiceData.get("taxRate").toString()));
+            } else {
+                invoice.setTaxRate(BigDecimal.ZERO);
+            }
+            
+            invoice.setNotes((String) invoiceData.get("notes"));
+            
+            // Create invoice from time entries
+            Invoice createdInvoice = invoiceService.createInvoiceFromTimeEntries(invoice, timeEntryIds);
+            
+            return ResponseEntity.ok(new CustomHttpResponse<>("Invoice created successfully from time entries", createdInvoice));
+            
+        } catch (Exception e) {
+            log.error("Error creating invoice from time entries: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                new CustomHttpResponse<>(400, "Failed to create invoice: " + e.getMessage(), null));
+        }
+    }
+
     @GetMapping
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Page<Invoice>>> getInvoices(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -46,6 +114,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> getInvoiceById(@PathVariable Long id) {
         log.info("Fetching invoice with ID: {}", id);
         Invoice invoice = invoiceService.getInvoiceById(id);
@@ -117,6 +186,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('UPDATE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> updateInvoice(
             @PathVariable Long id, 
             @RequestBody Invoice invoiceDetails) {
@@ -127,6 +197,7 @@ public class InvoiceController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('UPDATE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> changeInvoiceStatus(
             @PathVariable Long id, 
             @RequestBody Map<String, String> statusUpdate) {
@@ -149,6 +220,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DELETE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Void>> deleteInvoice(@PathVariable Long id) {
         log.info("Deleting invoice with ID: {}", id);
         invoiceService.deleteInvoice(id);
@@ -156,6 +228,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/unbilled-entries")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<List<TimeEntry>>> getUnbilledTimeEntries(
             @RequestParam Long clientId,
             @RequestParam(required = false) Long legalCaseId) {
@@ -166,6 +239,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<Resource> generateInvoicePdf(@PathVariable Long id) {
         log.info("Generating PDF for invoice ID: {}", id);
         
@@ -180,6 +254,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}/send")
+    @PreAuthorize("hasAuthority('UPDATE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Void>> sendInvoiceByEmail(
             @PathVariable Long id,
             @RequestBody Map<String, String> emailDetails) {
@@ -203,5 +278,19 @@ public class InvoiceController {
         log.info("Generating invoice statistics");
         Map<String, Object> statistics = invoiceService.getInvoiceStatistics();
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice statistics generated successfully", statistics));
+    }
+    
+    @GetMapping("/aging-report")
+    public ResponseEntity<CustomHttpResponse<AgingReportDTO>> getAgingReport() {
+        log.info("Generating aging report");
+        AgingReportDTO agingReport = invoiceAnalyticsService.generateAgingReport();
+        return ResponseEntity.ok(new CustomHttpResponse<>("Aging report generated successfully", agingReport));
+    }
+    
+    @GetMapping("/collection-metrics")
+    public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getCollectionMetrics() {
+        log.info("Generating collection efficiency metrics");
+        Map<String, Object> metrics = invoiceAnalyticsService.getCollectionEfficiencyMetrics();
+        return ResponseEntity.ok(new CustomHttpResponse<>("Collection metrics generated successfully", metrics));
     }
 } 

@@ -55,6 +55,10 @@ public class Role {
     @Transient
     private Set<Permission> permissions = new HashSet<>();
 
+    // Count of users who have this role - calculated dynamically
+    @Transient
+    private Integer userCount = 0;
+
     // Helper methods for role categorization
     public boolean hasFinancialAccess() {
         if (name == null) return false;

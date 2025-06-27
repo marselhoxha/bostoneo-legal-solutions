@@ -35,4 +35,8 @@ public interface UserRepository<T extends User> {
     /* RBAC Operations */
     List<T> getUsersByRoleId(Long roleId);
     T findByIdWithRoles(Long id);
+    
+    /* Case Assignment Operations */
+    List<T> findActiveAttorneys();
+    T findByEmail(String email);
 }

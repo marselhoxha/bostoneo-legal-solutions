@@ -111,17 +111,40 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                         .build(), FORBIDDEN);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<HttpResponse> exception(Exception exception) {
-        log.error(exception.getMessage());
-        System.out.println(exception);
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<HttpResponse> runtimeException(RuntimeException exception) {
+        log.error("Runtime exception: ", exception);
+        String reason = exception.getMessage();
+        if (reason == null || reason.isEmpty()) {
+            reason = "An error occurred while processing your request";
+        }
+        
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(exception.getMessage() != null ?
-                                (exception.getMessage().contains("expected 1, actual 0") ? "Record not found" : exception.getMessage())
-                                : "Some error occurred")
-                        .developerMessage(exception.getMessage())
+                        .reason(reason)
+                        .developerMessage(exception.toString())
+                        .status(BAD_REQUEST)
+                        .statusCode(BAD_REQUEST.value())
+                        .build(), BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<HttpResponse> exception(Exception exception) {
+        log.error("Unhandled exception: ", exception);
+        System.out.println(exception);
+        String reason = exception.getMessage();
+        if (reason == null || reason.isEmpty()) {
+            reason = exception.getClass().getSimpleName() + " occurred";
+        } else if (reason.contains("expected 1, actual 0")) {
+            reason = "Record not found";
+        }
+        
+        return new ResponseEntity<>(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .reason(reason)
+                        .developerMessage(exception.toString())
                         .status(INTERNAL_SERVER_ERROR)
                         .statusCode(INTERNAL_SERVER_ERROR.value())
                         .build(), INTERNAL_SERVER_ERROR);

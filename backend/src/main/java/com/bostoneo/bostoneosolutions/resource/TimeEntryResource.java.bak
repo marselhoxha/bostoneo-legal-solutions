@@ -1,0 +1,408 @@
+package com.***REMOVED***.***REMOVED***solutions.resource;
+
+import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryFilterRequest;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
+import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
+import com.***REMOVED***.***REMOVED***solutions.service.TimeTrackingService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import static java.time.LocalDateTime.now;
+import static org.springframework.http.HttpStatus.*;
+
+@RestController
+@RequestMapping("/api/time-entries")
+@RequiredArgsConstructor
+@Slf4j
+public class TimeEntryResource {
+
+    private final TimeTrackingService timeTrackingService;
+
+    // Create new time entry
+    @PostMapping
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
+    public ResponseEntity<HttpResponse> createTimeEntry(@Valid @RequestBody TimeEntryDTO timeEntryDTO) {
+        TimeEntryDTO created = timeTrackingService.createTimeEntry(timeEntryDTO);
+        return ResponseEntity.status(CREATED).body(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", created))
+                .message("Time entry created successfully")
+                .status(CREATED)
+                .statusCode(CREATED.value())
+                .build()
+        );
+    }
+
+    // Bulk create time entries
+    @PostMapping("/bulk")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
+    public ResponseEntity<HttpResponse> bulkCreateTimeEntry(@RequestBody Map<String, Object> request) {
+        TimeEntryDTO timeEntryDTO = (TimeEntryDTO) request.get("timeEntry");
+        Integer days = (Integer) request.get("days");
+        TimeEntryDTO created = timeTrackingService.bulkTimeEntry(timeEntryDTO, days);
+        return ResponseEntity.status(CREATED).body(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", created))
+                .message("Bulk time entries created successfully")
+                .status(CREATED)
+                .statusCode(CREATED.value())
+                .build()
+        );
+    }
+
+    // Get time entry by ID
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTimeEntry(@PathVariable Long id) {
+        TimeEntryDTO timeEntry = timeTrackingService.getTimeEntry(id);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", timeEntry))
+                .message("Time entry retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Get all time entries with pagination
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTimeEntries(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<TimeEntryDTO> timeEntries = timeTrackingService.getTimeEntries(page, size);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "timeEntries", timeEntries.getContent(),
+                    "totalElements", timeEntries.getTotalElements(),
+                    "totalPages", timeEntries.getTotalPages(),
+                    "currentPage", timeEntries.getNumber(),
+                    "pageSize", timeEntries.getSize()
+                ))
+                .message("Time entries retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Get time entries with filters
+    @PostMapping("/search")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTimeEntriesWithFilters(@RequestBody TimeEntryFilterRequest filterRequest) {
+        // Debug authentication
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        log.info("🔍 TIME ENTRIES SEARCH DEBUG:");
+        log.info("- Authentication: {}", auth != null ? auth.getClass().getSimpleName() : "null");
+        log.info("- Principal: {}", auth != null ? auth.getPrincipal() : "null");
+        log.info("- Authorities: {}", auth != null ? auth.getAuthorities() : "null");
+        if (auth != null && auth.getAuthorities() != null) {
+            auth.getAuthorities().forEach(authority -> 
+                log.info("  - Authority: {}", authority.getAuthority())
+            );
+        }
+        
+        Page<TimeEntryDTO> timeEntries = timeTrackingService.getTimeEntriesWithFilters(filterRequest);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "timeEntries", timeEntries.getContent(),
+                    "totalElements", timeEntries.getTotalElements(),
+                    "totalPages", timeEntries.getTotalPages(),
+                    "currentPage", timeEntries.getNumber(),
+                    "pageSize", timeEntries.getSize()
+                ))
+                .message("Filtered time entries retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Get time entries by user
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTimeEntriesByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            log.info("GET /api/time-entries/user/{} - page: {}, size: {}", userId, page, size);
+            
+            Page<TimeEntryDTO> timeEntries = timeTrackingService.getTimeEntriesByUser(userId, page, size);
+            
+            log.info("Successfully retrieved {} time entries for user {}", timeEntries.getTotalElements(), userId);
+            
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .data(Map.of(
+                        "timeEntries", timeEntries.getContent(),
+                        "totalElements", timeEntries.getTotalElements(),
+                        "totalPages", timeEntries.getTotalPages(),
+                        "currentPage", timeEntries.getNumber(),
+                        "pageSize", timeEntries.getSize()
+                    ))
+                    .message("User time entries retrieved")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error in getTimeEntriesByUser for user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Error retrieving time entries: " + e.getMessage())
+                    .status(BAD_REQUEST)
+                    .statusCode(BAD_REQUEST.value())
+                    .build()
+            );
+        }
+    }
+
+    // Get time entries by legal case
+    @GetMapping("/case/{caseId}")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTimeEntriesByCase(
+            @PathVariable Long caseId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<TimeEntryDTO> timeEntries = timeTrackingService.getTimeEntriesByMatter(caseId, page, size);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "timeEntries", timeEntries.getContent(),
+                    "totalElements", timeEntries.getTotalElements(),
+                    "totalPages", timeEntries.getTotalPages(),
+                    "currentPage", timeEntries.getNumber(),
+                    "pageSize", timeEntries.getSize()
+                ))
+                .message("Case time entries retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Update time entry
+    @PutMapping("/{id}")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> updateTimeEntry(@PathVariable Long id, @Valid @RequestBody TimeEntryDTO timeEntryDTO) {
+        TimeEntryDTO updated = timeTrackingService.updateTimeEntry(id, timeEntryDTO);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", updated))
+                .message("Time entry updated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Update time entry status
+    @PatchMapping("/{id}/status")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> updateTimeEntryStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        TimeEntryStatus status = TimeEntryStatus.valueOf(request.get("status"));
+        TimeEntryDTO updated = timeTrackingService.updateTimeEntryStatus(id, status);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", updated))
+                .message("Time entry status updated")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Update time entry with invoice information (status + invoiceId)
+    @PatchMapping("/{id}/invoice")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> updateTimeEntryInvoice(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
+        String statusStr = (String) request.get("status");
+        TimeEntryStatus status = statusStr != null ? TimeEntryStatus.valueOf(statusStr) : TimeEntryStatus.INVOICED;
+        
+        TimeEntryDTO updated = timeTrackingService.updateTimeEntryInvoice(id, invoiceId, status);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", updated))
+                .message("Time entry invoice information updated")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Bulk update time entries with invoice information
+    @PatchMapping("/bulk/invoice")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> bulkUpdateTimeEntriesForInvoice(@RequestBody Map<String, Object> request) {
+        List<Long> timeEntryIds = (List<Long>) request.get("timeEntryIds");
+        Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
+        String statusStr = (String) request.get("status");
+        TimeEntryStatus status = statusStr != null ? TimeEntryStatus.valueOf(statusStr) : TimeEntryStatus.INVOICED;
+        
+        List<TimeEntryDTO> updatedEntries = timeTrackingService.bulkUpdateTimeEntriesForInvoice(timeEntryIds, invoiceId, status);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "updatedEntries", updatedEntries,
+                    "totalUpdated", updatedEntries.size(),
+                    "totalRequested", timeEntryIds.size()
+                ))
+                .message(String.format("Updated %d of %d time entries with invoice information", 
+                        updatedEntries.size(), timeEntryIds.size()))
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Submit time entry for approval
+    @PostMapping("/{id}/submit")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> submitTimeEntry(@PathVariable Long id) {
+        TimeEntryDTO submitted = timeTrackingService.submitTimeEntry(id);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", submitted))
+                .message("Time entry submitted for approval")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Approve time entry
+    @PostMapping("/{id}/approve")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
+    public ResponseEntity<HttpResponse> approveTimeEntry(@PathVariable Long id) {
+        TimeEntryDTO approved = timeTrackingService.approveTimeEntry(id);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", approved))
+                .message("Time entry approved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Reject time entry
+    @PostMapping("/{id}/reject")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
+    public ResponseEntity<HttpResponse> rejectTimeEntry(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String reason = request.get("reason");
+        TimeEntryDTO rejected = timeTrackingService.rejectTimeEntry(id, reason);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", rejected))
+                .message("Time entry rejected")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Delete time entry
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:DELETE')")
+    public ResponseEntity<HttpResponse> deleteTimeEntry(@PathVariable Long id) {
+        timeTrackingService.deleteTimeEntry(id);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Time entry deleted successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Analytics endpoints
+    @GetMapping("/analytics/case/{caseId}/hours")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTotalHoursByCase(@PathVariable Long caseId) {
+        BigDecimal totalHours = timeTrackingService.getTotalHoursByCase(caseId);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("totalHours", totalHours))
+                .message("Total hours retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    @GetMapping("/analytics/case/{caseId}/amount")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getTotalAmountByCase(@PathVariable Long caseId) {
+        BigDecimal totalAmount = timeTrackingService.getTotalAmountByCase(caseId);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("totalAmount", totalAmount))
+                .message("Total amount retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    @GetMapping("/analytics/user/{userId}/summary")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getUserSummary(
+            @PathVariable Long userId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+        BigDecimal totalHours = timeTrackingService.getTotalHoursByUser(userId, startDate, endDate);
+        BigDecimal totalBillableAmount = timeTrackingService.getTotalBillableAmountByUser(userId);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "totalHours", totalHours,
+                    "totalBillableAmount", totalBillableAmount,
+                    "startDate", startDate,
+                    "endDate", endDate
+                ))
+                .message("User summary retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+} 

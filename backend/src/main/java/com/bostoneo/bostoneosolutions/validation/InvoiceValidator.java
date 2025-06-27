@@ -66,6 +66,52 @@ public class InvoiceValidator {
     }
     
     /**
+     * Validate invoice for creation from time entries
+     * This validation skips subtotal validation since it will be calculated from time entries
+     */
+    public void validateForCreateFromTimeEntries(Invoice invoice) {
+        List<String> errors = new ArrayList<>();
+        
+        // Required fields
+        if (invoice.getClientId() == null || invoice.getClientId() <= 0) {
+            errors.add("Client ID is required");
+        }
+        
+        if (invoice.getIssueDate() == null) {
+            errors.add("Issue date is required");
+        }
+        
+        if (invoice.getDueDate() == null) {
+            errors.add("Due date is required");
+        }
+        
+        // Date validation
+        if (invoice.getIssueDate() != null && invoice.getDueDate() != null) {
+            if (invoice.getDueDate().isBefore(invoice.getIssueDate())) {
+                errors.add("Due date cannot be before issue date");
+            }
+        }
+        
+        // Tax rate validation (but skip subtotal validation)
+        if (invoice.getTaxRate() != null && 
+            (invoice.getTaxRate().compareTo(BigDecimal.ZERO) < 0 || 
+             invoice.getTaxRate().compareTo(new BigDecimal("100")) > 0)) {
+            errors.add("Tax rate must be between 0 and 100");
+        }
+        
+        // Status validation
+        if (invoice.getStatus() == null) {
+            invoice.setStatus(InvoiceStatus.DRAFT);
+        }
+        
+        if (!errors.isEmpty()) {
+            throw new InvoiceValidationException("Invoice validation failed", errors);
+        }
+        
+        log.debug("Invoice validation passed for time entry creation - subtotal will be calculated from time entries");
+    }
+
+    /**
      * Validate invoice for update
      */
     public void validateForUpdate(Invoice existingInvoice, Invoice updatedInvoice) {

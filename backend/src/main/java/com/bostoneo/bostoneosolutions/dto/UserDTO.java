@@ -23,8 +23,8 @@ public class UserDTO {
     private String bio;
     private String imageUrl;
     private boolean enabled;
-    private boolean isNotLocked;
-    private boolean isUsingMFA;
+    private boolean notLocked;
+    private boolean usingMFA;
     private LocalDateTime createdAt;
     
     // List of role names for the new RBAC system

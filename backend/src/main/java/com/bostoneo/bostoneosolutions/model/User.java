@@ -49,11 +49,11 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = false;
     
-    @Column(name = "not_locked", nullable = false)
-    private boolean isNotLocked = true;
+    @Column(name = "non_locked", nullable = false)
+    private boolean notLocked = true;
     
     @Column(name = "using_mfa", nullable = false)
-    private boolean isUsingMFA = false;
+    private boolean usingMFA = false;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;

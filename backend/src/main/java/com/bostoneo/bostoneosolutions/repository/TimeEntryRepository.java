@@ -2,6 +2,7 @@ package com.***REMOVED***.***REMOVED***solutions.repository;
 
 import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
 import com.***REMOVED***.***REMOVED***solutions.model.TimeEntry;
+import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -84,6 +85,10 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
     List<TimeEntry> findByLegalCaseIdAndStatusAndInvoiceIdIsNull(Long legalCaseId, TimeEntryStatus status);
     
     List<TimeEntry> findByLegalCaseIdInAndStatusAndInvoiceIdIsNull(List<Long> legalCaseIds, TimeEntryStatus status);
+    
+    // Check if an invoice exists in the invoices table
+    @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM Invoice i WHERE i.id = :invoiceId")
+    boolean existsInvoiceById(@Param("invoiceId") Long invoiceId);
 } 
  
  

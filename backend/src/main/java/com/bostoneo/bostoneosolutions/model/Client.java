@@ -51,6 +51,9 @@ public class Client {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
     
+    @Column(name = "stripe_customer_id", length = 255)
+    private String stripeCustomerId;
+    
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
@@ -67,4 +70,8 @@ public class Client {
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     @JsonIgnoreProperties("client")
     private Collection<Expense> expenses;
+    
+    public String getClientName() {
+        return this.name;
+    }
 }

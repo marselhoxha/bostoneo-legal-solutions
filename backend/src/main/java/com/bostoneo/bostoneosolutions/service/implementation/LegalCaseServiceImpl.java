@@ -133,21 +133,28 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public Page<LegalCaseDTO> getCasesForUser(Long userId, int page, int size) {
+        log.info("Getting cases for user ID: {}, page: {}, size: {}", userId, page, size);
+        
         // Get user to check their role
         UserDTO user = userService.getUserById(userId);
         if (user == null) {
+            log.warn("User not found with ID: {}", userId);
             return Page.empty(PageRequest.of(page, size));
         }
         
         String userRole = user.getRoleName();
+        log.info("User ID: {} has role: {}", userId, userRole);
         
         // Admin users can see all cases
-        if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) || "ROLE_MANAGER".equals(userRole)) {
+        if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) || "ROLE_MANAGER".equals(userRole) ||
+            "MANAGING_PARTNER".equals(userRole) || "SENIOR_PARTNER".equals(userRole) || "OF_COUNSEL".equals(userRole)) {
+            log.info("User has admin/senior role, returning all cases");
             return getAllCases(page, size);
         }
         
-        // PARALEGAL: See assigned cases + cases where attorney granted access
-        if ("ROLE_PARALEGAL".equals(userRole)) {
+        // ATTORNEY-LEVEL ROLES: See assigned cases (Associates, Paralegals, etc.)
+        if ("ROLE_PARALEGAL".equals(userRole) || "ASSOCIATE".equals(userRole) || "JUNIOR_ASSOCIATE".equals(userRole) || "SENIOR_ASSOCIATE".equals(userRole)) {
+            log.info("User has attorney-level role, getting assigned cases");
             // Get case IDs from case role assignments
             Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
             
@@ -172,11 +179,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         }
         
         // CLIENT: See only cases where explicitly assigned
-        if ("ROLE_CLIENT".equals(userRole)) {
+        // Note: Client users have ROLE_USER role in this system
+        if ("ROLE_CLIENT".equals(userRole) || "ROLE_USER".equals(userRole)) {
             // Get case IDs from case role assignments
             Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
             
             if (caseRoleAssignments.isEmpty()) {
+                log.info("No case role assignments found for user ID: {}", userId);
                 return Page.empty(PageRequest.of(page, size));
             }
             
@@ -188,8 +197,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                 .collect(Collectors.toList());
                 
             if (caseIds.isEmpty()) {
+                log.info("No active case assignments found for user ID: {}", userId);
                 return Page.empty(PageRequest.of(page, size));
             }
+            
+            log.info("Found {} active case assignments for user ID: {}, case IDs: {}", caseIds.size(), userId, caseIds);
             
             // Get cases by IDs with pagination
             Page<LegalCase> cases = legalCaseRepository.findByIdIn(caseIds, PageRequest.of(page, size));

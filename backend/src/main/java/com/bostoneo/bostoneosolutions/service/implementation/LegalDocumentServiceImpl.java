@@ -63,8 +63,21 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     @Override
     public CustomHttpResponse<List<LegalDocument>> getDocumentsByCaseId(Long caseId) {
-        List<LegalDocument> documents = documentRepository.findByCaseId(caseId);
-        return new CustomHttpResponse<>(200, "Case documents retrieved successfully", documents);
+        try {
+            log.info("Fetching documents for case ID: {}", caseId);
+            
+            if (caseId == null) {
+                throw new IllegalArgumentException("Case ID cannot be null");
+            }
+            
+            List<LegalDocument> documents = documentRepository.findByCaseId(caseId);
+            log.info("Found {} documents for case ID: {}", documents.size(), caseId);
+            
+            return new CustomHttpResponse<>(200, "Case documents retrieved successfully", documents);
+        } catch (Exception e) {
+            log.error("Error fetching documents for case ID {}: {}", caseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch documents for case ID: " + caseId + ". Error: " + e.getMessage(), e);
+        }
     }
 
     @Override

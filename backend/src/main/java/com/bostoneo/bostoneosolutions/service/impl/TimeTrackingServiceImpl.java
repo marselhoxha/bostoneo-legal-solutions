@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -89,6 +90,34 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
         existingEntry.setRate(timeEntryDTO.getRate());
         existingEntry.setDescription(timeEntryDTO.getDescription());
         existingEntry.setBillable(timeEntryDTO.getBillable());
+        
+        // Update status if provided
+        if (timeEntryDTO.getStatus() != null) {
+            existingEntry.setStatus(timeEntryDTO.getStatus());
+        }
+        
+        // Update invoice-related fields if provided
+        if (timeEntryDTO.getInvoiceId() != null) {
+            existingEntry.setInvoiceId(timeEntryDTO.getInvoiceId());
+        }
+        
+        if (timeEntryDTO.getBilledAmount() != null) {
+            existingEntry.setBilledAmount(timeEntryDTO.getBilledAmount());
+        }
+        
+        // Update status if provided
+        if (timeEntryDTO.getStatus() != null) {
+            existingEntry.setStatus(timeEntryDTO.getStatus());
+        }
+        
+        // Update invoice-related fields if provided
+        if (timeEntryDTO.getInvoiceId() != null) {
+            existingEntry.setInvoiceId(timeEntryDTO.getInvoiceId());
+        }
+        
+        if (timeEntryDTO.getBilledAmount() != null) {
+            existingEntry.setBilledAmount(timeEntryDTO.getBilledAmount());
+        }
 
         TimeEntry updated = timeEntryRepository.save(existingEntry);
         log.info("Time entry updated successfully: {}", updated.getId());
@@ -268,6 +297,97 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     }
 
     @Override
+    public TimeEntryDTO updateTimeEntryInvoice(Long id, Long invoiceId, TimeEntryStatus status) {
+        log.info("Updating time entry {} with invoice {} and status {}", id, invoiceId, status);
+        
+        TimeEntry timeEntry = timeEntryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
+        
+        // Validate invoice exists if invoiceId is provided
+        if (invoiceId != null) {
+            boolean invoiceExists = timeEntryRepository.existsInvoiceById(invoiceId);
+            if (!invoiceExists) {
+                log.error("Invoice with ID {} does not exist, cannot update time entry {}", invoiceId, id);
+                throw new RuntimeException("Invoice with ID " + invoiceId + " does not exist");
+            }
+        }
+        
+        // Simple approach: try to update and handle constraint violations gracefully
+        try {
+            timeEntry.setInvoiceId(invoiceId);
+            timeEntry.setStatus(status);
+            
+            // Set billed amount if invoicing
+            if (invoiceId != null && timeEntry.getHours() != null && timeEntry.getRate() != null) {
+                timeEntry.setBilledAmount(timeEntry.getHours().multiply(timeEntry.getRate()));
+            }
+            
+            TimeEntry updated = timeEntryRepository.save(timeEntry);
+            log.info("Time entry {} updated with invoice {} and status {}", id, invoiceId, status);
+            
+            return mapToDTO(updated);
+            
+        } catch (Exception e) {
+            // Handle foreign key constraint violations
+            if (e.getMessage() != null && e.getMessage().contains("foreign key constraint")) {
+                log.error("Foreign key constraint violation when updating time entry {} with invoice {}: {}", 
+                         id, invoiceId, e.getMessage());
+                
+                // Check again if invoice exists (it might have been deleted)
+                if (invoiceId != null) {
+                    boolean invoiceExists = timeEntryRepository.existsInvoiceById(invoiceId);
+                    if (!invoiceExists) {
+                        throw new RuntimeException("Invoice with ID " + invoiceId + " was deleted or does not exist");
+                    }
+                }
+                
+                // Try a few times with delays in case it's a transaction timing issue
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        Thread.sleep(300 * attempt); // Increasing delay: 300ms, 600ms, 900ms
+                        
+                        // Refresh the time entry and try again
+                        TimeEntry refreshedEntry = timeEntryRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
+                        
+                        // Re-check invoice exists
+                        if (invoiceId != null && !timeEntryRepository.existsInvoiceById(invoiceId)) {
+                            throw new RuntimeException("Invoice with ID " + invoiceId + " does not exist");
+                        }
+                        
+                        refreshedEntry.setInvoiceId(invoiceId);
+                        refreshedEntry.setStatus(status);
+                        
+                        if (invoiceId != null && refreshedEntry.getHours() != null && refreshedEntry.getRate() != null) {
+                            refreshedEntry.setBilledAmount(refreshedEntry.getHours().multiply(refreshedEntry.getRate()));
+                        }
+                        
+                        TimeEntry updated = timeEntryRepository.save(refreshedEntry);
+                        log.info("Time entry {} updated with invoice {} and status {} after {} attempts", 
+                                id, invoiceId, status, attempt);
+                        
+                        return mapToDTO(updated);
+                        
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Update interrupted", ie);
+                    } catch (Exception retryException) {
+                        log.warn("Attempt {} failed for time entry {}: {}", attempt, id, retryException.getMessage());
+                        if (attempt == 3) {
+                            // Last attempt failed, throw the original error
+                            throw new RuntimeException("Failed to update time entry after 3 attempts. Invoice ID " + 
+                                                     invoiceId + " may not exist or there's a database issue.", e);
+                        }
+                    }
+                }
+            }
+            
+            // Re-throw other exceptions
+            throw new RuntimeException("Failed to update time entry: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public List<TimeEntryDTO> bulkUpdateStatus(List<Long> ids, TimeEntryStatus status) {
         log.info("Bulk updating {} time entries to status {}", ids.size(), status);
         
@@ -372,6 +492,43 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
         // Basic implementation - return default rate
         // In future, integrate with BillingRateService
         return new BigDecimal("250.00");
+    }
+
+    @Override
+    public List<TimeEntryDTO> bulkUpdateTimeEntriesForInvoice(List<Long> timeEntryIds, Long invoiceId, TimeEntryStatus status) {
+        log.info("Bulk updating {} time entries with invoice {} and status {}", timeEntryIds.size(), invoiceId, status);
+        
+        // Validate invoice exists first if invoiceId is provided
+        if (invoiceId != null) {
+            boolean invoiceExists = timeEntryRepository.existsInvoiceById(invoiceId);
+            if (!invoiceExists) {
+                log.error("Invoice with ID {} does not exist, cannot update time entries", invoiceId);
+                throw new RuntimeException("Invoice with ID " + invoiceId + " does not exist");
+            }
+        }
+        
+        List<TimeEntryDTO> updatedEntries = new ArrayList<>();
+        List<String> failedEntries = new ArrayList<>();
+        
+        for (Long timeEntryId : timeEntryIds) {
+            try {
+                TimeEntryDTO updated = updateTimeEntryInvoice(timeEntryId, invoiceId, status);
+                updatedEntries.add(updated);
+            } catch (Exception e) {
+                log.error("Failed to update time entry {} with invoice {}: {}", timeEntryId, invoiceId, e.getMessage());
+                failedEntries.add("Time entry " + timeEntryId + ": " + e.getMessage());
+                // Continue with other entries even if one fails
+            }
+        }
+        
+        log.info("Successfully updated {} of {} time entries with invoice {}", 
+                updatedEntries.size(), timeEntryIds.size(), invoiceId);
+        
+        if (!failedEntries.isEmpty()) {
+            log.warn("Failed to update {} time entries: {}", failedEntries.size(), String.join("; ", failedEntries));
+        }
+        
+        return updatedEntries;
     }
 
     // Helper method to map entity to DTO

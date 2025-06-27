@@ -41,6 +41,10 @@ public interface TimeTrackingService {
     // Status Management
     TimeEntryDTO updateTimeEntryStatus(Long id, TimeEntryStatus status);
     
+    TimeEntryDTO updateTimeEntryInvoice(Long id, Long invoiceId, TimeEntryStatus status);
+    
+    List<TimeEntryDTO> bulkUpdateTimeEntriesForInvoice(List<Long> timeEntryIds, Long invoiceId, TimeEntryStatus status);
+    
     List<TimeEntryDTO> bulkUpdateStatus(List<Long> ids, TimeEntryStatus status);
     
     TimeEntryDTO submitTimeEntry(Long id);

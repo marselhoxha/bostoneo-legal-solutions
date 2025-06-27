@@ -39,6 +39,7 @@ public class LegalDocument {
     @Column(nullable = false)
     private DocumentStatus status;
     
+    @Column(name = "caseId")
     private Long caseId;
     
     @Column(length = 1000)
@@ -51,18 +52,23 @@ public class LegalDocument {
     private List<String> tags = new ArrayList<>();
     
     @CreationTimestamp
+    @Column(name = "uploadedAt")
     private LocalDateTime uploadedAt;
     
     @UpdateTimestamp
+    @Column(name = "updatedAt")
     private LocalDateTime updatedAt;
     
-    @Column(nullable = false)
+    @Column(name = "fileName", nullable = false)
     private String fileName;
     
+    @Column(name = "fileType")
     private String fileType;
     
+    @Column(name = "fileSize")
     private Long fileSize;
     
+    @Column(name = "uploadedBy")
     private Long uploadedBy;
 } 
 

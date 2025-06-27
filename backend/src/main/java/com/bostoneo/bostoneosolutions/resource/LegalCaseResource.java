@@ -46,6 +46,20 @@ public class LegalCaseResource {
             @RequestParam Optional<Integer> page,
             @RequestParam Optional<Integer> size) {
         
+        // Add null check for user
+        if (user == null) {
+            log.error("User is null in getCases endpoint - authentication may have failed");
+            return ResponseEntity.badRequest()
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Authentication required")
+                            .status(FORBIDDEN)
+                            .statusCode(FORBIDDEN.value())
+                            .build());
+        }
+        
+        log.info("Getting cases for user: {} with roles: {}", user.getEmail(), user.getRoles());
+        
         // Check if user has admin role - admins can see all cases
         boolean isAdmin = user.getRoles() != null && 
             (user.getRoles().contains("ROLE_ADMIN") || 

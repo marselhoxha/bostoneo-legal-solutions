@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -64,6 +65,14 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public Page<Client> searchClients(String name, int page, int size) {
         return clientRepository.findByNameContaining(name, PageRequest.of(page, size));
+    }
+
+    @Override
+    public List<Client> getClientsWithUnbilledTimeEntries() {
+        log.info("Retrieving clients with unbilled time entries");
+        List<Client> clients = clientRepository.findClientsWithUnbilledTimeEntries();
+        log.info("Found {} clients with unbilled time entries", clients.size());
+        return clients;
     }
 
     @Override

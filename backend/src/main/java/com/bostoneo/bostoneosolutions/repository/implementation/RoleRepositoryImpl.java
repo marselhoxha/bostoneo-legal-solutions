@@ -51,7 +51,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("name", data.getName())
-                .addValue("permission", data.getPermission())
                 .addValue("description", data.getDescription())
                 .addValue("hierarchyLevel", data.getHierarchyLevel())
                 .addValue("isSystemRole", data.isSystemRole());
@@ -95,7 +94,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
             MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("id", data.getId())
                 .addValue("name", data.getName())
-                .addValue("permission", data.getPermission())
                 .addValue("description", data.getDescription())
                 .addValue("hierarchyLevel", data.getHierarchyLevel())
                 .addValue("isSystemRole", data.isSystemRole());

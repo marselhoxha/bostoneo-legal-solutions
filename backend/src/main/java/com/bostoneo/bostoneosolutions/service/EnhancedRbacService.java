@@ -3,6 +3,7 @@ package com.***REMOVED***.***REMOVED***solutions.service;
 import com.***REMOVED***.***REMOVED***solutions.model.Permission;
 import com.***REMOVED***.***REMOVED***solutions.model.Role;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
 import com.***REMOVED***.***REMOVED***solutions.enums.PermissionCategory;
 import com.***REMOVED***.***REMOVED***solutions.enums.RoleCategory;
 import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
@@ -27,6 +28,7 @@ public class EnhancedRbacService {
 
     private final RoleRepository<Role> roleRepository;
     private final UserRepository<User> userRepository;
+    private final RoleService roleService;
 
     /**
      * Check if user has a specific permission
@@ -236,8 +238,40 @@ public class EnhancedRbacService {
      * Get user case roles for frontend
      */
     public List<Map<String, Object>> getUserCaseRoles(Long userId) {
-        // TODO: Implement case role logic
-        return List.of();
+        try {
+            log.info("Getting case roles for user: {}", userId);
+            Set<CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
+            
+            return caseRoleAssignments.stream()
+                .filter(CaseRoleAssignment::isActive) // Only return active assignments
+                .map(assignment -> {
+                    Map<String, Object> caseRoleData = new HashMap<>();
+                    caseRoleData.put("id", assignment.getId());
+                    caseRoleData.put("caseId", assignment.getLegalCase().getId());
+                    caseRoleData.put("userId", assignment.getUser().getId());
+                    caseRoleData.put("roleId", assignment.getRole().getId());
+                    caseRoleData.put("roleName", assignment.getRole().getName());
+                    caseRoleData.put("roleDisplayName", assignment.getRole().getDisplayName());
+                    
+                    // Add case information if available
+                    if (assignment.getLegalCase() != null) {
+                        caseRoleData.put("caseName", assignment.getLegalCase().getTitle());
+                        caseRoleData.put("caseNumber", assignment.getLegalCase().getCaseNumber());
+                    }
+                    
+                    // Add expiration information
+                    if (assignment.getExpiresAt() != null) {
+                        caseRoleData.put("expiresAt", assignment.getExpiresAt());
+                    }
+                    
+                    log.debug("Mapped case role assignment: {}", caseRoleData);
+                    return caseRoleData;
+                })
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error getting case roles for user {}: {}", userId, e.getMessage(), e);
+            return List.of();
+        }
     }
 
     /**

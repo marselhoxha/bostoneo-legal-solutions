@@ -1,0 +1,226 @@
+package com.***REMOVED***.***REMOVED***solutions.resource;
+
+import com.***REMOVED***.***REMOVED***solutions.dto.*;
+import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/case-assignments")
+@RequiredArgsConstructor
+@Slf4j
+@Tag(name = "Case Assignment", description = "Manage case assignments and workload")
+public class CaseAssignmentResource {
+    
+    private final CaseAssignmentService caseAssignmentService;
+    
+    @PostMapping("/assign")
+    @Operation(summary = "Assign a case to a user")
+    @PreAuthorize("hasAuthority('case:assign') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<CaseAssignmentDTO> assignCase(@Valid @RequestBody CaseAssignmentRequest request) {
+        log.info("Assigning case {} to user {}", request.getCaseId(), request.getUserId());
+        CaseAssignmentDTO assignment = caseAssignmentService.assignCase(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(assignment);
+    }
+    
+    @PostMapping("/auto-assign/{caseId}")
+    @Operation(summary = "Auto-assign a case based on expertise and workload")
+    @PreAuthorize("hasAuthority('case:assign') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<CaseAssignmentDTO> autoAssignCase(@PathVariable Long caseId) {
+        log.info("Auto-assigning case {}", caseId);
+        CaseAssignmentDTO assignment = caseAssignmentService.autoAssignCase(caseId);
+        return ResponseEntity.ok(assignment);
+    }
+    
+    @PostMapping("/transfer")
+    @Operation(summary = "Request case transfer between users")
+    @PreAuthorize("hasAuthority('case:transfer') or hasRole('ROLE_ATTORNEY')")
+    public ResponseEntity<CaseAssignmentDTO> transferCase(@Valid @RequestBody CaseTransferRequest request) {
+        log.info("Requesting case transfer for case {}", request.getCaseId());
+        CaseAssignmentDTO assignment = caseAssignmentService.transferCase(request);
+        return ResponseEntity.ok(assignment);
+    }
+    
+    @DeleteMapping("/{caseId}/user/{userId}")
+    @Operation(summary = "Unassign a user from a case")
+    @PreAuthorize("hasAuthority('case:unassign') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<Map<String, String>> unassignCase(
+            @PathVariable Long caseId,
+            @PathVariable Long userId,
+            @RequestParam(required = false) String reason) {
+        log.info("Unassigning user {} from case {}", userId, caseId);
+        caseAssignmentService.unassignCase(caseId, userId, reason);
+        return ResponseEntity.ok(Map.of("message", "User unassigned successfully"));
+    }
+    
+    @GetMapping("/case/{caseId}")
+    @Operation(summary = "Get all assignments for a case")
+    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
+    public ResponseEntity<List<CaseAssignmentDTO>> getCaseAssignments(@PathVariable Long caseId) {
+        log.info("Getting assignments for case {}", caseId);
+        List<CaseAssignmentDTO> assignments = caseAssignmentService.getCaseAssignments(caseId);
+        return ResponseEntity.ok(assignments);
+    }
+    
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "Get all case assignments for a user")
+    @PreAuthorize("hasAuthority('case:read') or @securityService.isCurrentUser(#userId)")
+    public ResponseEntity<Page<CaseAssignmentDTO>> getUserAssignments(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "assignedAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+        
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? 
+            Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        
+        Page<CaseAssignmentDTO> assignments = caseAssignmentService.getUserAssignments(userId, pageable);
+        return ResponseEntity.ok(assignments);
+    }
+    
+    @GetMapping("/case/{caseId}/primary")
+    @Operation(summary = "Get primary assignment for a case")
+    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
+    public ResponseEntity<CaseAssignmentDTO> getPrimaryAssignment(@PathVariable Long caseId) {
+        log.info("Getting primary assignment for case {}", caseId);
+        CaseAssignmentDTO assignment = caseAssignmentService.getPrimaryAssignment(caseId);
+        return assignment != null ? ResponseEntity.ok(assignment) : ResponseEntity.notFound().build();
+    }
+    
+    @GetMapping("/case/{caseId}/team")
+    @Operation(summary = "Get case team members")
+    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
+    public ResponseEntity<List<CaseAssignmentDTO>> getTeamMembers(@PathVariable Long caseId) {
+        log.info("Getting team members for case {}", caseId);
+        List<CaseAssignmentDTO> team = caseAssignmentService.getTeamMembers(caseId);
+        return ResponseEntity.ok(team);
+    }
+    
+    // Workload endpoints
+    
+    @GetMapping("/workload/user/{userId}")
+    @Operation(summary = "Calculate user workload")
+    @PreAuthorize("hasAuthority('workload:read') or @securityService.isCurrentUser(#userId)")
+    public ResponseEntity<UserWorkloadDTO> calculateUserWorkload(@PathVariable Long userId) {
+        log.info("Calculating workload for user {}", userId);
+        UserWorkloadDTO workload = caseAssignmentService.calculateUserWorkload(userId);
+        return ResponseEntity.ok(workload);
+    }
+    
+    @GetMapping("/workload/team/{managerId}")
+    @Operation(summary = "Get team workload for a manager")
+    @PreAuthorize("hasAuthority('workload:read') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<List<UserWorkloadDTO>> getTeamWorkload(@PathVariable Long managerId) {
+        log.info("Getting team workload for manager {}", managerId);
+        List<UserWorkloadDTO> workloads = caseAssignmentService.getTeamWorkload(managerId);
+        return ResponseEntity.ok(workloads);
+    }
+    
+    @GetMapping("/workload/analytics")
+    @Operation(summary = "Get workload analytics")
+    @PreAuthorize("hasAuthority('workload:analytics') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<WorkloadAnalyticsDTO> getWorkloadAnalytics() {
+        log.info("Getting workload analytics");
+        WorkloadAnalyticsDTO analytics = caseAssignmentService.getWorkloadAnalytics();
+        return ResponseEntity.ok(analytics);
+    }
+    
+    // Assignment rules endpoints
+    
+    @GetMapping("/rules")
+    @Operation(summary = "Get active assignment rules")
+    @PreAuthorize("hasAuthority('rules:read') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<List<AssignmentRuleDTO>> getActiveRules() {
+        log.info("Getting active assignment rules");
+        List<AssignmentRuleDTO> rules = caseAssignmentService.getActiveRules();
+        return ResponseEntity.ok(rules);
+    }
+    
+    @PostMapping("/rules")
+    @Operation(summary = "Create assignment rule")
+    @PreAuthorize("hasAuthority('rules:create') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<AssignmentRuleDTO> createRule(@Valid @RequestBody AssignmentRuleDTO ruleDTO) {
+        log.info("Creating assignment rule: {}", ruleDTO.getRuleName());
+        AssignmentRuleDTO rule = caseAssignmentService.createRule(ruleDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(rule);
+    }
+    
+    @PutMapping("/rules/{ruleId}")
+    @Operation(summary = "Update assignment rule")
+    @PreAuthorize("hasAuthority('rules:update') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, String>> updateRule(
+            @PathVariable Long ruleId,
+            @Valid @RequestBody AssignmentRuleDTO ruleDTO) {
+        log.info("Updating assignment rule {}", ruleId);
+        caseAssignmentService.updateRule(ruleId, ruleDTO);
+        return ResponseEntity.ok(Map.of("message", "Rule updated successfully"));
+    }
+    
+    // History endpoints
+    
+    @GetMapping("/history/case/{caseId}")
+    @Operation(summary = "Get assignment history for a case")
+    @PreAuthorize("hasAuthority('case:history') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<Page<AssignmentHistoryDTO>> getAssignmentHistory(
+            @PathVariable Long caseId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by("performedAt").descending());
+        Page<AssignmentHistoryDTO> history = caseAssignmentService.getAssignmentHistory(caseId, pageable);
+        return ResponseEntity.ok(history);
+    }
+    
+    // Transfer request endpoints
+    
+    @GetMapping("/transfers/pending")
+    @Operation(summary = "Get pending transfer requests")
+    @PreAuthorize("hasAuthority('transfer:read') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<Page<CaseTransferRequestDTO>> getPendingTransferRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by("requestedAt").descending());
+        Page<CaseTransferRequestDTO> requests = caseAssignmentService.getPendingTransferRequests(pageable);
+        return ResponseEntity.ok(requests);
+    }
+    
+    @PostMapping("/transfers/{requestId}/approve")
+    @Operation(summary = "Approve transfer request")
+    @PreAuthorize("hasAuthority('transfer:approve') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<CaseTransferRequestDTO> approveTransfer(
+            @PathVariable Long requestId,
+            @RequestParam(required = false) String notes) {
+        log.info("Approving transfer request {}", requestId);
+        CaseTransferRequestDTO request = caseAssignmentService.approveTransfer(requestId, notes);
+        return ResponseEntity.ok(request);
+    }
+    
+    @PostMapping("/transfers/{requestId}/reject")
+    @Operation(summary = "Reject transfer request")
+    @PreAuthorize("hasAuthority('transfer:approve') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<CaseTransferRequestDTO> rejectTransfer(
+            @PathVariable Long requestId,
+            @RequestParam(required = false) String notes) {
+        log.info("Rejecting transfer request {}", requestId);
+        CaseTransferRequestDTO request = caseAssignmentService.rejectTransfer(requestId, notes);
+        return ResponseEntity.ok(request);
+    }
+}

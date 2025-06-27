@@ -239,6 +239,53 @@ public class TimeEntryResource {
         );
     }
 
+    // Update time entry with invoice information (status + invoiceId)
+    @PatchMapping("/{id}/invoice")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> updateTimeEntryInvoice(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
+        String statusStr = (String) request.get("status");
+        TimeEntryStatus status = statusStr != null ? TimeEntryStatus.valueOf(statusStr) : TimeEntryStatus.INVOICED;
+        
+        TimeEntryDTO updated = timeTrackingService.updateTimeEntryInvoice(id, invoiceId, status);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("timeEntry", updated))
+                .message("Time entry invoice information updated")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // Bulk update time entries with invoice information
+    @PatchMapping("/bulk/invoice")
+    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> bulkUpdateTimeEntriesForInvoice(@RequestBody Map<String, Object> request) {
+        List<Long> timeEntryIds = ((List<?>) request.get("timeEntryIds")).stream().map(id -> Long.valueOf(id.toString())).collect(java.util.stream.Collectors.toList());
+        Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
+        String statusStr = (String) request.get("status");
+        TimeEntryStatus status = statusStr != null ? TimeEntryStatus.valueOf(statusStr) : TimeEntryStatus.INVOICED;
+        
+        List<TimeEntryDTO> updatedEntries = timeTrackingService.bulkUpdateTimeEntriesForInvoice(timeEntryIds, invoiceId, status);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "updatedEntries", updatedEntries,
+                    "totalUpdated", updatedEntries.size(),
+                    "totalRequested", timeEntryIds.size()
+                ))
+                .message(String.format("Updated %d of %d time entries with invoice information", 
+                        updatedEntries.size(), timeEntryIds.size()))
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
     // Submit time entry for approval
     @PostMapping("/{id}/submit")
     // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")

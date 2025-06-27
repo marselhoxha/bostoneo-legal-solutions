@@ -35,7 +35,7 @@ public class BillingRate {
     @Column(name = "matter_type_id", columnDefinition = "BIGINT UNSIGNED")
     private Long matterTypeId;
 
-    @Column(name = "client_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "customer_id", columnDefinition = "BIGINT UNSIGNED")
     private Long clientId;
 
     @Column(name = "legal_case_id", columnDefinition = "BIGINT UNSIGNED")
@@ -55,7 +55,7 @@ public class BillingRate {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1)")
     @Builder.Default
     private Boolean isActive = true;
 

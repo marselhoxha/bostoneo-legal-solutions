@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Set;
 
 import static java.time.LocalDateTime.now;
 import static org.springframework.http.HttpStatus.OK;
@@ -42,7 +43,19 @@ public class RbacController {
     public ResponseEntity<List<Role>> getAllRoles() {
         try {
             List<Role> roles = new ArrayList<>(roleService.getRoles());
-            log.info("Retrieved {} roles", roles.size());
+            
+            // Load permissions and user count for each role
+            for (Role role : roles) {
+                // Load permissions
+                Set<Permission> permissions = roleService.getPermissionsByRoleId(role.getId());
+                role.setPermissions(permissions);
+                
+                // Load user count
+                List<com.***REMOVED***.***REMOVED***solutions.model.User> users = roleService.getUsersByRoleId(role.getId());
+                role.setUserCount(users.size());
+            }
+            
+            log.info("Retrieved {} roles with permissions and user counts", roles.size());
             return ResponseEntity.ok(roles);
         } catch (Exception e) {
             log.error("Error retrieving roles: {}", e.getMessage());
@@ -113,6 +126,15 @@ public class RbacController {
     public ResponseEntity<Role> getRoleById(@PathVariable Long roleId) {
         try {
             Role role = roleService.getRoleById(roleId);
+            
+            // Load permissions for this role
+            Set<Permission> permissions = roleService.getPermissionsByRoleId(roleId);
+            role.setPermissions(permissions);
+            
+            // Load user count
+            List<com.***REMOVED***.***REMOVED***solutions.model.User> users = roleService.getUsersByRoleId(roleId);
+            role.setUserCount(users.size());
+            
             return ResponseEntity.ok(role);
         } catch (Exception e) {
             log.error("Error retrieving role {}: {}", roleId, e.getMessage());
@@ -264,6 +286,65 @@ public class RbacController {
         } catch (Exception e) {
             log.error("Error retrieving case roles for user {}: {}", userId, e.getMessage());
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Set primary role for user
+     */
+    @PostMapping("/set-primary-role")
+    public ResponseEntity<Boolean> setPrimaryRole(@RequestBody Map<String, Object> request) {
+        try {
+            Long userId = ((Number) request.get("userId")).longValue();
+            Long roleId = ((Number) request.get("roleId")).longValue();
+            
+            roleService.setPrimaryRole(userId, roleId);
+            log.info("Set primary role {} for user {}", roleId, userId);
+            return ResponseEntity.ok(true);
+        } catch (Exception e) {
+            log.error("Error setting primary role: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(false);
+        }
+    }
+
+    /**
+     * Assign case role to user
+     */
+    @PostMapping("/assign-case-role")
+    public ResponseEntity<Boolean> assignCaseRole(@RequestBody Map<String, Object> request) {
+        try {
+            Long caseId = ((Number) request.get("caseId")).longValue();
+            Long userId = ((Number) request.get("userId")).longValue();
+            Long roleId = ((Number) request.get("roleId")).longValue();
+            
+            // Handle optional expiration date
+            java.time.LocalDateTime expiresAt = null;
+            if (request.get("expiresAt") != null) {
+                String expiresAtStr = (String) request.get("expiresAt");
+                expiresAt = java.time.LocalDateTime.parse(expiresAtStr);
+            }
+            
+            roleService.assignCaseRole(caseId, userId, roleId, expiresAt);
+            log.info("Assigned case role {} to user {} for case {}", roleId, userId, caseId);
+            return ResponseEntity.ok(true);
+        } catch (Exception e) {
+            log.error("Error assigning case role: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(false);
+        }
+    }
+
+    /**
+     * Remove case role assignment
+     */
+    @DeleteMapping("/case-roles/{assignmentId}")
+    public ResponseEntity<Boolean> removeCaseRole(@PathVariable Long assignmentId) {
+        try {
+            roleService.removeCaseRole(assignmentId);
+            log.info("Removed case role assignment {}", assignmentId);
+            return ResponseEntity.ok(true);
+        } catch (Exception e) {
+            log.error("Error removing case role assignment: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(false);
         }
     }
 } 

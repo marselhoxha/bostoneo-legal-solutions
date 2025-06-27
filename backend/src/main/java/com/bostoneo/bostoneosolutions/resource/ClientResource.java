@@ -137,6 +137,53 @@ public class ClientResource {
                         .build());
     }
 
+    @GetMapping("/with-unbilled-time-entries")
+    public ResponseEntity<HttpResponse> getClientsWithUnbilledTimeEntries(@AuthenticationPrincipal UserDTO user) {
+        
+        // Add null checking for authentication principal
+        if (user == null) {
+            return ResponseEntity.status(401).body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("User not authenticated")
+                        .status(UNAUTHORIZED)
+                        .statusCode(401)
+                        .build());
+        }
+        
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            return ResponseEntity.status(400).body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("User email is required")
+                        .status(BAD_REQUEST)
+                        .statusCode(400)
+                        .build());
+        }
+        
+        try {
+            UserDTO currentUser = userService.getUserByEmail(user.getEmail());
+            List<Client> clients = clientService.getClientsWithUnbilledTimeEntries();
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(of("user", currentUser, "clients", clients))
+                            .message("Clients with unbilled time entries retrieved")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        } catch (Exception e) {
+            log.error("Error retrieving clients with unbilled time entries for user: {}", user.getEmail(), e);
+            return ResponseEntity.status(500).body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("Error retrieving clients: " + e.getMessage())
+                        .status(INTERNAL_SERVER_ERROR)
+                        .statusCode(500)
+                        .build());
+        }
+    }
+
     @DeleteMapping("/delete/{id}")
     @AuditLog(action = "DELETE", entityType = "CUSTOMER", description = "Deleted client and associated data")
     public ResponseEntity<HttpResponse> deleteClient(@PathVariable("id") Long id) {
