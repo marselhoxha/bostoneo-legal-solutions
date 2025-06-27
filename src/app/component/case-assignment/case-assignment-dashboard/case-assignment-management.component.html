@@ -1,0 +1,679 @@
+<!-- Enhanced Assignment Management Dashboard -->
+<div class="container-fluid" style="margin-top: 115px;">
+  
+  <!-- Enhanced Page Title -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Case Management</a></li>
+            <li class="breadcrumb-item active">Assignment Management</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Header Card -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary text-white rounded">
+                      <i class="ri-user-settings-line fs-18"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h4 class="mb-1 fw-semibold">Case Assignment Management</h4>
+                  <p class="text-muted mb-2">Efficiently assign cases to attorneys and manage workload distribution</p>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="badge bg-success-subtle text-success px-2 py-1" *ngIf="assignments.length > 0">
+                      <i class="ri-check-line me-1"></i>{{ assignments.length }} Active Assignments
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning px-2 py-1" *ngIf="pendingTransfers.length > 0">
+                      <i class="ri-time-line me-1"></i>{{ pendingTransfers.length }} Pending Transfers
+                    </span>
+                    <span class="badge bg-info-subtle text-info px-2 py-1">
+                      <i class="ri-team-line me-1"></i>{{ attorneys.length }} Available Attorneys
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                      <i class="ri-briefcase-line me-1"></i>{{ cases.length }} Total Cases
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-lg-4">
+              <div class="row g-3">
+                <!-- Assignment Rate -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-primary-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-pie-chart-line text-primary fs-20 me-2"></i>
+                        <h4 class="mb-0 text-primary fw-bold">{{ getAssignmentRate() }}%</h4>
+                      </div>
+                      <small class="text-primary fw-semibold">Assignment Rate</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Workload Status -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-success-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-dashboard-line text-success fs-20 me-2"></i>
+                        <h4 class="mb-0 text-success fw-bold">{{ getAverageWorkload() }}%</h4>
+                      </div>
+                      <small class="text-success fw-semibold">Avg Workload</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Efficiency -->
+                <div class="col-4">
+                  <div class="d-flex align-items-center justify-content-center p-3 bg-warning-subtle rounded">
+                    <div class="text-center">
+                      <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="ri-speed-line text-warning fs-20 me-2"></i>
+                        <h4 class="mb-0 text-warning fw-bold">{{ getEfficiencyScore() }}%</h4>
+                      </div>
+                      <small class="text-warning fw-semibold">Efficiency</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="alert alert-danger border-0" role="alert" *ngIf="error">
+    <i class="ri-error-warning-line me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Success Alert -->
+  <div class="alert alert-success border-0 bg-success bg-opacity-10" role="alert" *ngIf="successMessage">
+    <div class="d-flex align-items-center">
+      <i class="ri-check-line me-2 text-success"></i>
+      <div class="flex-grow-1">
+        <strong class="text-success">{{ successMessage }}</strong>
+      </div>
+      <button type="button" class="btn-close" (click)="successMessage = null"></button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading.cases || loading.attorneys" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Loading assignment data...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading.cases && !loading.attorneys">
+    
+    <!-- Enhanced Statistics Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm card-animate card-enhanced">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1 overflow-hidden">
+                <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                  <i class="ri-briefcase-line me-1 text-primary"></i>Total Cases
+                </p>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="trend-badge trend-positive">
+                  <i class="ri-arrow-up-line fs-12"></i> +8.2%
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-end justify-content-between mt-4">
+              <div>
+                <h4 class="fs-22 fw-bold ff-secondary mb-3 text-primary">{{ cases.length }}</h4>
+                <div class="progress progress-sm mb-2">
+                  <div class="progress-bar bg-primary" [style.width.%]="(getAssignedCases() / cases.length) * 100"></div>
+                </div>
+                <span class="badge bg-primary-subtle text-primary fs-12">
+                  <i class="ri-check-line me-1"></i>{{ getAssignedCases() }} assigned
+                </span>
+              </div>
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-primary text-white rounded shadow-sm">
+                  <i class="ri-briefcase-line fs-18"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer border-0 bg-primary bg-opacity-10">
+            <small class="text-primary fw-medium">
+              <i class="ri-time-line me-1"></i>Updated {{ getLastUpdateTime() }}
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm card-animate card-enhanced">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1 overflow-hidden">
+                <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                  <i class="ri-team-line me-1 text-success"></i>Available Attorneys
+                </p>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="trend-badge trend-stable">
+                  <i class="ri-subtract-line fs-12"></i> 0%
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-end justify-content-between mt-4">
+              <div>
+                <h4 class="fs-22 fw-bold ff-secondary mb-3 text-success">{{ attorneys.length }}</h4>
+                <div class="progress progress-sm mb-2">
+                  <div class="progress-bar bg-success" [style.width.%]="(getActiveAttorneys() / attorneys.length) * 100"></div>
+                </div>
+                <span class="badge bg-success-subtle text-success fs-12">
+                  <i class="ri-user-line me-1"></i>{{ getActiveAttorneys() }} active
+                </span>
+              </div>
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-success text-white rounded shadow-sm">
+                  <i class="ri-team-line fs-18"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer border-0 bg-success bg-opacity-10">
+            <small class="text-success fw-medium">
+              <i class="ri-shield-check-line me-1"></i>All qualified
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm card-animate card-enhanced">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1 overflow-hidden">
+                <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                  <i class="ri-user-settings-line me-1 text-warning"></i>Active Assignments
+                </p>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="trend-badge trend-positive">
+                  <i class="ri-arrow-up-line fs-12"></i> +15.3%
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-end justify-content-between mt-4">
+              <div>
+                <h4 class="fs-22 fw-bold ff-secondary mb-3 text-warning">{{ assignments.length }}</h4>
+                <div class="progress progress-sm mb-2">
+                  <div class="progress-bar bg-warning" [style.width.%]="getAssignmentProgress()"></div>
+                </div>
+                <span class="badge bg-warning-subtle text-warning fs-12">
+                  <i class="ri-time-line me-1"></i>{{ getAssignmentProgress() }}% capacity
+                </span>
+              </div>
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-warning text-white rounded shadow-sm">
+                  <i class="ri-user-settings-line fs-18"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer border-0 bg-warning bg-opacity-10">
+            <small class="text-warning fw-medium">
+              <i class="ri-pulse-line me-1"></i>Real-time tracking
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm card-animate card-enhanced">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1 overflow-hidden">
+                <p class="text-uppercase fw-semibold text-muted text-truncate mb-0 fs-13 letter-spacing">
+                  <i class="ri-exchange-line me-1 text-info"></i>Pending Transfers
+                </p>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="trend-badge" [ngClass]="pendingTransfers.length > 0 ? 'trend-positive' : 'trend-stable'">
+                  <i class="ri-arrow-up-line fs-12" *ngIf="pendingTransfers.length > 0"></i>
+                  <i class="ri-subtract-line fs-12" *ngIf="pendingTransfers.length === 0"></i>
+                  {{ pendingTransfers.length > 0 ? '+' + pendingTransfers.length : '0' }}
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-end justify-content-between mt-4">
+              <div>
+                <h4 class="fs-22 fw-bold ff-secondary mb-3 text-info">{{ pendingTransfers.length }}</h4>
+                <div class="progress progress-sm mb-2">
+                  <div class="progress-bar bg-info" [style.width.%]="pendingTransfers.length > 0 ? 75 : 0"></div>
+                </div>
+                <span class="badge bg-info-subtle text-info fs-12">
+                  <i class="ri-time-line me-1"></i>{{ pendingTransfers.length > 0 ? 'Requires attention' : 'All clear' }}
+                </span>
+              </div>
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-info text-white rounded shadow-sm">
+                  <i class="ri-exchange-line fs-18"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer border-0 bg-info bg-opacity-10">
+            <small class="text-info fw-medium">
+              <i class="ri-notification-line me-1"></i>{{ pendingTransfers.length > 0 ? 'Action needed' : 'Up to date' }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+      <!-- Cases Panel -->
+      <div class="col-xl-4 col-lg-5">
+        <div class="card border-0 shadow-sm h-100 card-enhanced">
+          <div class="card-header bg-light border-bottom">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="card-title fw-semibold mb-0">
+                <i class="ri-briefcase-line me-2 text-primary"></i>Cases
+              </h6>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-soft-primary" (click)="refreshData()">
+                  <i class="ri-refresh-line me-1"></i>Refresh
+                </button>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-soft-secondary" data-bs-toggle="dropdown">
+                    <i class="ri-more-2-line"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#"><i class="ri-download-line me-2"></i>Export</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="ri-filter-line me-2"></i>Advanced Filter</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <!-- Enhanced Filters -->
+            <div class="p-3 border-bottom bg-light bg-opacity-50">
+              <div class="row g-2">
+                <div class="col-12">
+                  <div class="search-box">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search cases..." 
+                           [(ngModel)]="searchTerm" (ngModelChange)="filterCases()">
+                    <i class="ri-search-line search-icon"></i>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <select class="form-select form-select-sm" [(ngModel)]="selectedCaseType" (ngModelChange)="onCaseTypeChange()">
+                    <option value="">All Types</option>
+                    <option *ngFor="let type of caseTypes" [value]="type">{{ formatCaseType(type) }}</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <select class="form-select form-select-sm" [(ngModel)]="selectedPriority" (ngModelChange)="onPriorityChange()">
+                    <option value="">All Priorities</option>
+                    <option *ngFor="let priority of priorities" [value]="priority">{{ priority }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading.cases" class="text-center py-5">
+              <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p class="mt-3 text-muted fs-13">Loading cases...</p>
+            </div>
+
+            <!-- Cases List -->
+            <div class="case-list" style="max-height: 500px; overflow-y: auto;" *ngIf="!loading.cases">
+              <div class="case-item p-3 border-bottom cursor-pointer" 
+                   *ngFor="let case of filteredCases; trackBy: trackByCaseId" 
+                   (click)="selectCase(case)"
+                   [class.bg-soft-primary]="selectedCase?.id === case.id">
+                <div class="d-flex align-items-start">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1 fw-medium">{{ case.title }}</h6>
+                    <p class="text-muted mb-1 fs-12">{{ case.caseNumber }}</p>
+                    <p class="text-muted mb-2 fs-12">Client: {{ case.clientName || 'N/A' }}</p>
+                    <div class="d-flex gap-1 flex-wrap">
+                      <span class="badge bg-soft-info text-info fs-11">{{ formatCaseType(case.caseType) }}</span>
+                      <span class="badge fs-11" [ngClass]="getPriorityBadge(case.priority)">{{ case.priority }}</span>
+                      <span class="badge bg-soft-secondary text-secondary fs-11">{{ case.estimatedWorkload }}% Load</span>
+                    </div>
+                  </div>
+                  <div class="flex-shrink-0" *ngIf="selectedCase?.id === case.id">
+                    <i class="ri-check-line text-success fs-16"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Cases State -->
+            <div *ngIf="!loading.cases && filteredCases.length === 0" class="text-center py-5">
+              <div class="empty-icon">
+                <i class="ri-briefcase-line fs-24"></i>
+              </div>
+              <h6 class="mb-1 mt-3">No Cases Found</h6>
+              <p class="text-muted mb-0 fs-13">No cases match your current filters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assignment Management Panel -->
+      <div class="col-xl-8 col-lg-7">
+        <!-- Case Info Card -->
+        <div class="card border-0 shadow-sm mb-4 card-enhanced" *ngIf="selectedCase">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <div class="avatar-lg flex-shrink-0 me-3">
+                  <div class="avatar-title rounded-circle bg-soft-primary text-primary fs-24">
+                    <i class="ri-briefcase-line"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 fw-semibold">{{ selectedCase.title }}</h5>
+                  <p class="text-muted mb-1 fs-13">{{ selectedCase.caseNumber }} • {{ selectedCase.clientName }}</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-soft-info text-info">{{ formatCaseType(selectedCase.caseType) }}</span>
+                    <span class="badge" [ngClass]="getPriorityBadge(selectedCase.priority)">{{ selectedCase.priority }}</span>
+                    <span class="badge bg-soft-secondary text-secondary">{{ selectedCase.estimatedWorkload }}% Workload</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                <span class="badge bg-soft-success text-success fs-13">
+                  <i class="ri-team-line me-1"></i>{{ selectedCase.assignedAttorneys?.length || 0 }} Assigned
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Case Selected State -->
+        <div class="card border-0 shadow-sm" *ngIf="!selectedCase">
+          <div class="card-body text-center py-5">
+            <div class="avatar-xl mx-auto mb-4">
+              <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                <i class="ri-briefcase-4-line display-4"></i>
+              </div>
+            </div>
+            <h5 class="mb-2 fw-semibold">Select a Case</h5>
+            <p class="text-muted mb-0">Choose a case from the list to manage attorney assignments.</p>
+          </div>
+        </div>
+
+        <!-- Assignment Management Tabs -->
+        <div class="card border-0 shadow-sm" *ngIf="selectedCase">
+          <div class="card-header bg-light border-bottom">
+            <ul class="nav nav-tabs-custom card-header-tabs border-bottom-0" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="selectedTab === 'assignments'" 
+                   (click)="onTabChange('assignments')" href="javascript:void(0);">
+                  <i class="ri-user-settings-line me-2"></i>Assign Attorney
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="selectedTab === 'current'" 
+                   (click)="onTabChange('current')" href="javascript:void(0);">
+                  <i class="ri-team-line me-2"></i>Current Assignments
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="selectedTab === 'workload'" 
+                   (click)="onTabChange('workload')" href="javascript:void(0);">
+                  <i class="ri-bar-chart-line me-2"></i>Workload Analysis
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card-body">
+            <div class="tab-content">
+              <!-- Assignment Tab -->
+              <div class="tab-pane" [class.active]="selectedTab === 'assignments'">
+                <div class="row">
+                  <!-- Attorney Selection -->
+                  <div class="col-lg-6">
+                    <h6 class="fw-semibold mb-3">
+                      <i class="ri-team-line me-2 text-primary"></i>Select Attorney
+                    </h6>
+                    
+                    <!-- Attorney Search -->
+                    <div class="mb-3">
+                      <div class="search-box">
+                        <input type="text" class="form-control" placeholder="Search attorneys..." 
+                               [(ngModel)]="attorneySearchTerm" (ngModelChange)="filterAttorneys()">
+                        <i class="ri-search-line search-icon"></i>
+                      </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div *ngIf="loading.attorneys" class="text-center py-3">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading attorneys...</span>
+                      </div>
+                    </div>
+
+                    <!-- Attorneys List -->
+                    <div class="attorney-list" style="max-height: 300px; overflow-y: auto;">
+                      <div class="attorney-item p-2 border rounded mb-2 cursor-pointer" 
+                           *ngFor="let attorney of filteredAttorneys" 
+                           (click)="selectAttorney(attorney)"
+                           [class.border-primary]="selectedAttorney?.id === attorney.id"
+                           [class.bg-soft-primary]="selectedAttorney?.id === attorney.id">
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-sm flex-shrink-0 me-2">
+                            <div class="avatar-title rounded-circle bg-soft-info text-info">
+                              {{ attorney.firstName?.charAt(0) || 'U' }}{{ attorney.lastName?.charAt(0) || '' }}
+                            </div>
+                          </div>
+                          <div class="flex-grow-1">
+                            <h6 class="mb-1 fs-14 fw-medium">{{ getUserDisplayName(attorney) }}</h6>
+                            <p class="text-muted mb-0 fs-12">{{ attorney.email }}</p>
+                          </div>
+                          <div class="flex-shrink-0" *ngIf="selectedAttorney?.id === attorney.id">
+                            <i class="ri-check-line text-success"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- No Attorneys State -->
+                    <div *ngIf="!loading.attorneys && filteredAttorneys.length === 0" class="text-center py-3">
+                      <p class="text-muted mb-0">No attorneys found.</p>
+                    </div>
+                  </div>
+
+                  <!-- Assignment Form -->
+                  <div class="col-lg-6">
+                    <h6 class="fw-semibold mb-3">
+                      <i class="ri-add-circle-line me-2 text-success"></i>Assignment Details
+                    </h6>
+                    
+                    <form [formGroup]="assignmentForm" (ngSubmit)="assignCase()">
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Role Type</label>
+                        <select class="form-select" formControlName="roleType">
+                          <option *ngFor="let role of caseRoleTypes" [value]="role">
+                            {{ formatRoleType(role) }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Assignment Type</label>
+                        <select class="form-select" formControlName="assignmentType">
+                          <option *ngFor="let type of assignmentTypes" [value]="type">
+                            {{ formatRoleType(type) }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Workload Weight (%)</label>
+                        <input type="number" class="form-control" formControlName="workloadWeight" 
+                               min="1" max="100" placeholder="50">
+                        <small class="form-text text-muted">Percentage of attorney's capacity this case will consume</small>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Effective From</label>
+                        <input type="datetime-local" class="form-control" formControlName="effectiveFrom">
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Effective To (Optional)</label>
+                        <input type="datetime-local" class="form-control" formControlName="effectiveTo">
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label fw-medium">Notes (Optional)</label>
+                        <textarea class="form-control" formControlName="notes" rows="3" 
+                                  placeholder="Additional notes about this assignment..."></textarea>
+                      </div>
+                      
+                      <button type="submit" class="btn btn-primary w-100 waves-effect waves-light" 
+                              [disabled]="assignmentForm.invalid || !selectedCase || !selectedAttorney || loading.assigning">
+                        <span *ngIf="loading.assigning" class="spinner-border spinner-border-sm me-2"></span>
+                        <i class="ri-add-line me-1" *ngIf="!loading.assigning"></i>
+                        {{ loading.assigning ? 'Assigning...' : 'Assign Attorney' }}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Current Assignments Tab -->
+              <div class="tab-pane" [class.active]="selectedTab === 'current'">
+                <h6 class="fw-semibold mb-3">
+                  <i class="ri-team-line me-2 text-success"></i>Current Assignments
+                  <span class="badge bg-soft-info text-info ms-2">{{ selectedCase.assignedAttorneys?.length || 0 }}</span>
+                </h6>
+                
+                <div *ngIf="selectedCase.assignedAttorneys && selectedCase.assignedAttorneys.length > 0; else noAssignments">
+                  <div class="assignment-item p-3 border rounded mb-3" 
+                       *ngFor="let attorney of selectedCase.assignedAttorneys">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-sm flex-shrink-0 me-3">
+                          <div class="avatar-title rounded-circle bg-soft-success text-success">
+                            {{ attorney.firstName?.charAt(0) || 'U' }}{{ attorney.lastName?.charAt(0) || '' }}
+                          </div>
+                        </div>
+                        <div class="flex-grow-1">
+                          <h6 class="mb-1 fw-medium">{{ getUserDisplayName(attorney) }}</h6>
+                          <p class="text-muted mb-1 fs-12">{{ attorney.email }}</p>
+                          <div class="d-flex gap-1">
+                            <span class="badge bg-soft-primary text-primary fs-11">Lead Attorney</span>
+                            <span class="badge bg-soft-info text-info fs-11">50% Workload</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex-shrink-0">
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                  type="button" data-bs-toggle="dropdown">
+                            Actions
+                          </button>
+                          <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="javascript:void(0);">
+                              <i class="ri-edit-line me-2"></i>Edit Assignment
+                            </a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);">
+                              <i class="ri-exchange-line me-2"></i>Transfer Case
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="javascript:void(0);">
+                              <i class="ri-delete-bin-line me-2"></i>Remove Assignment
+                            </a></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <ng-template #noAssignments>
+                  <div class="text-center py-4">
+                    <div class="avatar-md mx-auto mb-3">
+                      <div class="avatar-title bg-soft-warning text-warning rounded-circle">
+                        <i class="ri-team-line fs-20"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-1">No Assignments</h6>
+                    <p class="text-muted mb-0">This case has no attorney assignments yet.</p>
+                  </div>
+                </ng-template>
+              </div>
+
+              <!-- Workload Analysis Tab -->
+              <div class="tab-pane" [class.active]="selectedTab === 'workload'">
+                <h6 class="fw-semibold mb-3">
+                  <i class="ri-bar-chart-line me-2 text-info"></i>Workload Analysis
+                </h6>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card border border-dashed border-info bg-soft-info">
+                      <div class="card-body text-center">
+                        <h5 class="text-info mb-1">{{ selectedCase.estimatedWorkload }}%</h5>
+                        <p class="text-muted mb-0">Estimated Case Workload</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card border border-dashed border-success bg-soft-success">
+                      <div class="card-body text-center">
+                        <h5 class="text-success mb-1">{{ formatCaseType(selectedCase.caseType) }}</h5>
+                        <p class="text-muted mb-0">Case Type</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4">
+                  <h6 class="fw-semibold mb-3">Recommended Attorneys</h6>
+                  <div class="alert alert-info">
+                    <i class="ri-information-line me-2"></i>
+                    Based on case type expertise and current workload, we recommend considering attorneys with experience in {{ formatCaseType(selectedCase.caseType) }} cases.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

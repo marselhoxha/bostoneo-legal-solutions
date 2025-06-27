@@ -1,0 +1,226 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { CustomHttpResponse as ApiResponse } from '../interface/custom-http-response';
+import { 
+  CaseTask, 
+  TaskCreateRequest, 
+  TaskUpdateRequest,
+  TaskComment,
+  TaskStatistics,
+  TaskFilter
+} from '../interface/case-task';
+import { tap, catchError } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CaseTaskService {
+  private readonly apiUrl = 'http://localhost:8085/api/v1';
+
+  constructor(private http: HttpClient) {}
+
+  // Task CRUD Operations
+  createTask(task: TaskCreateRequest): Observable<ApiResponse<CaseTask>> {
+    return this.http.post<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks`, 
+      task
+    );
+  }
+
+  updateTask(taskId: number, task: TaskUpdateRequest): Observable<ApiResponse<CaseTask>> {
+    return this.http.put<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${taskId}`, 
+      task
+    );
+  }
+
+  deleteTask(taskId: number): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(
+      `${this.apiUrl}/tasks/${taskId}`
+    );
+  }
+
+  getTask(taskId: number): Observable<ApiResponse<CaseTask>> {
+    return this.http.get<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${taskId}`
+    );
+  }
+
+  // Task Listing and Filtering
+  getTasksByCaseId(caseId: number, page: number = 0, size: number = 100): Observable<ApiResponse<any>> {
+    console.log('🌐 CaseTaskService - getTasksByCaseId called:', { caseId, page, size });
+    
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', 'createdAt')
+      .set('sortDirection', 'DESC');
+    
+    const url = `${this.apiUrl}/tasks/case/${caseId}`;
+    console.log('📡 CaseTaskService - Making request to:', url);
+    console.log('📋 CaseTaskService - Request params:', params.toString());
+    
+    return this.http.get<ApiResponse<any>>(url, { params })
+      .pipe(
+        tap(response => {
+          console.log('✅ CaseTaskService - Response received:', response);
+          console.log('📊 CaseTaskService - Response analysis:', {
+            hasData: !!response.data,
+            hasTasks: !!response.data?.tasks,
+            hasContent: !!response.data?.tasks?.content,
+            tasksCount: response.data?.tasks?.content?.length || 0
+          });
+        }),
+        catchError(error => {
+          console.error('❌ CaseTaskService - Error in getTasksByCaseId:', error);
+          throw error;
+        })
+      );
+  }
+
+  getAllTasks(page: number = 0, size: number = 100): Observable<ApiResponse<any>> {
+    console.log('🌐 CaseTaskService - getAllTasks called:', { page, size });
+    
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', 'createdAt')
+      .set('sortDirection', 'DESC');
+    
+    const url = `${this.apiUrl}/tasks`;
+    console.log('📡 CaseTaskService - Making request to:', url);
+    console.log('📋 CaseTaskService - Request params:', params.toString());
+    
+    return this.http.get<ApiResponse<any>>(url, { params })
+      .pipe(
+        tap(response => {
+          console.log('✅ CaseTaskService - Response received for getAllTasks:', response);
+          console.log('📊 CaseTaskService - Response analysis:', {
+            hasData: !!response.data,
+            hasTasks: !!response.data?.tasks,
+            hasContent: !!response.data?.tasks?.content,
+            tasksCount: response.data?.tasks?.content?.length || 0
+          });
+        }),
+        catchError(error => {
+          console.error('❌ CaseTaskService - Error in getAllTasks:', error);
+          throw error;
+        })
+      );
+  }
+
+  getUserTasks(userId: number, filter: TaskFilter): Observable<ApiResponse<CaseTask[]>> {
+    let params = new HttpParams()
+      .set('page', filter.page?.toString() || '0')
+      .set('size', filter.size?.toString() || '10');
+
+    if (filter.status) {
+      params = params.set('status', filter.status);
+    }
+    if (filter.priority) {
+      params = params.set('priority', filter.priority);
+    }
+    if (filter.dueDate) {
+      params = params.set('dueDate', filter.dueDate);
+    }
+
+    return this.http.get<ApiResponse<CaseTask[]>>(
+      `${this.apiUrl}/tasks/user/${userId}`,
+      { params }
+    );
+  }
+
+  getOverdueTasks(userId: number): Observable<ApiResponse<CaseTask[]>> {
+    return this.http.get<ApiResponse<CaseTask[]>>(
+      `${this.apiUrl}/tasks/user/${userId}/overdue`
+    );
+  }
+
+  getUpcomingTasks(userId: number, days: number = 7): Observable<ApiResponse<CaseTask[]>> {
+    return this.http.get<ApiResponse<CaseTask[]>>(
+      `${this.apiUrl}/tasks/user/${userId}/upcoming/${days}`
+    );
+  }
+
+  // Task Actions
+  updateTaskStatus(taskId: number, status: string): Observable<ApiResponse<CaseTask>> {
+    const params = new HttpParams().set('status', status);
+    
+    return this.http.put<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${taskId}/status`,
+      {},
+      { params }
+    );
+  }
+
+  assignTask(taskId: number, userId: number): Observable<ApiResponse<CaseTask>> {
+    return this.http.patch<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${taskId}/assign/${userId}`,
+      {}
+    );
+  }
+
+  addComment(taskId: number, comment: string): Observable<ApiResponse<TaskComment>> {
+    return this.http.post<ApiResponse<TaskComment>>(
+      `${this.apiUrl}/tasks/${taskId}/comments`,
+      { comment }
+    );
+  }
+
+  // Task Dependencies
+  addDependency(taskId: number, dependsOnTaskId: number): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/tasks/${taskId}/dependencies/${dependsOnTaskId}`,
+      {}
+    );
+  }
+
+  removeDependency(taskId: number, dependsOnTaskId: number): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(
+      `${this.apiUrl}/tasks/${taskId}/dependencies/${dependsOnTaskId}`
+    );
+  }
+
+  // Subtasks
+  createSubtask(parentTaskId: number, subtask: TaskCreateRequest): Observable<ApiResponse<CaseTask>> {
+    return this.http.post<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${parentTaskId}/subtasks`,
+      subtask
+    );
+  }
+
+  getSubtasks(parentTaskId: number): Observable<ApiResponse<CaseTask[]>> {
+    return this.http.get<ApiResponse<CaseTask[]>>(
+      `${this.apiUrl}/tasks/${parentTaskId}/subtasks`
+    );
+  }
+
+  // Task Statistics
+  getTaskStatistics(caseId: number): Observable<ApiResponse<TaskStatistics>> {
+    return this.http.get<ApiResponse<TaskStatistics>>(
+      `${this.apiUrl}/tasks/statistics/case/${caseId}`
+    );
+  }
+
+  getUserTaskStatistics(userId: number): Observable<ApiResponse<TaskStatistics>> {
+    return this.http.get<ApiResponse<TaskStatistics>>(
+      `${this.apiUrl}/tasks/statistics/user/${userId}`
+    );
+  }
+
+  // Batch Operations
+  batchUpdateStatus(taskIds: number[], status: string): Observable<ApiResponse<void>> {
+    return this.http.patch<ApiResponse<void>>(
+      `${this.apiUrl}/tasks/batch/status`,
+      { taskIds, status }
+    );
+  }
+
+  batchAssign(taskIds: number[], userId: number): Observable<ApiResponse<void>> {
+    return this.http.patch<ApiResponse<void>>(
+      `${this.apiUrl}/tasks/batch/assign`,
+      { taskIds, userId }
+    );
+  }
+}

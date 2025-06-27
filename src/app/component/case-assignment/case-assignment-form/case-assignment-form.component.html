@@ -1,0 +1,79 @@
+<div class="case-assignment-form">
+  <form [formGroup]="assignmentForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label>Select User <span class="text-danger">*</span></label>
+      <select class="form-control" formControlName="userId" 
+              [class.is-invalid]="isFieldInvalid('userId')">
+        <option value="">-- Select User --</option>
+        <option *ngFor="let user of availableUsers" [value]="user.id">
+          {{user.firstName}} {{user.lastName}} ({{user.email}})
+        </option>
+      </select>
+      <div class="invalid-feedback" *ngIf="isFieldInvalid('userId')">
+        {{getFieldError('userId')}}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Role Type <span class="text-danger">*</span></label>
+      <select class="form-control" formControlName="roleType"
+              [class.is-invalid]="isFieldInvalid('roleType')">
+        <option *ngFor="let role of roleTypes" [value]="role">
+          {{getRoleDisplayName(role)}}
+        </option>
+      </select>
+      <div class="invalid-feedback" *ngIf="isFieldInvalid('roleType')">
+        {{getFieldError('roleType')}}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Effective From <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" formControlName="effectiveFrom"
+                 [class.is-invalid]="isFieldInvalid('effectiveFrom')">
+          <div class="invalid-feedback" *ngIf="isFieldInvalid('effectiveFrom')">
+            {{getFieldError('effectiveFrom')}}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Effective To</label>
+          <input type="date" class="form-control" formControlName="effectiveTo">
+          <small class="form-text text-muted">Leave blank for indefinite assignment</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Workload Weight <span class="text-danger">*</span></label>
+      <input type="number" class="form-control" formControlName="workloadWeight"
+             step="0.1" min="0.1" max="5"
+             [class.is-invalid]="isFieldInvalid('workloadWeight')">
+      <small class="form-text text-muted">
+        Adjust workload weight based on case complexity (1.0 = standard, higher = more complex)
+      </small>
+      <div class="invalid-feedback" *ngIf="isFieldInvalid('workloadWeight')">
+        {{getFieldError('workloadWeight')}}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea class="form-control" formControlName="notes" rows="3"
+                placeholder="Add any notes about this assignment..."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading || assignmentForm.invalid">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm mr-2"></span>
+        {{assignment ? 'Update' : 'Assign'}} User
+      </button>
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">
+        Cancel
+      </button>
+    </div>
+  </form>
+</div>

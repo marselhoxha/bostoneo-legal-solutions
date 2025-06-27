@@ -1,0 +1,687 @@
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs';
+import { DndDropEvent } from 'ngx-drag-drop';
+import Swal from 'sweetalert2';
+
+// Services
+import { CaseTaskService } from '../../../service/case-task.service';
+import { UserService } from '../../../service/user.service';
+import { NotificationService } from '../../../service/notification.service';
+
+// Interfaces
+import { CaseTask, TaskStatus, TaskPriority, TaskType, TaskCreateRequest } from '../../../interface/case-task';
+import { User } from '../../../interface/user';
+
+@Component({
+  selector: 'app-task-management',
+  templateUrl: './task-management.component.html',
+  styleUrls: ['./task-management.component.css']
+})
+export class TaskManagementComponent implements OnInit {
+
+  // Bread crumb items
+  breadCrumbItems: Array<{}> = [];
+  
+  // Task lists for Kanban board
+  unassignedTasks: CaseTask[] = [];
+  todoTasks: CaseTask[] = [];
+  inprogressTasks: CaseTask[] = [];
+  reviewsTasks: CaseTask[] = [];
+  completedTasks: CaseTask[] = [];
+  
+  // All tasks and filtered tasks
+  allTasks: CaseTask[] = [];
+  
+  // Form and modal properties
+  taskForm: FormGroup;
+  showTaskModal = false;
+  isEditMode = false;
+  selectedTask: CaseTask | null = null;
+  
+  // Search and filter
+  searchTerm = '';
+  
+  // Loading states
+  loading = {
+    tasks: false,
+    submit: false
+  };
+  
+  // Users and options
+  availableUsers: User[] = [];
+  taskTypes: string[] = ['RESEARCH', 'DOCUMENTATION', 'COURT_FILING', 'CLIENT_MEETING', 'CASE_REVIEW', 'OTHER'];
+  taskStatuses: string[] = ['TODO', 'IN_PROGRESS', 'REVIEW', 'COMPLETED', 'CANCELLED'];
+  
+  // Current case ID
+  currentCaseId: number | null = null;
+  
+  // Current user
+  currentUser: User | null = null;
+
+  constructor(
+    private fb: FormBuilder,
+    private route: ActivatedRoute,
+    private caseTaskService: CaseTaskService,
+    private userService: UserService,
+    private notificationService: NotificationService
+  ) {
+    this.taskForm = this.createTaskForm();
+  }
+
+  ngOnInit(): void {
+    console.log('🎬 TaskManagementComponent - ngOnInit started');
+    
+    this.breadCrumbItems = [
+      { label: 'Tasks' },
+      { label: 'Kanban Board', active: true }
+    ];
+
+    // Get current user
+    this.userService.userData$.subscribe(user => {
+      console.log('👤 Current user received:', user);
+      if (user) {
+        this.currentUser = user;
+        console.log('✅ Current user set:', this.currentUser);
+      } else {
+        console.warn('⚠️ No user data received from userService');
+      }
+    });
+
+    // Check authentication state
+    const token = localStorage.getItem('[KEY] TOKEN');
+    console.log('🔐 Authentication check:', {
+      hasToken: !!token,
+      tokenLength: token?.length || 0,
+      tokenPreview: token ? token.substring(0, 50) + '...' : 'No token found'
+    });
+
+    // Check if caseId is provided in route
+    this.route.params.subscribe(params => {
+      console.log('🛤️ Route params received:', params);
+      
+      if (params['caseId']) {
+        this.currentCaseId = +params['caseId'];
+        console.log('📁 Case-specific view - caseId:', this.currentCaseId);
+        this.taskForm.patchValue({ caseId: this.currentCaseId });
+        this.loadTasksForCase(this.currentCaseId);
+      } else {
+        this.currentCaseId = null;
+        console.log('📂 All tasks view - no specific case');
+        // Load all tasks across all cases
+        this.loadAllTasks();
+      }
+    });
+    
+    console.log('🎬 TaskManagementComponent - ngOnInit completed');
+  }
+
+  /**
+   * Create task form
+   */
+  private createTaskForm(): FormGroup {
+    return this.fb.group({
+      title: ['', [Validators.required, Validators.minLength(3)]],
+      description: [''],
+      taskType: ['RESEARCH', Validators.required],
+      priority: ['MEDIUM', Validators.required],
+      status: ['TODO', Validators.required],
+      dueDate: [''],
+      estimatedHours: [0, [Validators.min(0)]],
+      tags: [''],
+      caseId: [1, Validators.required] // Default case ID for now
+    });
+  }
+
+  /**
+   * Load tasks for a specific case
+   */
+  private loadTasksForCase(caseId: number): void {
+    console.log('🚀 TaskManagementComponent - loadTasksForCase called with caseId:', caseId);
+    this.loading.tasks = true;
+    
+    console.log('📡 Making API call to get tasks for case:', caseId);
+    this.caseTaskService.getTasksByCaseId(caseId).subscribe({
+      next: (response) => {
+        console.log('✅ TaskManagementComponent - API Response received:', response);
+        console.log('📊 Response structure analysis:');
+        console.log('  - response:', !!response);
+        console.log('  - response.data:', !!response.data);
+        console.log('  - response.data.tasks:', !!response.data?.tasks);
+        console.log('  - response.data.tasks.content:', !!response.data?.tasks?.content);
+        console.log('  - response.data.content:', !!response.data?.content);
+        
+        // Handle paginated response
+        if (response.data && response.data.tasks && response.data.tasks.content) {
+          console.log('📝 Using response.data.tasks.content - found', response.data.tasks.content.length, 'tasks');
+          this.allTasks = response.data.tasks.content;
+        } else if (response.data && response.data.content) {
+          console.log('📝 Using response.data.content - found', response.data.content.length, 'tasks');
+          this.allTasks = response.data.content;
+        } else if (response.data && Array.isArray(response.data)) {
+          console.log('📝 Using response.data array - found', response.data.length, 'tasks');
+          this.allTasks = response.data;
+        } else {
+          console.warn('⚠️ No recognizable task data structure found in response');
+          console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+          this.allTasks = [];
+        }
+        
+        console.log('📋 All tasks after processing:', this.allTasks);
+        console.log('📊 Total tasks loaded:', this.allTasks.length);
+        
+        this.filterTasksByStatus();
+        this.loading.tasks = false;
+        
+        console.log('🎯 Tasks after filtering by status:');
+        console.log('  - unassignedTasks:', this.unassignedTasks.length);
+        console.log('  - todoTasks:', this.todoTasks.length);
+        console.log('  - inprogressTasks:', this.inprogressTasks.length);
+        console.log('  - reviewsTasks:', this.reviewsTasks.length);
+        console.log('  - completedTasks:', this.completedTasks.length);
+      },
+      error: (error) => {
+        console.error('❌ TaskManagementComponent - Error loading tasks:', error);
+        console.error('📊 Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          error: error.error,
+          url: error.url
+        });
+        
+        // Check if it's a token/auth issue
+        const token = localStorage.getItem('[KEY] TOKEN');
+        console.log('🔐 Token check:', {
+          hasToken: !!token,
+          tokenLength: token?.length || 0,
+          tokenPreview: token ? token.substring(0, 50) + '...' : 'No token'
+        });
+        
+        // More specific error messages
+        if (error.status === 401) {
+          console.error('🚫 Authentication required - redirecting to login might be needed');
+          this.notificationService.onError('Authentication required. Please log in.');
+        } else if (error.status === 403) {
+          console.error('🚫 Permission denied for viewing tasks');
+          this.notificationService.onError('You do not have permission to view these tasks.');
+        } else if (error.status === 404) {
+          console.error('🚫 Case not found');
+          this.notificationService.onError('Case not found.');
+        } else if (error.status === 0) {
+          console.error('🌐 Network error - backend might be down');
+          this.notificationService.onError('Network error. Please check if the backend is running.');
+        } else {
+          console.error('🚫 General error loading tasks');
+          this.notificationService.onError('Error loading tasks. Please try again.');
+        }
+        
+        this.allTasks = [];
+        this.filterTasksByStatus();
+        this.loading.tasks = false;
+      }
+    });
+
+    this.loadUsers();
+  }
+
+  /**
+   * Load all tasks across all cases
+   */
+  private loadAllTasks(): void {
+    console.log('🚀 TaskManagementComponent - loadAllTasks called');
+    this.loading.tasks = true;
+    
+    console.log('📡 Making API call to get all tasks');
+    this.caseTaskService.getAllTasks().subscribe({
+      next: (response) => {
+        console.log('✅ TaskManagementComponent - API Response received for all tasks:', response);
+        console.log('📊 Response structure analysis:');
+        console.log('  - response:', !!response);
+        console.log('  - response.data:', !!response.data);
+        console.log('  - response.data.tasks:', !!response.data?.tasks);
+        console.log('  - response.data.tasks.content:', !!response.data?.tasks?.content);
+        console.log('  - response.data.content:', !!response.data?.content);
+        
+        // Handle paginated response
+        if (response.data && response.data.tasks && response.data.tasks.content) {
+          console.log('📝 Using response.data.tasks.content - found', response.data.tasks.content.length, 'tasks');
+          this.allTasks = response.data.tasks.content;
+        } else if (response.data && response.data.content) {
+          console.log('📝 Using response.data.content - found', response.data.content.length, 'tasks');
+          this.allTasks = response.data.content;
+        } else if (response.data && Array.isArray(response.data)) {
+          console.log('📝 Using response.data array - found', response.data.length, 'tasks');
+          this.allTasks = response.data;
+        } else {
+          console.warn('⚠️ No recognizable task data structure found in response');
+          console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+          this.allTasks = [];
+        }
+        
+        console.log('📋 All tasks after processing:', this.allTasks);
+        console.log('📊 Total tasks loaded:', this.allTasks.length);
+        
+        this.filterTasksByStatus();
+        this.loading.tasks = false;
+        
+        console.log('🎯 Tasks after filtering by status:');
+        console.log('  - unassignedTasks:', this.unassignedTasks.length);
+        console.log('  - todoTasks:', this.todoTasks.length);
+        console.log('  - inprogressTasks:', this.inprogressTasks.length);
+        console.log('  - reviewsTasks:', this.reviewsTasks.length);
+        console.log('  - completedTasks:', this.completedTasks.length);
+      },
+      error: (error) => {
+        console.error('❌ TaskManagementComponent - Error loading all tasks:', error);
+        console.error('📊 Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          error: error.error,
+          url: error.url
+        });
+        
+        // Check if it's a token/auth issue
+        const token = localStorage.getItem('[KEY] TOKEN');
+        console.log('🔐 Token check:', {
+          hasToken: !!token,
+          tokenLength: token?.length || 0,
+          tokenPreview: token ? token.substring(0, 50) + '...' : 'No token'
+        });
+        
+        // More specific error messages
+        if (error.status === 401) {
+          console.error('🚫 Authentication required');
+          this.notificationService.onError('Authentication required. Please log in.');
+        } else if (error.status === 403) {
+          console.error('🚫 Permission denied for viewing tasks');
+          this.notificationService.onError('You do not have permission to view tasks.');
+        } else if (error.status === 0) {
+          console.error('🌐 Network error - backend might be down');
+          this.notificationService.onError('Network error. Please check if the backend is running.');
+        } else {
+          console.error('🚫 General error loading tasks');
+          this.notificationService.onError('Error loading tasks. Please try again.');
+        }
+        
+        this.allTasks = [];
+        this.filterTasksByStatus();
+        this.loading.tasks = false;
+      }
+    });
+    
+    this.loadUsers();
+  }
+
+  /**
+   * Load users
+   */
+  private loadUsers(): void {
+    this.userService.getUsers().subscribe({
+      next: (response) => {
+        // Handle both paginated and non-paginated responses
+        if (response.data && response.data.content) {
+          this.availableUsers = response.data.content;
+        } else if (response.data && Array.isArray(response.data)) {
+          this.availableUsers = response.data;
+        } else {
+          this.availableUsers = [];
+        }
+      },
+      error: (error) => {
+        console.error('Error loading users:', error);
+        this.availableUsers = [];
+      }
+    });
+  }
+
+  /**
+   * Filter tasks by status for Kanban columns
+   */
+  private filterTasksByStatus(): void {
+    console.log('🔍 FilterTasksByStatus called with allTasks:', this.allTasks);
+    console.log('📊 Total tasks to filter:', this.allTasks.length);
+    
+    // Log sample task data
+    if (this.allTasks.length > 0) {
+      console.log('📝 Sample task data:', {
+        firstTask: this.allTasks[0],
+        taskStatuses: this.allTasks.map(t => t.status),
+        taskAssignments: this.allTasks.map(t => ({ id: t.id, assignedToId: t.assignedToId }))
+      });
+    }
+    
+    this.unassignedTasks = this.allTasks.filter(t => !t.assignedToId);
+    this.todoTasks = this.allTasks.filter(t => t.status === TaskStatus.TODO && t.assignedToId);
+    this.inprogressTasks = this.allTasks.filter(t => t.status === TaskStatus.IN_PROGRESS);
+    this.reviewsTasks = this.allTasks.filter(t => t.status === TaskStatus.REVIEW);
+    this.completedTasks = this.allTasks.filter(t => t.status === TaskStatus.COMPLETED);
+    
+    console.log('🎯 Filtering results:');
+    console.log('  - Unassigned tasks:', this.unassignedTasks.length, this.unassignedTasks);
+    console.log('  - TODO tasks:', this.todoTasks.length, this.todoTasks);
+    console.log('  - In Progress tasks:', this.inprogressTasks.length, this.inprogressTasks);
+    console.log('  - Review tasks:', this.reviewsTasks.length, this.reviewsTasks);
+    console.log('  - Completed tasks:', this.completedTasks.length, this.completedTasks);
+    
+    // Check TaskStatus enum values
+    console.log('🏷️ TaskStatus enum check:', {
+      TODO: TaskStatus.TODO,
+      IN_PROGRESS: TaskStatus.IN_PROGRESS,
+      REVIEW: TaskStatus.REVIEW,
+      COMPLETED: TaskStatus.COMPLETED
+    });
+  }
+
+  /**
+   * Track by function for ngFor
+   */
+  trackByFn(index: number, item: CaseTask): any {
+    return item.id || index;
+  }
+
+  /**
+   * On task dragged from list
+   */
+  onDragged(item: CaseTask, list: CaseTask[]): void {
+    const index = list.indexOf(item);
+    if (index > -1) {
+      list.splice(index, 1);
+    }
+  }
+
+  /**
+   * On task dropped to new list
+   */
+  onDrop(event: DndDropEvent, filteredList: CaseTask[], targetStatus: string): void {
+    if (filteredList && event.dropEffect === 'move') {
+      let index = event.index;
+
+      if (typeof index === 'undefined') {
+        index = filteredList.length;
+      }
+
+      const task = event.data as CaseTask;
+      
+      // Update task status based on target column
+      const updatedTask = { ...task };
+      
+      switch (targetStatus) {
+        case 'TODO':
+          updatedTask.status = 'TODO' as TaskStatus;
+          break;
+        case 'IN_PROGRESS':
+          updatedTask.status = 'IN_PROGRESS' as TaskStatus;
+          break;
+        case 'REVIEW':
+          updatedTask.status = 'REVIEW' as TaskStatus;
+          break;
+        case 'COMPLETED':
+          updatedTask.status = 'COMPLETED' as TaskStatus;
+          break;
+      }
+
+      // Add to new list
+      filteredList.splice(index, 0, updatedTask);
+
+      // Update task in backend
+      this.updateTaskStatus(updatedTask);
+    }
+  }
+
+  /**
+   * Update task status in backend
+   */
+  private updateTaskStatus(task: CaseTask): void {
+    if (!task.id) return;
+
+    this.caseTaskService.updateTaskStatus(task.id, task.status).subscribe({
+      next: (response) => {
+        this.notificationService.onSuccess('Task status updated successfully');
+        // Update the task in allTasks array
+        const index = this.allTasks.findIndex(t => t.id === task.id);
+        if (index > -1) {
+          this.allTasks[index] = { ...response.data };
+        }
+      },
+      error: (error) => {
+        console.error('Error updating task status:', error);
+        this.notificationService.onError('Error updating task status');
+        // Reload data to revert changes
+        // Reload tasks based on current context
+        if (this.currentCaseId) {
+          this.loadTasksForCase(this.currentCaseId);
+        } else {
+          this.loadAllTasks();
+        }
+      }
+    });
+  }
+
+  /**
+   * Open create task modal
+   */
+  openCreateTaskModal(): void {
+    this.isEditMode = false;
+    this.selectedTask = null;
+    this.taskForm.reset({
+      taskType: 'RESEARCH',
+      priority: 'MEDIUM',
+      status: 'TODO',
+      estimatedHours: 0,
+      caseId: 1
+    });
+    this.showTaskModal = true;
+  }
+
+  /**
+   * Open edit task modal
+   */
+  openEditTaskModal(task: CaseTask): void {
+    this.isEditMode = true;
+    this.selectedTask = task;
+    
+    this.taskForm.patchValue({
+      title: task.title,
+      description: task.description,
+      taskType: task.taskType,
+      priority: task.priority,
+      status: task.status,
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+      estimatedHours: task.estimatedHours,
+      tags: task.tags?.join(', ') || '',
+      caseId: task.caseId
+    });
+    
+    this.showTaskModal = true;
+  }
+
+  /**
+   * Close task modal
+   */
+  closeTaskModal(): void {
+    this.showTaskModal = false;
+    this.isEditMode = false;
+    this.selectedTask = null;
+    this.taskForm.reset();
+  }
+
+  /**
+   * Save task (create or update)
+   */
+  saveTask(): void {
+    if (this.taskForm.invalid) {
+      this.markFormGroupTouched();
+      return;
+    }
+
+    this.loading.submit = true;
+    const formValue = this.taskForm.value;
+    
+    if (this.isEditMode && this.selectedTask?.id) {
+      // For updates, use TaskUpdateRequest
+      const updateData = {
+        title: formValue.title,
+        description: formValue.description,
+        taskType: formValue.taskType as TaskType,
+        priority: formValue.priority as TaskPriority,
+        status: formValue.status as TaskStatus,
+        dueDate: formValue.dueDate ? new Date(formValue.dueDate) : undefined,
+        estimatedHours: formValue.estimatedHours,
+        tags: formValue.tags ? formValue.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag) : []
+      };
+
+      this.caseTaskService.updateTask(this.selectedTask.id, updateData).subscribe({
+        next: (response) => {
+          this.notificationService.onSuccess('Task updated successfully');
+          this.closeTaskModal();
+          // Reload tasks based on current context
+        if (this.currentCaseId) {
+          this.loadTasksForCase(this.currentCaseId);
+        } else {
+          this.loadAllTasks();
+        }
+          this.loading.submit = false;
+        },
+        error: (error) => {
+          console.error('Error updating task:', error);
+          this.notificationService.onError('Error updating task');
+          this.loading.submit = false;
+        }
+      });
+    } else {
+      // For creation, use TaskCreateRequest (without status)
+      const createData: TaskCreateRequest = {
+        title: formValue.title,
+        description: formValue.description,
+        taskType: formValue.taskType as TaskType,
+        priority: formValue.priority as TaskPriority,
+        dueDate: formValue.dueDate ? new Date(formValue.dueDate) : undefined,
+        estimatedHours: formValue.estimatedHours,
+        tags: formValue.tags ? formValue.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag) : [],
+        caseId: formValue.caseId
+      };
+
+      this.caseTaskService.createTask(createData).subscribe({
+        next: (response) => {
+          this.notificationService.onSuccess('Task created successfully');
+          this.closeTaskModal();
+          // Reload tasks based on current context
+        if (this.currentCaseId) {
+          this.loadTasksForCase(this.currentCaseId);
+        } else {
+          this.loadAllTasks();
+        }
+          this.loading.submit = false;
+        },
+        error: (error) => {
+          console.error('Error creating task:', error);
+          this.notificationService.onError('Error creating task');
+          this.loading.submit = false;
+        }
+      });
+    }
+  }
+
+  /**
+   * Mark all form fields as touched
+   */
+  private markFormGroupTouched(): void {
+    Object.keys(this.taskForm.controls).forEach(key => {
+      const control = this.taskForm.get(key);
+      if (control) {
+        control.markAsTouched();
+      }
+    });
+  }
+
+  /**
+   * Check if form field is invalid
+   */
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.taskForm.get(fieldName);
+    return !!(field && field.invalid && (field.dirty || field.touched));
+  }
+
+  /**
+   * Get field error message
+   */
+  getFieldError(fieldName: string): string {
+    const field = this.taskForm.get(fieldName);
+    if (field && field.errors) {
+      if (field.errors['required']) {
+        return `${fieldName} is required`;
+      }
+      if (field.errors['minlength']) {
+        return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
+      }
+      if (field.errors['min']) {
+        return `${fieldName} must be greater than or equal to ${field.errors['min'].min}`;
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Get task progress percentage
+   */
+  getTaskProgress(task: CaseTask): number {
+    if (task.status === TaskStatus.COMPLETED) return 100;
+    if (task.status === TaskStatus.IN_PROGRESS) return 50;
+    if (task.status === TaskStatus.REVIEW) return 75;
+    return 0;
+  }
+
+  /**
+   * Format date for display
+   */
+  formatDate(date: Date | string | undefined): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString();
+  }
+
+  /**
+   * Confirmation dialog for task deletion
+   */
+  confirm(event: Event, task: CaseTask): void {
+    event.preventDefault();
+    
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Are you sure you want to remove this task?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f46a6a',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Close'
+    }).then(result => {
+      if (result.value && task.id) {
+        this.deleteTask(task.id);
+      }
+    });
+  }
+
+  /**
+   * Delete task
+   */
+  private deleteTask(taskId: number): void {
+    this.caseTaskService.deleteTask(taskId).subscribe({
+      next: (response) => {
+        this.notificationService.onSuccess('Task deleted successfully');
+        // Reload tasks based on current context
+        if (this.currentCaseId) {
+          this.loadTasksForCase(this.currentCaseId);
+        } else {
+          this.loadAllTasks();
+        } // Reload data
+      },
+      error: (error) => {
+        console.error('Error deleting task:', error);
+        this.notificationService.onError('Error deleting task');
+      }
+    });
+  }
+}

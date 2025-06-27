@@ -1,0 +1,529 @@
+<!-- Start Breadcrumbs -->
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0 fw-bold">Kanban Board</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="javascript: void(0);">Tasks</a></li>
+          <li class="breadcrumb-item active">Kanban Board</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End Breadcrumbs -->
+
+<div class="card" >
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-lg-auto">
+                <div class="hstack gap-2">
+                    <button class="btn btn-primary" (click)="openCreateTaskModal()"><i class="ri-add-line align-bottom me-1"></i> Create Task</button>
+                </div>
+            </div><!--end col-->
+            <div class="col-lg-3 col-auto">
+                <div class="search-box">
+                    <input type="text" class="form-control search" placeholder="Search for project, tasks..." [(ngModel)]="searchTerm">
+                    <i class="ri-search-line search-icon"></i>
+                </div>
+            </div>
+            <div class="col-auto ms-sm-auto">
+                <div class="avatar-group" id="newMembar">
+                    <a href="javascript:void(0);" class="avatar-group-item" ngbTooltip="{{user.firstName}} {{user.lastName}}" placement="top" *ngFor="let user of availableUsers.slice(0, 5)">
+                        <img [src]="user.imageUrl || 'assets/images/users/avatar-1.jpg'" alt="" class="rounded-circle avatar-xs">
+                    </a>
+                    <a class="avatar-group-item" *ngIf="availableUsers.length > 5">
+                        <div class="avatar-xs">
+                            <div class="avatar-title rounded-circle">
+                                +{{ availableUsers.length - 5 }}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div><!--end col-->
+        </div><!--end row-->
+    </div><!--end card-body-->
+</div><!--end card-->
+
+<div class="tasks-board mb-3" id="kanbanboard">
+    <div class="tasks-list">
+        <div class="d-flex mb-3">
+            <div class="flex-grow-1">
+                <h6 class="fs-14 text-uppercase fw-semibold mb-0">Unassigned <small class="badge bg-success align-bottom ms-1">{{ unassignedTasks.length }}</small></h6>
+            </div>
+            <div class="flex-shrink-0">
+                <div class="dropdown card-header-dropdown" ngbDropdown>
+                    <a class="text-reset dropdown-btn arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="fw-medium text-muted fs-14">Priority<i class="mdi mdi-chevron-down ms-1"></i></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <a class="dropdown-item" href="javascript:void(0);">Priority</a>
+                        <a class="dropdown-item" href="javascript:void(0);">Date Added</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tasklist-content" style="max-height: 400px; overflow-y: auto;">
+            <div id="unassigned-task" class="tasks" [dndDropzone] dndEffectAllowed="move" (dndDrop)="onDrop($event, unassignedTasks,'TODO')">
+                <div class="dndPlaceholder" dndPlaceholderRef></div>
+                <ng-container *ngFor="let task of unassignedTasks; trackBy: trackByFn">
+                    <div [dndDraggable]="task" dndEffectAllowed="move" (dndMoved)="onDragged(task, unassignedTasks)">
+                        <ng-container *ngTemplateOutlet="TaskContent; context: { task: task }"></ng-container>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+        <div class="my-3">
+            <button class="btn btn-soft-info w-100" (click)="openCreateTaskModal()">Add More</button>
+        </div>
+    </div><!--end tasks-list-->
+    
+    <div class="tasks-list">
+        <div class="d-flex mb-3">
+            <div class="flex-grow-1">
+                <h6 class="fs-14 text-uppercase fw-semibold mb-0">To Do <small class="badge bg-secondary align-bottom ms-1">{{ todoTasks.length }}</small></h6>
+            </div>
+            <div class="flex-shrink-0">
+                <div class="dropdown card-header-dropdown" ngbDropdown>
+                    <a class="text-reset dropdown-btn arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="fw-medium text-muted fs-14">Priority<i class="mdi mdi-chevron-down ms-1"></i></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <a class="dropdown-item" href="javascript:void(0);">Priority</a>
+                        <a class="dropdown-item" href="javascript:void(0);">Date Added</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tasklist-content" style="max-height: 400px; overflow-y: auto;">
+            <div id="todo-task" class="tasks" [dndDropzone] dndEffectAllowed="move" (dndDrop)="onDrop($event, todoTasks,'TODO')">
+                <div class="dndPlaceholder" dndPlaceholderRef></div>
+                <ng-container *ngFor="let task of todoTasks; trackBy: trackByFn">
+                    <div [dndDraggable]="task" dndEffectAllowed="move" (dndMoved)="onDragged(task, todoTasks)">
+                        <ng-container *ngTemplateOutlet="TaskContent; context: { task: task }"></ng-container>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+        <div class="my-3">
+            <button class="btn btn-soft-info w-100" (click)="openCreateTaskModal()">Add More</button>
+        </div>
+    </div><!--end tasks-list-->
+    
+    <div class="tasks-list">
+        <div class="d-flex mb-3">
+            <div class="flex-grow-1">
+                <h6 class="fs-14 text-uppercase fw-semibold mb-0">Inprogress <small class="badge bg-warning align-bottom ms-1">{{ inprogressTasks.length }}</small></h6>
+            </div>
+            <div class="flex-shrink-0">
+                <div class="dropdown card-header-dropdown" ngbDropdown>
+                    <a class="text-reset dropdown-btn arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="fw-medium text-muted fs-14">Priority<i class="mdi mdi-chevron-down ms-1"></i></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <a class="dropdown-item" href="javascript:void(0);">Priority</a>
+                        <a class="dropdown-item" href="javascript:void(0);">Date Added</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tasklist-content" style="max-height: 400px; overflow-y: auto;">
+            <div id="inprogress-task" class="tasks" [dndDropzone] dndEffectAllowed="move" (dndDrop)="onDrop($event, inprogressTasks,'IN_PROGRESS')">
+                <div class="dndPlaceholder" dndPlaceholderRef></div>
+                <ng-container *ngFor="let task of inprogressTasks; trackBy: trackByFn">
+                    <div [dndDraggable]="task" dndEffectAllowed="move" (dndMoved)="onDragged(task, inprogressTasks)">
+                        <ng-container *ngTemplateOutlet="TaskInProgressContent; context: { task: task }"></ng-container>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+        <div class="my-3">
+            <button class="btn btn-soft-info w-100" (click)="openCreateTaskModal()">Add More</button>
+        </div>
+    </div><!--end tasks-list-->
+    
+    <div class="tasks-list">
+        <div class="d-flex mb-3">
+            <div class="flex-grow-1">
+                <h6 class="fs-14 text-uppercase fw-semibold mb-0">In Reviews <small class="badge bg-info align-bottom ms-1">{{ reviewsTasks.length }}</small></h6>
+            </div>
+            <div class="flex-shrink-0">
+                <div class="dropdown card-header-dropdown" ngbDropdown>
+                    <a class="text-reset dropdown-btn arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="fw-medium text-muted fs-14">Priority<i class="mdi mdi-chevron-down ms-1"></i></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <a class="dropdown-item" href="javascript:void(0);">Priority</a>
+                        <a class="dropdown-item" href="javascript:void(0);">Date Added</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tasklist-content" style="max-height: 400px; overflow-y: auto;">
+            <div id="reviews-task" class="tasks" [dndDropzone] dndEffectAllowed="move" (dndDrop)="onDrop($event, reviewsTasks,'REVIEW')">
+                <div class="dndPlaceholder" dndPlaceholderRef></div>
+                <ng-container *ngFor="let task of reviewsTasks; trackBy: trackByFn">
+                    <div [dndDraggable]="task" dndEffectAllowed="move" (dndMoved)="onDragged(task, reviewsTasks)">
+                        <ng-container *ngTemplateOutlet="TaskInReviewsContent; context: { task: task }"></ng-container>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+        <div class="my-3">
+            <button class="btn btn-soft-info w-100" (click)="openCreateTaskModal()">Add More</button>
+        </div>
+    </div><!--end tasks-list-->
+    
+    <div class="tasks-list">
+        <div class="d-flex mb-3">
+            <div class="flex-grow-1">
+                <h6 class="fs-14 text-uppercase fw-semibold mb-0">Completed <small class="badge bg-success align-bottom ms-1">{{ completedTasks.length }}</small></h6>
+            </div>
+            <div class="flex-shrink-0">
+                <div class="dropdown card-header-dropdown" ngbDropdown>
+                    <a class="text-reset dropdown-btn arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                        <span class="fw-medium text-muted fs-14">Priority<i class="mdi mdi-chevron-down ms-1"></i></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <a class="dropdown-item" href="javascript:void(0);">Priority</a>
+                        <a class="dropdown-item" href="javascript:void(0);">Date Added</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tasklist-content" style="max-height: 400px; overflow-y: auto;">
+            <div id="completed-task" class="tasks" [dndDropzone] dndEffectAllowed="move" (dndDrop)="onDrop($event, completedTasks,'COMPLETED')">
+                <div class="dndPlaceholder" dndPlaceholderRef></div>
+                <ng-container *ngFor="let task of completedTasks; trackBy: trackByFn">
+                    <div [dndDraggable]="task" dndEffectAllowed="move" (dndMoved)="onDragged(task, completedTasks)">
+                        <ng-container *ngTemplateOutlet="TaskContent; context: { task: task }"></ng-container>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+        <div class="my-3">
+            <button class="btn btn-soft-info w-100" (click)="openCreateTaskModal()">Add More</button>
+        </div>
+    </div><!--end tasks-list-->
+</div><!--end task-board-->
+
+<div id="elmLoader" [class.d-none]="!loading.tasks">
+    <div class="spinner-border text-primary avatar-sm" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+<!-- Task Templates -->
+<!-- Default Task Content -->
+<ng-template #TaskContent let-task='task'>
+    <div class="card tasks-box">
+        <div class="card-body">
+            <div class="d-flex mb-2">
+                <h6 class="fs-15 mb-0 flex-grow-1 text-truncate"><a href="javascript:void(0);">{{ task.title }}</a></h6>
+                <div class="dropdown" ngbDropdown>
+                    <a href="javascript:void(0);" class="text-muted arrow-none" data-bs-toggle="dropdown" aria-expanded="false" ngbDropdownToggle>
+                        <i class="ri-more-fill"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-edit-2-line align-bottom me-2 text-muted"></i> Edit</a></li>
+                        <li><a class="dropdown-item" (click)="confirm($event, task)">
+                            <i class="ri-delete-bin-5-line align-bottom me-2 text-muted"></i> Delete</a></li>
+                    </ul>
+                </div>
+            </div>
+            <p class="text-muted">{{ task.description }}</p>
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="d-flex gap-1">
+                        <span class="badge bg-primary-subtle text-primary" *ngFor="let tag of task.tags?.slice(0, 2)">{{ tag }}</span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    <div class="avatar-group" *ngIf="task.assignedToName">
+                        <a href="javascript:void(0);" class="avatar-group-item" ngbTooltip="{{ task.assignedToName }}" placement="top">
+                            <div class="avatar-xxs">
+                                <div class="avatar-title rounded-circle bg-primary text-white">
+                                    {{ task.assignedToName.charAt(0).toUpperCase() }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer border-top-dashed">
+            <div class="d-flex">
+                <div class="flex-grow-1">
+                    <span class="text-muted" *ngIf="task.dueDate">
+                        <i class="ri-time-line align-bottom"></i> {{ formatDate(task.dueDate) }}
+                    </span>
+                </div>
+                <div class="flex-shrink-0">
+                    <ul class="link-inline mb-0">
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-eye-line align-bottom"></i> 0
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-question-answer-line align-bottom"></i> {{ task.comments?.length || 0 }}
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-attachment-2 align-bottom"></i> 0
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div><!--end card-footer-->
+    </div><!--end card-->
+</ng-template>
+
+<!-- InProgress Task Content -->
+<ng-template #TaskInProgressContent let-task='task'>
+    <div class="card tasks-box">
+        <div class="card-body">
+            <div class="d-flex mb-2">
+                <a href="javascript:void(0)" class="text-muted fw-medium fs-14 flex-grow-1">#{{ task.id || 'TASK' }}</a>
+                <div class="dropdown dropdown-menu-end" ngbDropdown>
+                    <a href="javascript:void(0);" class="text-muted arrow-none" data-bs-toggle="dropdown" aria-expanded="false" ngbDropdownToggle>
+                        <i class="ri-more-fill"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-edit-2-line align-bottom me-2 text-muted"></i> Edit</a></li>
+                        <li><a class="dropdown-item" (click)="confirm($event, task)">
+                            <i class="ri-delete-bin-5-line align-bottom me-2 text-muted"></i> Delete</a></li>
+                    </ul>
+                </div>
+            </div>
+            <h6 class="fs-15 text-truncate"><a href="javascript:void(0);">{{ task.title }}</a></h6>
+            <p class="text-muted">{{ task.description }}</p>
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="d-flex gap-1">
+                        <span class="badge bg-primary-subtle text-primary" *ngFor="let tag of task.tags?.slice(0, 2)">{{ tag }}</span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    <div class="avatar-group" *ngIf="task.assignedToName">
+                        <a href="javascript:void(0);" class="avatar-group-item" ngbTooltip="{{ task.assignedToName }}" placement="top">
+                            <div class="avatar-xxs">
+                                <div class="avatar-title rounded-circle bg-warning text-white">
+                                    {{ task.assignedToName.charAt(0).toUpperCase() }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer border-top-dashed">
+            <div class="d-flex">
+                <div class="flex-grow-1">
+                    <span class="text-muted" *ngIf="task.dueDate">
+                        <i class="ri-time-line align-bottom"></i> {{ formatDate(task.dueDate) }}
+                    </span>
+                </div>
+                <div class="flex-shrink-0">
+                    <ul class="link-inline mb-0">
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-eye-line align-bottom"></i> 0
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-question-answer-line align-bottom"></i> {{ task.comments?.length || 0 }}
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-attachment-2 align-bottom"></i> 0
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <ngb-progressbar [value]="getTaskProgress(task)" type="warning" class="progress-sm"></ngb-progressbar>
+    </div>
+</ng-template>
+
+<!-- InReviews Task Content -->
+<ng-template #TaskInReviewsContent let-task='task'>
+    <div class="card tasks-box">
+        <div class="card-body">
+            <div class="d-flex mb-2">
+                <a href="javascript:void(0)" class="text-muted fw-medium fs-14 flex-grow-1">#{{ task.id || 'TASK' }}</a>
+                <div class="dropdown" ngbDropdown>
+                    <a href="javascript:void(0);" class="text-muted arrow-none" data-bs-toggle="dropdown" aria-expanded="false" ngbDropdownToggle>
+                        <i class="ri-more-fill"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                        <li><a class="dropdown-item" (click)="openEditTaskModal(task)">
+                            <i class="ri-edit-2-line align-bottom me-2 text-muted"></i> Edit</a></li>
+                        <li><a class="dropdown-item" (click)="confirm($event, task)">
+                            <i class="ri-delete-bin-5-line align-bottom me-2 text-muted"></i> Delete</a></li>
+                    </ul>
+                </div>
+            </div>
+            <h6 class="fs-15 text-truncate"><a href="javascript:void(0);">{{ task.title }}</a></h6>
+            <p class="text-muted">{{ task.description }}</p>
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="d-flex gap-1">
+                        <span class="badge bg-primary-subtle text-primary" *ngFor="let tag of task.tags?.slice(0, 2)">{{ tag }}</span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    <div class="avatar-group" *ngIf="task.assignedToName">
+                        <a href="javascript:void(0);" class="avatar-group-item" ngbTooltip="{{ task.assignedToName }}" placement="top">
+                            <div class="avatar-xxs">
+                                <div class="avatar-title rounded-circle bg-info text-white">
+                                    {{ task.assignedToName.charAt(0).toUpperCase() }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer border-top-dashed">
+            <div class="d-flex">
+                <div class="flex-grow-1">
+                    <span class="text-muted" *ngIf="task.dueDate">
+                        <i class="ri-time-line align-bottom"></i> {{ formatDate(task.dueDate) }}
+                    </span>
+                </div>
+                <div class="flex-shrink-0">
+                    <ul class="link-inline mb-0">
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-eye-line align-bottom"></i> 0
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-question-answer-line align-bottom"></i> {{ task.comments?.length || 0 }}
+                            </a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="javascript:void(0)" class="text-muted">
+                                <i class="ri-attachment-2 align-bottom"></i> 0
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <ngb-progressbar [value]="75" type="info" class="progress-sm"></ngb-progressbar>
+    </div>
+</ng-template>
+
+<!-- Task Modal -->
+<div class="modal fade" [class.show]="showTaskModal" [style.display]="showTaskModal ? 'block' : 'none'" 
+     data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-info-subtle border-0">
+        <h5 class="modal-title fw-bold">
+          {{ isEditMode ? 'Edit Task' : 'Create New Task' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeTaskModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="taskForm" (ngSubmit)="saveTask()">
+          <div class="row g-3">
+            <div class="col-lg-8">
+              <div class="mb-3">
+                <label class="form-label">Task Title *</label>
+                <input type="text" class="form-control" formControlName="title" 
+                       placeholder="Enter task title">
+                <div class="invalid-feedback" *ngIf="isFieldInvalid('title')">
+                  {{ getFieldError('title') }}
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label">Priority</label>
+                <select class="form-select" formControlName="priority">
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-12">
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" rows="3" formControlName="description" 
+                          placeholder="Enter task description"></textarea>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <label class="form-label">Task Type</label>
+                <select class="form-select" formControlName="taskType">
+                  <option *ngFor="let type of taskTypes" [value]="type">{{ type }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" formControlName="status">
+                  <option *ngFor="let status of taskStatuses" [value]="status">{{ status }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <label class="form-label">Due Date</label>
+                <input type="date" class="form-control" formControlName="dueDate">
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <label class="form-label">Estimated Hours</label>
+                <input type="number" class="form-control" formControlName="estimatedHours" 
+                       placeholder="0.0" step="0.5" min="0">
+              </div>
+            </div>
+            <div class="col-lg-12">
+              <div class="mb-3">
+                <label class="form-label">Tags</label>
+                <input type="text" class="form-control" formControlName="tags" 
+                       placeholder="Enter tags separated by commas">
+                <div class="form-text">Separate multiple tags with commas</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeTaskModal()">Close</button>
+        <button type="button" class="btn btn-success" (click)="saveTask()" [disabled]="loading.submit">
+          <span class="spinner-border spinner-border-sm me-2" *ngIf="loading.submit"></span>
+          {{ isEditMode ? 'Update Task' : 'Create Task' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade" [class.show]="showTaskModal" *ngIf="showTaskModal"></div>

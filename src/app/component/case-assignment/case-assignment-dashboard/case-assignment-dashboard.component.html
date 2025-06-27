@@ -1,0 +1,457 @@
+<div class="case-assignment-dashboard" style="margin-top: 120px;">
+  <div class="dashboard-header">
+    <h2>Case Assignment Dashboard</h2>
+    <button class="btn btn-secondary" (click)="refreshData()">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="selectedTab === 'overview'" 
+         (click)="selectedTab = 'overview'">
+        Overview
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="selectedTab === 'assignments'" 
+         (click)="selectedTab = 'assignments'">
+        My Assignments
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="selectedTab === 'workload'" 
+         (click)="selectedTab = 'workload'">
+        Workload Analysis
+      </a>
+    </li>
+    <li class="nav-item" *ngIf="isManager()">
+      <a class="nav-link" [class.active]="selectedTab === 'team'" 
+         (click)="selectedTab = 'team'">
+        Team Management
+      </a>
+    </li>
+  </ul>
+
+  <!-- Overview Tab -->
+  <div class="tab-content" *ngIf="selectedTab === 'overview'">
+    <div class="row">
+      <!-- My Workload Card -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5>My Workload</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="loading.workload" class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+            
+            <div *ngIf="!loading.workload && myWorkload">
+              <div class="workload-metric">
+                <label>Capacity:</label>
+                <div class="progress mb-2">
+                  <div class="progress-bar" 
+                       [class]="getWorkloadPercentageClass(myWorkload.capacityPercentage)"
+                       [style.width.%]="myWorkload.capacityPercentage"
+                       role="progressbar">
+                    {{myWorkload.capacityPercentage}}%
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row text-center mt-3">
+                <div class="col-4">
+                  <div class="metric-box">
+                    <h3>{{myWorkload.activeCasesCount}}</h3>
+                    <small>Active Cases</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="metric-box">
+                    <h3>{{myWorkload.overdueTasksCount}}</h3>
+                    <small>Overdue Tasks</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="metric-box">
+                    <h3>{{myWorkload.upcomingDeadlinesCount}}</h3>
+                    <small>Upcoming Deadlines</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <span class="badge" [ngClass]="getWorkloadStatusClass(myWorkload.workloadStatus)">
+                  {{myWorkload.workloadStatus}}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Analytics Card -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5>System Analytics</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="loading.analytics" class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+            
+            <div *ngIf="!loading.analytics && workloadAnalytics">
+              <div class="row text-center">
+                <div class="col-4">
+                  <div class="metric-box">
+                    <h3>{{workloadAnalytics.totalAttorneys}}</h3>
+                    <small>Total Attorneys</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="metric-box text-success">
+                    <h3>{{workloadAnalytics.availableAttorneys}}</h3>
+                    <small>Available</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="metric-box text-danger">
+                    <h3>{{workloadAnalytics.overloadedAttorneys}}</h3>
+                    <small>Overloaded</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <label>Average Workload:</label>
+                <div class="progress">
+                  <div class="progress-bar bg-info" 
+                       [style.width.%]="workloadAnalytics.averageWorkload"
+                       role="progressbar">
+                    {{workloadAnalytics.averageWorkload}}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Assignments -->
+    <div class="card">
+      <div class="card-header">
+        <h5>Recent Assignments</h5>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading.assignments" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!loading.assignments">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Case Number</th>
+                <th>Case Title</th>
+                <th>Role</th>
+                <th>Assigned Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let assignment of myAssignments | slice:0:5">
+                <td>{{assignment.caseNumber}}</td>
+                <td>{{assignment.caseTitle}}</td>
+                <td>{{assignment.roleType}}</td>
+                <td>{{assignment.assignedAt | date:'short'}}</td>
+                <td>
+                  <span class="badge badge-success" *ngIf="assignment.active">Active</span>
+                  <span class="badge badge-secondary" *ngIf="!assignment.active">Inactive</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Assignments Tab -->
+  <div class="tab-content" *ngIf="selectedTab === 'assignments'">
+    <div class="card">
+      <div class="card-header">
+        <h5>My Case Assignments</h5>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading.assignments" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!loading.assignments">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Case Number</th>
+                <th>Case Title</th>
+                <th>Role</th>
+                <th>Assignment Type</th>
+                <th>Assigned Date</th>
+                <th>Workload Weight</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let assignment of myAssignments">
+                <td>{{assignment.caseNumber}}</td>
+                <td>{{assignment.caseTitle}}</td>
+                <td>{{assignment.roleType}}</td>
+                <td>{{assignment.assignmentType}}</td>
+                <td>{{assignment.assignedAt | date:'short'}}</td>
+                <td>{{assignment.workloadWeight}}</td>
+                <td>
+                  <span class="badge badge-success" *ngIf="assignment.active">Active</span>
+                  <span class="badge badge-secondary" *ngIf="!assignment.active">Inactive</span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary mr-1" 
+                          [routerLink]="['/cases', assignment.caseId]">
+                    View Case
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Pagination -->
+          <nav *ngIf="assignmentPage.totalElements > assignmentPage.pageSize">
+            <ul class="pagination justify-content-center">
+              <li class="page-item" [class.disabled]="assignmentPage.pageNumber === 0">
+                <a class="page-link" (click)="onPageChange(assignmentPage.pageNumber - 1)">
+                  Previous
+                </a>
+              </li>
+              <li class="page-item active">
+                <span class="page-link">
+                  Page {{assignmentPage.pageNumber + 1}}
+                </span>
+              </li>
+              <li class="page-item" 
+                  [class.disabled]="(assignmentPage.pageNumber + 1) * assignmentPage.pageSize >= assignmentPage.totalElements">
+                <a class="page-link" (click)="onPageChange(assignmentPage.pageNumber + 1)">
+                  Next
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workload Analysis Tab -->
+  <div class="tab-content" *ngIf="selectedTab === 'workload'">
+    <div class="card">
+      <div class="card-header">
+        <h5>Workload Details</h5>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading.workload" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        
+        <div *ngIf="!loading.workload && myWorkload">
+          <!-- Workload Summary -->
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="stat-card">
+                <h6>Total Workload Points</h6>
+                <h3>{{myWorkload.totalWorkloadPoints}}</h3>
+                <small>of {{myWorkload.maxCapacityPoints}} max</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <h6>Billable Hours/Week</h6>
+                <h3>{{myWorkload.billableHoursWeek || 0}}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <h6>Non-Billable Hours/Week</h6>
+                <h3>{{myWorkload.nonBillableHoursWeek || 0}}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <h6>Avg Response Time</h6>
+                <h3>{{myWorkload.averageResponseTimeHours || 0}}h</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- Case Breakdown -->
+          <h6>Case Breakdown</h6>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Case Number</th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Priority</th>
+                  <th>Role</th>
+                  <th>Workload Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let case of myWorkload.caseBreakdown">
+                  <td>{{case.caseNumber}}</td>
+                  <td>{{case.caseTitle}}</td>
+                  <td>{{case.caseType}}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getPriorityClass(case.priority)">
+                      {{case.priority}}
+                    </span>
+                  </td>
+                  <td>{{case.roleType}}</td>
+                  <td>{{case.workloadPoints}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Management Tab (Managers Only) -->
+  <div class="tab-content" *ngIf="selectedTab === 'team' && isManager()">
+    <!-- Team Workload -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5>Team Workload</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Attorney</th>
+                <th>Active Cases</th>
+                <th>Capacity</th>
+                <th>Status</th>
+                <th>Overdue Tasks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let member of teamWorkload">
+                <td>{{member.userName}}</td>
+                <td>{{member.activeCasesCount}}</td>
+                <td>
+                  <div class="progress" style="min-width: 100px;">
+                    <div class="progress-bar" 
+                         [class]="getWorkloadPercentageClass(member.capacityPercentage)"
+                         [style.width.%]="member.capacityPercentage"
+                         role="progressbar">
+                      {{member.capacityPercentage}}%
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getWorkloadStatusClass(member.workloadStatus)">
+                    {{member.workloadStatus}}
+                  </span>
+                </td>
+                <td>
+                  <span [class.text-danger]="member.overdueTasksCount > 0">
+                    {{member.overdueTasksCount}}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-info" 
+                          [routerLink]="['/case-assignment/user', member.userId]">
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Transfer Requests -->
+    <div class="card">
+      <div class="card-header">
+        <h5>Pending Transfer Requests</h5>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading.transfers" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!loading.transfers">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Case</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Reason</th>
+                <th>Urgency</th>
+                <th>Requested</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let transfer of pendingTransfers">
+                <td>{{transfer.caseNumber}}</td>
+                <td>{{transfer.fromUserName}}</td>
+                <td>{{transfer.toUserName}}</td>
+                <td>{{transfer.reason}}</td>
+                <td>
+                  <span class="badge" [ngClass]="getUrgencyClass(transfer.urgency)">
+                    {{transfer.urgency}}
+                  </span>
+                </td>
+                <td>{{transfer.requestedAt | date:'short'}}</td>
+                <td>
+                  <button class="btn btn-sm btn-success mr-1" 
+                          (click)="approveTransfer(transfer)">
+                    Approve
+                  </button>
+                  <button class="btn btn-sm btn-danger" 
+                          (click)="rejectTransfer(transfer)">
+                    Reject
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div *ngIf="pendingTransfers.length === 0" class="text-center text-muted">
+            No pending transfer requests
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

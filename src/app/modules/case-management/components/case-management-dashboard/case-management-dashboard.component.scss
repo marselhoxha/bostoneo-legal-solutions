@@ -1,0 +1,148 @@
+.case-management-dashboard {
+  .card-animate {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  .counter-value {
+    display: inline-block;
+  }
+
+  .avatar-sm {
+    height: 3rem;
+    width: 3rem;
+  }
+
+  .avatar-title {
+    align-items: center;
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .avatar-xxs {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+
+  .avatar-xs {
+    height: 2rem;
+    width: 2rem;
+  }
+
+  .avatar-group {
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: 12px;
+
+    .avatar-group-item {
+      margin-left: -12px;
+      transition: all 0.2s;
+
+      &:hover {
+        z-index: 5;
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  .table-card {
+    .table {
+      margin-bottom: 0;
+
+      thead th {
+        background-color: #f3f3f9;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      tbody tr {
+        &:hover {
+          background-color: #f8f9fa;
+        }
+      }
+    }
+  }
+
+  .badge-soft-info {
+    color: #299cdb;
+    background-color: rgba(41, 156, 219, 0.1);
+  }
+
+  .badge-soft-warning {
+    color: #f1b44c;
+    background-color: rgba(241, 180, 76, 0.1);
+  }
+
+  .badge-soft-success {
+    color: #50a5f1;
+    background-color: rgba(80, 165, 241, 0.1);
+  }
+
+  .badge-soft-danger {
+    color: #f46a6a;
+    background-color: rgba(244, 106, 106, 0.1);
+  }
+
+  .badge-soft-secondary {
+    color: #74788d;
+    background-color: rgba(116, 120, 141, 0.1);
+  }
+
+  .badge-soft-dark {
+    color: #343a40;
+    background-color: rgba(52, 58, 64, 0.1);
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  .list-group-item-action {
+    &.active {
+      background-color: var(--vz-primary);
+      border-color: var(--vz-primary);
+      color: #fff;
+
+      .text-muted {
+        color: rgba(255, 255, 255, 0.8) !important;
+      }
+
+      .badge {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+    }
+  }
+
+  // Chart container styling
+  canvas {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .card-header {
+      .card-title {
+        font-size: 16px;
+      }
+    }
+
+    .table-responsive {
+      font-size: 13px;
+
+      .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 12px;
+      }
+    }
+  }
+}
