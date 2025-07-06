@@ -1,0 +1,118 @@
+<div class="modal-header">
+  <div class="modal-title-info">
+    <h4 class="modal-title mb-1">
+      <i [class]="file.icon + ' me-2'" [ngStyle]="{'color': file.iconColor}"></i>
+      {{ file.originalName }}
+    </h4>
+    <p class="text-muted mb-0">
+      {{ getFileTypeDisplay() }} • {{ formatFileSize() }}
+      <span *ngIf="file.caseName" class="ms-2">
+        <i class="ri-briefcase-line me-1"></i>{{ file.caseName }}
+      </span>
+    </p>
+  </div>
+  
+  <div class="modal-actions d-flex gap-2">
+    <!-- Zoom Controls for images -->
+    <div class="btn-group" *ngIf="previewType === 'image'">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="zoomOut()" [disabled]="zoomLevel <= minZoom">
+        <i class="ri-subtract-line"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="resetZoom()">
+        {{ zoomLevel }}%
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="zoomIn()" [disabled]="zoomLevel >= maxZoom">
+        <i class="ri-add-line"></i>
+      </button>
+    </div>
+    
+    <!-- Download Button -->
+    <button type="button" class="btn btn-sm btn-success" (click)="downloadFile()">
+      <i class="ri-download-2-line me-1"></i>Download
+    </button>
+    
+    <!-- Close Button -->
+    <button type="button" class="btn-close" (click)="close()"></button>
+  </div>
+</div>
+
+<div class="modal-body p-0">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="preview-loading">
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary mb-3"></div>
+      <p class="text-muted">Loading preview...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="preview-error">
+    <div class="text-center py-5">
+      <div class="avatar-lg bg-soft-danger text-danger rounded-circle mx-auto mb-3">
+        <i class="ri-error-warning-line display-6"></i>
+      </div>
+      <h5 class="mb-3">Preview Not Available</h5>
+      <p class="text-muted mb-4">{{ error }}</p>
+      <button class="btn btn-primary" (click)="downloadFile()">
+        <i class="ri-download-2-line me-2"></i>Download File
+      </button>
+    </div>
+  </div>
+
+  <!-- PDF Preview -->
+  <div *ngIf="previewType === 'pdf' && previewUrl && !isLoading && !error" class="pdf-preview">
+    <iframe 
+      [src]="previewUrl" 
+      class="w-100"
+      style="height: 70vh; border: none;">
+    </iframe>
+  </div>
+
+  <!-- Image Preview -->
+  <div *ngIf="previewType === 'image' && imageUrl && !isLoading && !error" class="image-preview">
+    <div class="image-container">
+      <img 
+        [src]="imageUrl" 
+        [alt]="file.originalName"
+        class="preview-image"
+        [style.transform]="'scale(' + (zoomLevel / 100) + ')'">
+    </div>
+  </div>
+
+  <!-- Text Preview -->
+  <div *ngIf="previewType === 'text' && textContent && !isLoading && !error" class="text-preview">
+    <div class="text-content">
+      <pre class="text-content-pre">{{ textContent }}</pre>
+    </div>
+  </div>
+
+  <!-- Unsupported File Type -->
+  <div *ngIf="previewType === 'unsupported' && !isLoading" class="preview-unsupported">
+    <div class="text-center py-5">
+      <div class="avatar-lg bg-soft-secondary text-secondary rounded-circle mx-auto mb-3">
+        <i [class]="file.icon + ' display-6'"></i>
+      </div>
+      <h5 class="mb-3">Preview Not Supported</h5>
+      <p class="text-muted mb-4">
+        This file type ({{ file.extension?.toUpperCase() }}) cannot be previewed in the browser.
+      </p>
+      <button class="btn btn-primary" (click)="downloadFile()">
+        <i class="ri-download-2-line me-2"></i>Download to View
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer" *ngIf="!isLoading">
+  <div class="file-info">
+    <small class="text-muted">
+      Modified by {{ file.createdByName }} on {{ file.updatedAt | date:'medium' }}
+    </small>
+  </div>
+  
+  <div class="modal-footer-actions">
+    <button type="button" class="btn btn-secondary" (click)="close()">
+      <i class="ri-close-line me-1"></i>Close
+    </button>
+  </div>
+</div>

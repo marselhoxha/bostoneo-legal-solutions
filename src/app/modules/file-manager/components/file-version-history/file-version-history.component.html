@@ -1,0 +1,233 @@
+<div class="modal-header bg-light border-bottom">
+  <div class="d-flex align-items-center">
+    <div class="avatar-sm bg-primary-subtle rounded-2 me-3">
+      <i class="ri-history-line fs-20 text-primary"></i>
+    </div>
+    <div>
+      <h5 class="modal-title fw-semibold mb-1">Version History</h5>
+      <p class="text-muted mb-0 fs-13">{{ fileName }}</p>
+    </div>
+  </div>
+  <button type="button" class="btn-close" aria-label="Close" (click)="activeModal.dismiss()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Upload New Version Section -->
+  <div class="card border-0 bg-primary-subtle mb-4">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center mb-3">
+        <div class="avatar-xs bg-primary rounded me-2">
+          <i class="ri-upload-cloud-2-line fs-16 text-white"></i>
+        </div>
+        <h6 class="card-title mb-0 fw-semibold">Upload New Version</h6>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label text-muted fs-12 fw-medium">Version Comment (Optional)</label>
+        <textarea 
+          class="form-control form-control-sm border-primary-subtle" 
+          [(ngModel)]="versionComment" 
+          placeholder="Describe what changed in this version..."
+          rows="3"></textarea>
+      </div>
+      
+      <div class="upload-actions">
+        <input 
+          type="file" 
+          id="versionFile"
+          #fileInput 
+          class="d-none" 
+          (change)="onFileSelected($event)"
+          [disabled]="isUploading">
+        
+        <div class="d-flex gap-2 align-items-center">
+          <button 
+            class="btn btn-outline-primary btn-sm" 
+            (click)="fileInput.click()"
+            [disabled]="isUploading">
+            <i class="ri-file-line me-1"></i>
+            Choose File
+          </button>
+          
+          <button 
+            class="btn btn-primary btn-sm" 
+            (click)="uploadNewVersion()"
+            [disabled]="isUploading || !selectedFile">
+            <span *ngIf="isUploading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+            <i *ngIf="!isUploading" class="ri-upload-2-line me-1"></i>
+            {{ isUploading ? 'Uploading...' : 'Upload Version' }}
+          </button>
+        </div>
+        
+        <div *ngIf="selectedFile" class="alert alert-info border-0 mt-3 py-2">
+          <div class="d-flex align-items-center">
+            <i class="ri-file-line text-info me-2"></i>
+            <span class="fs-13 text-info fw-medium">Selected: {{ selectedFile.name }}</span>
+          </div>
+        </div>
+        
+        <div *ngIf="isUploading" class="mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fs-12 text-muted">Upload Progress</span>
+            <span class="fs-12 text-primary fw-medium">{{ uploadProgress }}%</span>
+          </div>
+          <div class="progress progress-sm">
+            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                 role="progressbar" 
+                 [style.width.%]="uploadProgress"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Error Display -->
+      <div *ngIf="error" class="alert alert-danger border-0 mt-3">
+        <div class="d-flex align-items-center">
+          <i class="ri-error-warning-line me-2"></i>
+          <span class="flex-grow-1">{{ error }}</span>
+          <button type="button" class="btn-close ms-2" (click)="clearError()"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Section Divider -->
+  <div class="row">
+    <div class="col">
+      <div class="text-center border-bottom pb-2 mb-4">
+        <h6 class="fs-14 text-muted text-uppercase fw-semibold ls-1">Timeline</h6>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary me-2" role="status"></div>
+    <span class="text-muted fw-medium">Loading version history...</span>
+  </div>
+  
+  <!-- Version Timeline -->
+  <div *ngIf="!isLoading && versions.length > 0" class="version-timeline-professional">
+    <div *ngFor="let version of versions; let i = index; let isLast = last" 
+         class="timeline-item" 
+         [class.current-version]="version.current">
+      
+      <!-- Timeline marker -->
+      <div class="timeline-marker">
+        <div class="timeline-dot" [class.current]="version.current">
+          <i *ngIf="version.current" class="ri-star-fill"></i>
+          <i *ngIf="!version.current" class="ri-file-text-line"></i>
+        </div>
+        <div *ngIf="!isLast" class="timeline-line"></div>
+      </div>
+      
+      <!-- Timeline content -->
+      <div class="timeline-content">
+        <div class="card border">
+          <div class="card-body">
+            <!-- Version Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="version-info">
+                <div class="d-flex align-items-center mb-2">
+                  <h6 class="fw-semibold mb-0 me-2">Version {{ version.versionNumber }}</h6>
+                  <span *ngIf="version.current" class="badge bg-success fs-11">
+                    <i class="ri-star-line me-1"></i>Current
+                  </span>
+                  <span *ngIf="!version.current" class="badge bg-secondary fs-11">Previous</span>
+                </div>
+                <p class="text-muted fs-13 mb-0 text-break">{{ version.fileName }}</p>
+              </div>
+              
+              <!-- Action buttons -->
+              <div class="version-actions">
+                <div class="btn-group btn-group-sm" role="group">
+                  <button 
+                    class="btn btn-outline-primary" 
+                    (click)="downloadVersion(version)"
+                    data-bs-toggle="tooltip" 
+                    title="Download">
+                    <i class="ri-download-2-line"></i>
+                  </button>
+                  <button 
+                    class="btn btn-outline-success" 
+                    (click)="restoreVersion(version)"
+                    [disabled]="version.current"
+                    data-bs-toggle="tooltip" 
+                    title="Restore">
+                    <i class="ri-refresh-line"></i>
+                  </button>
+                  <button 
+                    class="btn btn-outline-danger" 
+                    (click)="deleteVersion(version)"
+                    [disabled]="version.current"
+                    data-bs-toggle="tooltip" 
+                    title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Version Details Grid -->
+            <div class="version-details">
+              <div class="row g-3 p-3 bg-light rounded">
+                <div class="col-6 col-lg-3">
+                  <div class="text-center">
+                    <p class="text-muted fs-11 fw-medium text-uppercase ls-1 mb-1">Size</p>
+                    <h6 class="fs-14 mb-0">{{ version.formattedSize }}</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="text-center">
+                    <p class="text-muted fs-11 fw-medium text-uppercase ls-1 mb-1">Uploaded by</p>
+                    <h6 class="fs-14 mb-0 text-truncate">{{ version.uploadedByName }}</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="text-center">
+                    <p class="text-muted fs-11 fw-medium text-uppercase ls-1 mb-1">Date</p>
+                    <h6 class="fs-14 mb-0">{{ version.uploadedAt | date:'MMM d, yyyy' }}</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="text-center">
+                    <p class="text-muted fs-11 fw-medium text-uppercase ls-1 mb-1">Time</p>
+                    <h6 class="fs-14 mb-0">{{ version.uploadedAt | date:'h:mm a' }}</h6>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Version Comment -->
+              <div *ngIf="version.comment" class="alert alert-info border-0 mt-3">
+                <div class="d-flex align-items-start">
+                  <i class="ri-chat-3-line text-info me-2 mt-1"></i>
+                  <div>
+                    <h6 class="text-info fs-13 fw-semibold mb-1">Version Notes</h6>
+                    <p class="fs-13 mb-0 lh-base">{{ version.comment }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && versions.length === 0" class="text-center py-5">
+    <div class="avatar-lg bg-light rounded-circle mx-auto mb-4">
+      <i class="ri-history-line display-6 text-muted"></i>
+    </div>
+    <h5 class="fw-semibold mb-2">No Version History</h5>
+    <p class="text-muted fs-14 mb-0">
+      This file doesn't have any version history yet.<br>
+      Upload a new version to start tracking changes.
+    </p>
+  </div>
+</div>
+
+<div class="modal-footer bg-light border-top">
+  <button type="button" class="btn btn-light" (click)="activeModal.close()">
+    <i class="ri-close-line me-1"></i>Close
+  </button>
+</div>

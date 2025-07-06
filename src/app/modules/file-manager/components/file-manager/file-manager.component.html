@@ -1,0 +1,611 @@
+<div class="chat-wrapper d-lg-flex gap-1 mx-n4 mt-n4 p-1" style="margin-top: 120px;">
+    <!-- File Manager Sidebar -->
+    <div class="file-manager-sidebar" id="menusidebar">
+        <div class="p-3 d-flex flex-column h-100">
+            <div class="mb-3">
+                <h5 class="mb-0 fw-semibold">Document Manager</h5>
+            </div>
+            
+            <!-- Search Box -->
+            <div class="search-box">
+                <input type="text" class="form-control bg-light border-light" 
+                       placeholder="Search documents..." 
+                       [(ngModel)]="searchTerm" 
+                       (input)="onSearchChange($event.target.value)">
+                <i class="ri-search-2-line search-icon"></i>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <ngx-simplebar class="mt-3 mx-n4 px-4 file-menu-sidebar-scroll">
+                <ul class="list-unstyled file-manager-menu">
+                    <!-- My Documents -->
+                    <li>
+                        <a data-bs-toggle="collapse" href="javascript:void(0);" role="button" 
+                           aria-expanded="true" aria-controls="collapseExample" 
+                           (click)="collapse.toggle()" [attr.aria-expanded]="!isCollapsed">
+                            <i class="ri-folder-2-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">My Documents</span>
+                        </a>
+                        <div class="collapse show" id="collapseExample" #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+                            <ul class="sub-menu list-unstyled">
+                                <li *ngFor="let folder of folders">
+                                    <a href="javascript:void(0);" (click)="navigateToFolder(folder)">{{ folder.name }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- Quick Access -->
+                    <li>
+                        <a href="javascript:void(0);" (click)="changeFilter('Documents')">
+                            <i class="ri-file-list-2-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">All Documents</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" (click)="changeFilter('Media')">
+                            <i class="ri-image-2-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">Media</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" (click)="changeFilter('Recents')">
+                            <i class="ri-history-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">Recent</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" (click)="changeFilter('Important')">
+                            <i class="ri-star-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">Starred</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" (click)="changeFilter('Deleted')">
+                            <i class="ri-delete-bin-line align-bottom me-2 float-start"></i> 
+                            <span class="file-list-link">Deleted</span>
+                        </a>
+                    </li>
+                </ul>
+            </ngx-simplebar>
+
+            <!-- Storage Status -->
+            <div class="mt-auto">
+                <h6 class="fs-11 text-muted text-uppercase mb-3">Storage Status</h6>
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="ri-database-2-line fs-17"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3 overflow-hidden" *ngIf="stats">
+                        <div class="progress mb-2 progress-sm">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 [style.width.%]="stats.usagePercentage"
+                                 [attr.aria-valuenow]="stats.usagePercentage" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <span class="text-muted fs-12 d-block text-truncate">
+                            <b>{{ stats.formattedTotalSize }}</b> used of <b>{{ formatFileSize(stats.availableSpace) }}</b>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Manager Content -->
+    <div class="file-manager-content w-100 p-3 py-0">
+        <ngx-simplebar class="mx-n3 pt-4 px-4 file-manager-content-scroll">
+            <!-- Folders Section -->
+            <div id="folder-list" class="mb-2" *ngIf="folders.length > 0">
+                <div class="row justify-content-between g-2 mb-3">
+                    <div class="col">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-2 d-block d-lg-none">
+                                <button type="button" class="btn btn-soft-success btn-icon btn-sm fs-16 file-menu-btn">
+                                    <i class="ri-menu-2-fill align-bottom"></i>
+                                </button>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="fs-16 mb-0">Folders</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="d-flex gap-2 align-items-start">
+                            <select class="form-control" data-choices data-choices-search-false 
+                                    name="choices-single-default" id="file-type">
+                                <option value="">File Type</option>
+                                <option value="" selected>All</option>
+                                <option value="Contracts">Contracts</option>
+                                <option value="Evidence">Evidence</option>
+                                <option value="Correspondence">Correspondence</option>
+                            </select>
+                            <button class="btn btn-success w-sm create-folder-modal flex-shrink-0"
+                                    data-bs-toggle="modal" data-bs-target="#createFolderModal"
+                                    (click)="openModal(content)">
+                                <i class="ri-add-line align-bottom me-1"></i> Create Folders
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Folder Grid -->
+                <div class="row" id="folderlist-data">
+                    <div *ngFor="let folder of folders; trackBy: trackByFolderId" 
+                         class="col-xxl-3 col-6 folder-card" 
+                         [id]="'f-' + folder.id">
+                        <div class="card bg-light shadow-none" [id]="'folder-' + folder.id">
+                            <div class="card-body">
+                                <div class="d-flex mb-1">
+                                    <div class="form-check form-check-danger mb-3 fs-15 flex-grow-1">
+                                        <input class="form-check-input" type="checkbox" 
+                                               [value]="folder.id" 
+                                               [id]="'folderlistCheckbox_' + folder.id">
+                                        <label class="form-check-label" [for]="'folderlistCheckbox_' + folder.id"></label>
+                                    </div>
+                                    <div class="dropdown" ngbDropdown>
+                                        <button class="btn btn-ghost-primary btn-icon btn-sm dropdown arrow-none d-block"
+                                                type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                                ngbDropdownToggle>
+                                            <i class="ri-more-2-fill fs-16 align-bottom"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                                            <li><a class="dropdown-item view-item-btn" 
+                                                   href="javascript:void(0);" 
+                                                   (click)="navigateToFolder(folder)">Open</a></li>
+                                            <li><a class="dropdown-item edit-folder-list" 
+                                                   href="#createFolderModal"
+                                                   data-bs-toggle="modal" role="button" 
+                                                   (click)="editFolderModal(content, folder)">Rename</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0);"
+                                                   (click)="confirmDeleteFolder(deleteModel, folder.id)" 
+                                                   data-bs-toggle="modal" role="button">Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="text-center">
+                                    <div class="mb-2">
+                                        <i class="ri-folder-2-fill align-bottom text-warning display-5"></i>
+                                    </div>
+                                    <h6 class="fs-15 folder-name">
+                                        <span *ngIf="!isEditing(folder, 'folder')">{{ folder.name }}</span>
+                                        <div *ngIf="isEditing(folder, 'folder')" class="d-flex align-items-center justify-content-center">
+                                            <input type="text" class="form-control form-control-sm me-2" 
+                                                   [(ngModel)]="editingItem!.newName" 
+                                                   (keyup.enter)="saveRename()" 
+                                                   (keyup.escape)="cancelRename()">
+                                            <button class="btn btn-sm btn-success me-1" (click)="saveRename()">
+                                                <i class="ri-check-line"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" (click)="cancelRename()">
+                                                <i class="ri-close-line"></i>
+                                            </button>
+                                        </div>
+                                    </h6>
+                                </div>
+                                <div class="hstack mt-4 text-muted">
+                                    <span class="me-auto"><b>{{ folder.fileCount }}</b> Files</span>
+                                    <span><b>{{ formatFileSize(folder.size) }}</b></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files Section -->
+            <div>
+                <div class="d-flex align-items-center mb-3">
+                    <h5 class="flex-grow-1 fs-16 mb-0" id="filetype-title">Recent Files</h5>
+                    <div class="flex-shrink-0">
+                        <button class="btn btn-success createFile-modal" 
+                                data-bs-toggle="modal" data-bs-target="#createFileModal" 
+                                (click)="openUploadModal()">
+                            <i class="ri-upload-cloud-2-line align-bottom me-1"></i> Upload File
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Files Table -->
+                <div class="table-responsive">
+                    <table class="table align-middle table-nowrap mb-0">
+                        <thead class="table-active">
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Size</th>
+                                <th scope="col">Modified</th>
+                                <th scope="col" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-list">
+                            <tr *ngFor="let file of files; trackBy: trackByFileId" [id]="'r-' + file.id">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 fs-17 me-2 filelist-icon">
+                                            <i [class]="getFileIcon(file) + ' align-bottom'" 
+                                               [style.color]="getFileIconColor(file)"></i>
+                                        </div>
+                                        <div class="flex-grow-1 filelist-name">
+                                            <div *ngIf="!isEditing(file, 'file')">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">{{ file.name }}</span>
+                                                    <span *ngIf="file.caseName" 
+                                                          class="badge bg-primary-subtle text-primary fs-11 ms-1">
+                                                        <i class="ri-briefcase-line me-1"></i>{{ file.caseName }}
+                                                    </span>
+                                                </div>
+                                                <small *ngIf="file.description" class="text-muted d-block">{{ file.description }}</small>
+                                            </div>
+                                            <div *ngIf="isEditing(file, 'file')" class="d-flex align-items-center">
+                                                <input type="text" class="form-control form-control-sm me-2" 
+                                                       [(ngModel)]="editingItem!.newName" 
+                                                       (keyup.enter)="saveRename()" 
+                                                       (keyup.escape)="cancelRename()">
+                                                <button class="btn btn-sm btn-success me-1" (click)="saveRename()">
+                                                    <i class="ri-check-line"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" (click)="cancelRename()">
+                                                    <i class="ri-close-line"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ getFileTypeCategory(file.mimeType) }}</td>
+                                <td class="filelist-size">{{ formatFileSize(file.size) }}</td>
+                                <td class="filelist-create">{{ file.updatedAt | date:'MMM d, y' }}</td>
+                                <td>
+                                    <div class="d-flex gap-3 justify-content-center">
+                                        <button type="button"
+                                                class="btn btn-ghost-primary btn-icon btn-sm favourite-btn"
+                                                [ngClass]="{'active': file.starred}" 
+                                                (click)="toggleStar(file)">
+                                            <i class="ri-star-fill fs-13 align-bottom"></i>
+                                        </button>
+                                        <div class="dropdown" ngbDropdown>
+                                            <button class="btn btn-ghost-primary btn-icon btn-sm favourite-btn active arrow-none d-block"
+                                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                                    ngbDropdownToggle>
+                                                <i class="ri-more-fill align-bottom"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                                                <li><a class="dropdown-item viewfile-list" 
+                                                       href="javascript:void(0);"
+                                                       (click)="previewFile(file)">View</a></li>
+                                                <li><a class="dropdown-item" 
+                                                       href="javascript:void(0);"
+                                                       (click)="downloadFile(file.id)">Download</a></li>
+                                                <li><a class="dropdown-item edit-list" 
+                                                       href="javascript:void(0);"
+                                                       data-bs-toggle="modal" role="button"
+                                                       (click)="editFileModal(recentContent, file)">Rename</a></li>
+                                                <li class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item remove-list" 
+                                                       href="javascript:void(0);"
+                                                       data-bs-toggle="modal" role="button"
+                                                       (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="align-items-center mt-2 row g-3 text-center text-sm-start" *ngIf="totalPages > 1">
+                    <div class="col-sm">
+                        <div class="text-muted">
+                            Showing <span class="fw-semibold">{{ (currentPage * pageSize) + 1 }}</span>-<span class="fw-semibold">{{ Math.min((currentPage + 1) * pageSize, totalFiles) }}</span> of 
+                            <span class="fw-semibold">{{ totalFiles }}</span> Results
+                        </div>
+                    </div>
+                    <div class="col-sm-auto">
+                        <ul class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-start mb-0">
+                            <ngb-pagination [collectionSize]="totalFiles" 
+                                          [page]="currentPageDisplay" 
+                                          [pageSize]="pageSize" 
+                                          (pageChange)="currentPageDisplay = $event">
+                            </ngb-pagination>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </ngx-simplebar>
+    </div>
+
+    <!-- File Manager Detail Panel -->
+    <div class="file-manager-detail-content p-3 py-0" *ngIf="selectedFile">
+        <ngx-simplebar class="mx-n3 pt-3 px-3 file-detail-content-scroll">
+            <div id="file-overview" class="h-100">
+                <div class="d-flex h-100 flex-column">
+                    <div class="d-flex align-items-center pb-3 border-bottom border-bottom-dashed mb-3 gap-2">
+                        <h5 class="flex-grow-1 fw-semibold mb-0">File Preview</h5>
+                        <div>
+                            <button type="button" class="btn btn-ghost-primary btn-icon btn-sm fs-16 favourite-btn"
+                                    [ngClass]="{'active': selectedFile.starred}" 
+                                    (click)="toggleStar(selectedFile)">
+                                <i class="ri-star-fill align-bottom"></i>
+                            </button>
+                            <button type="button" class="btn btn-soft-danger btn-icon btn-sm fs-16 close-btn-overview" 
+                                    (click)="closeDetailPanel()">
+                                <i class="ri-close-fill align-bottom"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pb-3 border-bottom border-bottom-dashed mb-3">
+                        <div class="file-details-box bg-light p-3 text-center rounded-3 border border-light mb-3">
+                            <div class="display-4 file-icon">
+                                <i [class]="getFileIcon(selectedFile) + ' text-secondary'"></i>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-icon btn-sm btn-ghost-success float-end fs-16">
+                            <i class="ri-share-forward-line"></i>
+                        </button>
+                        <h5 class="fs-16 mb-1 file-name">{{ selectedFile.name }}</h5>
+                        <p class="text-muted mb-0 fs-12">
+                            <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>, 
+                            <span class="create-date">{{ selectedFile.updatedAt | date:'MMM d, y' }}</span>
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h5 class="fs-12 text-uppercase text-muted mb-3">File Description :</h5>
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-nowrap table-sm">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" style="width: 35%;">File Name :</th>
+                                        <td class="file-name">{{ selectedFile.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">File Type :</th>
+                                        <td class="file-type">{{ getFileTypeCategory(selectedFile.mimeType) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Size :</th>
+                                        <td class="file-size">{{ formatFileSize(selectedFile.size) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Created :</th>
+                                        <td class="create-date">{{ selectedFile.createdAt | date:'MMM d, y' }}</td>
+                                    </tr>
+                                    <tr *ngIf="selectedFile.caseName">
+                                        <th scope="row">Case :</th>
+                                        <td class="case-name">{{ selectedFile.caseName }}</td>
+                                    </tr>
+                                    <tr *ngIf="selectedFile.documentCategory">
+                                        <th scope="row">Category :</th>
+                                        <td class="doc-category">{{ selectedFile.documentCategory }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto border-top border-top-dashed py-3">
+                        <div class="hstack gap-2">
+                            <button type="button" class="btn btn-soft-primary w-100" 
+                                    (click)="downloadFile(selectedFile.id)">
+                                <i class="ri-download-2-line align-bottom me-1"></i> Download
+                            </button>
+                            <button type="button" class="btn btn-soft-danger w-100 remove-file-overview"
+                                    data-bs-toggle="modal" data-bs-target="#removeFileItemModal"
+                                    (click)="confirmDeleteFile(deleteFileModel, selectedFile.id)">
+                                <i class="ri-close-fill align-bottom me-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ngx-simplebar>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" 
+     *ngIf="contextMenu.visible" 
+     [style.left.px]="contextMenu.x" 
+     [style.top.px]="contextMenu.y">
+  <div class="context-menu-item" (click)="handleContextAction('open')">
+    <i class="ri-eye-line"></i>
+    {{ contextMenu.type === 'file' ? 'Preview' : 'Open' }}
+  </div>
+  <div class="context-menu-item" *ngIf="contextMenu.type === 'file'" (click)="handleContextAction('download')">
+    <i class="ri-download-2-line"></i>
+    Download
+  </div>
+  <div class="context-menu-item" (click)="handleContextAction('rename')">
+    <i class="ri-edit-line"></i>
+    Rename
+  </div>
+  <div class="context-menu-item" *ngIf="contextMenu.type === 'file'" (click)="handleContextAction('star')">
+    <i class="ri-star-line"></i>
+    {{ contextMenu.target?.starred ? 'Unstar' : 'Star' }}
+  </div>
+  <div class="context-menu-item" (click)="handleContextAction('copy')">
+    <i class="ri-file-copy-line"></i>
+    Copy
+  </div>
+  <div class="context-menu-item" (click)="handleContextAction('cut')">
+    <i class="ri-scissors-line"></i>
+    Cut
+  </div>
+  <div class="context-menu-item" (click)="handleContextAction('paste')" [class.disabled]="clipboard.items.length === 0">
+    <i class="ri-clipboard-line"></i>
+    Paste ({{ clipboard.items.length }})
+  </div>
+  <div class="context-menu-item text-danger" (click)="handleContextAction('delete')">
+    <i class="ri-delete-bin-line"></i>
+    Delete
+  </div>
+</div>
+
+<!-- Create Folder Modal -->
+<ng-template #content role="document" let-modal>
+    <div class="modal-header p-3 bg-success-subtle">
+        <h5 class="modal-title" id="createFolderModalLabel">Create Folder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" id="addFolderBtn-close" aria-label="Close"
+                (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <div class="modal-body">
+        <form autocomplete="off" class="needs-validation createfolder-form" id="createfolder-form" novalidate
+              (ngSubmit)="saveFolder()" [formGroup]="folderForm">
+            <div class="mb-4">
+                <label for="foldername-input" class="form-label">Folder Name</label>
+                <input type="text" class="form-control" id="foldername-input" required placeholder="Enter folder name"
+                       formControlName="name" [ngClass]="{ 'is-invalid': submitted && folderForm.get('name')?.errors }">
+                <div class="invalid-feedback">Please enter a folder name.</div>
+                <input type="hidden" class="form-control" id="folderid-input" value="" placeholder="Enter folder name">
+            </div>
+            <div class="hstack gap-2 justify-content-end">
+                <button type="button" class="btn btn-ghost-success" data-bs-dismiss="modal"
+                        (click)="modal.close('Close click')">
+                    <i class="ri-close-line align-bottom"></i> Close
+                </button>
+                <button type="submit" class="btn btn-primary" id="addNewFolder">Add Folder</button>
+            </div>
+        </form>
+    </div>
+</ng-template>
+
+<!-- Delete Folder Modal -->
+<ng-template #deleteModel let-modal>
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
+                    (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mt-2 text-center">
+                <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
+                          colors="primary:#f7b84b,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
+                <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
+                    <h4>Are you sure ?</h4>
+                    <p class="text-muted mx-4 mb-0">Are you sure you want to remove this folder ?</p>
+                </div>
+            </div>
+            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+                <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
+                        (click)="modal.close('Close click')">
+                    <i class="ri-close-line me-1 align-middle"></i> Close
+                </button>
+                <button type="button" class="btn w-sm btn-danger" id="remove-folderList" 
+                        (click)="deleteFolder(deleteId)" (click)="modal.close('Close click')">Yes, Delete It!</button>
+            </div>
+        </div>
+    </div>
+</ng-template>
+
+<!-- Delete File Modal -->
+<ng-template #deleteFileModel let-modal>
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
+                    (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mt-2 text-center">
+                <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
+                          colors="primary:#f7b84b,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
+                <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
+                    <h4>Are you sure ?</h4>
+                    <p class="text-muted mx-4 mb-0">Are you sure you want to remove this file ?</p>
+                </div>
+            </div>
+            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+                <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
+                        (click)="modal.close('Close click')">
+                    <i class="ri-close-line me-1 align-middle"></i> Close
+                </button>
+                <button type="button" class="btn w-sm btn-danger" id="remove-fileList" 
+                        (click)="deleteFile(deleteId)" (click)="modal.close('Close click')">Yes, Delete It!</button>
+            </div>
+        </div>
+    </div>
+</ng-template>
+
+<!-- File Upload Modal -->
+<ng-template #uploadModal let-modal>
+    <div class="modal-header p-3 bg-primary-subtle">
+        <h5 class="modal-title">Upload Documents</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <div class="modal-body">
+        <div class="dropzone-area" 
+             [ngClass]="{'drag-over': isDragOver}"
+             (dragover)="onDragOver($event)" 
+             (dragleave)="onDragLeave($event)" 
+             (drop)="onFileDropped($event)">
+            <div class="text-center py-4">
+                <i class="ri-upload-cloud-2-line display-4" [ngClass]="isDragOver ? 'text-primary' : 'text-muted'"></i>
+                <h6 class="mt-3">{{ isDragOver ? 'Drop files here' : 'Drop files here or click to upload' }}</h6>
+                <p class="text-muted">Support for multiple file uploads</p>
+                <input type="file" class="d-none" #fileInput multiple (change)="onFileSelected($event)">
+                <button type="button" class="btn btn-primary" (click)="fileInput.click()">
+                    <i class="ri-folder-open-line me-1"></i> Browse Files
+                </button>
+            </div>
+            
+            <!-- Selected Files Preview -->
+            <div *ngIf="selectedUploadFiles.length > 0" class="mt-3">
+                <h6>Selected Files ({{ selectedUploadFiles.length }})</h6>
+                <div class="list-group">
+                    <div *ngFor="let file of selectedUploadFiles; let i = index" class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="ri-file-line me-2"></i>
+                            <span>{{ file.name }}</span>
+                            <small class="text-muted ms-2">({{ formatFileSize(file.size) }})</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeSelectedFile(i)">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upload Progress -->
+        <div *ngIf="uploadProgress.length > 0" class="mt-3">
+            <h6>Upload Progress</h6>
+            <div *ngFor="let progress of uploadProgress" class="mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small flex-grow-1">{{ progress.fileName }}</span>
+                    <span class="small me-2">{{ progress.progress }}%</span>
+                    <span class="badge" [ngClass]="{
+                        'bg-warning': progress.status === 'pending',
+                        'bg-primary': progress.status === 'uploading',
+                        'bg-success': progress.status === 'completed',
+                        'bg-danger': progress.status === 'error'
+                    }">{{ progress.status }}</span>
+                </div>
+                <div class="progress progress-sm">
+                    <div class="progress-bar" 
+                         [ngClass]="{
+                           'bg-success': progress.status === 'completed',
+                           'bg-danger': progress.status === 'error'
+                         }"
+                         [style.width.%]="progress.progress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal"
+                (click)="modal.close('Close click')">Close</button>
+        <button type="button" class="btn btn-primary" (click)="startUpload()" 
+                [disabled]="isUploadDisabled">
+            {{ uploadButtonText }}
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" (click)="clearUpload()" 
+                *ngIf="selectedUploadFiles.length > 0">
+            Clear
+        </button>
+    </div>
+</ng-template>

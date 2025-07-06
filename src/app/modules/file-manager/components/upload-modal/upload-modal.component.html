@@ -1,0 +1,70 @@
+<div class="modal-header">
+  <h4 class="modal-title">
+    <i class="ri-upload-cloud-2-line me-2"></i>Upload Documents
+  </h4>
+  <button type="button" class="btn-close" (click)="dismiss()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Upload Location Info -->
+  <div class="alert alert-info mb-4">
+    <i class="ri-information-line me-2"></i>
+    <strong>Upload Location:</strong> {{ getUploadLocation() }}
+  </div>
+
+  <!-- Upload Options -->
+  <div class="row mb-4">
+    <!-- Case Selection -->
+    <div class="col-md-6">
+      <label class="form-label">Associate with Case</label>
+      <select class="form-select" [(ngModel)]="selectedCaseId">
+        <option [value]="undefined">No case association</option>
+        <option *ngFor="let case of activeCases" [value]="case.id">
+          {{ case.title || case.caseNumber }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Document Category -->
+    <div class="col-md-6">
+      <label class="form-label">Document Category</label>
+      <select class="form-select" [(ngModel)]="selectedDocumentCategory">
+        <option value="general">General</option>
+        <option *ngFor="let category of documentCategories" [value]="category">
+          {{ category | titlecase }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <!-- Document Status -->
+    <div class="col-md-6">
+      <label class="form-label">Document Status</label>
+      <select class="form-select" [(ngModel)]="selectedDocumentStatus">
+        <option *ngFor="let status of documentStatuses" [value]="status">
+          {{ status | titlecase }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <!-- File Upload Component -->
+  <app-file-upload
+    [folderId]="folderId"
+    [caseId]="selectedCaseId"
+    [documentCategory]="selectedDocumentCategory"
+    [documentStatus]="selectedDocumentStatus"
+    [multiple]="true"
+    [maxFileSize]="104857600"
+    acceptedTypes="*/*"
+    (uploadComplete)="onUploadComplete($event)"
+    (uploadError)="onUploadError($event)">
+  </app-file-upload>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" (click)="dismiss()">
+    <i class="ri-close-line me-1"></i>Cancel
+  </button>
+</div>

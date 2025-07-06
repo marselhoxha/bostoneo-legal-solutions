@@ -1,0 +1,107 @@
+.file-upload-component {
+  .drop-zone {
+    border: 2px dashed #e9ecef;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover,
+    &.drag-over {
+      border-color: #3577f1;
+      background-color: #f0f7ff;
+      
+      .upload-icon i {
+        transform: scale(1.1);
+        color: #3577f1 !important;
+      }
+    }
+
+    &.has-files {
+      border-color: #0ab39c;
+      background-color: #f0fdfa;
+    }
+
+    .drop-zone-content {
+      width: 100%;
+    }
+
+    .upload-icon i {
+      transition: all 0.3s ease;
+    }
+  }
+
+  .selected-files {
+    .file-item {
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+    }
+
+    .file-icon {
+      .avatar-sm {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+  }
+
+  .upload-progress {
+    .progress {
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+  }
+
+  .upload-results {
+    .alert {
+      border-radius: 8px;
+    }
+  }
+
+  // Drag and drop states
+  .drag-over {
+    .upload-icon i {
+      animation: bounce 0.6s ease-in-out;
+    }
+  }
+
+  // Animation for upload icon
+  @keyframes bounce {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+  }
+
+  // File type specific colors
+  .bg-primary-subtle { background-color: rgba(53, 119, 241, 0.1) !important; }
+  .bg-success-subtle { background-color: rgba(10, 179, 156, 0.1) !important; }
+  .bg-danger-subtle { background-color: rgba(214, 57, 57, 0.1) !important; }
+  .bg-warning-subtle { background-color: rgba(245, 159, 0, 0.1) !important; }
+  .bg-info-subtle { background-color: rgba(41, 156, 219, 0.1) !important; }
+  .bg-secondary-subtle { background-color: rgba(108, 117, 125, 0.1) !important; }
+
+  .text-primary { color: #3577f1 !important; }
+  .text-success { color: #0ab39c !important; }
+  .text-danger { color: #d63939 !important; }
+  .text-warning { color: #f59f00 !important; }
+  .text-info { color: #299cdb !important; }
+  .text-secondary { color: #6c757d !important; }
+}

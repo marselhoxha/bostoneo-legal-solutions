@@ -1,0 +1,124 @@
+<div class="file-upload-component">
+  <!-- Drop Zone -->
+  <div class="drop-zone"
+       [class.drag-over]="isDragOver"
+       [class.has-files]="selectedFiles.length > 0"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)"
+       (drop)="onDrop($event)"
+       (click)="fileInput.click()">
+    
+    <div class="drop-zone-content">
+      <div class="upload-icon mb-3">
+        <i class="ri-upload-cloud-2-line display-4 text-primary"></i>
+      </div>
+      
+      <h5 class="mb-2" *ngIf="selectedFiles.length === 0">
+        Drop files here or click to browse
+      </h5>
+      <h5 class="mb-2" *ngIf="selectedFiles.length > 0">
+        {{ selectedFiles.length }} file(s) selected
+      </h5>
+      
+      <p class="text-muted mb-3">
+        <span *ngIf="acceptedTypes === '*/*'">All file types accepted</span>
+        <span *ngIf="acceptedTypes !== '*/*'">Accepted types: {{ acceptedTypes }}</span>
+        <br>
+        Maximum file size: {{ formatFileSize(maxFileSize) }}
+      </p>
+      
+      <div class="upload-actions" *ngIf="selectedFiles.length === 0">
+        <button type="button" class="btn btn-primary">
+          <i class="ri-folder-open-line me-2"></i>Choose Files
+        </button>
+      </div>
+    </div>
+    
+    <!-- Hidden file input -->
+    <input #fileInput
+           type="file"
+           class="d-none"
+           [multiple]="multiple"
+           [accept]="acceptedTypes"
+           (change)="onFileSelected($event)">
+  </div>
+
+  <!-- Error Messages -->
+  <div class="alert alert-danger mt-3" *ngIf="errors.length > 0">
+    <ul class="mb-0">
+      <li *ngFor="let error of errors">{{ error }}</li>
+    </ul>
+  </div>
+
+  <!-- Selected Files List -->
+  <div class="selected-files mt-3" *ngIf="selectedFiles.length > 0">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="mb-0">Selected Files ({{ selectedFiles.length }})</h6>
+      <div class="btn-group">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFiles()">
+          <i class="ri-close-line me-1"></i>Clear All
+        </button>
+        <button type="button" 
+                class="btn btn-sm btn-primary" 
+                (click)="uploadFiles()"
+                [disabled]="isUploading || selectedFiles.length === 0">
+          <i class="ri-upload-2-line me-1" *ngIf="!isUploading"></i>
+          <div class="spinner-border spinner-border-sm me-1" *ngIf="isUploading"></div>
+          {{ isUploading ? 'Uploading...' : 'Upload Files' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Upload Progress -->
+    <div class="upload-progress mb-3" *ngIf="isUploading">
+      <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+             [style.width.%]="uploadProgressValue">
+          {{ uploadProgressValue }}%
+        </div>
+      </div>
+    </div>
+
+    <!-- Files List -->
+    <div class="files-list">
+      <div *ngFor="let file of selectedFiles; let i = index" 
+           class="file-item d-flex align-items-center p-3 border rounded mb-2">
+        
+        <div class="file-icon me-3">
+          <div class="avatar-sm rounded"
+               [ngClass]="'bg-' + getFileIconColor(file) + '-subtle text-' + getFileIconColor(file)">
+            <i [class]="getFileIcon(file) + ' fs-5'"></i>
+          </div>
+        </div>
+        
+        <div class="file-info flex-grow-1">
+          <h6 class="mb-1 fs-14">{{ file.name }}</h6>
+          <p class="text-muted mb-0 fs-12">
+            {{ file.type || 'Unknown type' }} • {{ formatFileSize(file.size) }}
+          </p>
+        </div>
+        
+        <div class="file-actions">
+          <button type="button" 
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="removeFile(i)"
+                  [disabled]="isUploading">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Results -->
+  <div class="upload-results mt-3" *ngIf="uploadedFiles.length > 0">
+    <div class="alert alert-success">
+      <h6 class="alert-heading">
+        <i class="ri-check-line me-2"></i>Upload Successful
+      </h6>
+      <p class="mb-0">
+        Successfully uploaded {{ uploadedFiles.length }} file(s).
+      </p>
+    </div>
+  </div>
+</div>
