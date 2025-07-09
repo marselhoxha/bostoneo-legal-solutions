@@ -1,6 +1,253 @@
+<!-- Mobile Sidebar Backdrop -->
+<div class="mobile-sidebar-backdrop" 
+     [class.show]="isMobileSidebarOpen"
+     (click)="closeMobileSidebar()"></div>
+
+<!-- File Manager Sidebar (Mobile version) -->
+<div class="mobile-file-manager-sidebar" 
+     [class.show]="isMobileSidebarOpen"
+     id="menusidebar-mobile"
+     [style.backgroundColor]="getMobileSidebarBgColor()"
+     [style.color]="getMobileSidebarTextColor()">
+        <div class="p-3 d-flex flex-column h-100">
+        <div class="mb-3">
+            <h5 class="mb-0 fw-semibold">Document Manager</h5>
+        </div>
+        
+        <!-- Search Box -->
+        <div class="search-box">
+            <input type="text" class="form-control bg-light border-light" 
+                   placeholder="Search documents..." 
+                   [(ngModel)]="searchTerm" 
+                   (input)="onSearchChange($event.target.value)">
+            <i class="ri-search-2-line search-icon"></i>
+        </div>
+        
+        <!-- Navigation Menu -->
+        <ngx-simplebar class="mt-3 mx-n4 px-4 file-menu-sidebar-scroll">
+            <div class="file-manager-navigation">
+                <!-- Primary Navigation -->
+                <div class="navigation-section mb-4">
+                    <h6 class="fs-11 text-muted text-uppercase mb-2 px-2">Navigation</h6>
+                    <ul class="list-unstyled">
+                        <!-- My Documents -->
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link d-flex align-items-center justify-content-between"
+                               data-bs-toggle="collapse" 
+                               (click)="collapse.toggle()" 
+                               [attr.aria-expanded]="!isCollapsed">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-folder-user-line me-2"></i>
+                                    <span>My Documents</span>
+                                </div>
+                                <i class="ri-arrow-down-s-line transition-icon" 
+                                   [class.rotate-180]="isCollapsed"></i>
+                            </a>
+                            <div class="collapse show" #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+                                <ul class="sub-menu list-unstyled ps-4 mt-2">
+                                    <li *ngFor="let folder of folders" class="mb-1">
+                                        <a href="javascript:void(0);" 
+                                           class="sub-nav-link d-flex align-items-center justify-content-between"
+                                           (click)="navigateToFolder(folder)">
+                                            <div class="d-flex align-items-center">
+                                                <i class="ri-folder-3-line me-2 text-warning"></i>
+                                                <span class="text-truncate">{{ folder.name }}</span>
+                                            </div>
+                                            <span class="badge bg-light text-muted fs-12">{{ folder.fileCount }}</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        
+                        <!-- Case Documents -->
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link d-flex align-items-center justify-content-between"
+                               (click)="handleCaseDocumentsClick()"
+                               [class.active]="isNavigationActive('case')">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-briefcase-line me-2"></i>
+                                    <span>Case Documents</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary-subtle text-primary fs-11">{{ activeCases.length }}</span>
+                                    <i class="ri-arrow-down-s-line transition-icon" 
+                                       [class.rotate-180]="!caseDocumentsExpanded"></i>
+                                </div>
+                            </a>
+                            <div class="collapse" [class.show]="caseDocumentsExpanded">
+                                <div class="case-selection-panel p-3 mt-2 bg-light-subtle rounded">
+                                    <div *ngIf="selectedCase" class="selected-case mb-3">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0 fs-13 fw-semibold">Active Case</h6>
+                                            <button class="btn btn-ghost-secondary btn-sm" 
+                                                    (click)="clearSelectedCase()">
+                                                <i class="ri-close-line"></i>
+                                            </button>
+                                        </div>
+                                        <div class="case-info p-2 bg-white rounded border">
+                                            <div class="d-flex align-items-start">
+                                                <div class="avatar-xs me-2">
+                                                    <div class="avatar-title bg-primary-subtle text-primary rounded fs-12">
+                                                        {{ selectedCase.caseNumber?.substring(0, 2) || 'CA' }}
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1 fs-13">{{ selectedCase.caseNumber }}</h6>
+                                                    <p class="mb-1 fs-12 text-muted text-truncate">{{ selectedCase.title }}</p>
+                                                    <div class="d-flex gap-2 fs-11">
+                                                        <span class="text-success">
+                                                            <i class="ri-file-text-line me-1"></i>{{ getCaseDocumentCount(selectedCase.id) }} docs
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="case-list">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="mb-0 fs-11 text-uppercase fw-semibold text-muted">Active Cases</h6>
+                                            <span class="badge bg-soft-primary text-primary rounded-pill px-2">{{ activeCases.length }}</span>
+                                        </div>
+                                        
+                                        <div class="case-list-scroll custom-scrollbar" style="max-height: 300px; overflow-y: auto;">
+                                            <div *ngFor="let caseItem of activeCases; trackBy: trackByCaseId" 
+                                                 class="case-sidebar-card d-flex mb-2"
+                                                 [class.selected]="selectedCase?.id === caseItem.id"
+                                                 (click)="selectCase(caseItem.id)">
+                                                
+                                                <div class="priority-sidebar"
+                                                     [class.priority-low]="getCasePriority(caseItem) === 'low'"
+                                                     [class.priority-medium]="getCasePriority(caseItem) === 'medium'"
+                                                     [class.priority-high]="getCasePriority(caseItem) === 'high'"
+                                                     [class.priority-urgent]="getCasePriority(caseItem) === 'urgent'">
+                                                </div>
+                                                
+                                                <div class="case-content flex-grow-1 p-3">
+                                                    <h6 class="case-number fs-13 fw-semibold mb-1 text-truncate" 
+                                                        [title]="caseItem.caseNumber">
+                                                        {{ caseItem.caseNumber }}
+                                                    </h6>
+                                                    
+                                                    <p class="case-title fs-12 text-muted mb-2 text-truncate" 
+                                                       [title]="caseItem.title">
+                                                        {{ caseItem.title }}
+                                                    </p>
+                                                    
+                                                    <div class="case-info-table">
+                                                        <div class="info-row">
+                                                            <span class="info-item client-name">
+                                                                {{ caseItem.clientName }}
+                                                            </span>
+                                                            <span class="badge badge-soft-sm"
+                                                                  [ngClass]="{
+                                                                    'badge-soft-success': getCaseStatus(caseItem) === 'active',
+                                                                    'badge-soft-info': getCaseStatus(caseItem) === 'open',
+                                                                    'badge-soft-warning': getCaseStatus(caseItem) === 'in_progress',
+                                                                    'badge-soft-secondary': getCaseStatus(caseItem) === 'pending' || getCaseStatus(caseItem) === 'closed',
+                                                                    'badge-soft-primary': getCaseStatus(caseItem) === 'review'
+                                                                  }">
+                                                                {{ getCaseStatusDisplay(caseItem) }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div *ngIf="activeCases.length === 0" class="text-center py-5">
+                                                <i class="ri-briefcase-line fs-48 text-muted mb-3 d-block"></i>
+                                                <p class="text-muted fs-14">No active cases found</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <!-- All Documents -->
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link d-flex align-items-center"
+                               (click)="changeFilter('All')">
+                                <i class="ri-file-list-2-line me-2"></i>
+                                <span>All Documents</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Quick Filters -->
+                <div class="navigation-section">
+                    <h6 class="fs-11 text-muted text-uppercase mb-2 px-2">Quick Filters</h6>
+                    <ul class="list-unstyled">
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link"
+                               (click)="changeFilter('Media')">
+                                <i class="ri-image-2-line me-2 text-info"></i>
+                                <span>Media Files</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link"
+                               (click)="changeFilter('Recents')">
+                                <i class="ri-time-line me-2 text-warning"></i>
+                                <span>Recent Files</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link"
+                               (click)="changeFilter('Important')">
+                                <i class="ri-star-line me-2 text-warning"></i>
+                                <span>Starred Files</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="javascript:void(0);" 
+                               class="nav-link"
+                               (click)="changeFilter('Deleted')">
+                                <i class="ri-delete-bin-line me-2 text-danger"></i>
+                                <span>Deleted Files</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </ngx-simplebar>
+
+        <!-- Storage Status -->
+        <div class="mt-auto">
+            <h6 class="fs-11 text-muted text-uppercase mb-3">Storage Status</h6>
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="ri-database-2-line fs-17"></i>
+                </div>
+                <div class="flex-grow-1 ms-3 overflow-hidden" *ngIf="stats">
+                    <div class="progress mb-2 progress-sm">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             [style.width.%]="stats.usagePercentage"
+                             [attr.aria-valuenow]="stats.usagePercentage" 
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    <span class="text-muted fs-12 d-block text-truncate">
+                        <b>{{ stats.formattedTotalSize }}</b> used of <b>{{ formatFileSize(stats.availableSpace) }}</b>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="chat-wrapper d-lg-flex gap-1 mx-n4 mt-n4 p-1" style="margin-top: 120px;">
-    <!-- File Manager Sidebar -->
-    <div class="file-manager-sidebar" id="menusidebar">
+    <!-- File Manager Sidebar (Desktop version) -->
+    <div class="file-manager-sidebar d-none d-lg-block" 
+         id="menusidebar">
         <div class="p-3 d-flex flex-column h-100">
             <div class="mb-3">
                 <h5 class="mb-0 fw-semibold">Document Manager</h5>
@@ -17,56 +264,206 @@
             
             <!-- Navigation Menu -->
             <ngx-simplebar class="mt-3 mx-n4 px-4 file-menu-sidebar-scroll">
-                <ul class="list-unstyled file-manager-menu">
-                    <!-- My Documents -->
-                    <li>
-                        <a data-bs-toggle="collapse" href="javascript:void(0);" role="button" 
-                           aria-expanded="true" aria-controls="collapseExample" 
-                           (click)="collapse.toggle()" [attr.aria-expanded]="!isCollapsed">
-                            <i class="ri-folder-2-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">My Documents</span>
-                        </a>
-                        <div class="collapse show" id="collapseExample" #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
-                            <ul class="sub-menu list-unstyled">
-                                <li *ngFor="let folder of folders">
-                                    <a href="javascript:void(0);" (click)="navigateToFolder(folder)">{{ folder.name }}</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
+                <div class="file-manager-navigation">
+                    <!-- Primary Navigation -->
+                    <div class="navigation-section mb-4">
+                        <h6 class="fs-11 text-muted text-uppercase mb-2 px-2">Navigation</h6>
+                        <ul class="list-unstyled">
+                            <!-- My Documents -->
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link d-flex align-items-center justify-content-between"
+                                   data-bs-toggle="collapse" 
+                                   (click)="collapse.toggle()" 
+                                   [attr.aria-expanded]="!isCollapsed">
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-folder-user-line me-2"></i>
+                                        <span>My Documents</span>
+                                    </div>
+                                    <i class="ri-arrow-down-s-line transition-icon" 
+                                       [class.rotate-180]="isCollapsed"></i>
+                                </a>
+                                <div class="collapse show" #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+                                    <ul class="sub-menu list-unstyled ps-4 mt-2">
+                                        <li *ngFor="let folder of folders" class="mb-1">
+                                            <a href="javascript:void(0);" 
+                                               class="sub-nav-link d-flex align-items-center justify-content-between"
+                                               (click)="navigateToFolder(folder)">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="ri-folder-3-line me-2 text-warning"></i>
+                                                    <span class="text-truncate">{{ folder.name }}</span>
+                                                </div>
+                                                <span class="badge bg-light text-muted fs-12">{{ folder.fileCount }}</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                            
+                            <!-- Case Documents -->
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link d-flex align-items-center justify-content-between"
+                                   (click)="handleCaseDocumentsClick()"
+                                   [class.active]="isNavigationActive('case')">
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-briefcase-line me-2"></i>
+                                        <span>Case Documents</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary-subtle text-primary fs-11">{{ activeCases.length }}</span>
+                                        <i class="ri-arrow-down-s-line transition-icon" 
+                                           [class.rotate-180]="!caseDocumentsExpanded"></i>
+                                    </div>
+                                </a>
+                                <div class="collapse" [class.show]="caseDocumentsExpanded">
+                                    <div class="case-selection-panel p-3 mt-2 bg-light-subtle rounded">
+                                        <div *ngIf="selectedCase" class="selected-case mb-3">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <h6 class="mb-0 fs-13 fw-semibold">Active Case</h6>
+                                                <button class="btn btn-ghost-secondary btn-sm" 
+                                                        (click)="clearSelectedCase()">
+                                                    <i class="ri-close-line"></i>
+                                                </button>
+                                            </div>
+                                            <div class="case-info p-2 bg-white rounded border">
+                                                <div class="d-flex align-items-start">
+                                                    <div class="avatar-xs me-2">
+                                                        <div class="avatar-title bg-primary-subtle text-primary rounded fs-12">
+                                                            {{ selectedCase.caseNumber?.substring(0, 2) || 'CA' }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1 fs-13">{{ selectedCase.caseNumber }}</h6>
+                                                        <p class="mb-1 fs-12 text-muted text-truncate">{{ selectedCase.title }}</p>
+                                                        <div class="d-flex gap-2 fs-11">
+                                                            <span class="text-success">
+                                                                <i class="ri-file-text-line me-1"></i>{{ getCaseDocumentCount(selectedCase.id) }} docs
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="case-list">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <h6 class="mb-0 fs-11 text-uppercase fw-semibold text-muted">Active Cases</h6>
+                                                <span class="badge bg-soft-primary text-primary rounded-pill px-2">{{ activeCases.length }}</span>
+                                            </div>
+                                            
+                                            <div class="case-list-scroll custom-scrollbar" style="max-height: 360px; overflow-y: auto;">
+                                                <!-- Case Item with Sidebar Accent -->
+                                                <div *ngFor="let caseItem of activeCases; trackBy: trackByCaseId" 
+                                                     class="case-sidebar-card d-flex mb-2"
+                                                     [class.selected]="selectedCase?.id === caseItem.id"
+                                                     (click)="selectCase(caseItem.id)">
+                                                    
+                                                    <!-- Priority Sidebar -->
+                                                    <div class="priority-sidebar"
+                                                         [class.priority-low]="getCasePriority(caseItem) === 'low'"
+                                                         [class.priority-medium]="getCasePriority(caseItem) === 'medium'"
+                                                         [class.priority-high]="getCasePriority(caseItem) === 'high'"
+                                                         [class.priority-urgent]="getCasePriority(caseItem) === 'urgent'">
+                                                    </div>
+                                                    
+                                                    <!-- Case Content -->
+                                                    <div class="case-content flex-grow-1 p-3">
+                                                        <!-- Case Number -->
+                                                        <h6 class="case-number fs-13 fw-semibold mb-1 text-truncate" 
+                                                            [title]="caseItem.caseNumber">
+                                                            {{ caseItem.caseNumber }}
+                                                        </h6>
+                                                        
+                                                        <!-- Case Title -->
+                                                        <p class="case-title fs-12 text-muted mb-2 text-truncate" 
+                                                           [title]="caseItem.title">
+                                                            {{ caseItem.title }}
+                                                        </p>
+                                                        
+                                                        <!-- Case Info Table -->
+                                                        <div class="case-info-table">
+                                                            <div class="info-row">
+                                                                <span class="info-item client-name">
+                                                                    {{ caseItem.clientName }}
+                                                                </span>
+                                                                <span class="badge badge-soft-sm"
+                                                                      [ngClass]="{
+                                                                        'badge-soft-success': getCaseStatus(caseItem) === 'active',
+                                                                        'badge-soft-info': getCaseStatus(caseItem) === 'open',
+                                                                        'badge-soft-warning': getCaseStatus(caseItem) === 'in_progress',
+                                                                        'badge-soft-secondary': getCaseStatus(caseItem) === 'pending' || getCaseStatus(caseItem) === 'closed',
+                                                                        'badge-soft-primary': getCaseStatus(caseItem) === 'review'
+                                                                      }">
+                                                                    {{ getCaseStatusDisplay(caseItem) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Empty State -->
+                                                <div *ngIf="activeCases.length === 0" class="text-center py-5">
+                                                    <i class="ri-briefcase-line fs-48 text-muted mb-3 d-block"></i>
+                                                    <p class="text-muted fs-14">No active cases found</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            <!-- All Documents -->
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link d-flex align-items-center"
+                                   (click)="changeFilter('All')">
+                                    <i class="ri-file-list-2-line me-2"></i>
+                                    <span>All Documents</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     
-                    <!-- Quick Access -->
-                    <li>
-                        <a href="javascript:void(0);" (click)="changeFilter('Documents')">
-                            <i class="ri-file-list-2-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">All Documents</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" (click)="changeFilter('Media')">
-                            <i class="ri-image-2-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">Media</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" (click)="changeFilter('Recents')">
-                            <i class="ri-history-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">Recent</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" (click)="changeFilter('Important')">
-                            <i class="ri-star-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">Starred</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" (click)="changeFilter('Deleted')">
-                            <i class="ri-delete-bin-line align-bottom me-2 float-start"></i> 
-                            <span class="file-list-link">Deleted</span>
-                        </a>
-                    </li>
-                </ul>
+                    <!-- Quick Filters -->
+                    <div class="navigation-section">
+                        <h6 class="fs-11 text-muted text-uppercase mb-2 px-2">Quick Filters</h6>
+                        <ul class="list-unstyled">
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link"
+                                   (click)="changeFilter('Media')">
+                                    <i class="ri-image-2-line me-2 text-info"></i>
+                                    <span>Media Files</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link"
+                                   (click)="changeFilter('Recents')">
+                                    <i class="ri-time-line me-2 text-warning"></i>
+                                    <span>Recent Files</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link"
+                                   (click)="changeFilter('Important')">
+                                    <i class="ri-star-line me-2 text-warning"></i>
+                                    <span>Starred Files</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="javascript:void(0);" 
+                                   class="nav-link"
+                                   (click)="changeFilter('Deleted')">
+                                    <i class="ri-delete-bin-line me-2 text-danger"></i>
+                                    <span>Deleted Files</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </ngx-simplebar>
 
             <!-- Storage Status -->
@@ -96,51 +493,141 @@
     <!-- File Manager Content -->
     <div class="file-manager-content w-100 p-3 py-0">
         <ngx-simplebar class="mx-n3 pt-4 px-4 file-manager-content-scroll">
-            <!-- Folders Section -->
-            <div id="folder-list" class="mb-2" *ngIf="folders.length > 0">
-                <div class="row justify-content-between g-2 mb-3">
-                    <div class="col">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-2 d-block d-lg-none">
-                                <button type="button" class="btn btn-soft-success btn-icon btn-sm fs-16 file-menu-btn">
-                                    <i class="ri-menu-2-fill align-bottom"></i>
-                                </button>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h5 class="fs-16 mb-0">Folders</h5>
-                            </div>
-                        </div>
+            
+            <!-- Breadcrumbs and Header -->
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-2 d-block d-lg-none">
+                        <button type="button" class="btn btn-soft-primary btn-icon btn-sm fs-16 file-menu-btn"
+                                (click)="toggleMobileSidebar()">
+                            <i class="ri-menu-2-fill align-bottom"></i>
+                        </button>
                     </div>
-                    <div class="col-auto">
-                        <div class="d-flex gap-2 align-items-start">
-                            <select class="form-control" data-choices data-choices-search-false 
-                                    name="choices-single-default" id="file-type">
-                                <option value="">File Type</option>
-                                <option value="" selected>All</option>
-                                <option value="Contracts">Contracts</option>
-                                <option value="Evidence">Evidence</option>
-                                <option value="Correspondence">Correspondence</option>
-                            </select>
-                            <button class="btn btn-success w-sm create-folder-modal flex-shrink-0"
-                                    data-bs-toggle="modal" data-bs-target="#createFolderModal"
-                                    (click)="openModal(content)">
-                                <i class="ri-add-line align-bottom me-1"></i> Create Folders
-                            </button>
-                        </div>
+                    <!-- Back Button -->
+                    <div class="flex-shrink-0 me-2" *ngIf="currentFolder">
+                        <button type="button" class="btn btn-soft-secondary btn-icon btn-sm fs-16"
+                                (click)="goBack()" title="Go Back">
+                            <i class="ri-arrow-left-line align-bottom"></i>
+                        </button>
+                    </div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <!-- Root breadcrumb -->
+                            <li class="breadcrumb-item">
+                                <a href="javascript:void(0);" class="text-muted" (click)="navigateToRoot()">
+                                    <i class="ri-home-4-line"></i> 
+                                    <span *ngIf="navigationState.context === 'case'">Case Documents</span>
+                                    <span *ngIf="navigationState.context === 'personal'">My Documents</span>
+                                    <span *ngIf="navigationState.context === 'all'">All Documents</span>
+                                </a>
+                            </li>
+                            <!-- Case breadcrumb if in case context -->
+                            <li class="breadcrumb-item" *ngIf="navigationState.context === 'case' && navigationState.caseName">
+                                <a href="javascript:void(0);" class="text-muted" (click)="navigateToCase(navigationState.caseId)">
+                                    <i class="ri-briefcase-line me-1"></i>{{ navigationState.caseName }}
+                                </a>
+                            </li>
+                            <!-- Dynamic folder breadcrumbs -->
+                            <li class="breadcrumb-item" 
+                                *ngFor="let item of breadcrumb; let last = last"
+                                [class.active]="last" 
+                                [attr.aria-current]="last ? 'page' : null">
+                                <a *ngIf="!last" href="javascript:void(0);" class="text-muted" 
+                                   (click)="navigateViaBreadcrumb(item)">
+                                    {{ item.name }}
+                                </a>
+                                <span *ngIf="last">{{ item.name }}</span>
+                            </li>
+                            <!-- Default if no breadcrumb items -->
+                            <li class="breadcrumb-item active" aria-current="page" *ngIf="breadcrumb.length === 0 && !currentFolder">
+                                Legal Documents
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+                
+                <!-- View Toggle -->
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group" role="group">
+                        <button type="button" 
+                                class="btn btn-outline-secondary btn-sm" 
+                                [class.active]="viewMode === 'grid'"
+                                (click)="setViewMode('grid')">
+                            <i class="ri-grid-line"></i>
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-secondary btn-sm" 
+                                [class.active]="viewMode === 'list'"
+                                (click)="setViewMode('list')">
+                            <i class="ri-list-check"></i>
+                        </button>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Content Header -->
+            <div class="content-header mb-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="ri-briefcase-line text-primary fs-20"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0 fw-semibold">Legal Documents</h4>
+                            <p class="text-muted mb-0 fs-13">Manage and organize your legal files</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <!-- File Type Filter -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri-filter-2-line me-1"></i>
+                                <span class="d-none d-sm-inline">Filter</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="javascript:void(0);">All Files</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);">Contracts</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);">Evidence</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);">Correspondence</a></li>
+                            </ul>
+                        </div>
+                        <!-- Action Buttons -->
+                        <button class="btn btn-success btn-sm"
+                                (click)="createNewFolderWithSwal()">
+                            <i class="ri-add-box-line align-bottom me-1"></i> 
+                            <span class="d-none d-sm-inline">Create Folder</span>
+                            <i class="ri-add-box-line d-sm-none"></i>
+                        </button>
+                        <button class="btn btn-primary btn-sm"
+                                (click)="openUploadModal()">
+                            <i class="ri-upload-cloud-2-line align-bottom me-1"></i> 
+                            <span class="d-none d-sm-inline">Upload Files</span>
+                            <i class="ri-upload-cloud-2-line d-sm-none"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Folders Section -->
+            <div id="folder-list" class="mb-4" *ngIf="folders.length > 0">
+                <h6 class="fs-14 text-muted text-uppercase mb-2">Folders</h6>
                 
                 <!-- Folder Grid -->
                 <div class="row" id="folderlist-data">
                     <div *ngFor="let folder of folders; trackBy: trackByFolderId" 
-                         class="col-xxl-3 col-6 folder-card" 
+                         class="col-xxl-3 col-xl-4 col-lg-6 col-md-6 col-sm-6 col-12 folder-card mb-3" 
                          [id]="'f-' + folder.id">
-                        <div class="card bg-light shadow-none" [id]="'folder-' + folder.id">
+                        <div class="card bg-light shadow-none" [id]="'folder-' + folder.id" 
+                             (dblclick)="navigateToFolder(folder)" style="cursor: pointer;">
                             <div class="card-body">
                                 <div class="d-flex mb-1">
                                     <div class="form-check form-check-danger mb-3 fs-15 flex-grow-1">
                                         <input class="form-check-input" type="checkbox" 
                                                [value]="folder.id" 
+                                               [checked]="isFolderSelected(folder.id)"
+                                               (change)="toggleFolderSelection(folder.id)"
                                                [id]="'folderlistCheckbox_' + folder.id">
                                         <label class="form-check-label" [for]="'folderlistCheckbox_' + folder.id"></label>
                                     </div>
@@ -155,9 +642,8 @@
                                                    href="javascript:void(0);" 
                                                    (click)="navigateToFolder(folder)">Open</a></li>
                                             <li><a class="dropdown-item edit-folder-list" 
-                                                   href="#createFolderModal"
-                                                   data-bs-toggle="modal" role="button" 
-                                                   (click)="editFolderModal(content, folder)">Rename</a></li>
+                                                   href="javascript:void(0);" 
+                                                   (click)="startInlineEdit(folder.id, 'folder', folder.name)">Rename</a></li>
                                             <li><a class="dropdown-item" href="javascript:void(0);"
                                                    (click)="confirmDeleteFolder(deleteModel, folder.id)" 
                                                    data-bs-toggle="modal" role="button">Delete</a></li>
@@ -170,16 +656,17 @@
                                         <i class="ri-folder-2-fill align-bottom text-warning display-5"></i>
                                     </div>
                                     <h6 class="fs-15 folder-name">
-                                        <span *ngIf="!isEditing(folder, 'folder')">{{ folder.name }}</span>
-                                        <div *ngIf="isEditing(folder, 'folder')" class="d-flex align-items-center justify-content-center">
+                                        <span *ngIf="!isEditing(folder.id, 'folder')" 
+                                              (dblclick)="startInlineEdit(folder.id, 'folder', folder.name)">{{ folder.name }}</span>
+                                        <div *ngIf="isEditing(folder.id, 'folder')" class="d-flex align-items-center justify-content-center">
                                             <input type="text" class="form-control form-control-sm me-2" 
                                                    [(ngModel)]="editingItem!.newName" 
-                                                   (keyup.enter)="saveRename()" 
-                                                   (keyup.escape)="cancelRename()">
-                                            <button class="btn btn-sm btn-success me-1" (click)="saveRename()">
+                                                   (keydown)="onInlineEditKeydown($event)"
+                                                   #renameInput>
+                                            <button class="btn btn-sm btn-success me-1" (click)="finishInlineEdit()">
                                                 <i class="ri-check-line"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-secondary" (click)="cancelRename()">
+                                            <button class="btn btn-sm btn-secondary" (click)="cancelInlineEdit()">
                                                 <i class="ri-close-line"></i>
                                             </button>
                                         </div>
@@ -189,39 +676,139 @@
                                     <span class="me-auto"><b>{{ folder.fileCount }}</b> Files</span>
                                     <span><b>{{ formatFileSize(folder.size) }}</b></span>
                                 </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="ri-shield-line me-1"></i>
+                                        Permissions: {{ getFolderPermissions(folder) }}
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Files Section -->
-            <div>
-                <div class="d-flex align-items-center mb-3">
-                    <h5 class="flex-grow-1 fs-16 mb-0" id="filetype-title">Recent Files</h5>
-                    <div class="flex-shrink-0">
-                        <button class="btn btn-success createFile-modal" 
-                                data-bs-toggle="modal" data-bs-target="#createFileModal" 
-                                (click)="openUploadModal()">
-                            <i class="ri-upload-cloud-2-line align-bottom me-1"></i> Upload File
-                        </button>
-                    </div>
+            <!-- Bulk Actions Bar (Always Visible at Top) -->
+            <div class="bulk-actions-bar mb-3">
+                <div *ngIf="selectedFiles.length > 0 || selectedFolders.length > 0" 
+                     class="alert alert-info d-flex align-items-center justify-content-between flex-wrap" role="alert">
+                        <div class="d-flex align-items-center mb-2 mb-sm-0">
+                            <i class="ri-checkbox-circle-line me-2"></i>
+                            <span>
+                                <strong>{{ selectedFiles.length + selectedFolders.length }}</strong> item{{(selectedFiles.length + selectedFolders.length) === 1 ? '' : 's'}} selected
+                                <span class="text-muted ms-1">
+                                    ({{selectedFiles.length}} file{{selectedFiles.length === 1 ? '' : 's'}}, {{selectedFolders.length}} folder{{selectedFolders.length === 1 ? '' : 's'}})
+                                </span>
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="dropdown">
+                                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri-briefcase-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Assign to Case</span>
+                                    <i class="ri-briefcase-line d-sm-none"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @for(caseItem of activeCases; track caseItem.id) {
+                                        <li>
+                                            <a class="dropdown-item" href="javascript:void(0);" 
+                                               (click)="bulkAssignToCase(caseItem.id)">
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-medium">{{caseItem.caseNumber}}</span>
+                                                    <small class="text-muted">{{caseItem.title}}</small>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-muted" href="javascript:void(0);" 
+                                           (click)="bulkRemoveFromCase()">
+                                            <i class="ri-close-line me-2"></i>Remove from case
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" 
+                                    (click)="copySelected()">
+                                <i class="ri-file-copy-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Copy</span>
+                                <i class="ri-file-copy-line d-sm-none"></i>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" 
+                                    (click)="cutSelected()">
+                                <i class="ri-scissors-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Cut</span>
+                                <i class="ri-scissors-line d-sm-none"></i>
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" 
+                                    (click)="pasteFiles()"
+                                    [disabled]="!canPaste()">
+                                <i class="ri-clipboard-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Paste</span>
+                                <i class="ri-clipboard-line d-sm-none"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                    (click)="bulkDownload()" 
+                                    [disabled]="selectedFiles.length === 0">
+                                <i class="ri-download-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Download</span>
+                                <i class="ri-download-line d-sm-none"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" 
+                                    (click)="bulkDelete()">
+                                <i class="ri-delete-bin-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Delete</span>
+                                <i class="ri-delete-bin-line d-sm-none"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                    (click)="clearSelection()">
+                                <i class="ri-close-line me-1 d-none d-sm-inline"></i> 
+                                <span class="d-none d-sm-inline">Clear</span>
+                                <i class="ri-close-line d-sm-none"></i>
+                            </button>
+                        </div>
                 </div>
+            </div>
+
+            <!-- Files Section -->
+            <div *ngIf="files.length > 0">
+                <h6 class="fs-14 text-muted text-uppercase mb-2">Files</h6>
                 
                 <!-- Files Table -->
-                <div class="table-responsive">
-                    <table class="table align-middle table-nowrap mb-0">
+                <div class="table-responsive" *ngIf="viewMode === 'list'">
+                    <table class="table align-middle table-nowrap mb-0 table-striped">
                         <thead class="table-active">
                             <tr>
+                                <th scope="col" style="width: 50px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               [checked]="allFilesSelected()" 
+                                               (change)="toggleAllFiles($event)"
+                                               [indeterminate]="someFilesSelected()"
+                                               id="selectAllFiles">
+                                        <label class="form-check-label" for="selectAllFiles"></label>
+                                    </div>
+                                </th>
                                 <th scope="col">Name</th>
-                                <th scope="col">Type</th>
-                                <th scope="col">Size</th>
-                                <th scope="col">Modified</th>
-                                <th scope="col" class="text-center">Actions</th>
+                                <th scope="col" class="d-none d-md-table-cell">Type</th>
+                                <th scope="col" class="d-none d-lg-table-cell">Size</th>
+                                <th scope="col" class="d-none d-xl-table-cell">Modified</th>
+                                <th scope="col" class="text-center" style="width: 120px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="file-list">
                             <tr *ngFor="let file of files; trackBy: trackByFileId" [id]="'r-' + file.id">
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               [checked]="isFileSelected(file.id)" 
+                                               (change)="toggleFileSelection(file.id)"
+                                               [id]="'fileCheckbox_' + file.id">
+                                        <label class="form-check-label" [for]="'fileCheckbox_' + file.id"></label>
+                                    </div>
+                                </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="flex-shrink-0 fs-17 me-2 filelist-icon">
@@ -229,34 +816,37 @@
                                                [style.color]="getFileIconColor(file)"></i>
                                         </div>
                                         <div class="flex-grow-1 filelist-name">
-                                            <div *ngIf="!isEditing(file, 'file')">
+                                            <div *ngIf="!isEditing(file.id, 'file')">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="me-2">{{ file.name }}</span>
+                                                    <span class="me-2 flex-grow-1 text-truncate" 
+                                                          (dblclick)="startInlineEdit(file.id, 'file', file.name)">{{ file.name }}</span>
                                                     <span *ngIf="file.caseName" 
-                                                          class="badge bg-primary-subtle text-primary fs-11 ms-1">
-                                                        <i class="ri-briefcase-line me-1"></i>{{ file.caseName }}
+                                                          class="badge bg-primary-subtle text-primary fs-11 flex-shrink-0"
+                                                          [title]="file.caseName">
+                                                        <i class="ri-briefcase-line me-1"></i>
+                                                        <span class="text-truncate d-inline-block" style="max-width: 80px;">{{ file.caseName }}</span>
                                                     </span>
                                                 </div>
                                                 <small *ngIf="file.description" class="text-muted d-block">{{ file.description }}</small>
                                             </div>
-                                            <div *ngIf="isEditing(file, 'file')" class="d-flex align-items-center">
+                                            <div *ngIf="isEditing(file.id, 'file')" class="d-flex align-items-center">
                                                 <input type="text" class="form-control form-control-sm me-2" 
                                                        [(ngModel)]="editingItem!.newName" 
-                                                       (keyup.enter)="saveRename()" 
-                                                       (keyup.escape)="cancelRename()">
-                                                <button class="btn btn-sm btn-success me-1" (click)="saveRename()">
+                                                       (keydown)="onInlineEditKeydown($event)"
+                                                       #renameInput>
+                                                <button class="btn btn-sm btn-success me-1" (click)="finishInlineEdit()">
                                                     <i class="ri-check-line"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-secondary" (click)="cancelRename()">
+                                                <button class="btn btn-sm btn-secondary" (click)="cancelInlineEdit()">
                                                     <i class="ri-close-line"></i>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ getFileTypeCategory(file.mimeType) }}</td>
-                                <td class="filelist-size">{{ formatFileSize(file.size) }}</td>
-                                <td class="filelist-create">{{ file.updatedAt | date:'MMM d, y' }}</td>
+                                <td class="d-none d-md-table-cell">{{ getFileTypeCategory(file.mimeType) }}</td>
+                                <td class="filelist-size d-none d-lg-table-cell">{{ formatFileSize(file.size) }}</td>
+                                <td class="filelist-create d-none d-xl-table-cell">{{ file.updatedAt | date:'MMM d, y' }}</td>
                                 <td>
                                     <div class="d-flex gap-3 justify-content-center">
                                         <button type="button"
@@ -280,8 +870,7 @@
                                                        (click)="downloadFile(file.id)">Download</a></li>
                                                 <li><a class="dropdown-item edit-list" 
                                                        href="javascript:void(0);"
-                                                       data-bs-toggle="modal" role="button"
-                                                       (click)="editFileModal(recentContent, file)">Rename</a></li>
+                                                       (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
                                                 <li class="dropdown-divider"></li>
                                                 <li><a class="dropdown-item remove-list" 
                                                        href="javascript:void(0);"
@@ -294,6 +883,90 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Files Grid View -->
+                <div class="row" *ngIf="viewMode === 'grid'">
+                    <div *ngFor="let file of files; trackBy: trackByFileId" 
+                         class="col-xxl-2 col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12 mb-3">
+                        <div class="card file-card shadow-sm h-100" (dblclick)="previewFile(file)">
+                            <div class="card-body text-center p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               [checked]="isFileSelected(file.id)" 
+                                               (change)="toggleFileSelection(file.id)"
+                                               [id]="'gridFileCheckbox_' + file.id">
+                                        <label class="form-check-label" [for]="'gridFileCheckbox_' + file.id"></label>
+                                    </div>
+                                    <div class="dropdown" ngbDropdown>
+                                        <button class="btn btn-ghost-primary btn-icon btn-sm dropdown arrow-none"
+                                                type="button" ngbDropdownToggle>
+                                            <i class="ri-more-fill align-bottom"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="previewFile(file)">View</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="downloadFile(file.id)">Download</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
+                                            <li class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="file-icon mb-3">
+                                    <i [class]="getFileIcon(file) + ' display-4'" [style.color]="getFileIconColor(file)"></i>
+                                </div>
+                                
+                                <div class="file-details">
+                                    <h6 class="fs-13 mb-1 text-truncate" [title]="file.name">
+                                        <span *ngIf="!isEditing(file.id, 'file')" 
+                                              (dblclick)="startInlineEdit(file.id, 'file', file.name)">{{ file.name }}</span>
+                                        <div *ngIf="isEditing(file.id, 'file')" class="d-flex align-items-center">
+                                            <input type="text" class="form-control form-control-sm me-1" 
+                                                   [(ngModel)]="editingItem!.newName" 
+                                                   (keydown)="onInlineEditKeydown($event)"
+                                                   #renameInput>
+                                            <button class="btn btn-sm btn-success me-1" (click)="finishInlineEdit()">
+                                                <i class="ri-check-line"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" (click)="cancelInlineEdit()">
+                                                <i class="ri-close-line"></i>
+                                            </button>
+                                        </div>
+                                    </h6>
+                                    <p class="text-muted fs-11 mb-1">{{ formatFileSize(file.size) }}</p>
+                                    <p class="text-muted fs-11 mb-2">{{ file.updatedAt | date:'MMM d, y' }}</p>
+                                    
+                                    <div *ngIf="file.caseName" class="mb-2">
+                                        <span class="badge bg-primary-subtle text-primary fs-11 d-block text-truncate" 
+                                              [title]="file.caseName" style="max-width: 100%;">
+                                            <i class="ri-briefcase-line me-1"></i>{{ file.caseName }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button type="button"
+                                                class="btn btn-ghost-primary btn-icon btn-sm favourite-btn"
+                                                [ngClass]="{'active': file.starred}" 
+                                                (click)="toggleStar(file)">
+                                            <i class="ri-star-fill fs-12"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-ghost-secondary btn-icon btn-sm"
+                                                (click)="previewFile(file)">
+                                            <i class="ri-eye-line fs-12"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-ghost-success btn-icon btn-sm"
+                                                (click)="downloadFile(file.id)">
+                                            <i class="ri-download-line fs-12"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Pagination -->

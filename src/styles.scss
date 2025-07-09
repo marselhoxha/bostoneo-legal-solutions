@@ -62,3 +62,37 @@
 }
 
   @import "~simplebar/dist/simplebar.min.css";
+
+
+
+
+/* Mobile File Manager Sidebar Dark Mode Fix */
+.mobile-file-manager-sidebar {
+  background-color: #ffffff \!important;
+  background: #ffffff \!important;
+}
+
+/* Dark mode selectors - covering all possible cases */
+[data-bs-theme="dark"] .mobile-file-manager-sidebar,
+[data-layout-mode="dark"] .mobile-file-manager-sidebar,
+[data-theme="dark"] .mobile-file-manager-sidebar,
+html[data-bs-theme="dark"] .mobile-file-manager-sidebar,
+body[data-bs-theme="dark"] .mobile-file-manager-sidebar,
+.dark-mode .mobile-file-manager-sidebar,
+body.dark-mode .mobile-file-manager-sidebar {
+  background-color: #212529 \!important;
+  background: #212529 \!important;
+  color: #adb5bd \!important;
+}
+
+/* Ensure all child elements inherit the colors */
+[data-bs-theme="dark"] .mobile-file-manager-sidebar *,
+[data-layout-mode="dark"] .mobile-file-manager-sidebar *,
+[data-theme="dark"] .mobile-file-manager-sidebar *,
+html[data-bs-theme="dark"] .mobile-file-manager-sidebar *,
+body[data-bs-theme="dark"] .mobile-file-manager-sidebar *,
+.dark-mode .mobile-file-manager-sidebar *,
+body.dark-mode .mobile-file-manager-sidebar * {
+  color: inherit \!important;
+}
+
