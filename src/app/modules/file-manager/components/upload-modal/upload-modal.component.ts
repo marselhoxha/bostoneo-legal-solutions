@@ -1,6 +1,8 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { FileManagerService } from '../../services/file-manager.service';
+import { FileUploadComponent } from '../file-upload/file-upload.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-upload-modal',
@@ -12,6 +14,8 @@ export class UploadModalComponent implements OnInit {
   @Input() caseId?: number;
   @Input() folderName?: string;
   @Input() caseName?: string;
+  
+  @ViewChild(FileUploadComponent) fileUploadComponent!: FileUploadComponent;
 
   activeCases: any[] = [];
   documentCategories = [
@@ -59,11 +63,58 @@ export class UploadModalComponent implements OnInit {
   }
 
   onUploadComplete(response: any): void {
-    this.activeModal.close(response);
+    // Add case information to the response if a case was selected
+    if (this.selectedCaseId) {
+      const selectedCase = this.activeCases.find(c => c.id === this.selectedCaseId);
+      if (selectedCase) {
+        response.caseId = this.selectedCaseId;
+        response.caseNumber = selectedCase.caseNumber;
+        response.caseTitle = selectedCase.title;
+      }
+    }
+    
+    // Add folder information if uploading to a folder
+    if (this.folderId) {
+      response.folderId = this.folderId;
+      response.folderName = this.folderName;
+    }
+
+    Swal.fire({
+      title: 'Upload Successful!',
+      text: 'Your files have been uploaded successfully.',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    }).then(() => {
+      this.activeModal.close(response);
+    });
   }
 
   onUploadError(error: string): void {
     console.error('Upload error:', error);
+    Swal.fire({
+      title: 'Upload Failed!',
+      text: `Failed to upload files: ${error}`,
+      icon: 'error',
+      confirmButtonColor: '#f06548'
+    });
+  }
+
+  uploadFiles(): void {
+    if (this.fileUploadComponent && this.fileUploadComponent.selectedFiles.length > 0) {
+      this.fileUploadComponent.uploadFiles();
+    } else {
+      Swal.fire({
+        title: 'No Files Selected',
+        text: 'Please select at least one file to upload.',
+        icon: 'warning',
+        confirmButtonColor: '#405189'
+      });
+    }
+  }
+
+  canUpload(): boolean {
+    return this.fileUploadComponent?.selectedFiles?.length > 0 && !this.fileUploadComponent?.isUploading;
   }
 
   dismiss(): void {

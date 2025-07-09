@@ -17,6 +17,9 @@ export interface FolderModel {
   canEdit: boolean;
   canDelete: boolean;
   canShare: boolean;
+  caseId?: number;
+  caseName?: string;
+  caseNumber?: string;
 }
 
 export interface FileItemModel {
@@ -68,6 +71,7 @@ export interface FileItemModel {
 export interface CreateFolderRequest {
   name: string;
   parentId?: number;
+  caseId?: number;
 }
 
 export interface FileUploadResponse {
@@ -83,6 +87,10 @@ export interface FileUploadResponse {
   downloadUrl?: string;
   message: string;
   success: boolean;
+  file?: FileItemModel;
+  folderId?: number;
+  caseId?: number;
+  progress?: number;
 }
 
 export interface FileManagerStats {

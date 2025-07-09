@@ -17,6 +17,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
   @Input() multiple: boolean = true;
   @Input() maxFileSize: number = 100 * 1024 * 1024; // 100MB
   @Input() acceptedTypes: string = '*/*';
+  @Input() hideUploadButton: boolean = false;
 
   @Output() uploadComplete = new EventEmitter<any>();
   @Output() uploadError = new EventEmitter<string>();
@@ -25,7 +26,6 @@ export class FileUploadComponent implements OnInit, OnDestroy {
   selectedFiles: File[] = [];
   isDragOver = false;
   isUploading = false;
-  uploadProgressValue = 0;
   uploadedFiles: any[] = [];
   errors: string[] = [];
 
@@ -148,7 +148,6 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     this.isUploading = true;
-    this.uploadProgressValue = 0;
     this.uploadedFiles = [];
     this.errors = [];
 
@@ -173,11 +172,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (response) => {
-        this.uploadProgressValue = 100;
-        this.uploadedFiles.push(response);
-        this.uploadComplete.emit(response);
-        this.isUploading = false;
-        this.selectedFiles = [];
+        if (response.success) {
+          this.uploadedFiles.push(response);
+          this.uploadComplete.emit(response);
+          this.isUploading = false;
+          this.selectedFiles = [];
+        }
       },
       error: (error) => {
         this.errors.push(`Failed to upload ${file.name}: ${error.message}`);
@@ -201,11 +201,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (response) => {
-        this.uploadProgressValue = 100;
-        this.uploadedFiles.push(response);
-        this.uploadComplete.emit(response);
-        this.isUploading = false;
-        this.selectedFiles = [];
+        if (response.success) {
+          this.uploadedFiles.push(response);
+          this.uploadComplete.emit(response);
+          this.isUploading = false;
+          this.selectedFiles = [];
+        }
       },
       error: (error) => {
         this.errors.push(`Failed to upload files: ${error.message}`);
@@ -262,5 +263,16 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     if (mimeType.includes('zip') || mimeType.includes('rar')) return 'warning';
     
     return 'secondary';
+  }
+
+  /**
+   * Get optimized accept types to improve file picker performance
+   * Empty accept attribute can cause performance issues on Windows
+   */
+  getOptimizedAcceptTypes(): string {
+    if (this.acceptedTypes === '*/*' || !this.acceptedTypes) {
+      return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.ods,.odp,.jpg,.jpeg,.png,.gif,.bmp,.svg,.mp4,.avi,.mov,.mp3,.wav,.zip,.rar,.7z';
+    }
+    return this.acceptedTypes;
   }
 }

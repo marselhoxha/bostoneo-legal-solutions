@@ -1,12 +1,11 @@
 .file-upload-component {
   .drop-zone {
-    border: 2px dashed #e9ecef;
+    border: 2px dashed #2a3d46;
     border-radius: 8px;
     padding: 2rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    background-color: #f8f9fa;
     min-height: 200px;
     display: flex;
     align-items: center;
@@ -15,7 +14,6 @@
     &:hover,
     &.drag-over {
       border-color: #3577f1;
-      background-color: #f0f7ff;
       
       .upload-icon i {
         transform: scale(1.1);

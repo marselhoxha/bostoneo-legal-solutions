@@ -1,0 +1,253 @@
+.permission-mapping-container,
+.conditions-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.inheritance-rules-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.card.border-light {
+  border: 1px solid #e9ecef !important;
+}
+
+.form-check-input:checked {
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: #0ab39c;
+  border-color: #0ab39c;
+}
+
+.btn-outline-primary {
+  color: #405189;
+  border-color: #405189;
+  
+  &:hover {
+    background-color: #405189;
+    border-color: #405189;
+  }
+}
+
+.btn-primary {
+  background-color: #405189;
+  border-color: #405189;
+  
+  &:hover {
+    background-color: #364068;
+    border-color: #364068;
+  }
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+  
+  &:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+  }
+}
+
+.btn-outline-danger {
+  color: #f06548;
+  border-color: #f06548;
+  
+  &:hover {
+    background-color: #f06548;
+    border-color: #f06548;
+  }
+}
+
+.btn-ghost-secondary {
+  color: #6c757d;
+  background-color: transparent;
+  border-color: transparent;
+  
+  &:hover {
+    color: #495057;
+    background-color: #e9ecef;
+    border-color: #e9ecef;
+  }
+}
+
+.badge.bg-secondary-subtle {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+}
+
+.badge.bg-success {
+  background-color: #0ab39c !important;
+}
+
+.page-title-box {
+  margin-bottom: 1.5rem;
+}
+
+.breadcrumb {
+  margin-bottom: 0;
+}
+
+.breadcrumb-item {
+  color: #6c757d;
+}
+
+.breadcrumb-item.active {
+  color: #495057;
+}
+
+.card-title {
+  color: #495057;
+  font-weight: 600;
+}
+
+.card-text {
+  color: #6c757d;
+}
+
+.form-label {
+  color: #495057;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #405189;
+  box-shadow: 0 0 0 0.2rem rgba(64, 81, 137, 0.25);
+}
+
+.form-control.form-control-sm,
+.form-select.form-select-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dropdown-menu {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border: 1px solid #e9ecef;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  color: #495057;
+  
+  &:hover {
+    background-color: #f8f9fa;
+    color: #495057;
+  }
+  
+  &.text-danger {
+    color: #dc3545 !important;
+    
+    &:hover {
+      background-color: #f8d7da;
+      color: #721c24 !important;
+    }
+  }
+}
+
+.dropdown-divider {
+  margin: 0.5rem 0;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .permission-mapping-container,
+  .conditions-container {
+    max-height: 200px;
+  }
+  
+  .inheritance-rules-container {
+    max-height: 300px;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .form-control-sm,
+  .form-select-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+  }
+}
+
+// Animation for cards
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+// Custom scrollbar
+.permission-mapping-container::-webkit-scrollbar,
+.conditions-container::-webkit-scrollbar,
+.inheritance-rules-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.permission-mapping-container::-webkit-scrollbar-track,
+.conditions-container::-webkit-scrollbar-track,
+.inheritance-rules-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.permission-mapping-container::-webkit-scrollbar-thumb,
+.conditions-container::-webkit-scrollbar-thumb,
+.inheritance-rules-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.permission-mapping-container::-webkit-scrollbar-thumb:hover,
+.conditions-container::-webkit-scrollbar-thumb:hover,
+.inheritance-rules-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+// Form validation states
+.is-invalid {
+  border-color: #dc3545;
+}
+
+.is-valid {
+  border-color: #198754;
+}
+
+// Loading states
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// Success and error states
+.alert-success {
+  background-color: #d1e7dd;
+  border-color: #badbcc;
+  color: #0f5132;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c2c7;
+  color: #842029;
+}
+
+// Priority badges
+.badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}

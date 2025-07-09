@@ -1,0 +1,199 @@
+<div class="container-fluid p-0" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 fw-bold">Template Manager</h4>
+        <div class="page-title-right">
+          <button type="button" class="btn btn-success" (click)="createNewTemplate()">
+            <i class="ri-add-line align-bottom me-1"></i>
+            Create Template
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Template List -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Available Templates</h5>
+        </div>
+        <div class="card-body">
+          <div *ngIf="isLoading" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          
+          <div *ngIf="!isLoading && templates.length === 0" class="text-center text-muted py-4">
+            <i class="ri-folder-2-line fs-48 text-muted mb-3"></i>
+            <p class="mb-0">No templates available</p>
+          </div>
+          
+          <div *ngFor="let template of templates" class="template-item border rounded p-3 mb-3 cursor-pointer"
+               [class.active]="selectedTemplate?.id === template.id"
+               (click)="selectTemplate(template)">
+            <div class="d-flex align-items-start justify-content-between">
+              <div class="flex-grow-1">
+                <h6 class="mb-1">{{ template.name }}</h6>
+                <p class="text-muted fs-13 mb-2">{{ template.description }}</p>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge fs-11" [class]="getStatusBadgeClass(template)">
+                    {{ getStatusText(template) }}
+                  </span>
+                  <span class="badge bg-light text-dark fs-11">
+                    {{ getPracticeAreaName(template.practiceArea) }}
+                  </span>
+                </div>
+              </div>
+              <div class="dropdown">
+                <button class="btn btn-ghost-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                  <i class="ri-more-2-fill"></i>
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="javascript:void(0);" (click)="editTemplate(template)">
+                    <i class="ri-edit-line me-2"></i>Edit
+                  </a></li>
+                  <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteTemplate(template)">
+                    <i class="ri-delete-bin-line me-2"></i>Delete
+                  </a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Details/Editor -->
+    <div class="col-lg-8">
+      <!-- Template Form -->
+      <div *ngIf="editingTemplate !== null || (!selectedTemplate && !editingTemplate)" class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            {{ editingTemplate ? 'Edit Template' : 'Create New Template' }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="templateForm" (ngSubmit)="saveTemplate()">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Template Name</label>
+                  <input type="text" class="form-control" formControlName="name" 
+                         placeholder="Enter template name">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Practice Area</label>
+                  <select class="form-select" formControlName="practiceArea">
+                    <option value="">Select practice area</option>
+                    <option *ngFor="let area of practiceAreas" [value]="area">
+                      {{ getPracticeAreaName(area) }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" formControlName="description" rows="3"
+                        placeholder="Enter template description"></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="isDefault">
+                <label class="form-check-label">
+                  Set as default template for this practice area
+                </label>
+              </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="!templateForm.valid">
+                <i class="ri-save-line me-1"></i>
+                Save Template
+              </button>
+              <button type="button" class="btn btn-secondary" (click)="editingTemplate = null">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Template Details View -->
+      <div *ngIf="selectedTemplate && editingTemplate === null" class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h5 class="card-title mb-0">{{ selectedTemplate.name }}</h5>
+          <button class="btn btn-outline-primary btn-sm" (click)="editTemplate(selectedTemplate)">
+            <i class="ri-edit-line me-1"></i>
+            Edit
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label text-muted">Practice Area</label>
+                <p class="mb-0">{{ getPracticeAreaName(selectedTemplate.practiceArea) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label text-muted">Status</label>
+                <div>
+                  <span class="badge fs-12" [class]="getStatusBadgeClass(selectedTemplate)">
+                    {{ getStatusText(selectedTemplate) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-muted">Description</label>
+            <p class="mb-0">{{ selectedTemplate.description }}</p>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-muted">Folder Structure</label>
+            <div class="folder-structure">
+              <div *ngFor="let folder of selectedTemplate.folders" class="folder-item mb-2">
+                <div class="d-flex align-items-center">
+                  <i class="ri-folder-line text-warning me-2"></i>
+                  <span class="fw-medium">{{ folder.name }}</span>
+                  <span *ngIf="folder.isRequired" class="badge bg-danger-subtle text-danger fs-11 ms-2">
+                    Required
+                  </span>
+                </div>
+                <div *ngIf="folder.description" class="text-muted fs-13 ms-4">
+                  {{ folder.description }}
+                </div>
+                <div *ngIf="folder.subFolders && folder.subFolders.length > 0" class="ms-4 mt-2">
+                  <div *ngFor="let subFolder of folder.subFolders" class="d-flex align-items-center mb-1">
+                    <i class="ri-folder-2-line text-secondary me-2"></i>
+                    <span class="fs-13">{{ subFolder.name }}</span>
+                    <span *ngIf="subFolder.isRequired" class="badge bg-danger-subtle text-danger fs-11 ms-2">
+                      Required
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div *ngIf="selectedTemplate.createdAt" class="mb-3">
+            <label class="form-label text-muted">Created</label>
+            <p class="mb-0">{{ selectedTemplate.createdAt | date:'medium' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

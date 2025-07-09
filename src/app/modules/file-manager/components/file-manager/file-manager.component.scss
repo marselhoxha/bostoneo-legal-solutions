@@ -955,12 +955,6 @@ $cyan-color: #0dcaf0;
 .case-selection-panel {
   background: var(--vz-gray-50) !important;
   
-  .selected-case {
-    .case-info {
-      background: var(--vz-white);
-      border: 1px solid var(--vz-border-color);
-    }
-  }
 }
 
 // Navigation Pills
@@ -1141,7 +1135,6 @@ $cyan-color: #0dcaf0;
   }
   
   &.bg-light {
-    background-color: #f8f9fa !important;
     color: #6c757d !important;
     font-weight: 500;
   }

@@ -39,7 +39,7 @@
            type="file"
            class="d-none"
            [multiple]="multiple"
-           [accept]="acceptedTypes"
+           [accept]="getOptimizedAcceptTypes()"
            (change)="onFileSelected($event)">
   </div>
 
@@ -61,7 +61,8 @@
         <button type="button" 
                 class="btn btn-sm btn-primary" 
                 (click)="uploadFiles()"
-                [disabled]="isUploading || selectedFiles.length === 0">
+                [disabled]="isUploading || selectedFiles.length === 0"
+                *ngIf="!hideUploadButton">
           <i class="ri-upload-2-line me-1" *ngIf="!isUploading"></i>
           <div class="spinner-border spinner-border-sm me-1" *ngIf="isUploading"></div>
           {{ isUploading ? 'Uploading...' : 'Upload Files' }}
@@ -69,15 +70,6 @@
       </div>
     </div>
 
-    <!-- Upload Progress -->
-    <div class="upload-progress mb-3" *ngIf="isUploading">
-      <div class="progress">
-        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-             [style.width.%]="uploadProgressValue">
-          {{ uploadProgressValue }}%
-        </div>
-      </div>
-    </div>
 
     <!-- Files List -->
     <div class="files-list">

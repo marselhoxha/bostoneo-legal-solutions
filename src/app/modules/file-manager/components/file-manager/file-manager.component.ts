@@ -31,6 +31,10 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   stats: FileManagerStats | null = null;
   recentFiles: FileItemModel[] = [];
   
+  // Separate personal and case folders
+  personalFolders: FolderModel[] = [];
+  personalFiles: FileItemModel[] = [];
+  
   // UI state properties
   isLoading = false;
   searchTerm = '';
@@ -40,7 +44,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   viewMode: 'grid' | 'list' = 'grid';
   sortBy = 'createdAt';
   sortDirection = 'DESC';
-  isCollapsed = false;
   
   // Unified navigation state
   navigationState = {
@@ -189,6 +192,8 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         this.totalPages = filesResponse.totalPages || 0;
         
         this.folders = folders;
+        // Store personal folders separately (folders without caseId)
+        this.personalFolders = folders.filter(folder => !folder.caseId);
         this.stats = stats;
         
         // Initialize active cases with enhanced data
@@ -337,6 +342,46 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigate to personal folder (always in personal context)
+   */
+  navigateToPersonalFolder(folder: FolderModel): void {
+    // Ensure we're in personal context
+    this.navigationState.context = 'personal';
+    this.navigationState.caseId = null;
+    this.navigationState.caseName = null;
+    
+    this.isLoading = true;
+    this.currentFolder = folder;
+    this.navigationState.folderId = folder.id;
+    this.navigationState.folderName = folder.name;
+    
+    // Close mobile sidebar when navigating
+    this.closeMobileSidebar();
+    
+    this.fileManagerService.getFolderContents(folder.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        // Always filter to show only non-case items in personal folders
+        this.files = (response.files || []).filter(file => !file.caseId);
+        this.folders = (response.folders || []).filter(subfolder => !subfolder.caseId);
+        
+        // Update personal folders for navigation
+        this.personalFolders = this.folders.filter(f => !f.caseId);
+        
+        this.updateBreadcrumb();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error navigating to personal folder:', error);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
    * Navigate to root
    */
   navigateToRoot(): void {
@@ -434,6 +479,10 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         
         // Only show folders that are NOT associated with any case
         this.folders = folders.filter(folder => !folder.caseId);
+        
+        // Also update personal folders for the sidebar navigation
+        this.personalFolders = folders.filter(folder => !folder.caseId);
+        this.personalFiles = (filesResponse.content || []).filter(file => !file.caseId);
         
         this.updateBreadcrumb();
         this.isLoading = false;
@@ -665,8 +714,11 @@ export class FileManagerComponent implements OnInit, OnDestroy {
               this.createFoldersFromTemplate(template.folders, caseFolder.id, targetCaseId);
             } else {
               // Need to create case root folder first
+              // Find the case info to get the proper name
+              const targetCase = this.activeCases.find(c => c.id === targetCaseId);
+              const caseFolderName = targetCase?.title || targetCase?.name || this.navigationState.caseName || `CASE-${targetCaseId}`;
               const caseFolderRequest: CreateFolderRequest = {
-                name: this.navigationState.caseName || `CASE-${targetCaseId}`,
+                name: caseFolderName,
                 parentId: undefined,
                 caseId: targetCaseId
               };
@@ -694,9 +746,10 @@ export class FileManagerComponent implements OnInit, OnDestroy {
           return;
         }
         
-        const caseNumber = caseInfo.caseNumber || `CASE-${caseInfo.id}`;
+        // Use case title/name for the folder name instead of case number
+        const caseFolderName = caseInfo.title || caseInfo.name || caseInfo.caseNumber || `CASE-${caseInfo.id}`;
         const caseFolderRequest: CreateFolderRequest = {
-          name: caseNumber,
+          name: caseFolderName,
           parentId: this.currentFolder?.id,
           caseId: caseInfo.id
         };
@@ -1111,6 +1164,18 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       case 'quickFilters':
         this.quickFiltersExpanded = !this.quickFiltersExpanded;
         break;
+    }
+  }
+
+  /**
+   * Toggle My Documents section
+   */
+  toggleMyDocuments(): void {
+    this.myDocumentsExpanded = !this.myDocumentsExpanded;
+    
+    // If expanding and we're not in personal context, switch to it
+    if (this.myDocumentsExpanded && this.navigationState.context !== 'personal') {
+      this.switchToPersonalDocuments();
     }
   }
 

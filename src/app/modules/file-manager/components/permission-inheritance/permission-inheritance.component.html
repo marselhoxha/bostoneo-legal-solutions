@@ -1,0 +1,268 @@
+<div class="container-fluid p-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Permission Inheritance Setup</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript:void(0);">File Manager</a></li>
+            <li class="breadcrumb-item active">Permission Inheritance</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Configuration -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Global Configuration</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="configForm" (ngSubmit)="saveInheritanceConfig()">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="isActive" id="inheritanceActive">
+                  <label class="form-check-label" for="inheritanceActive">
+                    Enable Permission Inheritance
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Default Folder Permission Set</label>
+                <select class="form-select" formControlName="defaultFolderPermissionSet">
+                  <option value="">Select permission set...</option>
+                  <option *ngFor="let set of permissionSets" [value]="set.id">{{ set.name }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Default File Permission Set</label>
+                <select class="form-select" formControlName="defaultFilePermissionSet">
+                  <option value="">Select permission set...</option>
+                  <option *ngFor="let set of permissionSets" [value]="set.id">{{ set.name }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="text-end mt-3">
+              <button type="submit" class="btn btn-primary" [disabled]="configForm.invalid">
+                <i class="ri-save-line me-1"></i>Save Configuration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Create Inheritance Rule -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Create Inheritance Rule</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="ruleForm" (ngSubmit)="saveInheritanceRule()">
+            <!-- Basic Info -->
+            <div class="mb-3">
+              <label class="form-label">Rule Name</label>
+              <input type="text" class="form-control" formControlName="name" placeholder="Enter rule name">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" formControlName="description" rows="2" placeholder="Enter rule description"></textarea>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Source Type</label>
+                  <select class="form-select" formControlName="sourceType">
+                    <option *ngFor="let type of sourceTypes" [value]="type">{{ getSourceTypeDisplayName(type) }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Target Type</label>
+                  <select class="form-select" formControlName="targetType">
+                    <option *ngFor="let type of targetTypes" [value]="type">{{ getTargetTypeDisplayName(type) }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Priority</label>
+              <input type="number" class="form-control" formControlName="priority" min="1" placeholder="Enter priority (1 = highest)">
+            </div>
+
+            <!-- Permission Mapping -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0">Permission Mapping</label>
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="addPermissionMapping()">
+                  <i class="ri-add-line me-1"></i>Add Mapping
+                </button>
+              </div>
+              
+              <div formArrayName="permissionMapping" class="permission-mapping-container">
+                <div *ngFor="let mapping of permissionMapping.controls; let i = index" 
+                     [formGroupName]="i" class="card border-light mb-2">
+                  <div class="card-body p-3">
+                    <div class="row align-items-center">
+                      <div class="col-md-4">
+                        <label class="form-label">Source Permission</label>
+                        <select class="form-select form-select-sm" formControlName="sourcePermission">
+                          <option *ngFor="let type of permissionTypes" [value]="type">{{ getPermissionTypeDisplayName(type) }}</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Target Permission</label>
+                        <select class="form-select form-select-sm" formControlName="targetPermission">
+                          <option *ngFor="let type of permissionTypes" [value]="type">{{ getPermissionTypeDisplayName(type) }}</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="form-check mt-4">
+                          <input class="form-check-input" type="checkbox" formControlName="override">
+                          <label class="form-check-label">Override</label>
+                        </div>
+                      </div>
+                      <div class="col-md-1">
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-4" (click)="removePermissionMapping(i)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conditions -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0">Conditions (Optional)</label>
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="addCondition()">
+                  <i class="ri-add-line me-1"></i>Add Condition
+                </button>
+              </div>
+              
+              <div formArrayName="conditions" class="conditions-container">
+                <div *ngFor="let condition of conditions.controls; let i = index" 
+                     [formGroupName]="i" class="card border-light mb-2">
+                  <div class="card-body p-3">
+                    <div class="row align-items-end">
+                      <div class="col-md-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select form-select-sm" formControlName="type">
+                          <option *ngFor="let type of conditionTypes" [value]="type">{{ getPermissionTypeDisplayName(type) }}</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Field</label>
+                        <input type="text" class="form-control form-control-sm" formControlName="field" placeholder="Field name">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label">Operator</label>
+                        <select class="form-select form-select-sm" formControlName="operator">
+                          <option *ngFor="let op of conditionOperators" [value]="op">{{ op }}</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Value</label>
+                        <input type="text" class="form-control form-control-sm" formControlName="value" placeholder="Value">
+                      </div>
+                      <div class="col-md-1">
+                        <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeCondition(i)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="text-end">
+              <button type="button" class="btn btn-light me-2" (click)="ruleForm.reset()">Reset</button>
+              <button type="submit" class="btn btn-primary" [disabled]="ruleForm.invalid || isLoading">
+                <i class="ri-save-line me-1"></i>Save Rule
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Existing Rules -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Existing Inheritance Rules</h5>
+        </div>
+        <div class="card-body">
+          <div class="inheritance-rules-container">
+            <div *ngFor="let rule of inheritanceRules" class="card border-light mb-3">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <h6 class="card-title">{{ rule.name }}</h6>
+                    <p class="card-text text-muted fs-12">{{ rule.description }}</p>
+                    
+                    <div class="row mt-2">
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <strong>Source:</strong> {{ getSourceTypeDisplayName(rule.sourceType) }}
+                        </small>
+                      </div>
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <strong>Target:</strong> {{ getTargetTypeDisplayName(rule.targetType) }}
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-2">
+                      <span class="badge bg-secondary-subtle text-secondary me-2">
+                        Priority: {{ rule.priority }}
+                      </span>
+                      <span class="badge" [class.bg-success]="rule.isActive" [class.bg-secondary]="!rule.isActive">
+                        {{ rule.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-ghost-secondary" type="button" data-bs-toggle="dropdown">
+                      <i class="ri-more-2-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="javascript:void(0);" (click)="toggleRuleStatus(rule)">
+                          <i class="ri-toggle-line me-2"></i>{{ rule.isActive ? 'Deactivate' : 'Activate' }}
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteInheritanceRule(rule)">
+                          <i class="ri-delete-bin-line me-2"></i>Delete
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

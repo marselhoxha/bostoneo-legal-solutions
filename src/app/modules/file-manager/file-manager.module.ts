@@ -10,10 +10,17 @@ import { FileVersionHistoryComponent } from './components/file-version-history/f
 import { FileUploadComponent } from './components/file-upload/file-upload.component';
 import { UploadModalComponent } from './components/upload-modal/upload-modal.component';
 import { FilePreviewModalComponent } from './components/file-preview-modal/file-preview-modal.component';
+import { TemplateManagerComponent } from './components/template-manager/template-manager.component';
 import { FileManagerService } from './services/file-manager.service';
+import { PermissionService } from './services/permission.service';
+import { FirmTemplateCustomizationComponent } from './components/firm-template-customization/firm-template-customization.component';
+import { PermissionInheritanceComponent } from './components/permission-inheritance/permission-inheritance.component';
 
 const routes: Routes = [
-  { path: '', component: FileManagerComponent }
+  { path: '', component: FileManagerComponent },
+  { path: 'templates', component: TemplateManagerComponent },
+  { path: 'firm-templates', component: FirmTemplateCustomizationComponent },
+  { path: 'permissions', component: PermissionInheritanceComponent }
 ];
 
 @NgModule({
@@ -22,7 +29,10 @@ const routes: Routes = [
     FileVersionHistoryComponent,
     FileUploadComponent,
     UploadModalComponent,
-    FilePreviewModalComponent
+    FilePreviewModalComponent,
+    TemplateManagerComponent,
+    FirmTemplateCustomizationComponent,
+    PermissionInheritanceComponent
   ],
   imports: [
     CommonModule,
@@ -33,7 +43,8 @@ const routes: Routes = [
     SimplebarAngularModule
   ],
   providers: [
-    FileManagerService
+    FileManagerService,
+    PermissionService
   ]
 })
 export class FileManagerModule { }
