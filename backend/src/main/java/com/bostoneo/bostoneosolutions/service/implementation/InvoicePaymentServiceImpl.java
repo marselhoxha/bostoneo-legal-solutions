@@ -86,7 +86,13 @@ public class InvoicePaymentServiceImpl implements InvoicePaymentService {
 
     @Override
     public List<InvoicePaymentDTO> getRecentPayments(int limit) {
-        return paymentRepository.findRecentPayments(limit);
+        try {
+            return paymentRepository.findRecentPayments(limit);
+        } catch (Exception e) {
+            log.warn("Error fetching recent payments: {}", e.getMessage());
+            // Return empty list instead of failing
+            return List.of();
+        }
     }
 
     @Override

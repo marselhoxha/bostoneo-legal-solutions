@@ -1,0 +1,2550 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.***REMOVED***:***REMOVED***solutions >-------------------
+[INFO] Building ***REMOVED***solutions 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.3:run (default-cli) > test-compile @ ***REMOVED***solutions >>>
+[INFO] 
+[INFO] --- jacoco:0.8.11:prepare-agent (prepare-agent) @ ***REMOVED***solutions ---
+[INFO] argLine set to -javaagent:/Users/marsel/.m2/repository/org/jacoco/org.jacoco.agent/0.8.11/org.jacoco.agent-0.8.11-runtime.jar=destfile=/Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/target/jacoco.exec
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ***REMOVED***solutions ---
+[INFO] Copying 6 resources from src/main/resources to target/classes
+[INFO] Copying 81 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ ***REMOVED***solutions ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 435 source files with javac [debug parameters release 17] to target/classes
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[42,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[45,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[48,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[51,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[54,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[58,33] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AssignmentRule.java:[62,33] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/CreateCommentRequest.java:[23,21] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/TaskComment.java:[43,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/TimeEntryAuditLog.java:[65,21] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[38,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[41,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[44,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[47,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[50,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[53,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[59,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/UserWorkload.java:[62,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[56,26] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[60,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[89,24] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[93,26] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[97,28] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTask.java:[101,31] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Role.java:[46,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Role.java:[56,29] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Role.java:[60,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/TimeEntryFilterRequest.java:[29,17] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/TimeEntryFilterRequest.java:[30,17] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/TimeEntryFilterRequest.java:[33,20] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/TimeEntryFilterRequest.java:[34,20] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTransferRequest.java:[53,29] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseTransferRequest.java:[57,28] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/User.java:[50,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/User.java:[53,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/User.java:[56,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseNote.java:[43,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AttorneyExpertise.java:[45,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/AttorneyExpertise.java:[48,21] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/CaseTransferRequest.java:[30,29] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/CaseAssignmentHistory.java:[69,33] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Invoice.java:[97,29] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Invoice.java:[137,27] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/Invoice.java:[141,35] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/model/ExpenseCategory.java:[46,34] @SuperBuilder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/dto/CreateTaskRequest.java:[38,26] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[INFO] Hibernate/JPA static Metamodel Generator 6.4.4.Final
+[INFO] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/service/InvoiceWorkflowService.java: Some input files use or override a deprecated API.
+[INFO] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/service/InvoiceWorkflowService.java: Recompile with -Xlint:deprecation for details.
+[INFO] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/algorithm/implementation/SmartAssignmentAlgorithmImpl.java: Some input files use unchecked or unsafe operations.
+[INFO] /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/src/main/java/com/***REMOVED***/***REMOVED***solutions/algorithm/implementation/SmartAssignmentAlgorithmImpl.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ***REMOVED***solutions ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ ***REMOVED***solutions ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 8 source files with javac [debug parameters release 17] to target/test-classes
+[INFO] Hibernate/JPA static Metamodel Generator 6.4.4.Final
+[INFO] 
+[INFO] <<< spring-boot:3.3.3:run (default-cli) < test-compile @ ***REMOVED***solutions <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.3:run (default-cli) @ ***REMOVED***solutions ---
+[INFO] Attaching agents: []
+23:22:44,766 |-INFO in ch.qos.logback.classic.LoggerContext[default] - This is logback-classic version 1.5.7
+23:22:44,768 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Here is a list of configurators discovered as a service, by rank: 
+23:22:44,768 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 -   org.springframework.boot.logging.logback.RootLogLevelConfigurator
+23:22:44,768 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - They will be invoked in order until ExecutionStatus.DO_NOT_INVOKE_NEXT_IF_ANY is returned.
+23:22:44,768 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class org.springframework.boot.logging.logback.RootLogLevelConfigurator
+23:22:44,775 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - org.springframework.boot.logging.logback.RootLogLevelConfigurator.configure() call lasted 0 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+23:22:44,775 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.joran.SerializedModelConfigurator
+23:22:44,777 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.joran.SerializedModelConfigurator
+23:22:44,780 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.scmo]
+23:22:44,780 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.scmo]
+23:22:44,780 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.joran.SerializedModelConfigurator.configure() call lasted 3 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+23:22:44,780 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+23:22:44,780 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+23:22:44,781 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+23:22:44,781 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.xml]
+23:22:44,781 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 1 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+23:22:44,781 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.BasicConfigurator
+23:22:44,782 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.BasicConfigurator
+23:22:44,782 |-INFO in ch.qos.logback.classic.BasicConfigurator@5bd82fed - Setting up default configuration.
+23:22:44,796 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.BasicConfigurator.configure() call lasted 14 milliseconds. ExecutionStatus=NEUTRAL
+23:22:45,046 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [Console]
+23:22:45,046 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+23:22:45,056 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - This appender no longer admits a layout as a sub-component, set an encoder instead.
+23:22:45,056 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - To ensure compatibility, wrapping your layout in LayoutWrappingEncoder.
+23:22:45,056 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - See also http://logback.qos.ch/codes.html#layoutInsteadOfEncoder for details
+23:22:45,056 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [RollingFile]
+23:22:45,056 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+23:22:45,057 |-INFO in ch.qos.logback.core.model.processor.ModelInterpretationContext@c1bd0be - value "./logs/application.log" substituted for "${LOGS}/application.log"
+23:22:45,059 |-INFO in ch.qos.logback.core.model.processor.ModelInterpretationContext@c1bd0be - value "./logs/archived/application-%d{yyyy-MM-dd}.%i.log" substituted for "${LOGS}/archived/application-%d{yyyy-MM-dd}.%i.log"
+23:22:45,061 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1198197478 - No compression will be used
+23:22:45,062 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1198197478 - Will use the pattern ./logs/archived/application-%d{yyyy-MM-dd}.%i.log for the active file
+23:22:45,070 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - The date pattern is 'yyyy-MM-dd' from file name pattern './logs/archived/application-%d{yyyy-MM-dd}.%i.log'.
+23:22:45,070 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - Roll-over at midnight.
+23:22:45,073 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - Setting initial period to 2025-07-18T03:22:10.074Z
+23:22:45,074 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+23:22:45,074 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+23:22:45,077 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[RollingFile] - Active log file name: ./logs/application.log
+23:22:45,077 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[RollingFile] - File property is set to [./logs/application.log]
+23:22:45,077 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+23:22:45,077 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@655f7ea - Propagating INFO level on Logger[ROOT] onto the JUL framework
+23:22:45,077 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [RollingFile] to Logger[ROOT]
+23:22:45,077 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [Console] to Logger[ROOT]
+23:22:45,078 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.***REMOVED***] to DEBUG
+23:22:45,078 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@655f7ea - Propagating DEBUG level on Logger[com.***REMOVED***] onto the JUL framework
+23:22:45,078 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.***REMOVED***] to false
+23:22:45,078 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [RollingFile] to Logger[com.***REMOVED***]
+23:22:45,078 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [Console] to Logger[com.***REMOVED***]
+23:22:45,078 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@549949be - End of configuration.
+23:22:45,078 |-INFO in org.springframework.boot.logging.logback.SpringBootJoranConfigurator@4b3a45f1 - Registering current configuration as safe fallback point
+
+ ____            _                           ____        _       _   _
+ | __ )  ___  ___| |_ ___  _ __   ___  ___   / ___|  ___ | |_   _| |_(_) ___  _ __  ___
+ |  _ \ / _ \/ __| __/ _ \| '_ \ / _ \/ _ \  \___ \ / _ \| | | | | __| |/ _ \| '_ \/ __|
+ | |_) | (_) \__ \ || (_) | | | |  __/ (_) |  ___) | (_) | | |_| | |_| | (_) | | | \__ \
+ |____/ \___/|___/\__\___/|_| |_|\___|\___/  |____/ \___/|_|\__,_|\__|_|\___/|_| |_|___/
+
+
+ Bostoneo Solutions 1.0.0
+ Powered by Spring Boot 3.3.3
+2025-07-17 23:22:45,097 [34mINFO [0;39m [[34mbackground-preinit[0;39m] [33mo.h.v.i.u.Version[0;39m: HV000001: Hibernate Validator 8.0.1.Final
+2025-07-17 23:22:45,114 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Starting BostoneosolutionsApplication using Java 22 with PID 9669 (/Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/target/classes started by marsel in /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend)
+2025-07-17 23:22:45,115 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Running with Spring Boot v3.3.3, Spring v6.1.12
+2025-07-17 23:22:45,115 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.SpringApplication[0;39m: The following 1 profile is active: "dev"
+2025-07-17 23:22:45,670 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-17 23:22:45,670 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data JDBC repositories in DEFAULT mode.
+2025-07-17 23:22:45,700 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ActiveTimerRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,701 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AssignmentRuleRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,701 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AttorneyExpertiseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,702 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,702 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.BillingRateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,703 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,703 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,703 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentHistoryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,704 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,704 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseNoteRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,705 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseRateConfigurationRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,705 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,705 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTransferRequestRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,706 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,706 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,706 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.EmailTemplateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,707 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,708 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,708 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileAccessLogRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,709 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileCommentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,709 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,710 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FilePermissionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,710 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileShareRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,710 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileTagRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,711 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileVersionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,711 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FolderRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,712 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,712 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,712 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceTemplateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,713 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,713 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,713 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,714 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,714 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.MatterTypeRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,714 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.NotificationTokenRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,715 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.PaymentTransactionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,715 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,715 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReminderQueueRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,716 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TaskCommentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,716 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,716 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimerSessionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,717 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.UserWorkloadRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,717 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,718 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.WorkloadCalculationRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-17 23:22:45,718 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 45 ms. Found 0 JDBC repository interfaces.
+2025-07-17 23:22:45,723 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-17 23:22:45,724 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-07-17 23:22:45,978 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 252 ms. Found 44 JPA repository interfaces.
+2025-07-17 23:22:45,993 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-17 23:22:45,995 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-07-17 23:22:46,015 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ActiveTimerRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,015 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AssignmentRuleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,015 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AttorneyExpertiseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,015 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.BillingRateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentHistoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseNoteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseRateConfigurationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTransferRequestRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,016 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.EmailTemplateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileAccessLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileCommentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FilePermissionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileShareRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileTagRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileVersionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FolderRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceTemplateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,017 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.MatterTypeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.NotificationTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.PaymentTransactionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReminderQueueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TaskCommentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimerSessionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.UserWorkloadRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,019 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.WorkloadCalculationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-17 23:22:46,019 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 13 ms. Found 0 Redis repository interfaces.
+2025-07-17 23:22:46,768 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.e.t.TomcatWebServer[0;39m: Tomcat initialized with port 8081 (http)
+2025-07-17 23:22:46,776 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Initializing ProtocolHandler ["http-nio-8081"]
+2025-07-17 23:22:46,778 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting service [Tomcat]
+2025-07-17 23:22:46,778 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting Servlet engine: [Apache Tomcat/10.1.28]
+2025-07-17 23:22:46,813 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Initializing Spring embedded WebApplicationContext
+2025-07-17 23:22:46,814 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.s.c.ServletWebServerApplicationContext[0;39m: Root WebApplicationContext: initialization completed in 1683 ms
+2025-07-17 23:22:46,921 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 System timezone: America/New_York
+2025-07-17 23:22:46,921 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Current LocalDateTime: 2025-07-17T23:22:46.921448 (Year: 2025)
+2025-07-17 23:22:46,921 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Current ZonedDateTime: 2025-07-17T23:22:46.921468-04:00[America/New_York]
+2025-07-17 23:22:46,922 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Available zones: America/New_York, UTC, etc.
+2025-07-17 23:22:46,922 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: ✅ System clock initialized - Current year: 2025
+2025-07-17 23:22:47,080 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.w.f.GenericFilterBean[0;39m: Filter 'customAuthorizationFilter' configured for use
+2025-07-17 23:22:47,081 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.w.f.GenericFilterBean[0;39m: Filter 'simpleRateLimitFilter' configured for use
+2025-07-17 23:22:47,158 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.j.i.u.LogHelper[0;39m: HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-07-17 23:22:47,194 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.Version[0;39m: HHH000412: Hibernate ORM core version 6.5.2.Final
+2025-07-17 23:22:47,222 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.c.i.RegionFactoryInitiator[0;39m: HHH000026: Second-level cache disabled
+2025-07-17 23:22:47,296 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Starting...
+2025-07-17 23:22:47,760 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.p.HikariPool[0;39m: HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2e785b28
+2025-07-17 23:22:47,763 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Start completed.
+2025-07-17 23:22:47,835 [31mWARN [0;39m [[34mmain[0;39m] [33mo.h.e.j.d.i.DialectFactoryImpl[0;39m: HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-07-17 23:22:48,006 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.o.j.p.SpringPersistenceUnitInfo[0;39m: No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-07-17 23:22:49,328 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.e.t.j.p.i.JtaPlatformInitiator[0;39m: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-07-17 23:22:49,330 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.o.j.AbstractEntityManagerFactoryBean[0;39m: Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-07-17 23:22:49,464 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.j.r.q.QueryEnhancerFactory[0;39m: Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-07-17 23:22:50,560 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.c.FirebaseConfig[0;39m: Initializing Firebase application...
+2025-07-17 23:22:50,598 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.c.FirebaseConfig[0;39m: Firebase application initialized successfully
+2025-07-17 23:22:51,608 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.s.i.FileStorageServiceImpl[0;39m: File storage initialized at: /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/uploads
+2025-07-17 23:22:51,890 [31mWARN [0;39m [[34mmain[0;39m] [33mo.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration[0;39m: spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-07-17 23:22:51,908 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer[0;39m: Global AuthenticationManager configured with UserDetailsService bean with name userRepositoryImpl
+2025-07-17 23:22:52,858 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting ProtocolHandler ["http-nio-8081"]
+2025-07-17 23:22:52,872 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.e.t.TomcatWebServer[0;39m: Tomcat started on port 8081 (http) with context path '/'
+2025-07-17 23:22:52,882 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Started BostoneosolutionsApplication in 8.033 seconds (process running for 8.267)
+2025-07-17 23:22:52,888 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowScheduler[0;39m: Running scheduled invoice workflows...
+Hibernate: 
+    select
+        iwr1_0.`id`,
+        iwr1_0.`action_config`,
+        iwr1_0.`action_type`,
+        iwr1_0.`created_at`,
+        iwr1_0.`created_by`,
+        iwr1_0.`days_after_due`,
+        iwr1_0.`days_before_due`,
+        iwr1_0.`description`,
+        iwr1_0.`execution_time`,
+        iwr1_0.`is_active`,
+        iwr1_0.`max_executions`,
+        iwr1_0.`name`,
+        iwr1_0.`trigger_event`,
+        iwr1_0.`trigger_status`,
+        iwr1_0.`updated_at` 
+    from
+        `invoice_workflow_rules` iwr1_0 
+    where
+        iwr1_0.`trigger_event`=? 
+        and iwr1_0.`is_active`
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`=? 
+        and i1_0.`status` in (?, ?, ?)
+Hibernate: 
+    select
+        li1_0.`invoice_id`,
+        li1_0.`id`,
+        li1_0.`amount`,
+        li1_0.`category`,
+        li1_0.`created_at`,
+        li1_0.`description`,
+        li1_0.`line_order`,
+        li1_0.`quantity`,
+        li1_0.`service_date`,
+        li1_0.`unit_price`,
+        li1_0.`updated_at` 
+    from
+        `invoice_line_items` li1_0 
+    where
+        li1_0.`invoice_id`=? 
+    order by
+        li1_0.`line_order`
+2025-07-17 23:22:53,044 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowService[0;39m: Executing workflow Mark Overdue Invoices for invoice INV-202506-666
+2025-07-17 23:22:53,048 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowService[0;39m: Updated invoice INV-202506-666 status to OVERDUE
+Hibernate: 
+    insert 
+    into
+        `invoice_workflow_executions`
+        (
+            `executed_at`, `invoice_id`, `result_message`, `status`, `workflow_rule_id`
+        ) 
+    values
+        (?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`=? 
+        and i1_0.`status` in (?, ?, ?)
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`<=? 
+        and i1_0.`status` in (?, ?)
+Hibernate: 
+    select
+        ir1_0.`id`,
+        ir1_0.`created_at`,
+        ir1_0.`created_by_workflow`,
+        ir1_0.`invoice_id`,
+        ir1_0.`message`,
+        ir1_0.`recipients`,
+        ir1_0.`reminder_type`,
+        ir1_0.`scheduled_date`,
+        ir1_0.`scheduled_time`,
+        ir1_0.`sent_at`,
+        ir1_0.`status`,
+        ir1_0.`subject`,
+        ir1_0.`updated_at` 
+    from
+        `invoice_reminders` ir1_0 
+    where
+        ir1_0.`status`=? 
+        and ir1_0.`scheduled_date`=?
+2025-07-17 23:22:53,098 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowScheduler[0;39m: Scheduled workflows completed successfully
+2025-07-17 23:22:53,106 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:22:53,134 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:22:53,134 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:22:53,135 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:22:53,140 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:22:53,143 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:22:53,145 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:23:17,599 [31mWARN [0;39m [[34mHikariPool-1 housekeeper[0;39m] [33mc.z.h.p.HikariPool$HouseKeeper[0;39m: HikariPool-1 - Retrograde clock change detected (housekeeper delta=29s729ms), soft-evicting connections from pool.
+2025-07-17 23:23:52,880 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:23:52,963 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:23:52,964 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:23:52,968 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:23:52,976 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:23:52,992 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:23:52,996 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:24:53,005 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:24:53,043 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:24:53,044 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:24:53,045 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:24:53,050 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:24:53,066 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:24:53,068 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:25:53,075 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:25:53,115 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:25:53,115 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:25:53,117 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:25:53,122 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:25:53,136 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:25:53,139 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:26:53,146 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:26:53,170 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:26:53,171 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:26:53,172 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:26:53,176 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:26:53,192 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:26:53,198 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:27:53,211 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:27:53,284 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:27:53,285 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:27:53,291 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:27:53,297 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:27:53,313 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:27:53,319 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:28:53,330 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:28:53,359 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:28:53,360 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:28:53,362 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:28:53,365 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:28:53,375 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:28:53,376 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:29:53,383 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:29:53,410 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:29:53,411 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:29:53,413 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:29:53,417 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:29:53,428 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:29:53,430 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:30:53,439 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:30:53,513 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:30:53,513 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:30:53,516 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:30:53,519 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:30:53,526 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:30:53,528 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:31:53,534 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:31:53,555 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:31:53,555 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:31:53,557 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:31:53,563 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:31:53,571 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:31:53,571 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:32:53,582 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:32:53,682 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:32:53,683 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:32:53,688 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:32:53,696 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:32:53,713 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:32:53,715 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:33:53,722 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:33:53,794 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:33:53,795 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:33:53,798 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:33:53,802 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:33:53,810 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:33:53,812 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:34:53,820 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:34:53,849 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:34:53,850 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:34:53,852 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:34:53,860 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:34:53,869 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:34:53,871 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:35:53,878 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:35:53,977 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:35:53,978 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:35:53,990 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:35:54,007 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:35:54,017 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:35:54,018 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:36:54,038 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:36:54,277 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:36:54,277 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:36:54,282 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:36:54,300 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:36:54,324 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:36:54,329 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:37:54,348 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:37:54,430 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:37:54,430 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:37:54,434 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:37:54,441 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:37:54,467 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:37:54,486 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:38:54,464 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:38:54,508 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:38:54,509 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:38:54,510 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:38:54,513 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:38:54,524 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:38:54,526 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:39:54,538 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:39:54,574 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:39:54,576 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:39:54,579 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:39:54,582 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:39:54,595 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:39:54,596 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:40:54,603 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:40:54,626 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:40:54,626 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:40:54,628 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:40:54,632 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:40:54,642 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:40:54,645 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:41:54,652 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:41:54,687 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:41:54,687 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:41:54,689 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:41:54,693 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:41:54,708 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:41:54,710 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:42:54,716 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:42:54,744 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:42:54,745 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:42:54,747 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:42:54,752 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:42:54,761 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:42:54,762 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:43:54,776 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:43:54,805 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:43:54,805 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:43:54,809 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:43:54,812 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:43:54,820 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:43:54,821 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:44:54,829 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:44:54,852 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:44:54,852 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:44:54,854 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:44:54,859 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:44:54,867 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:44:54,871 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:45:54,879 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-17 23:45:54,906 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-17 23:45:54,907 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-17 23:45:54,908 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-17 23:45:54,920 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-17 23:45:54,933 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-17 23:45:54,935 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-17 23:46:55,219 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mo.s.o.j.AbstractEntityManagerFactoryBean[0;39m: Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-07-17 23:46:55,244 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Shutdown initiated...
+2025-07-17 23:46:55,262 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Shutdown completed.

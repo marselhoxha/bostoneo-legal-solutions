@@ -1229,7 +1229,7 @@ export class SafePipe implements PipeTransform {
     }
 
     .timeline-content {
-      background: #f8f9fa;
+      background: #f8f9fa05;
       border-radius: 0.5rem;
       padding: 1rem;
       border-left: 3px solid #405189;

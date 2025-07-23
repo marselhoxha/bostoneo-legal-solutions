@@ -105,6 +105,79 @@
       }
     }
   }
+  
+  .office-preview {
+    background-color: #f8f9fa;
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .office-preview-container {
+      text-align: center;
+      padding: 3rem;
+      max-width: 600px;
+      
+      .office-icon-container {
+        margin-bottom: 2rem;
+        
+        i {
+          font-size: 5rem;
+        }
+      }
+      
+      .office-info {
+        h4 {
+          color: #495057;
+          font-weight: 600;
+        }
+        
+        .file-details {
+          background: white;
+          border: 1px solid #e9ecef;
+          border-radius: 8px;
+          padding: 1.5rem;
+          
+          .detail-item {
+            text-align: left;
+            margin-bottom: 0.5rem;
+            
+            .detail-label {
+              color: #6c757d;
+              font-weight: 500;
+              margin-right: 0.5rem;
+            }
+            
+            .detail-value {
+              color: #495057;
+            }
+          }
+        }
+        
+        .preview-actions {
+          margin-top: 2rem;
+          
+          .btn-lg {
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+          }
+        }
+      }
+    }
+    
+    iframe {
+      background-color: white;
+      display: block;
+    }
+  }
+  
+  .bg-soft-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+  }
+  
+  .text-warning {
+    color: #ffc107 !important;
+  }
 }
 
 .modal-footer {

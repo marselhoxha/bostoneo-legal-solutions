@@ -412,7 +412,14 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             // Create DocumentDTO to pass to the document service
             LegalDocumentDTO documentDTO = new LegalDocumentDTO();
             documentDTO.setTitle(title != null ? title : "Untitled Document");
-            documentDTO.setType(type != null ? DocumentType.valueOf(type) : DocumentType.OTHER);
+            DocumentType selectedType;
+            try {
+                selectedType = type != null ? DocumentType.valueOf(type) : DocumentType.OTHER;
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid document type: {}. Using OTHER instead.", type);
+                selectedType = DocumentType.OTHER;
+            }
+            documentDTO.setType(selectedType);
             documentDTO.setCategory(selectedCategory);
             documentDTO.setStatus(DocumentStatus.FINAL);
             documentDTO.setCaseId(caseId);

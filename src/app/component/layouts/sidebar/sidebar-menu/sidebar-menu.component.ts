@@ -134,54 +134,101 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
         ]
       },
 
-      // Time & Billing
+      // File Manager
       {
         id: 3,
+        label: 'File Manager',
+        icon: 'ri-folder-2-line',
+        isParent: true,
+        permission: { resource: 'DOCUMENT', action: 'VIEW' },
+        subItems: [
+          {
+            id: 31,
+            label: 'My Documents',
+            link: '/file-manager',
+            parentId: 3,
+            permission: { resource: 'DOCUMENT', action: 'VIEW' }
+          },
+          {
+            id: 32,
+            label: 'Templates',
+            link: '/file-manager/templates',
+            parentId: 3,
+            permission: { resource: 'DOCUMENT', action: 'VIEW' }
+          },
+          {
+            id: 33,
+            label: 'Firm Templates',
+            link: '/file-manager/firm-templates',
+            parentId: 3,
+            permission: { resource: 'SYSTEM', action: 'VIEW', hierarchyLevel: 30 }
+          },
+          {
+            id: 34,
+            label: 'Permissions',
+            link: '/file-manager/permissions',
+            parentId: 3,
+            permission: { resource: 'SYSTEM', action: 'VIEW', hierarchyLevel: 30 }
+          },
+          {
+            id: 35,
+            label: 'Deleted Files',
+            link: '/file-manager/deleted',
+            parentId: 3,
+            icon: 'ri-delete-bin-line',
+            permission: { resource: 'DOCUMENT', action: 'VIEW' }
+          }
+        ]
+      },
+
+      // Time & Billing
+      {
+        id: 4,
         label: 'Time & Billing',
         icon: 'ri-time-line',
         isParent: true,
         permission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' },
         subItems: [
           {
-            id: 31,
+            id: 41,
             label: 'Time Dashboard',
             link: '/time-tracking/dashboard',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
           },
           {
-            id: 32,
+            id: 42,
             label: 'Log Time',
             link: '/time-tracking/entry',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'TIME_TRACKING', action: 'CREATE' }
           },
           {
-            id: 33,
+            id: 43,
             label: 'My Timesheet',
             link: '/time-tracking/timesheet',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
           },
           {
-            id: 34,
+            id: 44,
             label: 'Team Timesheet',
             link: '/time-tracking/timesheet/team',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'TIME_TRACKING', action: 'VIEW_TEAM', hierarchyLevel: 25 }
           },
           {
-            id: 35,
+            id: 45,
             label: 'Time Approval',
             link: '/time-tracking/approval',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'TIME_TRACKING', action: 'APPROVE', hierarchyLevel: 30 }
           },
           {
-            id: 36,
+            id: 46,
             label: 'Billing Analytics',
             link: '/time-tracking/billing/analytics',
-            parentId: 3,
+            parentId: 4,
             permission: { resource: 'BILLING', action: 'VIEW', hierarchyLevel: 30 }
           }
         ]
@@ -189,24 +236,24 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
       // Client Management
       {
-        id: 4,
+        id: 5,
         label: 'Clients',
         icon: 'ri-user-3-line',
         isParent: true,
         permission: { resource: 'CLIENT', action: 'VIEW' },
         subItems: [
           {
-            id: 41,
+            id: 51,
             label: 'All Clients',
             link: '/clients',
-            parentId: 4,
+            parentId: 5,
             permission: { resource: 'CLIENT', action: 'VIEW' }
           },
           {
-            id: 42,
+            id: 52,
             label: 'Add Client',
             link: '/clients/create',
-            parentId: 4,
+            parentId: 5,
             permission: { resource: 'CLIENT', action: 'CREATE', hierarchyLevel: 25 }
           }
         ]
@@ -214,38 +261,38 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
       // Financial Management
       {
-        id: 5,
+        id: 6,
         label: 'Financial',
         icon: 'ri-money-dollar-circle-line',
         isParent: true,
         permission: { resource: 'BILLING', action: 'VIEW', hierarchyLevel: 30 },
         subItems: [
           {
-            id: 51,
+            id: 61,
             label: 'Invoices',
             link: '/invoices',
-            parentId: 5,
+            parentId: 6,
             permission: { resource: 'BILLING', action: 'VIEW' }
           },
           {
-            id: 52,
+            id: 62,
             label: 'Generate Invoice',
             link: '/time-tracking/billing/invoices',
-            parentId: 5,
+            parentId: 6,
             permission: { resource: 'BILLING', action: 'CREATE', hierarchyLevel: 50 }
           },
           {
-            id: 53,
+            id: 63,
             label: 'Billing Rates',
             link: '/time-tracking/billing/rates',
-            parentId: 5,
+            parentId: 6,
             permission: { resource: 'BILLING', action: 'EDIT', hierarchyLevel: 50 }
           },
           {
-            id: 54,
+            id: 64,
             label: 'Expenses',
             link: '/expenses',
-            parentId: 5,
+            parentId: 6,
             permission: { resource: 'EXPENSE', action: 'VIEW' }
           }
         ]
@@ -253,31 +300,31 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
       // Reports & Analytics
       {
-        id: 6,
+        id: 7,
         label: 'Reports',
         icon: 'ri-bar-chart-2-line',
         isParent: true,
         permission: { resource: 'REPORT', action: 'VIEW_OWN' },
         subItems: [
           {
-            id: 61,
+            id: 71,
             label: 'My Reports',
             link: '/time-tracking/reports',
-            parentId: 6,
+            parentId: 7,
             permission: { resource: 'REPORT', action: 'VIEW_OWN' }
           },
           {
-            id: 62,
+            id: 72,
             label: 'Team Reports',
             link: '/time-tracking/reports/team',
-            parentId: 6,
+            parentId: 7,
             permission: { resource: 'REPORT', action: 'VIEW_TEAM', hierarchyLevel: 30 }
           },
           {
-            id: 63,
+            id: 73,
             label: 'Firm Analytics',
             link: '/stats',
-            parentId: 6,
+            parentId: 7,
             permission: { resource: 'REPORT', action: 'VIEW_ALL', hierarchyLevel: 70 }
           }
         ]
@@ -285,31 +332,31 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
       // Administration
       {
-        id: 7,
+        id: 8,
         label: 'Administration',
         icon: 'ri-settings-2-line',
         isParent: true,
         permission: { resource: 'USER', action: 'VIEW', hierarchyLevel: 50 },
         subItems: [
           {
-            id: 71,
+            id: 81,
             label: 'User Management',
             link: '/admin/users',
-            parentId: 7,
+            parentId: 8,
             permission: { resource: 'USER', action: 'ADMIN', hierarchyLevel: 80 }
           },
           {
-            id: 72,
+            id: 82,
             label: 'Role Management',
             link: '/admin/roles',
-            parentId: 7,
+            parentId: 8,
             permission: { resource: 'ROLE', action: 'ADMIN', hierarchyLevel: 90 }
           },
           {
-            id: 73,
+            id: 83,
             label: 'System Settings',
             link: '/admin/system',
-            parentId: 7,
+            parentId: 8,
             permission: { 
               resource: 'SYSTEM', 
               action: 'ADMIN', 

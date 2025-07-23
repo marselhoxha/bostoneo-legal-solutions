@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpHeaders, HttpEventType } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpEventType } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, of } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { 
@@ -15,7 +15,6 @@ import {
   CreateTagRequest
 } from '../models/file-manager.model';
 import { environment } from '../../../../environments/environment';
-import { Key } from '../../../enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -44,25 +43,72 @@ export class FileManagerService {
 
   constructor(private http: HttpClient) { }
 
-  // Helper method to get auth headers
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem(Key.TOKEN);
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
-
-  // Helper method to get auth headers for file upload
-  private getAuthHeadersForUpload(): HttpHeaders {
-    const token = localStorage.getItem(Key.TOKEN);
-    return new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-  }
+  // Helper methods removed - token interceptor handles authentication automatically
 
   // File Operations
   
+  /**
+   * Get personal files (no case association)
+   */
+  getPersonalFiles(page: number = 0, size: number = 50, sortBy: string = 'createdAt', direction: string = 'DESC', folderId?: number): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', sortBy)
+      .set('direction', direction)
+      .set('context', 'personal')
+      .set('caseId', '-1'); // Special marker for personal files
+    
+    if (folderId) {
+      params = params.set('folderId', folderId.toString());
+    }
+    
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/files`, { params }).pipe(
+      map(response => {
+        const transformedFiles = this.transformFilesFromAPI(response.content || []);
+        this.filesSubject.next(transformedFiles);
+        this.setCachedData(`personal_files_${page}`, response);
+        return {
+          ...response,
+          content: transformedFiles
+        };
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Get files with all parameters
+   */
+  getFilesWithParams(page: number = 0, size: number = 50, sortBy: string = 'createdAt', direction: string = 'DESC', 
+                     folderId: number | null = null, caseId: number | null = null, search: string | null = null, 
+                     fileType: string | null = null, context: string | null = null): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', sortBy)
+      .set('direction', direction);
+
+    if (folderId !== null) params = params.set('folderId', folderId.toString());
+    if (caseId !== null) params = params.set('caseId', caseId.toString());
+    if (search) params = params.set('search', search);
+    if (fileType) params = params.set('fileType', fileType);
+    if (context) params = params.set('context', context);
+
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/files`, { params }).pipe(
+      map(response => {
+        return {
+          content: this.transformFilesFromAPI(response.content || []),
+          totalElements: response.totalElements || 0,
+          totalPages: response.totalPages || 0,
+          number: response.number || page,
+          size: response.size || size
+        };
+      }),
+      catchError(this.handleError)
+    );
+  }
+
   /**
    * Get all files with pagination and sorting
    */
@@ -85,8 +131,7 @@ export class FileManagerService {
       .set('direction', direction);
     
     return this.http.get<any>(`${this.FILE_MANAGER_API}/files`, { 
-      params,
-      headers: this.getAuthHeaders()
+      params
     }).pipe(
       map(response => {
         // Transform response to match file manager format
@@ -110,6 +155,16 @@ export class FileManagerService {
   }
 
   /**
+   * Get single file by ID
+   */
+  getFile(fileId: number): Observable<FileItemModel> {
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/files/${fileId}`).pipe(
+      map(response => this.transformFileFromAPI(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Get files by folder (filter by document category)
    */
   getFilesByFolder(folderId: number): Observable<FileItemModel[]> {
@@ -127,9 +182,7 @@ export class FileManagerService {
       );
     }
     
-    return this.http.get<any>(this.DOCUMENTS_API, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<any>(this.DOCUMENTS_API).pipe(
       map(response => {
         const allFiles = this.transformDocumentsToFiles(response);
         const filteredFiles = allFiles.filter(file => 
@@ -158,9 +211,7 @@ export class FileManagerService {
       });
     }
     
-    return this.http.get<any>(`${this.DOCUMENTS_API}/${fileId}`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<any>(`${this.DOCUMENTS_API}/${fileId}`).pipe(
       map(response => {
         const file = this.transformDocumentToFile(response);
         this.cacheFrequentFile(fileId, file);
@@ -183,7 +234,6 @@ export class FileManagerService {
     if (documentStatus) formData.append('documentStatus', documentStatus);
 
     return this.http.post<any>(`${this.FILE_MANAGER_API}/files/upload`, formData, {
-      headers: this.getAuthHeadersForUpload(),
       reportProgress: true,
       observe: 'events'
     }).pipe(
@@ -234,8 +284,7 @@ export class FileManagerService {
    */
   downloadFile(fileId: number): Observable<Blob> {
     return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/download`, { 
-      responseType: 'blob',
-      headers: this.getAuthHeaders()
+      responseType: 'blob'
     }).pipe(
       catchError(this.handleError)
     );
@@ -245,9 +294,7 @@ export class FileManagerService {
    * Delete file
    */
   deleteFile(fileId: number): Observable<void> {
-    return this.http.delete<void>(`${this.FILE_MANAGER_API}/files/${fileId}`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.delete<void>(`${this.FILE_MANAGER_API}/files/${fileId}`).pipe(
       tap(() => this.refreshCurrentFolderFiles()),
       catchError(this.handleError)
     );
@@ -260,7 +307,6 @@ export class FileManagerService {
     const params = new HttpParams().set('name', name);
     
     return this.http.put<any>(`${this.FILE_MANAGER_API}/files/${fileId}`, null, {
-      headers: this.getAuthHeaders(),
       params
     }).pipe(
       map(response => this.transformFileFromAPI(response)),
@@ -273,9 +319,7 @@ export class FileManagerService {
    * Toggle file star status
    */
   toggleFileStar(fileId: number): Observable<FileItemModel> {
-    return this.http.post<any>(`${this.FILE_MANAGER_API}/files/${fileId}/star`, {}, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<any>(`${this.FILE_MANAGER_API}/files/${fileId}/star`, {}).pipe(
       map(response => this.transformFileFromAPI(response)),
       catchError(this.handleError)
     );
@@ -290,8 +334,7 @@ export class FileManagerService {
       .set('page', page.toString())
       .set('size', size.toString());
     
-    return this.http.get<any>(`${this.FILE_MANAGER_API}/files/search`, {
-      headers: this.getAuthHeaders(),
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/search`, {
       params
     }).pipe(
       map(response => {
@@ -313,16 +356,14 @@ export class FileManagerService {
    * Get root folders
    */
   getRootFolders(): Observable<FolderModel[]> {
-    return this.http.get<any>(`${this.FILE_MANAGER_API}/folders/root`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<any[]>(`${this.FILE_MANAGER_API}/folders/personal`).pipe(
       map(response => {
         const folders = this.transformFoldersFromAPI(response);
         this.foldersSubject.next(folders);
         return folders;
       }),
       catchError((error) => {
-        console.warn('Root folders API not available, returning empty folders array:', error);
+        console.warn('Personal folders API not available, returning empty folders array:', error);
         const emptyFolders: FolderModel[] = [];
         this.foldersSubject.next(emptyFolders);
         return of(emptyFolders);
@@ -333,10 +374,13 @@ export class FileManagerService {
   /**
    * Get folder contents (subfolders and files)
    */
-  getFolderContents(folderId: number): Observable<any> {
-    return this.http.get<any>(`${this.FILE_MANAGER_API}/folders/${folderId}/contents`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+  getFolderContents(folderId: number, context?: string): Observable<any> {
+    let params = new HttpParams();
+    if (context) {
+      params = params.set('context', context);
+    }
+    
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/folders/${folderId}/contents`, { params }).pipe(
       map(response => {
         const folders = this.transformFoldersFromAPI(response.folders || []);
         const files = this.transformFilesFromAPI(response.files || []);
@@ -375,9 +419,7 @@ export class FileManagerService {
    * Get folder by ID
    */
   getFolderById(folderId: number): Observable<FolderModel> {
-    return this.http.get<any>(`${this.FILE_MANAGER_API}/folders/${folderId}`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/folders/${folderId}`).pipe(
       map(response => {
         const folder = this.transformFolderFromAPI(response);
         this.currentFolderSubject.next(folder);
@@ -391,9 +433,7 @@ export class FileManagerService {
    * Get folder permissions
    */
   getFolderPermissions(folderId: number): Observable<string[]> {
-    return this.http.get<string[]>(`${this.FILE_MANAGER_API}/folders/${folderId}/permissions`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<string[]>(`${this.FILE_MANAGER_API}/folders/${folderId}/permissions`).pipe(
       catchError(this.handleError)
     );
   }
@@ -402,9 +442,7 @@ export class FileManagerService {
    * Get file permissions
    */
   getFilePermissions(fileId: number): Observable<string[]> {
-    return this.http.get<string[]>(`${this.FILE_MANAGER_API}/files/${fileId}/permissions`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<string[]>(`${this.FILE_MANAGER_API}/files/${fileId}/permissions`).pipe(
       catchError(this.handleError)
     );
   }
@@ -413,9 +451,7 @@ export class FileManagerService {
    * Create new folder
    */
   createFolder(request: CreateFolderRequest): Observable<FolderModel> {
-    return this.http.post<any>(`${this.FILE_MANAGER_API}/folders`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<any>(`${this.FILE_MANAGER_API}/folders`, request).pipe(
       map(response => {
         const folder = this.transformFolderFromAPI(response);
         this.refreshCurrentFolderContents();
@@ -432,7 +468,6 @@ export class FileManagerService {
     const params = new HttpParams().set('name', name);
     
     return this.http.put<any>(`${this.FILE_MANAGER_API}/folders/${folderId}`, null, {
-      headers: this.getAuthHeaders(),
       params
     }).pipe(
       map(response => {
@@ -448,9 +483,7 @@ export class FileManagerService {
    * Delete folder
    */
   deleteFolder(folderId: number): Observable<void> {
-    return this.http.delete<void>(`${this.FILE_MANAGER_API}/folders/${folderId}`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.delete<void>(`${this.FILE_MANAGER_API}/folders/${folderId}`).pipe(
       tap(() => this.refreshCurrentFolderContents()),
       catchError(this.handleError)
     );
@@ -462,9 +495,7 @@ export class FileManagerService {
    * Get file versions
    */
   getFileVersions(fileId: number): Observable<FileVersion[]> {
-    return this.http.get<FileVersion[]>(`${this.DOCUMENTS_API}/${fileId}/versions`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<FileVersion[]>(`${this.DOCUMENTS_API}/${fileId}/versions`).pipe(
       catchError(this.handleError)
     );
   }
@@ -477,9 +508,7 @@ export class FileManagerService {
     formData.append('file', file);
     if (comment) formData.append('comment', comment);
 
-    return this.http.post<FileVersion>(`${this.DOCUMENTS_API}/${fileId}/versions`, formData, {
-      headers: this.getAuthHeadersForUpload()
-    }).pipe(
+    return this.http.post<FileVersion>(`${this.DOCUMENTS_API}/${fileId}/versions`, formData).pipe(
       catchError(this.handleError)
     );
   }
@@ -489,8 +518,7 @@ export class FileManagerService {
    */
   downloadFileVersion(versionId: number): Observable<Blob> {
     return this.http.get(`${this.DOCUMENTS_API}/versions/${versionId}/download`, { 
-      responseType: 'blob',
-      headers: this.getAuthHeaders()
+      responseType: 'blob'
     }).pipe(
       catchError(this.handleError)
     );
@@ -500,9 +528,7 @@ export class FileManagerService {
    * Restore file version
    */
   restoreFileVersion(fileId: number, versionId: number): Observable<void> {
-    return this.http.post<void>(`${this.DOCUMENTS_API}/${fileId}/versions/${versionId}/restore`, {}, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.DOCUMENTS_API}/${fileId}/versions/${versionId}/restore`, {}).pipe(
       catchError(this.handleError)
     );
   }
@@ -511,9 +537,7 @@ export class FileManagerService {
    * Delete file version
    */
   deleteFileVersion(versionId: number): Observable<void> {
-    return this.http.delete<void>(`${this.DOCUMENTS_API}/versions/${versionId}`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.delete<void>(`${this.DOCUMENTS_API}/versions/${versionId}`).pipe(
       catchError(this.handleError)
     );
   }
@@ -524,9 +548,7 @@ export class FileManagerService {
    * Add comment to file
    */
   addComment(fileId: number, request: CreateCommentRequest): Observable<FileComment> {
-    return this.http.post<FileComment>(`${this.DOCUMENTS_API}/${fileId}/comments`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<FileComment>(`${this.DOCUMENTS_API}/${fileId}/comments`, request).pipe(
       catchError(this.handleError)
     );
   }
@@ -535,9 +557,7 @@ export class FileManagerService {
    * Get file comments
    */
   getFileComments(fileId: number): Observable<FileComment[]> {
-    return this.http.get<FileComment[]>(`${this.DOCUMENTS_API}/${fileId}/comments`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<FileComment[]>(`${this.DOCUMENTS_API}/${fileId}/comments`).pipe(
       catchError(this.handleError)
     );
   }
@@ -546,9 +566,7 @@ export class FileManagerService {
    * Create tag
    */
   createTag(request: CreateTagRequest): Observable<FileTag> {
-    return this.http.post<FileTag>(`${this.DOCUMENTS_API}/tags`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<FileTag>(`${this.DOCUMENTS_API}/tags`, request).pipe(
       catchError(this.handleError)
     );
   }
@@ -557,9 +575,78 @@ export class FileManagerService {
    * Get user tags
    */
   getUserTags(): Observable<FileTag[]> {
-    return this.http.get<FileTag[]>(`${this.DOCUMENTS_API}/tags`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<FileTag[]>(`${this.DOCUMENTS_API}/tags`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // Deleted Files Operations
+
+  /**
+   * Get deleted files with pagination
+   */
+  getDeletedFiles(page: number = 0, size: number = 50, sortBy: string = 'deletedAt', direction: string = 'DESC'): Observable<any> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', sortBy)
+      .set('direction', direction);
+    
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/files/deleted`, { params }).pipe(
+      map(response => {
+        return {
+          content: this.transformFilesFromAPI(response.content || []),
+          totalElements: response.totalElements || 0,
+          totalPages: response.totalPages || 0,
+          number: response.number || page,
+          size: response.size || size,
+          first: response.first || true,
+          last: response.last || true
+        };
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Restore deleted file
+   */
+  restoreFile(fileId: number): Observable<FileItemModel> {
+    return this.http.post<any>(`${this.FILE_MANAGER_API}/files/${fileId}/restore`, {}).pipe(
+      map(response => this.transformFileFromAPI(response)),
+      tap(() => this.refreshCurrentFolderFiles()),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Permanently delete file
+   */
+  permanentlyDeleteFile(fileId: number): Observable<void> {
+    return this.http.delete<void>(`${this.FILE_MANAGER_API}/files/${fileId}/permanent`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Bulk restore files
+   */
+  bulkRestoreFiles(fileIds: number[]): Observable<void> {
+    const request = { fileIds: fileIds };
+    
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/bulk/restore`, request).pipe(
+      tap(() => this.refreshCurrentFolderFiles()),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Bulk permanent delete files
+   */
+  bulkPermanentlyDeleteFiles(fileIds: number[]): Observable<void> {
+    const request = { fileIds: fileIds };
+    
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/bulk/permanent-delete`, request).pipe(
       catchError(this.handleError)
     );
   }
@@ -570,60 +657,33 @@ export class FileManagerService {
    * Get user storage statistics
    */
   getStorageStats(): Observable<FileManagerStats> {
-    // Calculate stats from current files
-    const files = this.filesSubject.value;
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    
-    const stats: FileManagerStats = {
-      totalFiles: files.length,
-      totalFolders: this.foldersSubject.value.length,
-      totalSize: totalSize,
-      formattedTotalSize: this.formatFileSize(totalSize),
-      usedSpace: totalSize,
-      availableSpace: 1073741824, // 1 GB
-      usagePercentage: Math.round((totalSize / 1073741824) * 100),
-      storageByType: {
-        'Documents': {
-          type: 'Documents',
-          size: totalSize * 0.7,
-          formattedSize: this.formatFileSize(totalSize * 0.7),
-          count: Math.round(files.length * 0.7),
-          percentage: 70,
-          color: '#405189'
-        },
-        'Images': {
-          type: 'Images', 
-          size: totalSize * 0.2,
-          formattedSize: this.formatFileSize(totalSize * 0.2),
-          count: Math.round(files.length * 0.2),
-          percentage: 20,
-          color: '#0ab39c'
-        },
-        'Others': {
-          type: 'Others',
-          size: totalSize * 0.1,
-          formattedSize: this.formatFileSize(totalSize * 0.1),
-          count: Math.round(files.length * 0.1),
-          percentage: 10,
-          color: '#f59f00'
-        }
-      },
-      recentFiles: files.slice(0, 5),
-      starredFiles: files.filter(f => f.starred)
-    };
-    
-    return new Observable(observer => {
-      observer.next(stats);
-      observer.complete();
-    });
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/stats`).pipe(
+      map(response => {
+        return {
+          totalFiles: response.totalFiles || 0,
+          totalFolders: response.totalFolders || 0,
+          totalSize: response.totalStorageSize || response.totalSize || 0,
+          formattedTotalSize: response.formattedTotalSize || this.formatFileSize(response.totalStorageSize || response.totalSize || 0),
+          usedSpace: response.usedSpace || response.totalStorageSize || response.totalSize || 0,
+          availableSpace: response.availableSpace || (10737418240 - (response.usedSpace || response.totalStorageSize || response.totalSize || 0)),
+          usagePercentage: response.usagePercentage || 0,
+          storageByType: response.storageByType || {},
+          recentFiles: [],
+          starredFiles: []
+        } as FileManagerStats;
+      }),
+      catchError(this.handleError)
+    );
   }
 
   /**
    * Get recent files
    */
   getRecentFiles(limit: number = 10): Observable<FileItemModel[]> {
-    return this.getFiles(0, limit, 'updatedAt', 'DESC').pipe(
-      map(response => response.content || []),
+    const params = new HttpParams().set('limit', limit.toString());
+    
+    return this.http.get<FileItemModel[]>(`${this.FILE_MANAGER_API}/recent`, { params }).pipe(
+      map(files => files.map(file => this.transformFileFromAPI(file))),
       catchError(this.handleError)
     );
   }
@@ -632,12 +692,10 @@ export class FileManagerService {
    * Get starred files
    */
   getStarredFiles(): Observable<FileItemModel[]> {
-    // Filter starred files from current files
-    const starredFiles = this.filesSubject.value.filter(f => f.starred);
-    return new Observable(observer => {
-      observer.next(starredFiles);
-      observer.complete();
-    });
+    return this.http.get<FileItemModel[]>(`${this.FILE_MANAGER_API}/starred`).pipe(
+      map(files => files.map(file => this.transformFileFromAPI(file))),
+      catchError(this.handleError)
+    );
   }
 
   // Case Integration
@@ -651,7 +709,6 @@ export class FileManagerService {
       .set('size', size.toString());
 
     return this.http.get<any>(`${this.FILE_MANAGER_API}/cases/${caseId}/files`, {
-      headers: this.getAuthHeaders(),
       params: params
     }).pipe(
       map(response => {
@@ -702,9 +759,7 @@ export class FileManagerService {
    * Get folders by case
    */
   getFoldersByCase(caseId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.FILE_MANAGER_API}/cases/${caseId}/folders`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<any[]>(`${this.FILE_MANAGER_API}/cases/${caseId}/folders`).pipe(
       map(folders => folders.map(folder => this.transformFolderFromAPI(folder))),
       catchError(this.handleError)
     );
@@ -719,8 +774,7 @@ export class FileManagerService {
       .set('size', size.toString());
     
     return this.http.get<any>(`${this.FILE_MANAGER_API}/cases/active`, { 
-      params,
-      headers: this.getAuthHeaders()
+      params
     }).pipe(
       map(response => {
         return {
@@ -744,9 +798,7 @@ export class FileManagerService {
       folderIds: folderIds
     };
     
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/bulk/delete`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/bulk/delete`, request).pipe(
       tap(() => this.refreshCurrentFolderFiles()),
       catchError(this.handleError)
     );
@@ -761,9 +813,7 @@ export class FileManagerService {
       targetFolderId: targetFolderId
     };
     
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/move`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/move`, request).pipe(
       tap(() => this.refreshCurrentFolderFiles()),
       catchError((error) => {
         if (error.status === 405) {
@@ -786,9 +836,7 @@ export class FileManagerService {
       targetFolderId: targetFolderId
     };
     
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/folders/move`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/folders/move`, request).pipe(
       tap(() => this.refreshCurrentFolderContents()),
       catchError((error) => {
         if (error.status === 405) {
@@ -811,9 +859,7 @@ export class FileManagerService {
       targetFolderId: targetFolderId
     };
     
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/copy`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/copy`, request).pipe(
       tap(() => this.refreshCurrentFolderFiles()),
       catchError((error) => {
         if (error.status === 405) {
@@ -836,9 +882,7 @@ export class FileManagerService {
       targetFolderId: targetFolderId
     };
     
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/folders/copy`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.post<void>(`${this.FILE_MANAGER_API}/folders/copy`, request).pipe(
       tap(() => this.refreshCurrentFolderContents()),
       catchError((error) => {
         if (error.status === 405) {
@@ -860,8 +904,7 @@ export class FileManagerService {
     
     return this.http.get(`${this.FILE_MANAGER_API}/bulk/download`, {
       params: new HttpParams().set('fileIds', fileIdsParam),
-      responseType: 'blob',
-      headers: this.getAuthHeaders()
+      responseType: 'blob'
     }).pipe(
       catchError(this.handleError)
     );
@@ -933,9 +976,13 @@ export class FileManagerService {
   /**
    * Transform folders from File Manager API response to FolderModel format
    */
-  private transformFoldersFromAPI(folders: any[]): FolderModel[] {
-    if (!folders || !Array.isArray(folders)) return [];
-    return folders.map((folder: any) => this.transformFolderFromAPI(folder));
+  private transformFoldersFromAPI(folders: any): FolderModel[] {
+    if (!folders) return [];
+    
+    // Handle both single object and array
+    const folderArray = Array.isArray(folders) ? folders : [folders];
+    
+    return folderArray.map((folder: any) => this.transformFolderFromAPI(folder));
   }
 
   /**
@@ -957,7 +1004,14 @@ export class FileManagerService {
       updatedAt: file.updatedAt ? new Date(file.updatedAt) : new Date(),
       downloadUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
       previewUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
-      starred: file.starred || false,
+      starred: file.starred === true,  // Ensure boolean value
+      // DEBUG: Log the transformation
+      ...(() => {
+        if (file.id) {
+          console.log(`[TRANSFORM DEBUG] File ${file.id} - Backend starred: ${file.starred} -> Frontend: ${file.starred === true}`);
+        }
+        return {};
+      })(),
       deleted: file.deleted || false,
       canEdit: file.canEdit !== undefined ? file.canEdit : true,
       canDelete: file.canDelete !== undefined ? file.canDelete : true,
@@ -966,7 +1020,7 @@ export class FileManagerService {
       documentCategory: file.documentCategory || 'OTHER',
       documentStatus: file.documentStatus || 'DRAFT',
       caseId: file.caseId,
-      caseName: file.caseName || file.caseNumber || (file.caseId ? `Case ${file.caseId}` : undefined),
+      caseName: file.caseName || file.caseTitle || file.caseNumber || undefined,
       folderId: file.folderId,
       tags: file.tags || [],
       description: file.description,
@@ -993,7 +1047,7 @@ export class FileManagerService {
       canEdit: folder.canEdit !== undefined ? folder.canEdit : true,
       canDelete: folder.canDelete !== undefined ? folder.canDelete : true,
       canShare: folder.canShare !== undefined ? folder.canShare : true,
-      parentId: folder.parentId,
+      parentId: folder.parentFolderId || folder.parentId,
       parentName: folder.parentName,
       caseId: folder.caseId,
       caseName: folder.caseName,
@@ -1047,7 +1101,7 @@ export class FileManagerService {
       documentCategory: doc.documentType || 'OTHER',
       documentStatus: doc.status || 'DRAFT',
       caseId: doc.caseId,
-      caseName: doc.caseTitle || doc.caseName || (doc.caseId ? `Case ${doc.caseId}` : ''),
+      caseName: doc.caseTitle || doc.caseName || '',
       tags: doc.tags || [],
       description: doc.description,
       version: doc.version || 1

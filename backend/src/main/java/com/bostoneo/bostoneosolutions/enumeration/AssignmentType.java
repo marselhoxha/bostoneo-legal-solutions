@@ -3,7 +3,10 @@ package com.***REMOVED***.***REMOVED***solutions.enumeration;
 public enum AssignmentType {
     MANUAL("Manual Assignment"),
     AUTO_ASSIGNED("Auto-Assigned"),
-    TRANSFERRED("Transferred");
+    TRANSFERRED("Transferred"),
+    TEMPORARY("Temporary"),
+    EMERGENCY("Emergency"),
+    DELEGATED("Delegated");
     
     private final String displayName;
     

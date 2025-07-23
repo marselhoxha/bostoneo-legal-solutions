@@ -652,8 +652,7 @@
                                         <i class="ri-folder-2-fill align-bottom text-warning display-5"></i>
                                     </div>
                                     <h6 class="fs-15 folder-name">
-                                        <span *ngIf="!isEditing(folder.id, 'folder')" 
-                                              (dblclick)="startInlineEdit(folder.id, 'folder', folder.name)">{{ folder.name }}</span>
+                                        <span *ngIf="!isEditing(folder.id, 'folder')">{{ folder.name }}</span>
                                         <div *ngIf="isEditing(folder.id, 'folder')" class="d-flex align-items-center justify-content-center">
                                             <input type="text" class="form-control form-control-sm me-2" 
                                                    [(ngModel)]="editingItem!.newName" 
@@ -698,66 +697,89 @@
                             </span>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
-                            <div class="dropdown">
-                                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="ri-briefcase-line me-1 d-none d-sm-inline"></i> 
-                                    <span class="d-none d-sm-inline">Assign to Case</span>
-                                    <i class="ri-briefcase-line d-sm-none"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    @for(caseItem of activeCases; track caseItem.id) {
+                            <!-- Actions for regular files -->
+                            <ng-container *ngIf="!isDeletedView">
+                                <div class="dropdown">
+                                    <button class="btn btn-primary btn-sm dropdown-toggle" type="button" 
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="ri-briefcase-line me-1 d-none d-sm-inline"></i> 
+                                        <span class="d-none d-sm-inline">Assign to Case</span>
+                                        <i class="ri-briefcase-line d-sm-none"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        @for(caseItem of activeCases; track caseItem.id) {
+                                            <li>
+                                                <a class="dropdown-item" href="javascript:void(0);" 
+                                                   (click)="bulkAssignToCase(caseItem.id)">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-medium">{{caseItem.caseNumber}}</span>
+                                                        <small class="text-muted">{{caseItem.title}}</small>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        }
+                                        <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <a class="dropdown-item" href="javascript:void(0);" 
-                                               (click)="bulkAssignToCase(caseItem.id)">
-                                                <div class="d-flex flex-column">
-                                                    <span class="fw-medium">{{caseItem.caseNumber}}</span>
-                                                    <small class="text-muted">{{caseItem.title}}</small>
-                                                </div>
+                                            <a class="dropdown-item text-muted" href="javascript:void(0);" 
+                                               (click)="bulkRemoveFromCase()">
+                                                <i class="ri-close-line me-2"></i>Remove from case
                                             </a>
                                         </li>
-                                    }
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item text-muted" href="javascript:void(0);" 
-                                           (click)="bulkRemoveFromCase()">
-                                            <i class="ri-close-line me-2"></i>Remove from case
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <button class="btn btn-outline-primary btn-sm" 
-                                    (click)="copySelected()">
-                                <i class="ri-file-copy-line me-1 d-none d-sm-inline"></i> 
-                                <span class="d-none d-sm-inline">Copy</span>
-                                <i class="ri-file-copy-line d-sm-none"></i>
-                            </button>
-                            <button class="btn btn-outline-primary btn-sm" 
-                                    (click)="cutSelected()">
-                                <i class="ri-scissors-line me-1 d-none d-sm-inline"></i> 
-                                <span class="d-none d-sm-inline">Cut</span>
-                                <i class="ri-scissors-line d-sm-none"></i>
-                            </button>
-                            <button class="btn btn-outline-success btn-sm" 
-                                    (click)="pasteFiles()"
-                                    [disabled]="!canPaste()">
-                                <i class="ri-clipboard-line me-1 d-none d-sm-inline"></i> 
-                                <span class="d-none d-sm-inline">Paste</span>
-                                <i class="ri-clipboard-line d-sm-none"></i>
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" 
-                                    (click)="bulkDownload()" 
-                                    [disabled]="selectedFiles.length === 0">
-                                <i class="ri-download-line me-1 d-none d-sm-inline"></i> 
-                                <span class="d-none d-sm-inline">Download</span>
-                                <i class="ri-download-line d-sm-none"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" 
-                                    (click)="bulkDelete()">
-                                <i class="ri-delete-bin-line me-1 d-none d-sm-inline"></i> 
-                                <span class="d-none d-sm-inline">Delete</span>
-                                <i class="ri-delete-bin-line d-sm-none"></i>
-                            </button>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        (click)="copySelected()">
+                                    <i class="ri-file-copy-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Copy</span>
+                                    <i class="ri-file-copy-line d-sm-none"></i>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        (click)="cutSelected()">
+                                    <i class="ri-scissors-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Cut</span>
+                                    <i class="ri-scissors-line d-sm-none"></i>
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" 
+                                        (click)="pasteFiles()"
+                                        [disabled]="!canPaste()">
+                                    <i class="ri-clipboard-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Paste</span>
+                                    <i class="ri-clipboard-line d-sm-none"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" 
+                                        (click)="bulkDownload()" 
+                                        [disabled]="selectedFiles.length === 0">
+                                    <i class="ri-download-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Download</span>
+                                    <i class="ri-download-line d-sm-none"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        (click)="bulkDelete()">
+                                    <i class="ri-delete-bin-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Delete</span>
+                                    <i class="ri-delete-bin-line d-sm-none"></i>
+                                </button>
+                            </ng-container>
+                            
+                            <!-- Actions for deleted files -->
+                            <ng-container *ngIf="isDeletedView">
+                                <button class="btn btn-success btn-sm" 
+                                        (click)="bulkRestoreFiles()"
+                                        [disabled]="selectedFiles.length === 0">
+                                    <i class="ri-refresh-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Restore Selected</span>
+                                    <i class="ri-refresh-line d-sm-none"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" 
+                                        (click)="bulkPermanentlyDeleteFiles()"
+                                        [disabled]="selectedFiles.length === 0">
+                                    <i class="ri-delete-bin-line me-1 d-none d-sm-inline"></i> 
+                                    <span class="d-none d-sm-inline">Delete Permanently</span>
+                                    <i class="ri-delete-bin-line d-sm-none"></i>
+                                </button>
+                            </ng-container>
+                            
+                            <!-- Common actions for both views -->
                             <button class="btn btn-outline-secondary btn-sm" 
                                     (click)="clearSelection()">
                                 <i class="ri-close-line me-1 d-none d-sm-inline"></i> 
@@ -769,8 +791,8 @@
             </div>
 
             <!-- Files Section -->
-            <div *ngIf="files.length > 0">
-                <h6 class="fs-14 text-muted text-uppercase mb-2">Files</h6>
+            <div *ngIf="(isDeletedView && deletedFiles.length > 0) || (!isDeletedView && files.length > 0)">
+                <h6 class="fs-14 text-muted text-uppercase mb-2">{{ isDeletedView ? 'Deleted Files' : 'Files' }}</h6>
                 
                 <!-- Files Table -->
                 <div class="table-responsive" *ngIf="viewMode === 'list'">
@@ -795,7 +817,8 @@
                             </tr>
                         </thead>
                         <tbody id="file-list">
-                            <tr *ngFor="let file of files; trackBy: trackByFileId" [id]="'r-' + file.id">
+                            <!-- Regular files view -->
+                            <tr *ngFor="let file of (isDeletedView ? deletedFiles : files); trackBy: trackByFileId" [id]="'r-' + file.id">
                                 <td>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" 
@@ -814,8 +837,7 @@
                                         <div class="flex-grow-1 filelist-name">
                                             <div *ngIf="!isEditing(file.id, 'file')">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="me-2 flex-grow-1 text-truncate" 
-                                                          (dblclick)="startInlineEdit(file.id, 'file', file.name)">{{ file.name }}</span>
+                                                    <span class="me-2 flex-grow-1 text-truncate">{{ file.name }}</span>
                                                     <span *ngIf="file.caseName" 
                                                           class="badge bg-primary-subtle text-primary fs-11 flex-shrink-0"
                                                           [title]="file.caseName">
@@ -858,20 +880,36 @@
                                                 <i class="ri-more-fill align-bottom"></i>
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
-                                                <li><a class="dropdown-item viewfile-list" 
-                                                       href="javascript:void(0);"
-                                                       (click)="previewFile(file)">View</a></li>
-                                                <li><a class="dropdown-item" 
-                                                       href="javascript:void(0);"
-                                                       (click)="downloadFile(file.id)">Download</a></li>
-                                                <li><a class="dropdown-item edit-list" 
-                                                       href="javascript:void(0);"
-                                                       (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
-                                                <li class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item remove-list" 
-                                                       href="javascript:void(0);"
-                                                       data-bs-toggle="modal" role="button"
-                                                       (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                                <!-- Actions for regular files -->
+                                                <ng-container *ngIf="!isDeletedView">
+                                                    <li><a class="dropdown-item viewfile-list" 
+                                                           href="javascript:void(0);"
+                                                           (click)="previewFile(file)">View</a></li>
+                                                    <li><a class="dropdown-item" 
+                                                           href="javascript:void(0);"
+                                                           (click)="downloadFile(file.id)">Download</a></li>
+                                                    <li><a class="dropdown-item edit-list" 
+                                                           href="javascript:void(0);"
+                                                           (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
+                                                    <li class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item remove-list" 
+                                                           href="javascript:void(0);"
+                                                           data-bs-toggle="modal" role="button"
+                                                           (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                                </ng-container>
+                                                
+                                                <!-- Actions for deleted files -->
+                                                <ng-container *ngIf="isDeletedView">
+                                                    <li><a class="dropdown-item text-success" 
+                                                           href="javascript:void(0);"
+                                                           (click)="restoreFile(file.id)">
+                                                        <i class="ri-refresh-line me-2"></i>Restore</a></li>
+                                                    <li class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" 
+                                                           href="javascript:void(0);"
+                                                           (click)="permanentlyDeleteFile(file.id)">
+                                                        <i class="ri-delete-bin-line me-2"></i>Delete Permanently</a></li>
+                                                </ng-container>
                                             </ul>
                                         </div>
                                     </div>
@@ -883,7 +921,7 @@
                 
                 <!-- Files Grid View -->
                 <div class="row" *ngIf="viewMode === 'grid'">
-                    <div *ngFor="let file of files; trackBy: trackByFileId" 
+                    <div *ngFor="let file of (isDeletedView ? deletedFiles : files); trackBy: trackByFileId" 
                          class="col-xxl-2 col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12 mb-3">
                         <div class="card file-card shadow-sm h-100" (dblclick)="previewFile(file)">
                             <div class="card-body text-center p-3">
@@ -901,11 +939,27 @@
                                             <i class="ri-more-fill align-bottom"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
-                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="previewFile(file)">View</a></li>
-                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="downloadFile(file.id)">Download</a></li>
-                                            <li><a class="dropdown-item" href="javascript:void(0);" (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
-                                            <li class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                            <!-- Actions for regular files -->
+                                            <ng-container *ngIf="!isDeletedView">
+                                                <li><a class="dropdown-item" href="javascript:void(0);" (click)="previewFile(file)">View</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0);" (click)="downloadFile(file.id)">Download</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0);" (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
+                                                <li class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                            </ng-container>
+                                            
+                                            <!-- Actions for deleted files -->
+                                            <ng-container *ngIf="isDeletedView">
+                                                <li><a class="dropdown-item text-success" 
+                                                       href="javascript:void(0);"
+                                                       (click)="restoreFile(file.id)">
+                                                    <i class="ri-refresh-line me-2"></i>Restore</a></li>
+                                                <li class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" 
+                                                       href="javascript:void(0);"
+                                                       (click)="permanentlyDeleteFile(file.id)">
+                                                    <i class="ri-delete-bin-line me-2"></i>Delete Permanently</a></li>
+                                            </ng-container>
                                         </ul>
                                     </div>
                                 </div>
@@ -916,8 +970,7 @@
                                 
                                 <div class="file-details">
                                     <h6 class="fs-13 mb-1 text-truncate" [title]="file.name">
-                                        <span *ngIf="!isEditing(file.id, 'file')" 
-                                              (dblclick)="startInlineEdit(file.id, 'file', file.name)">{{ file.name }}</span>
+                                        <span *ngIf="!isEditing(file.id, 'file')">{{ file.name }}</span>
                                         <div *ngIf="isEditing(file.id, 'file')" class="d-flex align-items-center">
                                             <input type="text" class="form-control form-control-sm me-1" 
                                                    [(ngModel)]="editingItem!.newName" 

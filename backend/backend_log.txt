@@ -1,0 +1,2309 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.***REMOVED***:***REMOVED***solutions >-------------------
+[INFO] Building ***REMOVED***solutions 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.3:run (default-cli) > test-compile @ ***REMOVED***solutions >>>
+[INFO] 
+[INFO] --- jacoco:0.8.11:prepare-agent (prepare-agent) @ ***REMOVED***solutions ---
+[INFO] argLine set to -javaagent:/Users/marsel/.m2/repository/org/jacoco/org.jacoco.agent/0.8.11/org.jacoco.agent-0.8.11-runtime.jar=destfile=/Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/target/jacoco.exec
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ***REMOVED***solutions ---
+[INFO] Copying 6 resources from src/main/resources to target/classes
+[INFO] Copying 84 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ ***REMOVED***solutions ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ***REMOVED***solutions ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ ***REMOVED***solutions ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 8 source files with javac [debug parameters release 17] to target/test-classes
+[INFO] Hibernate/JPA static Metamodel Generator 6.4.4.Final
+[INFO] 
+[INFO] <<< spring-boot:3.3.3:run (default-cli) < test-compile @ ***REMOVED***solutions <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.3:run (default-cli) @ ***REMOVED***solutions ---
+[INFO] Attaching agents: []
+18:51:08,676 |-INFO in ch.qos.logback.classic.LoggerContext[default] - This is logback-classic version 1.5.7
+18:51:08,678 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Here is a list of configurators discovered as a service, by rank: 
+18:51:08,678 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 -   org.springframework.boot.logging.logback.RootLogLevelConfigurator
+18:51:08,678 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - They will be invoked in order until ExecutionStatus.DO_NOT_INVOKE_NEXT_IF_ANY is returned.
+18:51:08,678 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class org.springframework.boot.logging.logback.RootLogLevelConfigurator
+18:51:08,685 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - org.springframework.boot.logging.logback.RootLogLevelConfigurator.configure() call lasted 0 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+18:51:08,685 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.joran.SerializedModelConfigurator
+18:51:08,686 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.joran.SerializedModelConfigurator
+18:51:08,688 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.scmo]
+18:51:08,688 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.scmo]
+18:51:08,688 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.joran.SerializedModelConfigurator.configure() call lasted 2 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+18:51:08,688 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+18:51:08,688 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+18:51:08,689 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+18:51:08,689 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.xml]
+18:51:08,689 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 1 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+18:51:08,689 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Trying to configure with ch.qos.logback.classic.BasicConfigurator
+18:51:08,689 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - Constructed configurator of type class ch.qos.logback.classic.BasicConfigurator
+18:51:08,689 |-INFO in ch.qos.logback.classic.BasicConfigurator@5bd82fed - Setting up default configuration.
+18:51:08,703 |-INFO in ch.qos.logback.classic.util.ContextInitializer@3b2c0e88 - ch.qos.logback.classic.BasicConfigurator.configure() call lasted 14 milliseconds. ExecutionStatus=NEUTRAL
+18:51:09,040 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [Console]
+18:51:09,040 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+18:51:09,052 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - This appender no longer admits a layout as a sub-component, set an encoder instead.
+18:51:09,052 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - To ensure compatibility, wrapping your layout in LayoutWrappingEncoder.
+18:51:09,052 |-WARN in ch.qos.logback.core.ConsoleAppender[Console] - See also http://logback.qos.ch/codes.html#layoutInsteadOfEncoder for details
+18:51:09,053 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [RollingFile]
+18:51:09,053 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+18:51:09,054 |-INFO in ch.qos.logback.core.model.processor.ModelInterpretationContext@c1bd0be - value "./logs/application.log" substituted for "${LOGS}/application.log"
+18:51:09,056 |-INFO in ch.qos.logback.core.model.processor.ModelInterpretationContext@c1bd0be - value "./logs/archived/application-%d{yyyy-MM-dd}.%i.log" substituted for "${LOGS}/archived/application-%d{yyyy-MM-dd}.%i.log"
+18:51:09,059 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1198197478 - No compression will be used
+18:51:09,060 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1198197478 - Will use the pattern ./logs/archived/application-%d{yyyy-MM-dd}.%i.log for the active file
+18:51:09,068 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - The date pattern is 'yyyy-MM-dd' from file name pattern './logs/archived/application-%d{yyyy-MM-dd}.%i.log'.
+18:51:09,068 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - Roll-over at midnight.
+18:51:09,072 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - Setting initial period to 2025-07-23T22:48:39.010Z
+18:51:09,072 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+18:51:09,072 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1c6804cd - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+18:51:09,078 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[RollingFile] - Active log file name: ./logs/application.log
+18:51:09,078 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[RollingFile] - File property is set to [./logs/application.log]
+18:51:09,079 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+18:51:09,079 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@655f7ea - Propagating INFO level on Logger[ROOT] onto the JUL framework
+18:51:09,079 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [RollingFile] to Logger[ROOT]
+18:51:09,079 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [Console] to Logger[ROOT]
+18:51:09,079 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.***REMOVED***] to DEBUG
+18:51:09,079 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@655f7ea - Propagating DEBUG level on Logger[com.***REMOVED***] onto the JUL framework
+18:51:09,080 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.***REMOVED***] to false
+18:51:09,080 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [RollingFile] to Logger[com.***REMOVED***]
+18:51:09,080 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [Console] to Logger[com.***REMOVED***]
+18:51:09,080 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@549949be - End of configuration.
+18:51:09,080 |-INFO in org.springframework.boot.logging.logback.SpringBootJoranConfigurator@4b3a45f1 - Registering current configuration as safe fallback point
+
+ ____            _                           ____        _       _   _
+ | __ )  ___  ___| |_ ___  _ __   ___  ___   / ___|  ___ | |_   _| |_(_) ___  _ __  ___
+ |  _ \ / _ \/ __| __/ _ \| '_ \ / _ \/ _ \  \___ \ / _ \| | | | | __| |/ _ \| '_ \/ __|
+ | |_) | (_) \__ \ || (_) | | | |  __/ (_) |  ___) | (_) | | |_| | |_| | (_) | | | \__ \
+ |____/ \___/|___/\__\___/|_| |_|\___|\___/  |____/ \___/|_|\__,_|\__|_|\___/|_| |_|___/
+
+
+ Bostoneo Solutions 1.0.0
+ Powered by Spring Boot 3.3.3
+2025-07-23 18:51:09,103 [34mINFO [0;39m [[34mbackground-preinit[0;39m] [33mo.h.v.i.u.Version[0;39m: HV000001: Hibernate Validator 8.0.1.Final
+2025-07-23 18:51:09,121 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Starting BostoneosolutionsApplication using Java 22 with PID 97303 (/Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/target/classes started by marsel in /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend)
+2025-07-23 18:51:09,121 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Running with Spring Boot v3.3.3, Spring v6.1.12
+2025-07-23 18:51:09,122 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.SpringApplication[0;39m: The following 1 profile is active: "dev"
+2025-07-23 18:51:09,768 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-23 18:51:09,768 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data JDBC repositories in DEFAULT mode.
+2025-07-23 18:51:09,804 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ActiveTimerRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,805 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AssignmentRuleRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,806 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AttorneyExpertiseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,807 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,807 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.BillingRateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,808 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,808 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,809 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentHistoryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,809 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,810 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseNoteRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,811 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseRateConfigurationRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,811 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,812 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTransferRequestRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,812 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,813 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,814 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.EmailTemplateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,814 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,815 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,816 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileAccessLogRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,816 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileCommentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,817 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,817 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FilePermissionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,818 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileShareRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,819 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileTagRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,819 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileVersionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,819 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FolderRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,820 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,820 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,821 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceTemplateRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,821 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,822 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,822 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,823 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,823 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.MatterTypeRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,824 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.NotificationTokenRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,824 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.PaymentTransactionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,825 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,825 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReminderQueueRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,825 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TaskCommentRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,826 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,826 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimerSessionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,827 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.UserWorkloadRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,828 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,829 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data JDBC - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.WorkloadCalculationRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-07-23 18:51:09,829 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 58 ms. Found 0 JDBC repository interfaces.
+2025-07-23 18:51:09,835 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-23 18:51:09,836 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-07-23 18:51:10,003 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 165 ms. Found 44 JPA repository interfaces.
+2025-07-23 18:51:10,018 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-23 18:51:10,019 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ActiveTimerRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AssignmentRuleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AttorneyExpertiseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.BillingRateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,036 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentHistoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseNoteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseRateConfigurationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.CaseTransferRequestRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.EmailTemplateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ExpenseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,037 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileAccessLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileCommentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FilePermissionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileShareRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileTagRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FileVersionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.FolderRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceTemplateRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,038 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.MatterTypeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.NotificationTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.PaymentTransactionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.ReminderQueueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TaskCommentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.TimerSessionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.UserWorkloadRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationExtensionSupport[0;39m: Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.***REMOVED***.***REMOVED***solutions.repository.WorkloadCalculationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2025-07-23 18:51:10,039 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.r.c.RepositoryConfigurationDelegate[0;39m: Finished Spring Data repository scanning in 14 ms. Found 0 Redis repository interfaces.
+2025-07-23 18:51:10,687 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.e.t.TomcatWebServer[0;39m: Tomcat initialized with port 8085 (http)
+2025-07-23 18:51:10,696 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Initializing ProtocolHandler ["http-nio-8085"]
+2025-07-23 18:51:10,699 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting service [Tomcat]
+2025-07-23 18:51:10,699 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting Servlet engine: [Apache Tomcat/10.1.28]
+2025-07-23 18:51:10,737 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Initializing Spring embedded WebApplicationContext
+2025-07-23 18:51:10,738 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.s.c.ServletWebServerApplicationContext[0;39m: Root WebApplicationContext: initialization completed in 1587 ms
+2025-07-23 18:51:10,811 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 System timezone: America/New_York
+2025-07-23 18:51:10,812 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Current LocalDateTime: 2025-07-23T18:51:10.811785 (Year: 2025)
+2025-07-23 18:51:10,812 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Current ZonedDateTime: 2025-07-23T18:51:10.811801-04:00[America/New_York]
+2025-07-23 18:51:10,812 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: 🕐 Available zones: America/New_York, UTC, etc.
+2025-07-23 18:51:10,812 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.BostoneosolutionsApplication[0;39m: ✅ System clock initialized - Current year: 2025
+2025-07-23 18:51:11,107 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.w.f.GenericFilterBean[0;39m: Filter 'customAuthorizationFilter' configured for use
+2025-07-23 18:51:11,107 [39mDEBUG[0;39m [[34mmain[0;39m] [33mo.s.w.f.GenericFilterBean[0;39m: Filter 'simpleRateLimitFilter' configured for use
+2025-07-23 18:51:11,222 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.j.i.u.LogHelper[0;39m: HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-07-23 18:51:11,269 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.Version[0;39m: HHH000412: Hibernate ORM core version 6.5.2.Final
+2025-07-23 18:51:11,308 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.c.i.RegionFactoryInitiator[0;39m: HHH000026: Second-level cache disabled
+2025-07-23 18:51:11,402 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Starting...
+2025-07-23 18:51:11,716 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.p.HikariPool[0;39m: HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@71f10042
+2025-07-23 18:51:11,718 [34mINFO [0;39m [[34mmain[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Start completed.
+2025-07-23 18:51:11,767 [31mWARN [0;39m [[34mmain[0;39m] [33mo.h.e.j.d.i.DialectFactoryImpl[0;39m: HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-07-23 18:51:11,913 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.o.j.p.SpringPersistenceUnitInfo[0;39m: No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-07-23 18:51:13,291 [34mINFO [0;39m [[34mmain[0;39m] [33mo.h.e.t.j.p.i.JtaPlatformInitiator[0;39m: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-07-23 18:51:13,295 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.o.j.AbstractEntityManagerFactoryBean[0;39m: Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-07-23 18:51:13,474 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.d.j.r.q.QueryEnhancerFactory[0;39m: Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-07-23 18:51:14,523 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.c.FirebaseConfig[0;39m: Initializing Firebase application...
+2025-07-23 18:51:14,568 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.c.FirebaseConfig[0;39m: Firebase application initialized successfully
+2025-07-23 18:51:15,155 [34mINFO [0;39m [[34mmain[0;39m] [33mc.b.b.s.i.FileStorageServiceImpl[0;39m: File storage initialized at: /Users/marsel/***REMOVED***/***REMOVED***solutionsapp1/backend/uploads
+2025-07-23 18:51:15,917 [31mWARN [0;39m [[34mmain[0;39m] [33mo.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration[0;39m: spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-07-23 18:51:15,938 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer[0;39m: Global AuthenticationManager configured with UserDetailsService bean with name userRepositoryImpl
+2025-07-23 18:51:16,932 [34mINFO [0;39m [[34mmain[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Starting ProtocolHandler ["http-nio-8085"]
+2025-07-23 18:51:16,943 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.w.e.t.TomcatWebServer[0;39m: Tomcat started on port 8085 (http) with context path '/'
+2025-07-23 18:51:16,952 [34mINFO [0;39m [[34mmain[0;39m] [33mo.s.b.StartupInfoLogger[0;39m: Started BostoneosolutionsApplication in 8.171 seconds (process running for 8.428)
+2025-07-23 18:51:16,987 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowScheduler[0;39m: Running scheduled invoice workflows...
+Hibernate: 
+    select
+        iwr1_0.`id`,
+        iwr1_0.`action_config`,
+        iwr1_0.`action_type`,
+        iwr1_0.`created_at`,
+        iwr1_0.`created_by`,
+        iwr1_0.`days_after_due`,
+        iwr1_0.`days_before_due`,
+        iwr1_0.`description`,
+        iwr1_0.`execution_time`,
+        iwr1_0.`is_active`,
+        iwr1_0.`max_executions`,
+        iwr1_0.`name`,
+        iwr1_0.`trigger_event`,
+        iwr1_0.`trigger_status`,
+        iwr1_0.`updated_at` 
+    from
+        `invoice_workflow_rules` iwr1_0 
+    where
+        iwr1_0.`trigger_event`=? 
+        and iwr1_0.`is_active`
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`=? 
+        and i1_0.`status` in (?, ?, ?)
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`=? 
+        and i1_0.`status` in (?, ?, ?)
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`<=? 
+        and i1_0.`status` in (?, ?)
+Hibernate: 
+    select
+        ir1_0.`id`,
+        ir1_0.`created_at`,
+        ir1_0.`created_by_workflow`,
+        ir1_0.`invoice_id`,
+        ir1_0.`message`,
+        ir1_0.`recipients`,
+        ir1_0.`reminder_type`,
+        ir1_0.`scheduled_date`,
+        ir1_0.`scheduled_time`,
+        ir1_0.`sent_at`,
+        ir1_0.`status`,
+        ir1_0.`subject`,
+        ir1_0.`updated_at` 
+    from
+        `invoice_reminders` ir1_0 
+    where
+        ir1_0.`status`=? 
+        and ir1_0.`scheduled_date`=?
+2025-07-23 18:51:17,159 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowScheduler[0;39m: Scheduled workflows completed successfully
+2025-07-23 18:51:17,164 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:51:17,197 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:51:17,198 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:51:17,198 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:51:17,207 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:51:17,213 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:51:17,214 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:52:17,226 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:52:17,303 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:52:17,303 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:52:17,306 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:52:17,310 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:52:17,318 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:52:17,320 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:52:52,046 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mo.a.j.l.DirectJDKLog[0;39m: Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-07-23 18:52:52,047 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mo.s.w.s.FrameworkServlet[0;39m: Initializing Servlet 'dispatcherServlet'
+2025-07-23 18:52:52,056 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mo.s.w.s.FrameworkServlet[0;39m: Completed initialization in 9 ms
+2025-07-23 18:52:52,082 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: 🔍 AUTHORIZATION FILTER DEBUG for: DELETE /api/file-manager/files/37/permanent
+2025-07-23 18:52:52,083 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Token extracted: YES (length: 4490)
+2025-07-23 18:52:52,101 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - User ID from token: 1
+2025-07-23 18:52:52,102 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Token valid: true
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Authorities from token: 91
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE_ADMIN
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: access:admin
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:ASSIGN
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DELETE:PAYMENT_TRANSACTION
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:CREATE
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:SEND
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:SHARE
+2025-07-23 18:52:52,105 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:VIEW
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:ASSIGN
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:ADMIN
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:ADMIN
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:UPDATE
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:DELETE
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:DELETE
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:DELETE
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:ADMIN
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:VIEW
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:DELETE
+2025-07-23 18:52:52,106 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:CREATE
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:CREATE
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:READ
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:EDIT
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:CREATE
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_TEAM
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:EDIT
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:EDIT
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:CREATE
+2025-07-23 18:52:52,107 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EXPORT
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:EDIT
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_TEAM
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SYSTEM:ADMIN
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:CREATE
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:ADMIN
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:ADMIN
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:VIEW
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:ADMIN
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:DELETE
+2025-07-23 18:52:52,108 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: APPROVE:INVOICE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ADMINISTRATIVE:VIEW
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SEND:INVOICE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:DELETE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:EDIT
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:ADMIN
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:APPROVE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EDIT_OWN
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CREATE:INVOICE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:CREATE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CREATE:PAYMENT_TRANSACTION
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_ALL
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:CREATE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: UPDATE:PAYMENT_TRANSACTION
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: READ:INVOICE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_OWN
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_OWN
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:EDIT
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:ADMIN
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_TEAM
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:VIEW
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:EDIT
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:DELETE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: READ:PAYMENT_TRANSACTION
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:CREATE
+2025-07-23 18:52:52,109 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:DELETE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:ADMIN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:ADMIN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:CREATE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:CREATE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:ADMIN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DELETE:INVOICE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SYSTEM:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:APPROVE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EDIT
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:DELETE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: UPDATE:INVOICE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:VIEW
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_OWN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:CREATE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_ALL
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:ADMIN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_ALL
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:MANAGE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:EDIT
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:CREATE
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:ASSIGN
+2025-07-23 18:52:52,110 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:EDIT
+2025-07-23 18:52:52,111 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:EDIT
+2025-07-23 18:52:52,111 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:VIEW
+2025-07-23 18:52:52,111 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Has BILLING:VIEW: true
+2025-07-23 18:52:52,111 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Has BILLING:EDIT: true
+2025-07-23 18:52:52,131 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.i.RoleRepositoryImpl[0;39m: Fetching roles for user id: 1
+2025-07-23 18:52:52,138 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.i.RoleRepositoryImpl[0;39m: Fetching permissions for role id: 20
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'EXPORT' in permission ID: 68, name: TIME_TRACKING:EXPORT. Using VIEW as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 77, name: CREATE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 78, name: READ:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 79, name: UPDATE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 80, name: DELETE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 81, name: APPROVE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 82, name: SEND:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SEND' in permission ID: 82, name: SEND:INVOICE. Using VIEW as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 83, name: INVOICE:ADMIN. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 84, name: READ:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 85, name: CREATE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,146 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 86, name: UPDATE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,147 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 87, name: DELETE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 88, name: INVOICE:VIEW. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 89, name: INVOICE:READ. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 90, name: INVOICE:CREATE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 91, name: INVOICE:UPDATE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 92, name: INVOICE:DELETE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 93, name: INVOICE:APPROVE. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 94, name: INVOICE:SEND. Using ADMINISTRATIVE as fallback.
+2025-07-23 18:52:52,180 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SEND' in permission ID: 94, name: INVOICE:SEND. Using VIEW as fallback.
+2025-07-23 18:52:52,181 [31mWARN [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SHARE' in permission ID: 109, name: DOCUMENT:SHARE. Using VIEW as fallback.
+2025-07-23 18:52:52,183 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.d.UserDTOMapper[0;39m: Setting roles for user marsel.hox@gmail.com: [ROLE_ADMIN]
+2025-07-23 18:52:52,183 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Authentication set in SecurityContext
+2025-07-23 18:52:52,183 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - SecurityContext authorities: [ROLE_ADMIN, access:admin, CASE:ASSIGN, DELETE:PAYMENT_TRANSACTION, DOCUMENT:CREATE, INVOICE:SEND, DOCUMENT:SHARE, DOCUMENT:VIEW, ROLE:ASSIGN, CUSTOMER:ADMIN, BILLING:ADMIN, INVOICE:UPDATE, TASK:DELETE, BILLING:DELETE, CASE:DELETE, DOCUMENT:ADMIN, CUSTOMER:VIEW, DOCUMENT:DELETE, TIME_TRACKING:CREATE, CUSTOMER:CREATE, INVOICE:READ, CLIENT:EDIT, REPORT:CREATE, TIME_TRACKING:VIEW_TEAM, BILLING:EDIT, DOCUMENT:EDIT, EXPENSE:CREATE, TIME_TRACKING:EXPORT, CALENDAR:EDIT, REPORT:VIEW_TEAM, SYSTEM:ADMIN, TASK:CREATE, CASE:ADMIN, EXPENSE:ADMIN, CALENDAR:VIEW, REPORT:ADMIN, CUSTOMER:DELETE, APPROVE:INVOICE, ADMINISTRATIVE:VIEW, SEND:INVOICE, CLIENT:DELETE, ROLE:EDIT, USER:ADMIN, INVOICE:APPROVE, TIME_TRACKING:EDIT_OWN, CREATE:INVOICE, ROLE:CREATE, CREATE:PAYMENT_TRANSACTION, TIME_TRACKING:VIEW_ALL, CLIENT:CREATE, UPDATE:PAYMENT_TRANSACTION, READ:INVOICE, REPORT:VIEW_OWN, TIME_TRACKING:VIEW_OWN, CASE:EDIT, ROLE:ADMIN, TASK:VIEW_TEAM, EXPENSE:VIEW, CUSTOMER:EDIT, TIME_TRACKING:DELETE, READ:PAYMENT_TRANSACTION, BILLING:CREATE, INVOICE:DELETE, TASK:ADMIN, ROLE:VIEW, CLIENT:ADMIN, INVOICE:CREATE, CASE:CREATE, CALENDAR:ADMIN, INVOICE:VIEW, DELETE:INVOICE, SYSTEM:VIEW, CASE:VIEW, TIME_TRACKING:APPROVE, TIME_TRACKING:EDIT, CALENDAR:DELETE, USER:VIEW, UPDATE:INVOICE, CLIENT:VIEW, TASK:VIEW_OWN, CALENDAR:CREATE, TASK:VIEW_ALL, INVOICE:ADMIN, REPORT:VIEW_ALL, TIME_TRACKING:MANAGE, EXPENSE:EDIT, USER:CREATE, TASK:ASSIGN, USER:EDIT, TASK:EDIT, BILLING:VIEW]
+2025-07-23 18:52:52,206 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.FileManagerResource[0;39m: Permanent delete endpoint called for file ID: 37
+2025-07-23 18:52:52,207 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Permanently deleting file with ID: 37
+Hibernate: 
+    select
+        fi1_0.`id`,
+        fi1_0.`case_id`,
+        fi1_0.`checksum`,
+        fi1_0.`client_access_expires`,
+        fi1_0.`created_at`,
+        fi1_0.`created_by`,
+        fi1_0.`is_deleted`,
+        fi1_0.`deleted_at`,
+        fi1_0.`department_id`,
+        fi1_0.`document_category`,
+        fi1_0.`document_status`,
+        fi1_0.`extension`,
+        fi1_0.`file_path`,
+        fi1_0.`folder_id`,
+        fi1_0.`metadata`,
+        fi1_0.`mime_type`,
+        fi1_0.`name`,
+        fi1_0.`original_name`,
+        fi1_0.`practice_area`,
+        fi1_0.`shared_with_client`,
+        fi1_0.`size`,
+        fi1_0.`is_starred`,
+        fi1_0.`updated_at`,
+        fi1_0.`version` 
+    from
+        `file_items` fi1_0 
+    where
+        fi1_0.`id`=?
+2025-07-23 18:52:52,229 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Found file: Plate Type.pdf (deleted: true)
+2025-07-23 18:52:52,229 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file access logs for file ID: 37
+Hibernate: 
+    select
+        fal1_0.`id`,
+        fal1_0.`access_method`,
+        fal1_0.`accessed_at`,
+        fal1_0.`action_type`,
+        fal1_0.`bytes_transferred`,
+        fal1_0.`download_success`,
+        fal1_0.`error_message`,
+        fal1_0.`file_id`,
+        fal1_0.`file_version`,
+        fal1_0.`ip_address`,
+        fal1_0.`referrer_url`,
+        fal1_0.`request_duration_ms`,
+        fal1_0.`session_id`,
+        fal1_0.`share_token`,
+        fal1_0.`user_id`,
+        fal1_0.`user_agent` 
+    from
+        `file_access_logs` fal1_0 
+    where
+        fal1_0.`file_id`=?
+2025-07-23 18:52:52,245 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleted file access logs
+2025-07-23 18:52:52,246 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file comments for file ID: 37
+Hibernate: 
+    select
+        fc1_0.`id`,
+        fc1_0.`content`,
+        fc1_0.`created_at`,
+        fc1_0.`created_by`,
+        fc1_0.`file_id`,
+        fc1_0.`is_deleted`,
+        fc1_0.`is_internal`,
+        fc1_0.`parent_comment_id`,
+        fc1_0.`updated_at` 
+    from
+        `file_comments` fc1_0 
+    where
+        fc1_0.`file_id`=?
+2025-07-23 18:52:52,251 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleted file comments
+2025-07-23 18:52:52,251 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file tags for file ID: 37
+Hibernate: 
+    select
+        ft1_0.`id`,
+        ft1_0.`created_at`,
+        ft1_0.`created_by`,
+        ft1_0.`file_id`,
+        ft1_0.`is_system_tag`,
+        ft1_0.`tag_category`,
+        ft1_0.`tag_color`,
+        ft1_0.`tag_name` 
+    from
+        `file_tags` ft1_0 
+    where
+        ft1_0.`file_id`=?
+2025-07-23 18:52:52,256 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleted file tags
+2025-07-23 18:52:52,256 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file shares for file ID: 37
+Hibernate: 
+    select
+        fs1_0.`id`,
+        fs1_0.`access_level`,
+        fs1_0.`created_at`,
+        fs1_0.`created_by`,
+        fs1_0.`download_count`,
+        fs1_0.`expires_at`,
+        fs1_0.`file_id`,
+        fs1_0.`is_active`,
+        fs1_0.`last_accessed_at`,
+        fs1_0.`max_downloads`,
+        fs1_0.`password_hash`,
+        fs1_0.`share_token`,
+        fs1_0.`share_type`,
+        fs1_0.`shared_with_email`,
+        fs1_0.`shared_with_user_id`,
+        fs1_0.`watermark_text` 
+    from
+        `file_shares` fs1_0 
+    where
+        fs1_0.`file_id`=?
+2025-07-23 18:52:52,267 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleted file shares
+2025-07-23 18:52:52,267 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file versions for file ID: 37
+Hibernate: 
+    select
+        fv1_0.`id`,
+        fv1_0.`comment`,
+        fv1_0.`checksum`,
+        fv1_0.`created_by`,
+        fv1_0.`file_id`,
+        fv1_0.`file_name`,
+        fv1_0.`file_path`,
+        fv1_0.`size`,
+        fv1_0.`is_current`,
+        fv1_0.`is_deleted`,
+        fv1_0.`mime_type`,
+        fv1_0.`uploaded_at`,
+        fv1_0.`uploaded_by`,
+        fv1_0.`version_number` 
+    from
+        `file_versions` fv1_0 
+    where
+        fv1_0.`file_id`=?
+2025-07-23 18:52:52,303 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleted file versions
+2025-07-23 18:52:52,303 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Deleting file item from database
+Hibernate: 
+    select
+        al1_0.`file_id`,
+        al1_0.`id`,
+        al1_0.`access_method`,
+        al1_0.`accessed_at`,
+        al1_0.`action_type`,
+        al1_0.`bytes_transferred`,
+        al1_0.`download_success`,
+        al1_0.`error_message`,
+        al1_0.`file_version`,
+        al1_0.`ip_address`,
+        al1_0.`referrer_url`,
+        al1_0.`request_duration_ms`,
+        al1_0.`session_id`,
+        al1_0.`share_token`,
+        al1_0.`user_id`,
+        al1_0.`user_agent` 
+    from
+        `file_access_logs` al1_0 
+    where
+        al1_0.`file_id`=?
+Hibernate: 
+    select
+        c1_0.`file_id`,
+        c1_0.`id`,
+        c1_0.`content`,
+        c1_0.`created_at`,
+        c1_0.`created_by`,
+        c1_0.`is_deleted`,
+        c1_0.`is_internal`,
+        c1_0.`parent_comment_id`,
+        c1_0.`updated_at` 
+    from
+        `file_comments` c1_0 
+    where
+        c1_0.`file_id`=?
+Hibernate: 
+    select
+        p1_0.`file_id`,
+        p1_0.`id`,
+        p1_0.`expires_at`,
+        p1_0.`granted_at`,
+        p1_0.`granted_by`,
+        p1_0.`is_revoked`,
+        p1_0.`notes`,
+        p1_0.`permission_type`,
+        p1_0.`revoked_at`,
+        p1_0.`revoked_by`,
+        p1_0.`user_id` 
+    from
+        `file_permissions` p1_0 
+    where
+        p1_0.`file_id`=?
+Hibernate: 
+    select
+        s1_0.`file_id`,
+        s1_0.`id`,
+        s1_0.`access_level`,
+        s1_0.`created_at`,
+        s1_0.`created_by`,
+        s1_0.`download_count`,
+        s1_0.`expires_at`,
+        s1_0.`is_active`,
+        s1_0.`last_accessed_at`,
+        s1_0.`max_downloads`,
+        s1_0.`password_hash`,
+        s1_0.`share_token`,
+        s1_0.`share_type`,
+        s1_0.`shared_with_email`,
+        s1_0.`shared_with_user_id`,
+        s1_0.`watermark_text` 
+    from
+        `file_shares` s1_0 
+    where
+        s1_0.`file_id`=?
+Hibernate: 
+    select
+        t1_0.`file_id`,
+        t1_0.`id`,
+        t1_0.`created_at`,
+        t1_0.`created_by`,
+        t1_0.`is_system_tag`,
+        t1_0.`tag_category`,
+        t1_0.`tag_color`,
+        t1_0.`tag_name` 
+    from
+        `file_tags` t1_0 
+    where
+        t1_0.`file_id`=?
+Hibernate: 
+    select
+        v1_0.`file_id`,
+        v1_0.`id`,
+        v1_0.`comment`,
+        v1_0.`checksum`,
+        v1_0.`created_by`,
+        v1_0.`file_name`,
+        v1_0.`file_path`,
+        v1_0.`size`,
+        v1_0.`is_current`,
+        v1_0.`is_deleted`,
+        v1_0.`mime_type`,
+        v1_0.`uploaded_at`,
+        v1_0.`uploaded_by`,
+        v1_0.`version_number` 
+    from
+        `file_versions` v1_0 
+    where
+        v1_0.`file_id`=?
+Hibernate: 
+    delete 
+    from
+        `file_access_logs` 
+    where
+        `id`=?
+Hibernate: 
+    delete 
+    from
+        `file_access_logs` 
+    where
+        `id`=?
+Hibernate: 
+    delete 
+    from
+        `file_items` 
+    where
+        `id`=?
+2025-07-23 18:52:52,346 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: File 37 deleted from database
+2025-07-23 18:52:52,347 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Physical file deleted: uploads/1/1751913678834_d8e67e04-a08c-4889-951f-2a2b6fb6c863.pdf
+2025-07-23 18:52:52,347 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: File 37 permanently deleted successfully
+2025-07-23 18:52:52,351 [34mINFO [0;39m [[34mhttp-nio-8085-exec-1[0;39m] [33mc.b.b.r.FileManagerResource[0;39m: File 37 permanently deleted successfully via endpoint
+2025-07-23 18:53:17,331 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:53:17,408 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:53:17,409 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:53:17,413 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:53:17,417 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:53:17,425 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:53:17,427 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:54:17,436 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:54:17,467 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:54:17,468 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:54:17,469 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:54:17,473 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:54:17,482 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:54:17,484 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:55:17,501 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:55:17,599 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:55:17,599 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:55:17,603 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:55:17,609 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:55:17,618 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:55:17,624 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:56:17,635 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:56:17,721 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:56:17,721 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:56:17,725 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:56:17,729 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:56:17,737 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:56:17,740 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:57:17,750 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:57:17,826 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:57:17,826 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:57:17,830 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:57:17,837 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:57:17,848 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:57:17,852 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:58:17,860 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:58:17,898 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:58:17,898 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:58:17,900 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:58:17,905 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:58:17,913 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:58:17,916 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 18:59:17,940 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 18:59:17,964 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 18:59:17,964 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 18:59:17,966 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 18:59:17,970 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 18:59:17,982 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 18:59:17,983 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:00:00,035 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.InvoiceWorkflowService[0;39m: Processing scheduled workflows
+Hibernate: 
+    select
+        iwr1_0.`id`,
+        iwr1_0.`action_config`,
+        iwr1_0.`action_type`,
+        iwr1_0.`created_at`,
+        iwr1_0.`created_by`,
+        iwr1_0.`days_after_due`,
+        iwr1_0.`days_before_due`,
+        iwr1_0.`description`,
+        iwr1_0.`execution_time`,
+        iwr1_0.`is_active`,
+        iwr1_0.`max_executions`,
+        iwr1_0.`name`,
+        iwr1_0.`trigger_event`,
+        iwr1_0.`trigger_status`,
+        iwr1_0.`updated_at` 
+    from
+        `invoice_workflow_rules` iwr1_0 
+    where
+        iwr1_0.`trigger_event`=? 
+        and iwr1_0.`is_active`
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`<=? 
+        and i1_0.`status` in (?, ?)
+Hibernate: 
+    select
+        i1_0.`id`,
+        i1_0.`balance_due`,
+        i1_0.`case_name`,
+        i1_0.`client_id`,
+        i1_0.`client_name`,
+        i1_0.`created_at`,
+        i1_0.`created_by`,
+        i1_0.`due_date`,
+        i1_0.`invoice_number`,
+        i1_0.`issue_date`,
+        i1_0.`last_payment_date`,
+        i1_0.`legal_case_id`,
+        i1_0.`notes`,
+        i1_0.`payment_status`,
+        i1_0.`status`,
+        i1_0.`subtotal`,
+        i1_0.`tax_amount`,
+        i1_0.`tax_rate`,
+        i1_0.`total_amount`,
+        i1_0.`total_paid`,
+        i1_0.`updated_at` 
+    from
+        `invoices` i1_0 
+    where
+        i1_0.`due_date`<=? 
+        and i1_0.`status` in (?, ?)
+2025-07-23 19:00:17,997 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:00:18,029 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:00:18,029 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:00:18,030 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:00:18,034 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:00:18,043 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:00:18,044 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:01:18,070 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:01:18,145 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:01:18,146 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:01:18,149 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:01:18,157 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:01:18,167 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:01:18,170 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:02:18,192 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:02:18,261 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:02:18,262 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:02:18,264 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:02:18,269 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:02:18,277 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:02:18,282 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:03:18,298 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:03:18,330 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:03:18,331 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:03:18,332 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:03:18,339 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:03:18,349 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:03:18,352 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:04:18,365 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:04:18,403 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:04:18,403 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:04:18,404 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:04:18,411 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:04:18,422 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:04:18,424 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:04:57,976 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: 🔍 AUTHORIZATION FILTER DEBUG for: DELETE /api/file-manager/files/37/permanent
+2025-07-23 19:04:57,983 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Token extracted: YES (length: 4490)
+2025-07-23 19:04:57,994 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - User ID from token: 1
+2025-07-23 19:04:57,996 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Token valid: true
+2025-07-23 19:04:57,997 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Authorities from token: 91
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE_ADMIN
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: access:admin
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:ASSIGN
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:CREATE
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:READ
+2025-07-23 19:04:57,998 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:CREATE
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:DELETE
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_OWN
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:CREATE
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:VIEW
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:ADMIN
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_ALL
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:CREATE
+2025-07-23 19:04:57,999 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:UPDATE
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:DELETE
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:CREATE
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:ADMIN
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:MANAGE
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:EDIT
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:APPROVE
+2025-07-23 19:04:58,000 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:EDIT
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_OWN
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:EDIT
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:DELETE
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:VIEW
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:APPROVE
+2025-07-23 19:04:58,001 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:ADMIN
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:VIEW
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: READ:INVOICE
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SEND:INVOICE
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_TEAM
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_TEAM
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_ALL
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:DELETE
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: UPDATE:INVOICE
+2025-07-23 19:04:58,002 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: APPROVE:INVOICE
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EDIT
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:ADMIN
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ADMINISTRATIVE:VIEW
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:VIEW
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:ADMIN
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:CREATE
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:EDIT
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:CREATE
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:DELETE
+2025-07-23 19:04:58,003 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:EDIT
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:ASSIGN
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:DELETE
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:CREATE
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:VIEW
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: UPDATE:PAYMENT_TRANSACTION
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:EDIT
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:ADMIN
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:CREATE
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:CREATE
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: REPORT:VIEW_TEAM
+2025-07-23 19:04:58,004 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:SEND
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:EDIT
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:VIEW
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:CREATE
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EDIT_OWN
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:VIEW
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CREATE:INVOICE
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: READ:PAYMENT_TRANSACTION
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:VIEW_OWN
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:ADMIN
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:DELETE
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:ADMIN
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TIME_TRACKING:EXPORT
+2025-07-23 19:04:58,005 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SYSTEM:VIEW
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:VIEW
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DELETE:PAYMENT_TRANSACTION
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: BILLING:CREATE
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CALENDAR:ADMIN
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: TASK:VIEW_ALL
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:EDIT
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DELETE:INVOICE
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:DELETE
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: ROLE:ASSIGN
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: EXPENSE:VIEW
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:ADMIN
+2025-07-23 19:04:58,006 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CLIENT:EDIT
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: SYSTEM:ADMIN
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:SHARE
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: DOCUMENT:EDIT
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CREATE:PAYMENT_TRANSACTION
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: USER:ADMIN
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:ADMIN
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CASE:CREATE
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: INVOICE:VIEW
+2025-07-23 19:04:58,007 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m:   - Authority: CUSTOMER:DELETE
+2025-07-23 19:04:58,008 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Has BILLING:VIEW: true
+2025-07-23 19:04:58,008 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Has BILLING:EDIT: true
+2025-07-23 19:04:58,021 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.i.RoleRepositoryImpl[0;39m: Fetching roles for user id: 1
+2025-07-23 19:04:58,026 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.i.RoleRepositoryImpl[0;39m: Fetching permissions for role id: 20
+2025-07-23 19:04:58,031 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'EXPORT' in permission ID: 68, name: TIME_TRACKING:EXPORT. Using VIEW as fallback.
+2025-07-23 19:04:58,032 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 77, name: CREATE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,032 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 78, name: READ:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,032 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 79, name: UPDATE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,032 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 80, name: DELETE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,032 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 81, name: APPROVE:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 82, name: SEND:INVOICE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SEND' in permission ID: 82, name: SEND:INVOICE. Using VIEW as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 83, name: INVOICE:ADMIN. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 84, name: READ:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 85, name: CREATE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,033 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 86, name: UPDATE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'PAYMENT_TRANSACTION' in permission ID: 87, name: DELETE:PAYMENT_TRANSACTION. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 88, name: INVOICE:VIEW. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 89, name: INVOICE:READ. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 90, name: INVOICE:CREATE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 91, name: INVOICE:UPDATE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 92, name: INVOICE:DELETE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,034 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 93, name: INVOICE:APPROVE. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,035 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ResourceType 'INVOICE' in permission ID: 94, name: INVOICE:SEND. Using ADMINISTRATIVE as fallback.
+2025-07-23 19:04:58,035 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SEND' in permission ID: 94, name: INVOICE:SEND. Using VIEW as fallback.
+2025-07-23 19:04:58,035 [31mWARN [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.PermissionRowMapper[0;39m: Invalid ActionType 'SHARE' in permission ID: 109, name: DOCUMENT:SHARE. Using VIEW as fallback.
+2025-07-23 19:04:58,039 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.d.UserDTOMapper[0;39m: Setting roles for user marsel.hox@gmail.com: [ROLE_ADMIN]
+2025-07-23 19:04:58,039 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - Authentication set in SecurityContext
+2025-07-23 19:04:58,039 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.f.CustomAuthorizationFilter[0;39m: - SecurityContext authorities: [ROLE_ADMIN, access:admin, CASE:ASSIGN, CALENDAR:CREATE, INVOICE:READ, DOCUMENT:CREATE, INVOICE:DELETE, TASK:VIEW_OWN, INVOICE:CREATE, USER:VIEW, DOCUMENT:ADMIN, TIME_TRACKING:VIEW_ALL, EXPENSE:CREATE, INVOICE:UPDATE, CALENDAR:DELETE, CUSTOMER:CREATE, TASK:ADMIN, TIME_TRACKING:MANAGE, EXPENSE:EDIT, INVOICE:APPROVE, USER:EDIT, REPORT:VIEW_OWN, CALENDAR:EDIT, BILLING:DELETE, CASE:VIEW, TIME_TRACKING:APPROVE, BILLING:ADMIN, CALENDAR:VIEW, READ:INVOICE, SEND:INVOICE, TASK:VIEW_TEAM, TIME_TRACKING:VIEW_TEAM, REPORT:VIEW_ALL, DOCUMENT:DELETE, UPDATE:INVOICE, APPROVE:INVOICE, TIME_TRACKING:EDIT, REPORT:ADMIN, ADMINISTRATIVE:VIEW, CLIENT:VIEW, ROLE:ADMIN, ROLE:CREATE, ROLE:EDIT, TIME_TRACKING:CREATE, TASK:DELETE, BILLING:EDIT, TASK:ASSIGN, CASE:DELETE, CLIENT:CREATE, CUSTOMER:VIEW, UPDATE:PAYMENT_TRANSACTION, CASE:EDIT, CASE:ADMIN, TASK:CREATE, REPORT:CREATE, REPORT:VIEW_TEAM, INVOICE:SEND, TASK:EDIT, DOCUMENT:VIEW, USER:CREATE, TIME_TRACKING:EDIT_OWN, BILLING:VIEW, CREATE:INVOICE, READ:PAYMENT_TRANSACTION, TIME_TRACKING:VIEW_OWN, EXPENSE:ADMIN, TIME_TRACKING:DELETE, CLIENT:ADMIN, TIME_TRACKING:EXPORT, SYSTEM:VIEW, ROLE:VIEW, DELETE:PAYMENT_TRANSACTION, BILLING:CREATE, CALENDAR:ADMIN, TASK:VIEW_ALL, CUSTOMER:EDIT, DELETE:INVOICE, CLIENT:DELETE, ROLE:ASSIGN, EXPENSE:VIEW, INVOICE:ADMIN, CLIENT:EDIT, SYSTEM:ADMIN, DOCUMENT:SHARE, DOCUMENT:EDIT, CREATE:PAYMENT_TRANSACTION, USER:ADMIN, CUSTOMER:ADMIN, CASE:CREATE, INVOICE:VIEW, CUSTOMER:DELETE]
+2025-07-23 19:04:58,052 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.FileManagerResource[0;39m: Permanent delete endpoint called for file ID: 37
+2025-07-23 19:04:58,055 [34mINFO [0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.s.i.FileManagerServiceImpl[0;39m: Permanently deleting file with ID: 37
+Hibernate: 
+    select
+        fi1_0.`id`,
+        fi1_0.`case_id`,
+        fi1_0.`checksum`,
+        fi1_0.`client_access_expires`,
+        fi1_0.`created_at`,
+        fi1_0.`created_by`,
+        fi1_0.`is_deleted`,
+        fi1_0.`deleted_at`,
+        fi1_0.`department_id`,
+        fi1_0.`document_category`,
+        fi1_0.`document_status`,
+        fi1_0.`extension`,
+        fi1_0.`file_path`,
+        fi1_0.`folder_id`,
+        fi1_0.`metadata`,
+        fi1_0.`mime_type`,
+        fi1_0.`name`,
+        fi1_0.`original_name`,
+        fi1_0.`practice_area`,
+        fi1_0.`shared_with_client`,
+        fi1_0.`size`,
+        fi1_0.`is_starred`,
+        fi1_0.`updated_at`,
+        fi1_0.`version` 
+    from
+        `file_items` fi1_0 
+    where
+        fi1_0.`id`=?
+2025-07-23 19:04:58,073 [1;31mERROR[0;39m [[34mhttp-nio-8085-exec-3[0;39m] [33mc.b.b.r.FileManagerResource[0;39m: Error permanently deleting file 37: File not found with ID: 37
+2025-07-23 19:05:18,463 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Processing reminder queue
+Hibernate: 
+    select
+        rqi1_0.`id`,
+        rqi1_0.`created_at`,
+        rqi1_0.`error_message`,
+        rqi1_0.`event_id`,
+        rqi1_0.`last_attempt`,
+        rqi1_0.`minutes_before`,
+        rqi1_0.`reminder_type`,
+        rqi1_0.`retry_count`,
+        rqi1_0.`scheduled_time`,
+        rqi1_0.`status`,
+        rqi1_0.`updated_at`,
+        rqi1_0.`user_id` 
+    from
+        `reminder_queue` rqi1_0 
+    where
+        rqi1_0.`status`='PENDING' 
+        and rqi1_0.`scheduled_time`<=?
+2025-07-23 19:05:18,514 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.ReminderQueueServiceImpl[0;39m: Processing 0 pending reminders
+2025-07-23 19:05:18,514 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Reminder queue processing completed successfully
+2025-07-23 19:05:18,516 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing calendar event reminders
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`reminder_minutes` is not null 
+        and ce1_0.`reminder_sent`=0 
+        and ce1_0.`start_time`<=?
+2025-07-23 19:05:18,521 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Processing additional reminders for deadline events
+Hibernate: 
+    select
+        ce1_0.`id`,
+        ce1_0.`additional_reminders`,
+        ce1_0.`all_day`,
+        ce1_0.`case_id`,
+        ce1_0.`color`,
+        ce1_0.`created_at`,
+        ce1_0.`description`,
+        ce1_0.`email_notification`,
+        ce1_0.`end_time`,
+        ce1_0.`event_type`,
+        ce1_0.`external_calendar`,
+        ce1_0.`external_id`,
+        ce1_0.`high_priority`,
+        ce1_0.`location`,
+        ce1_0.`push_notification`,
+        ce1_0.`recurrence_rule`,
+        ce1_0.`reminder_minutes`,
+        ce1_0.`reminder_sent`,
+        ce1_0.`reminders_sent`,
+        ce1_0.`start_time`,
+        ce1_0.`status`,
+        ce1_0.`title`,
+        ce1_0.`updated_at`,
+        ce1_0.`user_id` 
+    from
+        `calendar_events` ce1_0 
+    where
+        ce1_0.`event_type`=?
+2025-07-23 19:05:18,529 [34mINFO [0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.i.CalendarEventServiceImpl[0;39m: Skipping additional reminders for deadline 5 - deadline already passed
+2025-07-23 19:05:18,531 [39mDEBUG[0;39m [[34mscheduling-1[0;39m] [33mc.b.b.s.ReminderScheduler[0;39m: Calendar event reminders processing completed successfully
+2025-07-23 19:05:51,064 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mo.s.o.j.AbstractEntityManagerFactoryBean[0;39m: Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-07-23 19:05:51,081 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Shutdown initiated...
+2025-07-23 19:05:51,099 [34mINFO [0;39m [[34mSpringApplicationShutdownHook[0;39m] [33mc.z.h.HikariDataSource[0;39m: HikariPool-1 - Shutdown completed.

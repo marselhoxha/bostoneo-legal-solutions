@@ -43,6 +43,13 @@ const routes: Routes = [
         canActivate: [AuthenticationGuard]
       },
 
+      // File manager module
+      { 
+        path: 'file-manager', 
+        loadChildren: () => import('./modules/file-manager/file-manager.module').then(m => m.FileManagerModule),
+        canActivate: [AuthenticationGuard]
+      },
+
       // Activities module (lazy loaded)
       { 
         path: 'activities', 

@@ -23,7 +23,6 @@
 
     &.has-files {
       border-color: #0ab39c;
-      background-color: #f0fdfa;
     }
 
     .drop-zone-content {
@@ -40,7 +39,6 @@
       transition: all 0.3s ease;
       
       &:hover {
-        background-color: #f8f9fa;
         transform: translateY(-1px);
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }

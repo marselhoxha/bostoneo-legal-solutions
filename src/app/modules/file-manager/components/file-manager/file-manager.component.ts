@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import Swal from 'sweetalert2';
 import { FileManagerService } from '../../services/file-manager.service';
@@ -12,8 +13,10 @@ import {
   CreateFolderRequest 
 } from '../../models/file-manager.model';
 import { UploadModalComponent } from '../upload-modal/upload-modal.component';
+import { FilePreviewModalComponent } from '../file-preview-modal/file-preview-modal.component';
 import { Subject, takeUntil, BehaviorSubject, combineLatest } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs/operators';
+import { Key } from '../../../../enum/key.enum';
 
 @Component({
   selector: 'app-file-manager',
@@ -37,6 +40,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   
   // UI state properties
   isLoading = false;
+  isTogglingStar = false;
   searchTerm = '';
   selectedFiles: number[] = [];
   selectedFolders: number[] = [];
@@ -54,6 +58,10 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     folderName: null as string | null,
     filter: null as string | null
   };
+  
+  // View state
+  isDeletedView = false;
+  deletedFiles: FileItemModel[] = [];
   
   // Helper getters for backward compatibility during refactoring
   get navigationContext() { return this.navigationState.context; }
@@ -131,7 +139,8 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     private templateService: TemplateService,
     private modalService: NgbModal,
     private cdr: ChangeDetectorRef,
-    private formBuilder: FormBuilder
+    private formBuilder: FormBuilder,
+    private route: ActivatedRoute
   ) {
     this.folderForm = this.formBuilder.group({
       name: [''],
@@ -160,6 +169,13 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Check authentication token
+    const token = localStorage.getItem(Key.TOKEN);
+    console.log('FileManager - Token from localStorage:', token ? 'Present (length: ' + token.length + ')' : 'Missing');
+    if (token) {
+      console.log('FileManager - Token preview:', token.substring(0, 50) + '...');
+    }
+    
     this.initializeData();
     this.setupSearchSubscription();
     this.subscribeToDataStreams();
@@ -176,6 +192,59 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   private initializeData(): void {
     this.isLoading = true;
     
+    // Check if this is the deleted files view
+    this.route.data.subscribe(data => {
+      this.isDeletedView = data['view'] === 'deleted';
+      
+      if (this.isDeletedView) {
+        this.loadDeletedFiles();
+      } else {
+        this.loadRegularFiles();
+      }
+    });
+  }
+  
+  /**
+   * Load deleted files
+   */
+  private loadDeletedFiles(): void {
+    this.isDeletedView = true; // Set the deleted view flag
+    this.folders = []; // Clear folders for deleted view
+    this.files = []; // Clear regular files
+    this.isLoading = true;
+    
+    combineLatest([
+      this.fileManagerService.getDeletedFiles(this.currentPage, this.pageSize, this.sortBy, this.sortDirection),
+      this.fileManagerService.getStorageStats()
+    ]).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: ([deletedResponse, stats]) => {
+        console.log('Deleted files response:', deletedResponse);
+        console.log('isDeletedView:', this.isDeletedView);
+        this.deletedFiles = deletedResponse.content || [];
+        console.log('deletedFiles array:', this.deletedFiles);
+        console.log('deletedFiles length:', this.deletedFiles.length);
+        this.totalFiles = deletedResponse.totalElements || 0;
+        this.totalPages = deletedResponse.totalPages || 0;
+        this.stats = stats;
+        this.isLoading = false;
+        this.updateBreadcrumb(); // Update breadcrumb to show "Deleted Files"
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading deleted files:', error);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+  
+  /**
+   * Load regular files
+   */
+  private loadRegularFiles(): void {
+    this.isDeletedView = false; // Reset the deleted view flag
     // Load initial data
     combineLatest([
       this.fileManagerService.getFiles(this.currentPage, this.pageSize, this.sortBy, this.sortDirection),
@@ -358,7 +427,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     // Close mobile sidebar when navigating
     this.closeMobileSidebar();
     
-    this.fileManagerService.getFolderContents(folder.id).pipe(
+    this.fileManagerService.getFolderContents(folder.id, 'personal').pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (response) => {
@@ -467,33 +536,57 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Load personal documents (no case association)
    */
   private loadPersonalDocuments(): void {
-    combineLatest([
-      this.fileManagerService.getFiles(this.currentPage, this.pageSize, this.sortBy, this.sortDirection),
-      this.fileManagerService.getRootFolders()
-    ]).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: ([filesResponse, folders]) => {
-        // Only show files that are NOT associated with any case
-        this.files = (filesResponse.content || []).filter(file => !file.caseId);
-        
-        // Only show folders that are NOT associated with any case
-        this.folders = folders.filter(folder => !folder.caseId);
-        
-        // Also update personal folders for the sidebar navigation
-        this.personalFolders = folders.filter(folder => !folder.caseId);
-        this.personalFiles = (filesResponse.content || []).filter(file => !file.caseId);
-        
-        this.updateBreadcrumb();
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading personal documents:', error);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.isDeletedView = false; // Reset the deleted view flag
+    if (this.currentFolder) {
+      // If we're in a folder, get its contents with personal context
+      this.fileManagerService.getFolderContents(this.currentFolder.id, 'personal').pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (response) => {
+          this.files = response.files || [];
+          this.folders = response.folders || [];
+          this.personalFolders = this.folders;
+          
+          this.updateBreadcrumb();
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading folder contents:', error);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      // If we're at root, get root folders and personal files
+      combineLatest([
+        this.fileManagerService.getPersonalFiles(this.currentPage, this.pageSize, this.sortBy, this.sortDirection),
+        this.fileManagerService.getRootFolders()
+      ]).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: ([filesResponse, folders]) => {
+          // Files are already filtered on backend
+          this.files = filesResponse.content || [];
+          
+          // Folders are already personal folders only
+          this.folders = folders;
+          this.personalFolders = folders;
+          
+          this.totalFiles = filesResponse.totalElements || 0;
+          this.totalPages = filesResponse.totalPages || 0;
+          
+          this.updateBreadcrumb();
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading personal documents:', error);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   /**
@@ -568,7 +661,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
                 <label class="form-label">Case</label>
                 <select id="caseSelect" class="form-select">
                   <option value="">Select a case...</option>
-                  ${this.activeCases.map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('')}
+                  ${this.activeCases.map(c => `<option value="${c.id}">${c.title || c.name || c.caseNumber}</option>`).join('')}
                 </select>
               </div>
             `}
@@ -1581,9 +1674,10 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   private loadAllDocuments(): void {
+    this.isDeletedView = false; // Reset the deleted view flag
     this.currentFolder = null;
     combineLatest([
-      this.fileManagerService.getFiles(),
+      this.fileManagerService.getFilesWithParams(0, 100, 'createdAt', 'DESC'),
       this.fileManagerService.getRootFolders()
     ]).subscribe({
       next: ([filesResponse, folders]) => {
@@ -1604,6 +1698,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Load case-specific documents and folders
    */
   private loadCaseDocuments(caseId: number): void {
+    this.isDeletedView = false; // Reset the deleted view flag
     this.isLoading = true;
     
     // Use getFilesByCase with proper caseId parameter
@@ -1664,9 +1759,12 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   private loadMediaFiles(): void {
+    this.isDeletedView = false; // Reset the deleted view flag
     this.currentFolder = null;
-    this.fileManagerService.getFiles().subscribe({
+    // Call the file manager service with media file type filtering
+    this.fileManagerService.getFilesWithParams(0, 100, 'createdAt', 'DESC', null, null, null, 'media').subscribe({
       next: (response) => {
+        // Filter for media files on frontend as backup
         this.files = (response.content || []).filter((file: any) => 
           file.mimeType?.startsWith('image/') || 
           file.mimeType?.startsWith('video/') || 
@@ -1702,6 +1800,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   private loadStarredFiles(): void {
+    this.isDeletedView = false; // Reset the deleted view flag
     this.currentFolder = null;
     this.fileManagerService.getStarredFiles().subscribe({
       next: (files) => {
@@ -1712,25 +1811,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading starred files:', error);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  private loadDeletedFiles(): void {
-    this.currentFolder = null;
-    this.fileManagerService.getFiles(0, 100).subscribe({
-      next: (response) => {
-        this.files = (response.content || []).filter((file: any) => file.deleted);
-        this.folders = [];
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading deleted files:', error);
-        this.files = [];
-        this.folders = [];
         this.isLoading = false;
         this.cdr.detectChanges();
       }
@@ -1824,6 +1904,159 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  /**
+   * Restore deleted file
+   */
+  restoreFile(fileId: number): void {
+    if (fileId) {
+      this.fileManagerService.restoreFile(fileId).subscribe({
+        next: () => {
+          this.loadDeletedFiles();
+          Swal.fire({
+            icon: 'success',
+            title: 'File Restored',
+            text: 'The file has been successfully restored.',
+            confirmButtonText: 'OK'
+          });
+        },
+        error: (error) => {
+          console.error('Error restoring file:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Restore Failed',
+            text: 'Failed to restore the file. Please try again.',
+            confirmButtonText: 'OK'
+          });
+        }
+      });
+    }
+  }
+
+  /**
+   * Permanently delete file with confirmation
+   */
+  permanentlyDeleteFile(fileId: number): void {
+    console.log('permanentlyDeleteFile called with fileId:', fileId);
+    Swal.fire({
+      title: 'Permanently Delete File?',
+      text: 'This action cannot be undone. The file will be permanently removed from the system.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, Delete Permanently',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        console.log('User confirmed, permanently deleting file:', fileId);
+        console.log('About to call fileManagerService.permanentlyDeleteFile');
+        this.fileManagerService.permanentlyDeleteFile(fileId).subscribe({
+          next: (response) => {
+            console.log('Permanent delete response:', response);
+            this.loadDeletedFiles();
+            Swal.fire({
+              icon: 'success',
+              title: 'File Permanently Deleted',
+              text: 'The file has been permanently removed.',
+              confirmButtonText: 'OK'
+            });
+          },
+          error: (error) => {
+            console.error('Error permanently deleting file:', error);
+            console.error('Error details:', error.error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Delete Failed',
+              text: error.error?.message || 'Failed to permanently delete the file. Please try again.',
+              confirmButtonText: 'OK'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Bulk restore selected files
+   */
+  bulkRestoreFiles(): void {
+    if (this.selectedFiles.length === 0) {
+      return;
+    }
+
+    const selectedCount = this.selectedFiles.length;
+    this.fileManagerService.bulkRestoreFiles(this.selectedFiles).subscribe({
+      next: () => {
+        this.selectedFiles = [];
+        this.loadDeletedFiles();
+        Swal.fire({
+          icon: 'success',
+          title: 'Files Restored',
+          text: `${selectedCount} files have been successfully restored.`,
+          confirmButtonText: 'OK'
+        });
+      },
+      error: (error) => {
+        console.error('Error bulk restoring files:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Bulk Restore Failed',
+          text: 'Failed to restore the selected files. Please try again.',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+
+  /**
+   * Bulk permanently delete selected files with confirmation
+   */
+  bulkPermanentlyDeleteFiles(): void {
+    console.log('bulkPermanentlyDeleteFiles called, selectedFiles:', this.selectedFiles);
+    if (this.selectedFiles.length === 0) {
+      console.log('No files selected, returning early');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Permanently Delete Selected Files?',
+      text: `This will permanently delete ${this.selectedFiles.length} files. This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, Delete Permanently',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const selectedFileIds = [...this.selectedFiles]; // Save the IDs before clearing
+        console.log('Bulk permanently deleting files:', selectedFileIds);
+        this.fileManagerService.bulkPermanentlyDeleteFiles(selectedFileIds).subscribe({
+          next: (response) => {
+            console.log('Bulk permanent delete response:', response);
+            this.selectedFiles = [];
+            this.loadDeletedFiles();
+            Swal.fire({
+              icon: 'success',
+              title: 'Files Permanently Deleted',
+              text: 'The selected files have been permanently removed.',
+              confirmButtonText: 'OK'
+            });
+          },
+          error: (error) => {
+            console.error('Error bulk permanently deleting files:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Bulk Delete Failed',
+              text: 'Failed to permanently delete the selected files. Please try again.',
+              confirmButtonText: 'OK'
+            });
+          }
+        });
+      }
+    });
   }
   
   /**
@@ -2187,10 +2420,54 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   
   
   /**
+   * Show notification message
+   */
+  private showNotification(type: 'success' | 'warning' | 'error', message: string): void {
+    const toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    });
+    
+    toast.fire({
+      icon: type,
+      title: message
+    });
+  }
+  
+  /**
+   * Count total folders in template including subfolders
+   */
+  private countTotalFolders(folders: any[]): number {
+    let count = 0;
+    folders.forEach(folder => {
+      count++;
+      if (folder.subFolders && folder.subFolders.length > 0) {
+        count += this.countTotalFolders(folder.subFolders);
+      }
+    });
+    return count;
+  }
+  
+  /**
    * Create folders from template structure
    */
   private createFoldersFromTemplate(folders: any[], parentId?: number, caseId?: number): void {
+    let createdCount = 0;
+    let totalCount = this.countTotalFolders(folders);
+    
     this.createFoldersSequentially(folders, 0, parentId, caseId, () => {
+      // Show completion notification
+      if (createdCount > 0) {
+        this.showNotification('success', `Successfully created ${createdCount} of ${totalCount} folders`);
+      }
+      
+      console.log(`Template creation complete. Created ${createdCount} folders. Refreshing view...`);
+      console.log('Navigation state:', this.navigationState);
+      console.log('Parent ID:', parentId, 'Case ID:', caseId);
+      
       // Preserve/ensure navigation state if we have a case ID
       if (caseId) {
         this.navigationState.context = 'case';
@@ -2210,14 +2487,28 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         this.currentFolder = null;
       }
       
+      // Force refresh after a delay to ensure backend has committed changes
       setTimeout(() => {
+        console.log('Refreshing view after template creation...');
         this.refreshCurrentView();
         this.cdr.detectChanges();
-      }, 200);
+        
+        // Double check after another delay
+        setTimeout(() => {
+          console.log('Double-checking folder load...');
+          if (this.folders.length === 0 && caseId) {
+            console.log('No folders loaded, forcing reload...');
+            this.loadCaseFolders(caseId);
+          }
+        }, 1000);
+      }, 500);
+    }, () => {
+      createdCount++;
+      console.log(`Progress: ${createdCount}/${totalCount} folders created`);
     });
   }
   
-  private createFoldersSequentially(folders: any[], index: number, parentId?: number, caseId?: number, onComplete?: () => void): void {
+  private createFoldersSequentially(folders: any[], index: number, parentId?: number, caseId?: number, onComplete?: () => void, onFolderCreated?: () => void): void {
     if (index >= folders.length) {
       if (onComplete) {
         onComplete();
@@ -2230,72 +2521,35 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     const folderTemplate = folders[index];
     const request: CreateFolderRequest = {
       name: folderTemplate.name,
-      parentId: parentId, // Use explicit parentId without fallback
-      ...(caseId && { caseId })
-    };
-    
-    this.fileManagerService.createFolder(request).subscribe({
-      next: (createdFolder) => {
-        // If this folder has subfolders, create them recursively
-        if (folderTemplate.subFolders && folderTemplate.subFolders.length > 0) {
-          this.createSubFoldersSequentially(folderTemplate.subFolders, 0, createdFolder.id, caseId, () => {
-            // After all subfolders are created, continue with next folder at same level
-            this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete);
-          });
-        } else {
-          // No subfolders, continue with next folder at same level
-          this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete);
-        }
-      },
-      error: (error) => {
-        console.error('Error creating folder:', error);
-        this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete); // Continue with next folder
-      }
-    });
-  }
-
-  /**
-   * Create subfolders sequentially with callback - now handles nested subfolders recursively
-   */
-  private createSubFoldersSequentially(subFolders: any[], index: number, parentId: number, caseId?: number, callback?: () => void): void {
-    if (index >= subFolders.length) {
-      if (callback) callback();
-      return;
-    }
-    
-    const subFolderTemplate = subFolders[index];
-    const request: CreateFolderRequest = {
-      name: subFolderTemplate.name,
       parentId: parentId,
       ...(caseId && { caseId })
     };
     
+    console.log(`Creating folder: ${folderTemplate.name} with parentId: ${parentId}, caseId: ${caseId}`);
+    
     this.fileManagerService.createFolder(request).subscribe({
-      next: (createdSubFolder) => {
-        // If this subfolder has its own subfolders, create them recursively
-        if (subFolderTemplate.subFolders && subFolderTemplate.subFolders.length > 0) {
-          this.createSubFoldersSequentially(
-            subFolderTemplate.subFolders, 
-            0, 
-            createdSubFolder.id, 
-            caseId,
-            () => {
-              // After creating nested subfolders, continue with next sibling subfolder
-              this.createSubFoldersSequentially(subFolders, index + 1, parentId, caseId, callback);
-            }
-          );
+      next: (createdFolder) => {
+        console.log(`Successfully created folder: ${createdFolder.name} with id: ${createdFolder.id}`);
+        if (onFolderCreated) onFolderCreated();
+        
+        // Create subfolders first, then continue with siblings
+        if (folderTemplate.subFolders?.length > 0) {
+          console.log(`Creating ${folderTemplate.subFolders.length} subfolders for ${createdFolder.name}`);
+          this.createFoldersSequentially(folderTemplate.subFolders, 0, createdFolder.id, caseId, () => {
+            this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete, onFolderCreated);
+          }, onFolderCreated);
         } else {
-          // No nested subfolders, continue with next subfolder
-          this.createSubFoldersSequentially(subFolders, index + 1, parentId, caseId, callback);
+          this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete, onFolderCreated);
         }
       },
       error: (error) => {
-        console.error('Error creating subfolder:', error);
-        // Continue with next subfolder even if this one failed
-        this.createSubFoldersSequentially(subFolders, index + 1, parentId, caseId, callback);
+        console.error('Error creating folder:', error);
+        this.showNotification('warning', `Failed to create folder "${folderTemplate.name}": ${error.error?.message || error.message}`);
+        this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete, onFolderCreated);
       }
     });
   }
+
   
   /**
    * Close detail panel
@@ -2817,23 +3071,80 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   previewFile(file: FileItemModel): void {
     this.selectedFile = file;
+    
+    // Open preview modal
+    const modalRef = this.modalService.open(FilePreviewModalComponent, {
+      size: 'xl',
+      centered: true,
+      backdrop: 'static'
+    });
+    
+    modalRef.componentInstance.file = file;
   }
 
   /**
    * Toggle star status
    */
   toggleStar(file: FileItemModel): void {
+    // Prevent double clicks
+    if (this.isTogglingStar) {
+      return;
+    }
+    this.isTogglingStar = true;
+    
+    // Store what the user WANTS to happen
+    const userWantsToStar = file.starred !== true; // If not starred, user wants to star it
+    console.log(`[STAR DEBUG] File ${file.id} - Current: ${file.starred}, User wants to star: ${userWantsToStar}`);
+    
+    // Call backend to toggle star status (NO optimistic update)
     this.fileManagerService.toggleFileStar(file.id).pipe(
-      takeUntil(this.destroy$)
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isTogglingStar = false;
+      })
     ).subscribe({
       next: (updatedFile) => {
-        const index = this.files.findIndex(f => f.id === file.id);
-        if (index !== -1) {
-          this.files[index] = updatedFile;
+        // Backend has toggled the star - use its response as truth
+        const backendStarred = updatedFile.starred === true;
+        console.log(`[STAR DEBUG] File ${file.id} - Backend returned starred: ${backendStarred}`);
+        
+        // Update ALL references to this file with backend state
+        file.starred = backendStarred;
+        this.files = this.files.map(f => 
+          f.id === file.id ? { ...f, starred: backendStarred } : f
+        );
+        
+        if (this.selectedFile?.id === file.id) {
+          this.selectedFile = { ...this.selectedFile, starred: backendStarred };
         }
+        
+        // Show message based on what the user intended vs what happened
+        let message: string;
+        if (userWantsToStar && backendStarred) {
+          message = 'File starred successfully';
+        } else if (!userWantsToStar && !backendStarred) {
+          message = 'File unstarred successfully';
+        } else {
+          // State was out of sync, but we've corrected it
+          message = backendStarred ? 'File starred' : 'File unstarred';
+          console.warn(`[STAR DEBUG] State mismatch corrected for file ${file.id}`);
+        }
+        this.showNotification('success', message);
+        
+        // Handle starred files filter
+        if (this.navigationState.filter === 'Important' && !backendStarred) {
+          this.files = this.files.filter(f => f.id !== file.id);
+          if (this.selectedFile?.id === file.id) {
+            this.selectedFile = null;
+          }
+        }
+        
+        // Force UI update
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error toggling star:', error);
+        this.showNotification('error', 'Failed to update file status');
       }
     });
   }

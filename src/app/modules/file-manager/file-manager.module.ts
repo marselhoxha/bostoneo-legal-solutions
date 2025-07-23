@@ -18,6 +18,7 @@ import { PermissionInheritanceComponent } from './components/permission-inherita
 
 const routes: Routes = [
   { path: '', component: FileManagerComponent },
+  { path: 'deleted', component: FileManagerComponent, data: { view: 'deleted' } },
   { path: 'templates', component: TemplateManagerComponent },
   { path: 'firm-templates', component: FirmTemplateCustomizationComponent },
   { path: 'permissions', component: PermissionInheritanceComponent }

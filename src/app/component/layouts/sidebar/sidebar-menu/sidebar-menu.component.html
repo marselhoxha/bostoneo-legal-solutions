@@ -60,6 +60,34 @@
   </div>
 </li>
 
+<!-- File Manager -->
+<li class="nav-item" *ngIf="hasPermission('DOCUMENT', 'VIEW')">
+  <a class="nav-link menu-link" href="#sidebarFileManager" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarFileManager">
+    <i class="ri-folder-2-line"></i> <span data-key="t-file-manager">File Manager</span>
+  </a>
+  <div class="collapse menu-dropdown" id="sidebarFileManager">
+    <ul class="nav nav-sm flex-column">
+      <li class="nav-item" *ngIf="hasPermission('DOCUMENT', 'VIEW')">
+        <a routerLink="/file-manager" routerLinkActive="active" class="nav-link" data-key="t-my-documents">My Documents</a>
+      </li>
+      <li class="nav-item" *ngIf="hasPermission('DOCUMENT', 'VIEW')">
+        <a routerLink="/file-manager/templates" routerLinkActive="active" class="nav-link" data-key="t-templates">Templates</a>
+      </li>
+      <li class="nav-item" *ngIf="hasPermission('SYSTEM', 'VIEW')">
+        <a routerLink="/file-manager/firm-templates" routerLinkActive="active" class="nav-link" data-key="t-firm-templates">Firm Templates</a>
+      </li>
+      <li class="nav-item" *ngIf="hasPermission('SYSTEM', 'VIEW')">
+        <a routerLink="/file-manager/permissions" routerLinkActive="active" class="nav-link" data-key="t-permissions">Permissions</a>
+      </li>
+      <li class="nav-item" *ngIf="hasPermission('DOCUMENT', 'VIEW')">
+        <a routerLink="/file-manager/deleted" routerLinkActive="active" class="nav-link" data-key="t-deleted-files">
+          <i class="ri-delete-bin-line"></i> Deleted Files
+        </a>
+      </li>
+    </ul>
+  </div>
+</li>
+
 <!-- Clients/Clients -->
 <li class="nav-item" *ngIf="hasPermission('USER', 'VIEW')">
   <a routerLink="/clients" routerLinkActive="active" class="nav-link menu-link">

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { 
@@ -17,7 +17,6 @@ import {
   InheritanceTargetType
 } from '../models/permission.model';
 import { environment } from '../../../../environments/environment';
-import { Key } from '../../../enum/key.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -27,22 +26,13 @@ export class PermissionService {
   
   constructor(private http: HttpClient) {}
   
-  // Helper method to get auth headers
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem(Key.TOKEN);
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
+  // Helper method removed - token interceptor handles authentication automatically
   
   /**
    * Get all available permissions
    */
   getAvailablePermissions(): Observable<Permission[]> {
-    return this.http.get<Permission[]>(`${this.API_BASE}/available`, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.get<Permission[]>(`${this.API_BASE}/available`);
   }
   
   /**
@@ -57,18 +47,14 @@ export class PermissionService {
    * Create custom permission set
    */
   createPermissionSet(request: CreatePermissionSetRequest): Observable<PermissionSet> {
-    return this.http.post<PermissionSet>(`${this.API_BASE}/sets`, request, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.post<PermissionSet>(`${this.API_BASE}/sets`, request);
   }
   
   /**
    * Get inheritance rules
    */
   getInheritanceRules(firmId: string): Observable<InheritanceRule[]> {
-    return this.http.get<InheritanceRule[]>(`${this.API_BASE}/firm/${firmId}/inheritance-rules`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<InheritanceRule[]>(`${this.API_BASE}/firm/${firmId}/inheritance-rules`).pipe(
       catchError(() => {
         // Return mock data if API is not available
         return of(this.getMockInheritanceRules());
@@ -80,18 +66,14 @@ export class PermissionService {
    * Create inheritance rule
    */
   createInheritanceRule(firmId: string, request: CreateInheritanceRuleRequest): Observable<InheritanceRule> {
-    return this.http.post<InheritanceRule>(`${this.API_BASE}/firm/${firmId}/inheritance-rules`, request, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.post<InheritanceRule>(`${this.API_BASE}/firm/${firmId}/inheritance-rules`, request);
   }
   
   /**
    * Update inheritance rule
    */
   updateInheritanceRule(ruleId: string, request: CreateInheritanceRuleRequest): Observable<InheritanceRule> {
-    return this.http.put<InheritanceRule>(`${this.API_BASE}/inheritance-rules/${ruleId}`, request, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.put<InheritanceRule>(`${this.API_BASE}/inheritance-rules/${ruleId}`, request).pipe(
       catchError(() => {
         // Simulate success for demo
         return of({ ...request, id: ruleId, isActive: true } as InheritanceRule);
@@ -103,18 +85,14 @@ export class PermissionService {
    * Delete inheritance rule
    */
   deleteInheritanceRule(ruleId: string): Observable<void> {
-    return this.http.delete<void>(`${this.API_BASE}/inheritance-rules/${ruleId}`, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.delete<void>(`${this.API_BASE}/inheritance-rules/${ruleId}`);
   }
   
   /**
    * Get permission inheritance config for firm
    */
   getInheritanceConfig(firmId: string): Observable<PermissionInheritanceConfig> {
-    return this.http.get<PermissionInheritanceConfig>(`${this.API_BASE}/firm/${firmId}/config`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
+    return this.http.get<PermissionInheritanceConfig>(`${this.API_BASE}/firm/${firmId}/config`).pipe(
       catchError(() => {
         // Return mock config if API is not available
         return of(this.getMockInheritanceConfig());
@@ -126,27 +104,21 @@ export class PermissionService {
    * Update permission inheritance config
    */
   updateInheritanceConfig(firmId: string, config: PermissionInheritanceConfig): Observable<PermissionInheritanceConfig> {
-    return this.http.put<PermissionInheritanceConfig>(`${this.API_BASE}/firm/${firmId}/config`, config, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.put<PermissionInheritanceConfig>(`${this.API_BASE}/firm/${firmId}/config`, config);
   }
   
   /**
    * Get applied permissions for resource
    */
   getResourcePermissions(resourceId: string, resourceType: 'file' | 'folder'): Observable<AppliedPermission[]> {
-    return this.http.get<AppliedPermission[]>(`${this.API_BASE}/resource/${resourceType}/${resourceId}`, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.get<AppliedPermission[]>(`${this.API_BASE}/resource/${resourceType}/${resourceId}`);
   }
   
   /**
    * Update resource permissions
    */
   updateResourcePermissions(request: UpdatePermissionRequest): Observable<AppliedPermission[]> {
-    return this.http.put<AppliedPermission[]>(`${this.API_BASE}/resource/update`, request, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.put<AppliedPermission[]>(`${this.API_BASE}/resource/update`, request);
   }
   
   /**
@@ -155,8 +127,6 @@ export class PermissionService {
   applyInheritanceToResource(resourceId: string, resourceType: 'file' | 'folder', applyToChildren: boolean = false): Observable<AppliedPermission[]> {
     return this.http.post<AppliedPermission[]>(`${this.API_BASE}/resource/${resourceType}/${resourceId}/apply-inheritance`, {
       applyToChildren
-    }, {
-      headers: this.getAuthHeaders()
     });
   }
   
@@ -164,9 +134,7 @@ export class PermissionService {
    * Preview inheritance for resource
    */
   previewInheritance(resourceId: string, resourceType: 'file' | 'folder'): Observable<AppliedPermission[]> {
-    return this.http.get<AppliedPermission[]>(`${this.API_BASE}/resource/${resourceType}/${resourceId}/preview-inheritance`, {
-      headers: this.getAuthHeaders()
-    });
+    return this.http.get<AppliedPermission[]>(`${this.API_BASE}/resource/${resourceType}/${resourceId}/preview-inheritance`);
   }
   
   /**
