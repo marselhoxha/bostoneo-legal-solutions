@@ -939,7 +939,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
           next: () => {
             this.selectedFiles = [];
             this.selectedFolders = [];
-            this.loadCurrentFolderContents();
+            this.refreshCurrentView();
             Swal.fire({
               title: 'Deleted!',
               text: `${totalItems} ${itemText} have been deleted successfully.`,
@@ -1856,10 +1856,22 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Confirm delete folder
    */
   confirmDeleteFolder(modal: any, folderId: number): void {
-    this.deleteId = folderId;
-    this.modalService.open(modal, {
-      centered: true,
-      size: 'sm'
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you want to delete this folder? This action cannot be undone!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete!',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'swal-wide'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.deleteFolder(folderId);
+      }
     });
   }
   
@@ -1867,10 +1879,22 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Confirm delete file
    */
   confirmDeleteFile(modal: any, fileId: number): void {
-    this.deleteId = fileId;
-    this.modalService.open(modal, {
-      centered: true,
-      size: 'sm'
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you want to delete this file? This action cannot be undone!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete!',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'swal-wide'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.deleteFile(fileId);
+      }
     });
   }
   
@@ -1881,10 +1905,23 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     if (folderId) {
       this.fileManagerService.deleteFolder(folderId).subscribe({
         next: () => {
-          this.loadCurrentFolderContents();
+          this.refreshCurrentView();
+          Swal.fire({
+            icon: 'success',
+            title: 'Folder Deleted',
+            text: 'The folder has been successfully deleted.',
+            timer: 2000,
+            showConfirmButton: false
+          });
         },
         error: (error) => {
           console.error('Error deleting folder:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Delete Failed',
+            text: 'Failed to delete the folder. Please try again.',
+            confirmButtonText: 'OK'
+          });
         }
       });
     }
@@ -1897,10 +1934,23 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     if (fileId) {
       this.fileManagerService.deleteFile(fileId).subscribe({
         next: () => {
-          this.loadCurrentFolderContents();
+          this.refreshCurrentView();
+          Swal.fire({
+            icon: 'success',
+            title: 'File Deleted',
+            text: 'The file has been successfully deleted.',
+            timer: 2000,
+            showConfirmButton: false
+          });
         },
         error: (error) => {
           console.error('Error deleting file:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Delete Failed',
+            text: 'Failed to delete the file. Please try again.',
+            confirmButtonText: 'OK'
+          });
         }
       });
     }

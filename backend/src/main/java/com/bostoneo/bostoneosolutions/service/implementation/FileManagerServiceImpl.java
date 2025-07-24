@@ -602,21 +602,43 @@ public class FileManagerServiceImpl implements FileManagerService {
     }
 
     @Override
+    @Transactional
     public void deleteFolder(Long folderId) {
         log.info("Deleting folder with ID: {}", folderId);
         
         Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + folderId));
         
-        List<Folder> subFolders = folderRepository.findByParentFolderIdAndDeletedFalse(folderId);
-        List<FileItem> files = fileItemRepository.findByFolderIdAndDeletedFalse(folderId);
+        // Recursively delete all contents first
+        deleteFolderContentsRecursively(folderId);
         
-        if (!subFolders.isEmpty() || !files.isEmpty()) {
-            throw new RuntimeException("Cannot delete folder that contains files or subfolders");
-        }
-        
+        // Now delete the folder itself
         folder.setDeleted(true);
         folderRepository.save(folder);
+        
+        log.info("Successfully deleted folder with ID: {}", folderId);
+    }
+    
+    private void deleteFolderContentsRecursively(Long folderId) {
+        log.debug("Deleting contents of folder with ID: {}", folderId);
+        
+        // First, delete all files in this folder
+        List<FileItem> files = fileItemRepository.findByFolderIdAndDeletedFalse(folderId);
+        for (FileItem file : files) {
+            log.debug("Soft deleting file: {} (ID: {})", file.getName(), file.getId());
+            file.setDeleted(true);
+            file.setDeletedAt(LocalDateTime.now());
+            fileItemRepository.save(file);
+        }
+        
+        // Then, recursively delete all subfolders
+        List<Folder> subFolders = folderRepository.findByParentFolderIdAndDeletedFalse(folderId);
+        for (Folder subFolder : subFolders) {
+            log.debug("Recursively deleting subfolder: {} (ID: {})", subFolder.getName(), subFolder.getId());
+            deleteFolderContentsRecursively(subFolder.getId()); // Recursive call
+            subFolder.setDeleted(true);
+            folderRepository.save(subFolder);
+        }
     }
     
     @Override
