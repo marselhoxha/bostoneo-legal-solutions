@@ -14,6 +14,7 @@ import {
 } from '../../models/file-manager.model';
 import { UploadModalComponent } from '../upload-modal/upload-modal.component';
 import { FilePreviewModalComponent } from '../file-preview-modal/file-preview-modal.component';
+import { FileVersionHistoryComponent } from '../file-version-history/file-version-history.component';
 import { Subject, takeUntil, BehaviorSubject, combineLatest } from 'rxjs';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs/operators';
 import { Key } from '../../../../enum/key.enum';
@@ -3130,6 +3131,33 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     });
     
     modalRef.componentInstance.file = file;
+  }
+
+  /**
+   * Open file version history modal
+   */
+  openVersionHistory(file: FileItemModel): void {
+    const modalRef = this.modalService.open(FileVersionHistoryComponent, {
+      size: 'lg',
+      backdrop: 'static',
+      keyboard: false,
+      centered: true
+    });
+
+    modalRef.componentInstance.fileId = file.id;
+    modalRef.componentInstance.fileName = file.name;
+
+    modalRef.result.then(
+      (result) => {
+        // Refresh file list if versions were modified
+        if (result && result.changed) {
+          this.refreshCurrentView();
+        }
+      },
+      (dismissed) => {
+        // Modal dismissed - no action needed
+      }
+    );
   }
 
   /**

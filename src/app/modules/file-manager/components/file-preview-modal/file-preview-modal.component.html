@@ -6,6 +6,9 @@
     </h4>
     <p class="text-muted mb-0">
       {{ getFileTypeDisplay() }} • {{ formatFileSize() }}
+      <span *ngIf="file.version" class="ms-2">
+        <i class="ri-git-branch-line me-1"></i>Version {{ file.version }}
+      </span>
       <span *ngIf="file.caseName" class="ms-2">
         <i class="ri-briefcase-line me-1"></i>{{ file.caseName }}
       </span>
@@ -25,6 +28,11 @@
         <i class="ri-add-line"></i>
       </button>
     </div>
+    
+    <!-- Version History Button -->
+    <button type="button" class="btn btn-sm btn-outline-primary" (click)="openVersionHistory()">
+      <i class="ri-history-line me-1"></i>Versions
+    </button>
     
     <!-- Download Button -->
     <button type="button" class="btn btn-sm btn-success" (click)="downloadFile()">

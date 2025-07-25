@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -141,6 +142,18 @@ public class FileManagerResource {
         
         FileItemDTO updatedFile = fileManagerService.updateFile(fileId, request);
         return ResponseEntity.ok(updatedFile);
+    }
+    
+    @PutMapping("/files/{fileId}/content")
+    @Operation(summary = "Replace file content (creates new version)")
+    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    public ResponseEntity<FileVersionDTO> replaceFileContent(
+            @PathVariable Long fileId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String comment) {
+        
+        FileVersionDTO version = fileManagerService.replaceFileContent(fileId, file, comment);
+        return ResponseEntity.ok(version);
     }
     
     @DeleteMapping("/files/{fileId}")
@@ -600,6 +613,72 @@ public class FileManagerResource {
         
         FileVersionDTO version = fileManagerService.uploadFileVersion(fileId, file, comment);
         return ResponseEntity.status(HttpStatus.CREATED).body(version);
+    }
+    
+    @GetMapping("/files/{fileId}/versions/{versionId}/download")
+    @Operation(summary = "Download a specific version of a file")
+    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    public ResponseEntity<byte[]> downloadFileVersion(
+            @PathVariable Long fileId,
+            @PathVariable Long versionId) {
+        
+        try {
+            log.info("Downloading version {} of file {}", versionId, fileId);
+            
+            FileVersionDTO version = fileManagerService.getFileVersion(fileId, versionId);
+            if (version == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            byte[] fileContent = fileManagerService.downloadFileVersion(versionId);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDispositionFormData("attachment", version.getFileName());
+            headers.setContentType(MediaType.parseMediaType(version.getMimeType()));
+            headers.setContentLength(fileContent.length);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(fileContent);
+                    
+        } catch (Exception e) {
+            log.error("Error downloading file version: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PutMapping("/files/{fileId}/versions/{versionId}/restore")
+    @Operation(summary = "Restore a version as the current version")
+    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    public ResponseEntity<Map<String, String>> restoreFileVersion(
+            @PathVariable Long fileId,
+            @PathVariable Long versionId) {
+        
+        try {
+            fileManagerService.restoreFileVersion(fileId, versionId);
+            return ResponseEntity.ok(Map.of("message", "Version restored successfully"));
+        } catch (Exception e) {
+            log.error("Error restoring file version: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @DeleteMapping("/files/{fileId}/versions/{versionId}")
+    @Operation(summary = "Delete a specific version of a file")
+    // @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
+    public ResponseEntity<Map<String, String>> deleteFileVersion(
+            @PathVariable Long fileId,
+            @PathVariable Long versionId) {
+        
+        try {
+            fileManagerService.deleteFileVersion(fileId, versionId);
+            return ResponseEntity.ok(Map.of("message", "Version deleted successfully"));
+        } catch (Exception e) {
+            log.error("Error deleting file version: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
     
     // File sharing and permissions

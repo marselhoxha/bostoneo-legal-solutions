@@ -78,7 +78,8 @@ public class FileAccessLog {
     private String referrerUrl;
     
     public enum ActionType {
-        VIEW, DOWNLOAD, UPLOAD, EDIT, DELETE, SHARE, COMMENT, TAG, VERSION_CREATE, PERMISSION_GRANT
+        VIEW, DOWNLOAD, UPLOAD, EDIT, DELETE, SHARE, COMMENT, TAG, 
+        VERSION_CREATE, VERSION_DOWNLOAD, VERSION_RESTORE, VERSION_DELETE, PERMISSION_GRANT
     }
     
     // Helper methods

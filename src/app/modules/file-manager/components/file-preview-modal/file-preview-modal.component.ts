@@ -1,9 +1,10 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
-import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FileManagerService } from '../../services/file-manager.service';
 import { FileItemModel } from '../../models/file-manager.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
+import { FileVersionHistoryComponent } from '../file-version-history/file-version-history.component';
 
 @Component({
   selector: 'app-file-preview-modal',
@@ -31,7 +32,8 @@ export class FilePreviewModalComponent implements OnInit, OnDestroy {
   constructor(
     public activeModal: NgbActiveModal,
     private fileManagerService: FileManagerService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private modalService: NgbModal
   ) { }
 
   ngOnInit(): void {
@@ -249,6 +251,34 @@ export class FilePreviewModalComponent implements OnInit, OnDestroy {
 
   resetZoom(): void {
     this.zoomLevel = 100;
+  }
+
+  /**
+   * Open version history modal
+   */
+  openVersionHistory(): void {
+    const modalRef = this.modalService.open(FileVersionHistoryComponent, {
+      size: 'lg',
+      backdrop: 'static',
+      keyboard: false,
+      centered: true
+    });
+
+    modalRef.componentInstance.fileId = this.file.id;
+    modalRef.componentInstance.fileName = this.file.name;
+
+    modalRef.result.then(
+      (result) => {
+        // If a version was changed, we might want to update the preview
+        if (result && result.changed) {
+          // Optionally reload the preview or show a message
+          console.log('File version was changed');
+        }
+      },
+      (dismissed) => {
+        // Modal dismissed - no action needed
+      }
+    );
   }
 
   /**

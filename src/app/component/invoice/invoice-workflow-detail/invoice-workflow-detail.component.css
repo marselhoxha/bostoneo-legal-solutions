@@ -31,15 +31,10 @@
   color: #74788d;
 }
 
-.table-bordered th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
-}
 
 .table-bordered td code {
   color: #e83e8c;
-  background-color: #f8f9fa;
+  background-color: #f8f9fa0a;
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 87.5%;
@@ -124,18 +119,6 @@ pre {
   height: 2rem;
 }
 
-/* Buttons */
-.btn-light {
-  background-color: #f3f6f9;
-  border-color: #f3f6f9;
-  color: #495057;
-}
-
-.btn-light:hover {
-  background-color: #e7ecf1;
-  border-color: #e7ecf1;
-  color: #495057;
-}
 
 /* Responsive */
 @media (max-width: 767px) {

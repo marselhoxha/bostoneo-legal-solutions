@@ -16,6 +16,7 @@ public interface FileManagerService {
     String getFilePath(Long fileId);
     FileUploadResponseDTO uploadFile(MultipartFile file, Long folderId, Long caseId, String description, String tags);
     FileItemDTO updateFile(Long fileId, UpdateFileRequestDTO request);
+    FileVersionDTO replaceFileContent(Long fileId, MultipartFile file, String comment);
     void deleteFile(Long fileId);
     FileItemDTO restoreFile(Long fileId);
     void permanentlyDeleteFile(Long fileId);
@@ -41,7 +42,11 @@ public interface FileManagerService {
     
     // Version operations
     List<FileVersionDTO> getFileVersions(Long fileId);
+    FileVersionDTO getFileVersion(Long fileId, Long versionId);
     FileVersionDTO uploadFileVersion(Long fileId, MultipartFile file, String comment);
+    byte[] downloadFileVersion(Long versionId);
+    void restoreFileVersion(Long fileId, Long versionId);
+    void deleteFileVersion(Long fileId, Long versionId);
     
     // Permission operations
     List<FilePermissionDTO> getFilePermissions(Long fileId);

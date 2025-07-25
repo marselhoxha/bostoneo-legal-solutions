@@ -7,6 +7,7 @@ import com.***REMOVED***.***REMOVED***solutions.service.FileManagerService;
 import com.***REMOVED***.***REMOVED***solutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +56,7 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final FileAccessLogRepository fileAccessLogRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final FileStorageService fileStorageService;
+    private final UserRepository<User> userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -720,39 +722,231 @@ public class FileManagerServiceImpl implements FileManagerService {
         FileItem fileItem = fileItemRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
-        Integer latestVersion = fileVersionRepository.findLatestVersionNumber(fileId);
-        Integer newVersionNumber = (latestVersion != null ? latestVersion : 0) + 1;
-        
-        // Mark all previous versions as not current
-        List<FileVersion> existingVersions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
-        for (FileVersion version : existingVersions) {
-            version.setIsCurrent(false);
-            fileVersionRepository.save(version);
+        if (Boolean.TRUE.equals(fileItem.getDeleted())) {
+            throw new RuntimeException("Cannot upload version for deleted file");
         }
         
-        FileVersion newVersion = FileVersion.builder()
+        try {
+            // Build the folder path for storage
+            String folderPath = buildFolderPath(fileItem.getFolderId());
+            String subdirectory = folderPath.isEmpty() ? "documents" : folderPath;
+            
+            // Use original filename for the new version
+            String fileName = file.getOriginalFilename();
+            
+            // Store the physical file
+            String storedFilePath = fileStorageService.storeFile(file, subdirectory, fileName);
+            log.info("New version file stored at: {}", storedFilePath);
+            
+            Integer highestVersion = fileVersionRepository.findHighestVersionNumberIncludingDeleted(fileId);
+            Integer newVersionNumber = (highestVersion != null ? highestVersion : 0) + 1;
+            
+            // Mark all previous versions as not current
+            List<FileVersion> existingVersions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
+            for (FileVersion version : existingVersions) {
+                version.setIsCurrent(false);
+                fileVersionRepository.save(version);
+            }
+            
+            // Create new version record
+            FileVersion newVersion = FileVersion.builder()
+                    .fileId(fileId)
+                    .versionNumber(newVersionNumber)
+                    .fileName(fileName)
+                    .filePath(storedFilePath)
+                    .fileSize(file.getSize())
+                    .mimeType(file.getContentType())
+                    .isCurrent(true)
+                    .changeNotes(comment)
+                    .createdBy(getCurrentUserId())
+                    .uploadedBy(getCurrentUserId())
+                    .build();
+            
+            newVersion = fileVersionRepository.save(newVersion);
+            
+            // Update main file item to point to the new version
+            fileItem.setVersion(newVersionNumber);
+            fileItem.setSize(file.getSize());
+            fileItem.setName(fileName); // Update name in case it changed
+            fileItem.setFilePath(storedFilePath); // IMPORTANT: Update the file path to the new version
+            fileItem.setUpdatedAt(LocalDateTime.now());
+            fileItemRepository.save(fileItem);
+            
+            log.info("Successfully uploaded version {} for file ID: {}", newVersionNumber, fileId);
+            
+            logFileAccess(fileId, FileAccessLog.ActionType.VERSION_CREATE, true, null);
+            
+            return convertToFileVersionDTO(newVersion);
+            
+        } catch (Exception e) {
+            log.error("Failed to upload file version for file ID {}: {}", fileId, e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file version: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public FileVersionDTO getFileVersion(Long fileId, Long versionId) {
+        log.info("Getting version {} for file ID: {}", versionId, fileId);
+        
+        FileVersion version = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
+        
+        if (!version.getFileId().equals(fileId)) {
+            throw new RuntimeException("Version does not belong to the specified file");
+        }
+        
+        return convertToFileVersionDTO(version);
+    }
+
+    @Override
+    public byte[] downloadFileVersion(Long versionId) {
+        log.info("Downloading version with ID: {}", versionId);
+        
+        FileVersion version = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
+        
+        try {
+            Resource resource = fileStorageService.loadFileAsResource(version.getFilePath());
+            return resource.getInputStream().readAllBytes();
+        } catch (Exception e) {
+            log.error("Failed to download version {}: {}", versionId, e.getMessage());
+            throw new RuntimeException("Failed to download file version", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void restoreFileVersion(Long fileId, Long versionId) {
+        log.info("Restoring version {} as new current version for file ID: {}", versionId, fileId);
+        
+        // Get the version to restore
+        FileVersion versionToRestore = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
+        
+        if (!versionToRestore.getFileId().equals(fileId)) {
+            throw new RuntimeException("Version does not belong to the specified file");
+        }
+        
+        if (versionToRestore.getIsDeleted()) {
+            throw new RuntimeException("Cannot restore deleted version");
+        }
+        
+        // IMPROVED APPROACH: Handle the constraint properly
+        // The constraint 'unique_current_version' appears to enforce uniqueness on (file_id, is_current)
+        // This means we can only have ONE record with is_current=true and ONE with is_current=false per file
+        
+        // Step 1: Find the highest version number (including deleted versions)
+        Integer highestVersionNumber = fileVersionRepository.findHighestVersionNumberIncludingDeleted(fileId);
+        if (highestVersionNumber == null) {
+            // Fallback: get from all versions
+            List<FileVersion> allVersions = fileVersionRepository.findByFileIdOrderByVersionNumberDesc(fileId);
+            highestVersionNumber = allVersions.stream()
+                    .map(FileVersion::getVersionNumber)
+                    .max(Integer::compareTo)
+                    .orElse(0);
+        }
+        
+        Integer nextVersionNumber = highestVersionNumber + 1;
+        log.info("Creating new version {} for file {}", nextVersionNumber, fileId);
+        
+        // Step 2: Mark all existing versions as non-current (since we fixed the DB constraint)
+        List<FileVersion> activeVersions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
+        log.info("Found {} active versions for file {}", activeVersions.size(), fileId);
+        
+        for (FileVersion version : activeVersions) {
+            if (version.getIsCurrent()) {
+                log.info("Marking version {} as non-current", version.getVersionNumber());
+                version.setIsCurrent(false);
+                fileVersionRepository.save(version);
+            }
+        }
+        
+        // Flush to ensure changes are committed
+        fileVersionRepository.flush();
+        
+        // Step 3: Create the new version
+        FileVersion newCurrentVersion = FileVersion.builder()
                 .fileId(fileId)
-                .versionNumber(newVersionNumber)
-                .fileName(file.getOriginalFilename())
-                .filePath(generateFilePath(file.getOriginalFilename()))
-                .fileSize(file.getSize())
-                .mimeType(file.getContentType())
-                .isCurrent(true)
-                .changeNotes(comment)
-                .createdBy(getCurrentUserId())
+                .versionNumber(nextVersionNumber)
+                .fileName(versionToRestore.getFileName())
+                .fileSize(versionToRestore.getFileSize())
+                .mimeType(versionToRestore.getMimeType())
+                .filePath(versionToRestore.getFilePath())
+                .uploadedAt(LocalDateTime.now())
                 .uploadedBy(getCurrentUserId())
+                .createdBy(getCurrentUserId())
+                .changeNotes("Restored from version " + versionToRestore.getVersionNumber())
+                .isCurrent(true)
+                .isDeleted(false)
+                .checksum(versionToRestore.getChecksum())
                 .build();
         
-        newVersion = fileVersionRepository.save(newVersion);
+        try {
+            log.info("Saving new version {} as current", nextVersionNumber);
+            FileVersion savedVersion = fileVersionRepository.save(newCurrentVersion);
+            log.info("Successfully saved version with ID: {} and number: {}", 
+                savedVersion.getId(), savedVersion.getVersionNumber());
+            newCurrentVersion = savedVersion;
+        } catch (Exception e) {
+            log.error("Failed to save version: {}", e.getMessage());
+            
+            // If we still get a constraint violation, it means the constraint is different than we think
+            // Let's try to understand what's happening
+            log.error("Constraint violation details:");
+            log.error("Tried to insert: fileId={}, versionNumber={}, isCurrent={}", 
+                fileId, nextVersionNumber, true);
+            
+            // Log more details about the constraint violation
+            log.error("This might be due to the unique constraint on (file_id, is_current)");
+            
+            throw new RuntimeException("Failed to create new version: " + e.getMessage(), e);
+        }
         
-        // Update file item version
-        fileItem.setVersion(newVersionNumber);
-        fileItem.setSize(file.getSize());
+        // Update the file item
+        FileItem fileItem = fileItemRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
+        
+        fileItem.setVersion(newCurrentVersion.getVersionNumber());
+        fileItem.setSize(newCurrentVersion.getFileSize());
+        fileItem.setName(newCurrentVersion.getFileName());
+        fileItem.setFilePath(newCurrentVersion.getFilePath());
+        fileItem.setUpdatedAt(LocalDateTime.now());
         fileItemRepository.save(fileItem);
         
-        logFileAccess(fileId, FileAccessLog.ActionType.VERSION_CREATE, true, null);
+        logFileAccess(fileId, FileAccessLog.ActionType.VERSION_RESTORE, true, 
+            "Restored version " + versionToRestore.getVersionNumber() + " as new version " + nextVersionNumber);
         
-        return convertToFileVersionDTO(newVersion);
+        log.info("Successfully created new version {} by restoring version {} for file ID: {}", 
+            nextVersionNumber, versionToRestore.getVersionNumber(), fileId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteFileVersion(Long fileId, Long versionId) {
+        log.info("Deleting version {} of file ID: {}", versionId, fileId);
+        
+        FileVersion version = fileVersionRepository.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
+        
+        if (!version.getFileId().equals(fileId)) {
+            throw new RuntimeException("Version does not belong to the specified file");
+        }
+        
+        if (version.getIsCurrent()) {
+            throw new RuntimeException("Cannot delete the current version");
+        }
+        
+        // Soft delete the version
+        version.setIsDeleted(true);
+        fileVersionRepository.save(version);
+        
+        log.info("Successfully deleted version {} of file ID: {}", versionId, fileId);
+    }
+
+    @Override
+    public FileVersionDTO replaceFileContent(Long fileId, MultipartFile file, String comment) {
+        log.info("Replacing content for file ID: {}", fileId);
+        return uploadFileVersion(fileId, file, comment);
     }
 
     @Override
@@ -956,6 +1150,12 @@ public class FileManagerServiceImpl implements FileManagerService {
     }
     
     private FileVersionDTO convertToFileVersionDTO(FileVersion version) {
+        // Get uploaded by user information
+        String uploadedByName = "Unknown";
+        if (version.getUploadedBy() != null) {
+            uploadedByName = getUserDisplayName(version.getUploadedBy());
+        }
+        
         return FileVersionDTO.builder()
                 .id(version.getId())
                 .fileId(version.getFileId())
@@ -964,6 +1164,8 @@ public class FileManagerServiceImpl implements FileManagerService {
                 .fileSize(version.getFileSize())
                 .formattedSize(version.getFormattedSize())
                 .mimeType(version.getMimeType())
+                .uploadedById(version.getUploadedBy())
+                .uploadedByName(uploadedByName)
                 .isCurrent(version.getIsCurrent())
                 .uploadedAt(version.getUploadedAt())
                 .comment(version.getChangeNotes())
@@ -1086,5 +1288,35 @@ public class FileManagerServiceImpl implements FileManagerService {
         int digitGroups = (int) (Math.log10(bytes) / Math.log10(1024));
         
         return String.format("%.2f %s", bytes / Math.pow(1024, digitGroups), units[digitGroups]);
+    }
+    
+    private String getUserDisplayName(Long userId) {
+        if (userId == null) {
+            return "Unknown";
+        }
+        
+        try {
+            User user = userRepository.get(userId);
+            if (user != null) {
+                String firstName = user.getFirstName();
+                String lastName = user.getLastName();
+                String email = user.getEmail();
+                
+                // Build display name from available information
+                if (firstName != null && lastName != null) {
+                    return firstName + " " + lastName;
+                } else if (firstName != null) {
+                    return firstName;
+                } else if (email != null) {
+                    return email;
+                } else {
+                    return "User " + userId;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get user display name for user ID {}: {}", userId, e.getMessage());
+        }
+        
+        return "Unknown";
     }
 }

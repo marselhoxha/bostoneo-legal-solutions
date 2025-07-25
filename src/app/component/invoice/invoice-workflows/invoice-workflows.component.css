@@ -26,14 +26,11 @@
   cursor: default;
 }
 
-.table-hover tbody tr:hover {
-  background-color: #f8f9fa;
-}
+
 
 /* Workflow Rule Details */
 .table td h5 {
   font-weight: 600;
-  color: #343a40;
   margin-bottom: 0.25rem;
 }
 
@@ -70,30 +67,10 @@
   cursor: pointer;
 }
 
-/* Action Buttons */
-.btn-light {
-  background-color: #f3f6f9;
-  border-color: #f3f6f9;
-  color: #495057;
-}
 
-.btn-light:hover {
-  background-color: #e7ecf1;
-  border-color: #e7ecf1;
-  color: #495057;
-}
 
-/* Info Card */
-.card-border-info {
-  border-left: 3px solid #3577f1;
-}
 
-.card-border-info .card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eff2f7;
-}
-
-.card-border-info .card-title {
+.card-border .card-title {
   color: #3577f1;
   font-weight: 600;
 }

@@ -29,6 +29,10 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
     @Query("SELECT MAX(v.versionNumber) FROM FileVersion v WHERE v.fileId = :fileId AND v.isDeleted = false")
     Integer findLatestVersionNumber(@Param("fileId") Long fileId);
     
+    // Get the highest version number including deleted versions (for avoiding constraint violations)
+    @Query("SELECT MAX(v.versionNumber) FROM FileVersion v WHERE v.fileId = :fileId")
+    Integer findHighestVersionNumberIncludingDeleted(@Param("fileId") Long fileId);
+    
     @Query("SELECT v FROM FileVersion v WHERE v.fileId = :fileId AND v.isDeleted = false " +
            "ORDER BY v.versionNumber DESC")
     List<FileVersion> findAllVersionsForFile(@Param("fileId") Long fileId);

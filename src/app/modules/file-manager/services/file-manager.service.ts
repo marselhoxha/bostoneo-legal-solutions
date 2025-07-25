@@ -495,7 +495,7 @@ export class FileManagerService {
    * Get file versions
    */
   getFileVersions(fileId: number): Observable<FileVersion[]> {
-    return this.http.get<FileVersion[]>(`${this.DOCUMENTS_API}/${fileId}/versions`).pipe(
+    return this.http.get<FileVersion[]>(`${this.FILE_MANAGER_API}/files/${fileId}/versions`).pipe(
       catchError(this.handleError)
     );
   }
@@ -508,7 +508,7 @@ export class FileManagerService {
     formData.append('file', file);
     if (comment) formData.append('comment', comment);
 
-    return this.http.post<FileVersion>(`${this.DOCUMENTS_API}/${fileId}/versions`, formData).pipe(
+    return this.http.post<FileVersion>(`${this.FILE_MANAGER_API}/files/${fileId}/versions`, formData).pipe(
       catchError(this.handleError)
     );
   }
@@ -516,8 +516,8 @@ export class FileManagerService {
   /**
    * Download file version
    */
-  downloadFileVersion(versionId: number): Observable<Blob> {
-    return this.http.get(`${this.DOCUMENTS_API}/versions/${versionId}/download`, { 
+  downloadFileVersion(fileId: number, versionId: number): Observable<Blob> {
+    return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/versions/${versionId}/download`, { 
       responseType: 'blob'
     }).pipe(
       catchError(this.handleError)
@@ -528,7 +528,7 @@ export class FileManagerService {
    * Restore file version
    */
   restoreFileVersion(fileId: number, versionId: number): Observable<void> {
-    return this.http.post<void>(`${this.DOCUMENTS_API}/${fileId}/versions/${versionId}/restore`, {}).pipe(
+    return this.http.put<void>(`${this.FILE_MANAGER_API}/files/${fileId}/versions/${versionId}/restore`, {}).pipe(
       catchError(this.handleError)
     );
   }
@@ -536,8 +536,8 @@ export class FileManagerService {
   /**
    * Delete file version
    */
-  deleteFileVersion(versionId: number): Observable<void> {
-    return this.http.delete<void>(`${this.DOCUMENTS_API}/versions/${versionId}`).pipe(
+  deleteFileVersion(fileId: number, versionId: number): Observable<void> {
+    return this.http.delete<void>(`${this.FILE_MANAGER_API}/files/${fileId}/versions/${versionId}`).pipe(
       catchError(this.handleError)
     );
   }

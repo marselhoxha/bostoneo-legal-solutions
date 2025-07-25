@@ -891,6 +891,10 @@
                                                     <li><a class="dropdown-item edit-list" 
                                                            href="javascript:void(0);"
                                                            (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
+                                                    <li><a class="dropdown-item" 
+                                                           href="javascript:void(0);"
+                                                           (click)="openVersionHistory(file)">
+                                                        <i class="ri-history-line me-2"></i>Version History</a></li>
                                                     <li class="dropdown-divider"></li>
                                                     <li><a class="dropdown-item remove-list" 
                                                            href="javascript:void(0);"
@@ -944,6 +948,8 @@
                                                 <li><a class="dropdown-item" href="javascript:void(0);" (click)="previewFile(file)">View</a></li>
                                                 <li><a class="dropdown-item" href="javascript:void(0);" (click)="downloadFile(file.id)">Download</a></li>
                                                 <li><a class="dropdown-item" href="javascript:void(0);" (click)="startInlineEdit(file.id, 'file', file.name)">Rename</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0);" (click)="openVersionHistory(file)">
+                                                    <i class="ri-history-line me-2"></i>Version History</a></li>
                                                 <li class="dropdown-divider"></li>
                                                 <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
                                             </ng-container>

@@ -4,6 +4,7 @@ import { FileManagerService } from '../../services/file-manager.service';
 import { FileVersion } from '../../models/file-manager.model';
 import { Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-file-version-history', 
@@ -48,6 +49,29 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Process versions to ensure proper ordering and current version logic
+   */
+  private processVersions(versions: FileVersion[]): FileVersion[] {
+    if (!versions || versions.length === 0) {
+      return [];
+    }
+
+    // Sort versions by version number (highest first)
+    const sortedVersions = versions.sort((a, b) => {
+      const versionA = parseFloat(a.versionNumber) || 0;
+      const versionB = parseFloat(b.versionNumber) || 0;
+      return versionB - versionA;
+    });
+
+    // Sync current flags from backend's isCurrent field
+    sortedVersions.forEach(version => {
+      version.current = version.isCurrent || false;
+    });
+
+    return sortedVersions;
+  }
+
+  /**
    * Load version history for the file
    */
   loadVersionHistory(): void {
@@ -65,8 +89,10 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (versions) => {
-          this.versions = versions || [];
-          console.log('Loaded versions:', this.versions);
+          console.log('Raw versions from API:', versions);
+          this.versions = this.processVersions(versions || []);
+          console.log('Processed versions:', this.versions);
+          console.log('Versions length:', this.versions.length);
         },
         error: (error) => {
           console.error('Failed to load version history:', error);
@@ -198,7 +224,7 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       return;
     }
 
-         this.fileManagerService.downloadFileVersion(version.id)
+         this.fileManagerService.downloadFileVersion(this.fileId, version.id)
        .pipe(takeUntil(this.destroy$))
        .subscribe({
          next: (blob) => {
@@ -220,7 +246,7 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
    }
 
    /**
-    * Restore a specific version as current
+    * Restore a specific version as current (creates a new version entry)
     */
    restoreVersion(version: FileVersion): void {
     if (!version.id) {
@@ -229,13 +255,44 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Are you sure you want to restore version ${version.versionNumber} as the current version?`)) {
+    Swal.fire({
+      title: 'Restore Version?',
+      html: `Are you sure you want to restore <strong>version ${version.versionNumber}</strong> as the current version?<br><br>This will create a new version entry in the timeline with the content from version ${version.versionNumber}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#405189',
+      cancelButtonColor: '#f46a6a',
+      confirmButtonText: 'Yes, Restore It!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+      this.isLoading = true;
+      this.error = null;
+      this.cdr.detectChanges();
+
       this.fileManagerService.restoreFileVersion(this.fileId, version.id)
-        .pipe(takeUntil(this.destroy$))
+        .pipe(
+          takeUntil(this.destroy$),
+          finalize(() => {
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          })
+        )
         .subscribe({
           next: () => {
-            console.log('Version restored successfully');
-            this.loadVersionHistory(); // Reload to show updated current version
+            console.log('Version restored successfully - new version created');
+            // Reload version history to show the new current version
+            this.loadVersionHistory();
+            
+            // Show success message
+            Swal.fire({
+              title: 'Success!',
+              html: `Version <strong>${version.versionNumber}</strong> has been restored successfully!<br>A new current version has been created in the timeline.`,
+              icon: 'success',
+              confirmButtonColor: '#405189',
+              timer: 3000,
+              timerProgressBar: true
+            });
           },
           error: (error) => {
             console.error('Failed to restore version:', error);
@@ -243,7 +300,8 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           }
         });
-    }
+      }
+    });
   }
 
   /**
@@ -262,13 +320,33 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Are you sure you want to delete version ${version.versionNumber}? This action cannot be undone.`)) {
-             this.fileManagerService.deleteFileVersion(version.id)
+    Swal.fire({
+      title: 'Delete Version?',
+      html: `Are you sure you want to delete <strong>version ${version.versionNumber}</strong>?<br><br><span class="text-danger">This action cannot be undone.</span>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f46a6a',
+      cancelButtonColor: '#74788d',
+      confirmButtonText: 'Yes, Delete It!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+             this.fileManagerService.deleteFileVersion(this.fileId, version.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
             console.log('Version deleted successfully');
             this.loadVersionHistory(); // Reload to show updated list
+            
+            // Show success message
+            Swal.fire({
+              title: 'Deleted!',
+              text: 'Version has been deleted successfully.',
+              icon: 'success',
+              confirmButtonColor: '#405189',
+              timer: 2000,
+              timerProgressBar: true
+            });
           },
           error: (error) => {
             console.error('Failed to delete version:', error);
@@ -276,7 +354,8 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           }
         });
-    }
+      }
+    });
   }
 
   /**
