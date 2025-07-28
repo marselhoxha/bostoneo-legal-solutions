@@ -786,6 +786,38 @@ export class FileManagerService {
       catchError(this.handleError)
     );
   }
+  
+  /**
+   * Get cases with optional status and search filters
+   */
+  getAllCases(statuses?: string[], search?: string, page: number = 0, size: number = 50): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    if (statuses && statuses.length > 0) {
+      statuses.forEach(status => {
+        params = params.append('statuses', status);
+      });
+    }
+    
+    if (search && search.trim()) {
+      params = params.set('search', search.trim());
+    }
+    
+    return this.http.get<any>(`${this.FILE_MANAGER_API}/cases`, { 
+      params
+    }).pipe(
+      map(response => {
+        return {
+          content: response.content || [],
+          totalElements: response.totalElements || 0,
+          totalPages: response.totalPages || 0
+        };
+      }),
+      catchError(this.handleError)
+    );
+  }
 
   // Bulk Operations
 

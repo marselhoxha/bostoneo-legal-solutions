@@ -569,6 +569,23 @@ public class FileManagerResource {
         return ResponseEntity.ok(cases);
     }
     
+    @GetMapping("/cases")
+    @Operation(summary = "Get cases with optional status and search filters")
+    // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
+    public ResponseEntity<Page<CaseDTO>> getCases(
+            @RequestParam(required = false) List<String> statuses,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+        
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Page<CaseDTO> cases = fileManagerService.getCases(statuses, search, pageable);
+        return ResponseEntity.ok(cases);
+    }
+    
     @GetMapping("/cases/{caseId}/files")
     @Operation(summary = "Get files for a specific case")
     // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")

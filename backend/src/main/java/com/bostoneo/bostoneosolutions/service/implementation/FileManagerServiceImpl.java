@@ -1,6 +1,7 @@
 package com.***REMOVED***.***REMOVED***solutions.service.implementation;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.filemanager.*;
+import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
 import com.***REMOVED***.***REMOVED***solutions.model.*;
 import com.***REMOVED***.***REMOVED***solutions.repository.*;
 import com.***REMOVED***.***REMOVED***solutions.service.FileManagerService;
@@ -669,7 +670,45 @@ public class FileManagerServiceImpl implements FileManagerService {
     public Page<CaseDTO> getActiveCases(Pageable pageable) {
         log.info("Getting active cases");
         
-        Page<LegalCase> casesPage = legalCaseRepository.findAll(pageable);
+        List<CaseStatus> activeStatuses = Arrays.asList(
+            CaseStatus.ACTIVE, 
+            CaseStatus.OPEN, 
+            CaseStatus.IN_PROGRESS
+        );
+        
+        Page<LegalCase> casesPage = legalCaseRepository.findByStatusIn(activeStatuses, pageable);
+        
+        List<CaseDTO> caseDTOs = casesPage.getContent().stream()
+                .map(this::convertToCaseDTO)
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(caseDTOs, pageable, casesPage.getTotalElements());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CaseDTO> getCases(List<String> statuses, String search, Pageable pageable) {
+        log.info("Getting cases with filters - statuses: {}, search: {}", statuses, search);
+        
+        Page<LegalCase> casesPage;
+        
+        if (statuses != null && !statuses.isEmpty()) {
+            List<CaseStatus> caseStatuses = statuses.stream()
+                    .map(CaseStatus::valueOf)
+                    .collect(Collectors.toList());
+            
+            if (search != null && !search.trim().isEmpty()) {
+                casesPage = legalCaseRepository.searchCasesByStatus(caseStatuses, search.trim(), pageable);
+            } else {
+                casesPage = legalCaseRepository.findByStatusIn(caseStatuses, pageable);
+            }
+        } else {
+            if (search != null && !search.trim().isEmpty()) {
+                casesPage = legalCaseRepository.searchCases(search.trim(), pageable);
+            } else {
+                casesPage = legalCaseRepository.findAll(pageable);
+            }
+        }
         
         List<CaseDTO> caseDTOs = casesPage.getContent().stream()
                 .map(this::convertToCaseDTO)

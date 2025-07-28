@@ -32,6 +32,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   folders: FolderModel[] = [];
   currentFolder: FolderModel | null = null;
   activeCases: any[] = [];
+  totalCasesCount = 0;
   stats: FileManagerStats | null = null;
   recentFiles: FileItemModel[] = [];
   
@@ -78,6 +79,9 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   // Case-related state
   caseFolders: FolderModel[] = [];
   caseDocuments: FileItemModel[] = [];
+  showAllCases = false;
+  caseSearchTerm = '';
+  private caseSearchSubject = new BehaviorSubject<string>('');
   
   // Form properties
   folderForm: any;
@@ -179,6 +183,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     
     this.initializeData();
     this.setupSearchSubscription();
+    this.setupCaseSearchSubscription();
     this.subscribeToDataStreams();
   }
 
@@ -274,6 +279,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
           // Add mock client name if not provided
           clientName: caseItem.clientName || this.getMockClientName(index)
         }));
+        this.totalCasesCount = cases.totalElements || this.activeCases.length;
         
         this.recentFiles = recentFiles;
         
@@ -334,6 +340,61 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         this.loadCurrentFolderContents();
       }
     });
+  }
+  
+  /**
+   * Setup case search functionality
+   */
+  private setupCaseSearchSubscription(): void {
+    this.caseSearchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      this.caseSearchTerm = searchTerm;
+      this.loadCases();
+    });
+  }
+  
+  /**
+   * Load cases based on current filter settings
+   */
+  loadCases(): void {
+    const casesObservable = this.showAllCases 
+      ? this.fileManagerService.getAllCases([], this.caseSearchTerm)
+      : this.fileManagerService.getAllCases(['ACTIVE', 'OPEN', 'IN_PROGRESS', 'PENDING'], this.caseSearchTerm);
+    
+    casesObservable.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (cases) => {
+        this.activeCases = (cases.content || []).map((caseItem, index) => ({
+          ...caseItem,
+          documentCount: caseItem.documentCount || this.getDefaultDocumentCount(caseItem.id),
+          clientName: caseItem.clientName || this.getMockClientName(index)
+        }));
+        this.totalCasesCount = cases.totalElements || this.activeCases.length;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading cases:', error);
+      }
+    });
+  }
+  
+  /**
+   * Toggle between active and all cases
+   */
+  toggleCaseFilter(): void {
+    this.showAllCases = !this.showAllCases;
+    this.loadCases();
+  }
+  
+  /**
+   * Handle case search input
+   */
+  onCaseSearchChange(term: string): void {
+    this.caseSearchSubject.next(term);
   }
 
   /**
@@ -1306,7 +1367,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       return caseData.status.toLowerCase();
     }
     // Generate realistic status based on ID for demo
-    const statuses = ['active', 'in_progress', 'pending', 'review', 'open', 'completed'];
+    const statuses = ['active', 'open', 'in_progress', 'pending', 'closed', 'archived'];
     return statuses[caseData.id % statuses.length];
   }
 
@@ -1320,11 +1381,26 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       'open': 'Open',
       'in_progress': 'In Progress',
       'pending': 'Pending',
-      'review': 'In Review',
-      'completed': 'Completed',
-      'closed': 'Closed'
+      'closed': 'Closed',
+      'archived': 'Archived'
     };
     return statusDisplayMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+  }
+  
+  /**
+   * Get case badge class
+   */
+  getCaseBadgeClass(caseData: any): string {
+    const status = this.getCaseStatus(caseData);
+    const badgeClassMap: { [key: string]: string } = {
+      'active': 'bg-success',
+      'open': 'bg-primary',
+      'in_progress': 'bg-info',
+      'pending': 'bg-warning',
+      'closed': 'bg-danger',
+      'archived': 'bg-dark'
+    };
+    return badgeClassMap[status] || 'bg-secondary';
   }
 
   /**

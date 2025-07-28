@@ -565,9 +565,85 @@ $orange-color: #fd7e14;
 $teal-color: #20c997;
 $cyan-color: #0dcaf0;
 
+// Empty State Styling
+.fs-48 {
+  font-size: 48px;
+}
+
+// Force badge colors
+.badge {
+  &.bg-success {
+    background-color: #198754 !important;
+  }
+  &.bg-primary {
+    background-color: #0d6efd !important;
+  }
+  &.bg-info {
+    background-color: #0dcaf0 !important;
+  }
+  &.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+  }
+  &.bg-danger {
+    background-color: #dc3545 !important;
+  }
+  &.bg-dark {
+    background-color: #212529 !important;
+  }
+}
+
+// Case Filter Buttons
+.btn-group-sm {
+  .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &.btn-outline-primary {
+      background-color: transparent;
+      border-color: var(--vz-border-color);
+      color: var(--vz-text-muted);
+      
+      &:hover {
+        background-color: rgba(var(--vz-primary-rgb), 0.1);
+        border-color: var(--vz-primary);
+        color: var(--vz-primary);
+      }
+    }
+    
+    &.btn-primary {
+      box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.25);
+    }
+  }
+}
+
 // Enhanced Search Box
 .search-box {
   position: relative;
+  
+  .form-control {
+    padding-left: 35px;
+    font-size: 0.8125rem;
+    background-color: var(--vz-light);
+    border: 1px solid var(--vz-border-color);
+    
+    &:focus {
+      background-color: var(--vz-body-bg);
+      border-color: var(--vz-primary);
+      box-shadow: none;
+    }
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vz-text-muted);
+    font-size: 14px;
+  }
   
   .input-group {
     .input-group-text {
@@ -722,6 +798,21 @@ $cyan-color: #0dcaf0;
     .case-number {
       color: var(--vz-primary);
     }
+  }
+  
+  // Styling for closed/archived cases
+  &.case-closed,
+  &.case-archived {
+    opacity: 0.7;
+    
+    .case-number,
+    .case-title {
+      opacity: 0.8;
+    }
+  }
+  
+  &.case-archived {
+    background-color: rgba(var(--vz-secondary-rgb), 0.05);
   }
   
   // Priority Sidebar Styling

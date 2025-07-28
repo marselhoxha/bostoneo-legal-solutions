@@ -37,6 +37,7 @@ public interface FileManagerService {
     
     // Case operations
     Page<CaseDTO> getActiveCases(Pageable pageable);
+    Page<CaseDTO> getCases(List<String> statuses, String search, Pageable pageable);
     List<FileItemDTO> getCaseFiles(Long caseId);
     List<FolderDTO> getCaseFolders(Long caseId);
     
