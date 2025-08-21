@@ -4,7 +4,7 @@ import { Subject, takeUntil, forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { CaseAssignmentService } from '../../../service/case-assignment.service';
 import { UserService } from '../../../service/user.service';
-import { CaseClientService } from '../../../service/case-client.service';
+import { CaseService } from '../../../modules/legal/services/case.service';
 import { NotificationService } from '../../../service/notification.service';
 import { 
   CaseAssignment, 
@@ -22,6 +22,18 @@ import {
 } from '../../../interface/case-assignment';
 import { User } from '../../../interface/user';
 
+interface AssignedAttorney {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roleType?: string;
+  workloadWeight?: number;
+  assignmentId?: number;
+  assignedAt?: Date;
+  active?: boolean;
+}
+
 interface LegalCase {
   id: number;
   title: string;
@@ -32,7 +44,7 @@ interface LegalCase {
   priority: string;
   estimatedWorkload?: number;
   createdAt: Date;
-  assignedAttorneys?: User[];
+  assignedAttorneys?: AssignedAttorney[];
 }
 
 interface CaseTypeStats {
@@ -118,7 +130,7 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   constructor(
     private caseAssignmentService: CaseAssignmentService,
     private userService: UserService,
-    private caseClientService: CaseClientService,
+    private caseService: CaseService,
     private notificationService: NotificationService,
     private formBuilder: FormBuilder,
     private cdr: ChangeDetectorRef
@@ -140,7 +152,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
       caseId: [null, Validators.required],
       userId: [null, Validators.required],
       roleType: [CaseRoleType.LEAD_ATTORNEY, Validators.required],
-      assignmentType: [AssignmentType.MANUAL, Validators.required],
       workloadWeight: [50, [Validators.required, Validators.min(1), Validators.max(100)]],
       effectiveFrom: [new Date(), Validators.required],
       effectiveTo: [null],
@@ -174,16 +185,28 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     this.loading.assignments = true;
     
     forkJoin({
-      cases: this.caseClientService.getUserCases(1, 0, 1000).pipe(
+      cases: this.caseService.getCases(0, 1000).pipe(
         catchError(error => {
           console.error('Error loading cases:', error);
-          return of({ data: { content: [] } });
+          return of({ data: { cases: [] } });
         })
       ),
       attorneys: this.userService.getUsers().pipe(
         catchError(error => {
           console.error('Error loading attorneys:', error);
-          return of({ data: [] });
+          return of({ data: { users: [] } });
+        })
+      ),
+      assignments: this.loadAllAssignments().pipe(
+        catchError(error => {
+          console.error('Error loading assignments:', error);
+          return of([]);
+        })
+      ),
+      workloadData: this.loadWorkloadAnalytics().pipe(
+        catchError(error => {
+          console.error('Error loading workload data:', error);
+          return of(null);
         })
       )
     }).pipe(
@@ -198,19 +221,30 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.processCasesData(response.cases);
         this.processAttorneysData(response.attorneys);
-        this.generateSampleData();
+        this.processAssignmentsData(response.assignments);
+        this.processWorkloadData(response.workloadData);
       },
       error: (error) => {
         console.error('Error in loadInitialData:', error);
         this.notificationService.onError('Failed to load initial data');
-        this.generateSampleData();
       }
     });
   }
 
   private processCasesData(response: any): void {
-    if (response?.data?.content) {
-      this.cases = response.data.content.map((caseItem: any) => ({
+    console.log('Processing cases response:', response);
+    
+    let casesArray = [];
+    if (response?.data?.cases) {
+      casesArray = response.data.cases;
+    } else if (response?.data?.page?.content) {
+      casesArray = response.data.page.content;
+    } else if (response?.data?.content) {
+      casesArray = response.data.content;
+    }
+    
+    if (casesArray && casesArray.length > 0) {
+      this.cases = casesArray.map((caseItem: any) => ({
         id: caseItem.id,
         title: caseItem.title,
         caseNumber: caseItem.caseNumber,
@@ -229,7 +263,13 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   private processAttorneysData(response: any): void {
-    this.attorneys = response?.data ? (Array.isArray(response.data) ? response.data : []) : [];
+    if (response?.data?.users) {
+      this.attorneys = response.data.users;
+    } else if (response?.data && Array.isArray(response.data)) {
+      this.attorneys = response.data;
+    } else {
+      this.attorneys = [];
+    }
     this.filteredAttorneys = [...this.attorneys];
   }
 
@@ -237,6 +277,7 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   selectCase(caseItem: LegalCase): void {
     this.selectedCase = caseItem;
     this.assignmentForm.patchValue({ caseId: caseItem.id });
+    this.loadCaseAssignments(caseItem.id);
   }
 
   selectAttorney(attorney: User): void {
@@ -292,14 +333,35 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     this.loading.assigning = true;
     const formData = this.assignmentForm.value;
     
-    // Simulate assignment
-    setTimeout(() => {
-      this.notificationService.onSuccess('Case assigned successfully');
-      this.assignmentForm.reset();
-      this.selectedCase = null;
-      this.selectedAttorney = null;
-      this.loading.assigning = false;
-    }, 1000);
+    const assignmentRequest: CaseAssignmentRequest = {
+      caseId: formData.caseId,
+      userId: formData.userId,
+      roleType: formData.roleType,
+      workloadWeight: formData.workloadWeight,
+      effectiveFrom: formData.effectiveFrom,
+      effectiveTo: formData.effectiveTo,
+      notes: formData.notes
+    };
+
+    this.caseAssignmentService.assignCase(assignmentRequest).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.loading.assigning = false;
+        this.cdr.markForCheck();
+      })
+    ).subscribe({
+      next: (response) => {
+        this.notificationService.onSuccess('Case assigned successfully');
+        this.assignmentForm.reset();
+        this.selectedCase = null;
+        this.selectedAttorney = null;
+        this.refreshData();
+      },
+      error: (error) => {
+        console.error('Error assigning case:', error);
+        this.notificationService.onError('Failed to assign case. Please try again.');
+      }
+    });
   }
 
   // Utility Methods
@@ -332,43 +394,64 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     return Math.round(baseWorkload * (priorityMultiplier[priority] || 1.0) * (typeMultiplier[caseType] || 1.0));
   }
 
-  private generateSampleData(): void {
-    if (this.cases.length === 0) {
-      this.cases = [
-        {
-          id: 1, title: 'Corporate Merger Agreement', caseNumber: 'CASE-2025-001',
-          clientName: 'TechCorp Inc.', status: 'ACTIVE', caseType: 'CORPORATE_LAW',
-          priority: 'HIGH', estimatedWorkload: 75, createdAt: new Date(), assignedAttorneys: []
-        },
-        {
-          id: 2, title: 'Employment Discrimination Lawsuit', caseNumber: 'CASE-2025-002',
-          clientName: 'John Smith', status: 'ACTIVE', caseType: 'EMPLOYMENT_LAW',
-          priority: 'MEDIUM', estimatedWorkload: 60, createdAt: new Date(), assignedAttorneys: []
-        },
-        {
-          id: 3, title: 'Real Estate Transaction', caseNumber: 'CASE-2025-003',
-          clientName: 'Property Holdings LLC', status: 'ACTIVE', caseType: 'REAL_ESTATE',
-          priority: 'LOW', estimatedWorkload: 40, createdAt: new Date(), assignedAttorneys: []
-        }
-      ];
-      this.filteredCases = [...this.cases];
+  private loadAllAssignments() {
+    return this.caseAssignmentService.getAllAssignments(0, 1000);
+  }
+
+  private loadWorkloadAnalytics() {
+    return this.caseAssignmentService.getWorkloadAnalytics();
+  }
+
+  private loadCaseAssignments(caseId: number): void {
+    console.log('Loading assignments for case:', caseId);
+    
+    this.caseAssignmentService.getCaseAssignments(caseId).subscribe({
+      next: (response) => {
+        console.log('Case assignments response:', response);
+        
+        // Extract assignments from response
+        const assignments = response?.data || [];
+        
+        // Convert assignments to attorney objects for display
+        this.selectedCase.assignedAttorneys = assignments.map(assignment => ({
+          id: assignment.userId,
+          firstName: assignment.userName?.split(' ')[0] || '',
+          lastName: assignment.userName?.split(' ').slice(1).join(' ') || '',
+          email: assignment.userEmail,
+          roleType: assignment.roleType,
+          workloadWeight: assignment.workloadWeight,
+          assignmentId: assignment.id,
+          assignedAt: assignment.assignedAt,
+          active: assignment.active
+        }));
+        
+        console.log('Updated case with assigned attorneys:', this.selectedCase.assignedAttorneys);
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        console.error('Error loading case assignments:', error);
+        this.selectedCase.assignedAttorneys = [];
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private processAssignmentsData(assignments: any): void {
+    console.log('Processing assignments data:', assignments);
+    
+    if (Array.isArray(assignments)) {
+      this.assignments = assignments;
+    } else if (assignments?.data) {
+      this.assignments = Array.isArray(assignments.data) ? assignments.data : assignments.data.content || [];
+    } else {
+      this.assignments = [];
     }
     
-    if (this.attorneys.length === 0) {
-      this.attorneys = [
-        { 
-          id: 1, firstName: 'John', lastName: 'Attorney', email: 'john.attorney@firm.com', 
-          enabled: true, notLocked: true, usingMFA: false, roleName: 'ROLE_ATTORNEY', 
-          permissions: 'CASE:VIEW,CASE:EDIT', roles: ['ROLE_ATTORNEY'] 
-        },
-        { 
-          id: 2, firstName: 'Jane', lastName: 'Lawyer', email: 'jane.lawyer@firm.com', 
-          enabled: true, notLocked: true, usingMFA: false, roleName: 'ROLE_SENIOR_ATTORNEY', 
-          permissions: 'CASE:VIEW,CASE:EDIT,CASE:DELETE', roles: ['ROLE_SENIOR_ATTORNEY'] 
-        }
-      ];
-      this.filteredAttorneys = [...this.attorneys];
-    }
+    console.log('Processed assignments:', this.assignments);
+  }
+
+  private processWorkloadData(workloadData: any): void {
+    this.analytics = workloadData;
   }
 
   // Utility getters
@@ -380,8 +463,214 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     return roleType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
+  // Assignment Action Methods
+  editAssignment(attorney: AssignedAttorney): void {
+    console.log('Edit assignment for:', attorney);
+    
+    // Pre-populate the form with existing assignment data
+    this.assignmentForm.patchValue({
+      caseId: this.selectedCase?.id,
+      userId: attorney.id,
+      roleType: attorney.roleType || CaseRoleType.ASSOCIATE,
+      workloadWeight: attorney.workloadWeight || 1.0,
+      notes: ''
+    });
+    
+    // Select the attorney in the UI
+    this.selectedAttorney = this.attorneys.find(a => a.id === attorney.id) || null;
+    
+    // Switch to assignment tab
+    this.selectedTab = 'assignments';
+    
+    this.notificationService.onInfo('Assignment details loaded for editing');
+  }
+
+  transferAssignment(attorney: AssignedAttorney): void {
+    console.log('Transfer assignment for:', attorney);
+    
+    if (!attorney.assignmentId || !this.selectedCase) {
+      this.notificationService.onError('Cannot transfer assignment - missing assignment ID or case');
+      return;
+    }
+
+    // Get available attorneys for transfer (exclude the current attorney)
+    const availableAttorneys = this.attorneys.filter(a => a.id !== attorney.id);
+    
+    if (availableAttorneys.length === 0) {
+      this.notificationService.onWarning('No other attorneys available for transfer');
+      return;
+    }
+
+    // Create options object for the select dropdown
+    const attorneyOptions: { [key: string]: string } = {};
+    availableAttorneys.forEach(a => {
+      attorneyOptions[a.id.toString()] = `${a.firstName} ${a.lastName} (${a.email})`;
+    });
+
+    // Import SweetAlert2 for attorney selection dialog
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Transfer Assignment',
+        text: `Transfer ${attorney.firstName} ${attorney.lastName}'s assignment to:`,
+        input: 'select',
+        inputOptions: attorneyOptions,
+        inputPlaceholder: 'Select an attorney',
+        showCancelButton: true,
+        confirmButtonText: 'Transfer Assignment',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Please select an attorney to transfer to';
+          }
+          return null;
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const newAttorneyId = parseInt(result.value);
+          const newAttorney = availableAttorneys.find(a => a.id === newAttorneyId);
+          
+          if (newAttorney) {
+            this.performTransfer(attorney, newAttorney);
+          }
+        }
+      });
+    });
+  }
+
+  private performTransfer(fromAttorney: AssignedAttorney, toAttorney: User): void {
+    console.log('Performing transfer from:', fromAttorney, 'to:', toAttorney);
+    
+    if (!fromAttorney.assignmentId || !this.selectedCase) {
+      this.notificationService.onError('Cannot perform transfer - missing assignment data');
+      return;
+    }
+
+    // First remove the current assignment
+    this.caseAssignmentService.unassignCase(this.selectedCase.id, fromAttorney.id, 'Assignment transferred').subscribe({
+      next: () => {
+        console.log('Successfully removed old assignment');
+        
+        // Create new assignment for the selected attorney
+        const newAssignmentData: CaseAssignmentRequest = {
+          caseId: this.selectedCase!.id,
+          userId: toAttorney.id,
+          roleType: (fromAttorney.roleType as CaseRoleType) || CaseRoleType.ASSOCIATE,
+          workloadWeight: fromAttorney.workloadWeight || 1.0,
+          notes: `Transferred from ${fromAttorney.firstName} ${fromAttorney.lastName}`
+        };
+
+        this.caseAssignmentService.assignCase(newAssignmentData).subscribe({
+          next: (response) => {
+            console.log('Successfully created new assignment:', response);
+            this.notificationService.onSuccess(
+              `Assignment transferred from ${fromAttorney.firstName} ${fromAttorney.lastName} to ${toAttorney.firstName} ${toAttorney.lastName}`
+            );
+            
+            // Refresh the assignments display
+            if (this.selectedCase) {
+              this.loadCaseAssignments(this.selectedCase.id);
+            }
+          },
+          error: (error) => {
+            console.error('Error creating new assignment:', error);
+            this.notificationService.onError('Failed to create new assignment: ' + (error.error?.message || error.message));
+            
+            // Try to restore the original assignment if possible
+            const restoreData: CaseAssignmentRequest = {
+              caseId: this.selectedCase!.id,
+              userId: fromAttorney.id,
+              roleType: (fromAttorney.roleType as CaseRoleType) || CaseRoleType.ASSOCIATE,
+              workloadWeight: fromAttorney.workloadWeight || 1.0,
+              notes: 'Restored after failed transfer'
+            };
+            
+            this.caseAssignmentService.assignCase(restoreData).subscribe({
+              next: () => {
+                this.notificationService.onInfo('Original assignment restored');
+                if (this.selectedCase) {
+                  this.loadCaseAssignments(this.selectedCase.id);
+                }
+              },
+              error: (restoreError) => {
+                console.error('Failed to restore original assignment:', restoreError);
+                this.notificationService.onError('Failed to restore original assignment');
+              }
+            });
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error removing old assignment:', error);
+        this.notificationService.onError('Failed to remove current assignment: ' + (error.error?.message || error.message));
+      }
+    });
+  }
+
+  removeAssignment(attorney: AssignedAttorney): void {
+    console.log('Remove assignment for:', attorney);
+    
+    if (!attorney.assignmentId || !this.selectedCase) {
+      this.notificationService.onError('Cannot remove assignment - missing assignment ID');
+      return;
+    }
+    
+    // Import SweetAlert2 for confirmation dialog
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Remove Assignment',
+        text: `Are you sure you want to remove ${attorney.firstName} ${attorney.lastName} from this case?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Remove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        input: 'textarea',
+        inputPlaceholder: 'Reason for removal (optional)',
+        inputAttributes: {
+          'aria-label': 'Reason for removal'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const reason = result.value || 'Assignment removed by user';
+          this.performRemoveAssignment(attorney, reason);
+        }
+      });
+    });
+  }
+
+  private performRemoveAssignment(attorney: AssignedAttorney, reason: string): void {
+    if (!attorney.assignmentId || !this.selectedCase) {
+      return;
+    }
+
+    this.caseAssignmentService.unassignCase(this.selectedCase.id, attorney.id, reason)
+      .subscribe({
+        next: (response) => {
+          console.log('Assignment removed successfully:', response);
+          this.notificationService.onSuccess('Assignment removed successfully');
+          
+          // Reload the assignments for the current case
+          this.loadCaseAssignments(this.selectedCase!.id);
+          
+          // Reload all assignments to update the main list
+          this.loadInitialData();
+        },
+        error: (error) => {
+          console.error('Error removing assignment:', error);
+          this.notificationService.onError('Failed to remove assignment');
+        }
+      });
+  }
+
   getUserDisplayName(user: User): string {
     return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User';
+  }
+
+  getAttorneyDisplayName(attorney: AssignedAttorney): string {
+    return `${attorney.firstName || ''} ${attorney.lastName || ''}`.trim() || attorney.email || 'Unknown Attorney';
   }
 
   getPriorityBadge(priority: string): string {

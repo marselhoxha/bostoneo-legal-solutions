@@ -59,6 +59,17 @@ export class CaseAssignmentService {
     );
   }
 
+  getAllAssignments(page: number = 0, size: number = 100): Observable<ApiResponse<CaseAssignment[]>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    return this.http.get<ApiResponse<CaseAssignment[]>>(
+      `${this.apiUrl}/case-assignments`, 
+      { params }
+    );
+  }
+
   getUserAssignments(userId: number, page: number = 0, size: number = 10): Observable<ApiResponse<CaseAssignment[]>> {
     const params = new HttpParams()
       .set('page', page.toString())

@@ -67,6 +67,18 @@ export interface BillingInfo {
   paymentStatus: PaymentStatus;
 }
 
+export interface AssignedAttorney {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roleType?: string;
+  workloadWeight?: number;
+  assignmentId?: number;
+  assignedAt?: Date;
+  active?: boolean;
+}
+
 export interface LegalCase {
   id: string;
   title: string;
@@ -78,6 +90,7 @@ export interface LegalCase {
   createdAt: Date;
   updatedAt: Date;
   assignedTo?: User;
+  assignedAttorneys?: AssignedAttorney[]; // Array of assigned attorneys with assignment details
   client?: {
     id: string;
     firstName: string;

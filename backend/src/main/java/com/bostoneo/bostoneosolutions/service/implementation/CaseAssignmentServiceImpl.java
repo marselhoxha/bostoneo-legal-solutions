@@ -7,7 +7,7 @@ import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
 import com.***REMOVED***.***REMOVED***solutions.model.*;
 import com.***REMOVED***.***REMOVED***solutions.repository.*;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+// import com.***REMOVED***.***REMOVED***solutions.service.UserService; // Temporarily commented
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,7 +40,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     private final CaseTaskRepository taskRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final UserRepository userRepository;
-    private final UserService userService;
+    // private final UserService userService; // Temporarily commented to avoid circular dependency
     private final SmartAssignmentAlgorithm smartAssignmentAlgorithm;
     
     @Override
@@ -65,7 +65,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         if (assignedTo == null) {
             throw new ApiException("User not found");
         }
-        User currentUser = getCurrentUser();
+        User currentUser = getSystemUser(); // Temporarily use system user for testing
         
         // Create new assignment
         CaseAssignment assignment = CaseAssignment.builder()
@@ -156,7 +156,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         if (toUser == null) {
             throw new ApiException("To user not found");
         }
-        User currentUser = getCurrentUser();
+        User currentUser = getSystemUser(); // Temporarily use system user for testing
         
         // Check if transfer request already exists
         if (transferRequestRepository.existsPendingRequest(request.getCaseId(), request.getFromUserId())) {
@@ -192,7 +192,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .findByCaseIdAndUserIdAndActive(caseId, userId, true)
             .orElseThrow(() -> new ApiException("Assignment not found"));
         
-        User currentUser = getCurrentUser();
+        User currentUser = getSystemUser(); // Temporarily use system user for testing
         
         // Deactivate assignment
         assignment.setActive(false);
@@ -206,6 +206,20 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         recordAssignmentHistory(assignment, AssignmentAction.DEACTIVATED, reason, currentUser);
     }
     
+    @Override
+    public List<CaseAssignmentDTO> getAllAssignments() {
+        try {
+            log.debug("Getting all case assignments");
+            List<CaseAssignment> assignments = assignmentRepository.findAll();
+            return assignments.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching all assignments: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
     @Override
     public List<CaseAssignmentDTO> getCaseAssignments(Long caseId) {
         try {
@@ -459,7 +473,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Transfer request is not pending");
         }
         
-        User currentUser = getCurrentUser();
+        User currentUser = getSystemUser(); // Temporarily use system user for testing
         CaseAssignmentDTO result = processTransfer(request, currentUser, notes);
         
         return mapTransferToDTO(request);
@@ -474,7 +488,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Transfer request is not pending");
         }
         
-        User currentUser = getCurrentUser();
+        User currentUser = getSystemUser(); // Temporarily use system user for testing
         
         request.setStatus(TransferStatus.REJECTED);
         request.setApprovedBy(currentUser);
