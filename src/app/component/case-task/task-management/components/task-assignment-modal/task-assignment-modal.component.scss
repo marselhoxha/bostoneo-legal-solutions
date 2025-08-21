@@ -1,0 +1,63 @@
+.alert-sm {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.form-select option {
+  padding: 8px 12px;
+}
+
+.invalid-feedback {
+  display: block;
+}
+
+.workload-indicator {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.modal-header {
+  border-bottom: 1px solid #e9ecef;
+  
+  .modal-title {
+    font-weight: 600;
+    color: #495057;
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.5rem;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.alert {
+  border-radius: 6px;
+  
+  &.alert-info {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+  }
+  
+  &.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+  }
+  
+  &.alert-light {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+  }
+}
+
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}

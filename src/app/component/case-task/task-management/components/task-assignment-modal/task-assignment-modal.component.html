@@ -1,0 +1,135 @@
+<div class="modal-header">
+  <h4 class="modal-title">
+    <i class="ri-user-add-line me-2 text-primary"></i>{{ getModalTitle() }}
+  </h4>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
+
+<div class="modal-body">
+  <form [formGroup]="assignmentForm" (ngSubmit)="onAssign()">
+    <!-- Task Info (if editing existing task) -->
+    <div class="alert alert-info mb-4" *ngIf="data.task">
+      <div class="d-flex align-items-start">
+        <i class="ri-information-line me-2 mt-1"></i>
+        <div>
+          <h6 class="mb-1">{{ data.task.title }}</h6>
+          <p class="mb-0 text-muted fs-13" *ngIf="data.task.description">
+            {{ data.task.description | slice:0:100 }}{{ data.task.description.length > 100 ? '...' : '' }}
+          </p>
+          <div class="mt-2">
+            <span class="badge fs-11" [ngClass]="{
+              'bg-secondary-subtle text-secondary': data.task.status === 'TODO',
+              'bg-warning-subtle text-warning': data.task.status === 'IN_PROGRESS',
+              'bg-info-subtle text-info': data.task.status === 'REVIEW',
+              'bg-success-subtle text-success': data.task.status === 'COMPLETED'
+            }">{{ data.task.status }}</span>
+            <span class="badge bg-light text-muted fs-11 ms-2" *ngIf="data.task.dueDate">
+              Due: {{ data.task.dueDate | date:'mediumDate' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignment Form -->
+    <div class="row g-3">
+      <!-- Assign To -->
+      <div class="col-12">
+        <label for="assignedToId" class="form-label">
+          <i class="ri-user-line me-1"></i>Assign To <span class="text-danger">*</span>
+        </label>
+        <select 
+          id="assignedToId" 
+          class="form-select" 
+          formControlName="assignedToId"
+          [class.is-invalid]="assignmentForm.get('assignedToId')?.invalid && assignmentForm.get('assignedToId')?.touched">
+          <option value="">Select team member...</option>
+          <option *ngFor="let user of availableUsers" [value]="user.id">
+            {{ user.firstName }} {{ user.lastName }} - {{ user.title || user.role }}
+            <span [ngClass]="getUserWorkloadClass(user)">
+              ({{ user.workloadPercentage || 0 }}% - {{ getUserWorkloadText(user) }})
+            </span>
+          </option>
+        </select>
+        <div class="invalid-feedback" *ngIf="assignmentForm.get('assignedToId')?.invalid && assignmentForm.get('assignedToId')?.touched">
+          Please select a team member to assign this task to.
+        </div>
+        
+        <!-- Workload Warning -->
+        <div class="mt-2" *ngIf="assignmentForm.get('assignedToId')?.value">
+          <div class="alert alert-warning alert-sm mb-0" 
+               *ngIf="getSelectedUser()?.workloadPercentage >= 90">
+            <i class="ri-alarm-warning-line me-1"></i>
+            <strong>Warning:</strong> This team member is currently overloaded ({{ getSelectedUser()?.workloadPercentage }}% capacity).
+            Consider redistributing tasks or extending deadlines.
+          </div>
+          <div class="alert alert-info alert-sm mb-0" 
+               *ngIf="getSelectedUser()?.workloadPercentage >= 70 && getSelectedUser()?.workloadPercentage < 90">
+            <i class="ri-information-line me-1"></i>
+            This team member is currently busy ({{ getSelectedUser()?.workloadPercentage }}% capacity).
+          </div>
+        </div>
+      </div>
+
+      <!-- Priority -->
+      <div class="col-md-6">
+        <label for="priority" class="form-label">
+          <i class="ri-flag-line me-1"></i>Priority
+        </label>
+        <select id="priority" class="form-select" formControlName="priority">
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="URGENT">Urgent</option>
+        </select>
+      </div>
+
+      <!-- Due Date -->
+      <div class="col-md-6">
+        <label for="dueDate" class="form-label">
+          <i class="ri-calendar-line me-1"></i>Due Date
+        </label>
+        <input 
+          type="date" 
+          id="dueDate" 
+          class="form-control" 
+          formControlName="dueDate"
+          [min]="today">
+      </div>
+
+      <!-- Notes -->
+      <div class="col-12">
+        <label for="notes" class="form-label">
+          <i class="ri-sticky-note-line me-1"></i>Assignment Notes
+        </label>
+        <textarea 
+          id="notes" 
+          class="form-control" 
+          formControlName="notes" 
+          rows="3"
+          placeholder="Add any notes about this assignment..."></textarea>
+      </div>
+    </div>
+
+    <!-- Current Assignment Info -->
+    <div class="mt-3" *ngIf="data.task?.assignedToName && data.mode === 'reassign'">
+      <div class="alert alert-light border">
+        <small class="text-muted">
+          <i class="ri-arrow-right-line me-1"></i>
+          Currently assigned to: <strong>{{ data.task.assignedToName }}</strong>
+        </small>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="onCancel()" [disabled]="isLoading">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" (click)="onAssign()" [disabled]="isLoading || assignmentForm.invalid">
+    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+    <i class="ri-user-add-line me-1" *ngIf="!isLoading"></i>
+    {{ data.mode === 'reassign' ? 'Reassign Task' : 'Assign Task' }}
+  </button>
+</div>

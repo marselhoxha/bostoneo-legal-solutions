@@ -1,0 +1,162 @@
+<div class="modal-header">
+  <h4 class="modal-title">
+    <i class="ri-add-line me-2 text-primary"></i>Quick Create Task
+  </h4>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
+
+<div class="modal-body">
+  <form [formGroup]="taskForm" (ngSubmit)="onCreate()">
+    <div class="row g-3">
+      <!-- Task Title -->
+      <div class="col-12">
+        <label for="title" class="form-label">
+          <i class="ri-file-text-line me-1"></i>Task Title <span class="text-danger">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="title" 
+          class="form-control" 
+          formControlName="title"
+          placeholder="Enter task title..."
+          [class.is-invalid]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched">
+        <div class="invalid-feedback" *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched">
+          <small *ngIf="taskForm.get('title')?.hasError('required')">Task title is required.</small>
+          <small *ngIf="taskForm.get('title')?.hasError('minlength')">Task title must be at least 3 characters.</small>
+        </div>
+      </div>
+
+      <!-- Task Description -->
+      <div class="col-12">
+        <label for="description" class="form-label">
+          <i class="ri-file-list-line me-1"></i>Description
+        </label>
+        <textarea 
+          id="description" 
+          class="form-control" 
+          formControlName="description"
+          rows="3"
+          placeholder="Describe the task requirements..."></textarea>
+      </div>
+
+      <!-- Task Type -->
+      <div class="col-md-6">
+        <label for="taskType" class="form-label">
+          <i class="ri-bookmark-line me-1"></i>Task Type
+        </label>
+        <select id="taskType" class="form-select" formControlName="taskType">
+          <option value="OTHER">General Task</option>
+          <option value="RESEARCH">Research</option>
+          <option value="REVIEW">Review</option>
+          <option value="DOCUMENT_PREP">Document Preparation</option>
+          <option value="CLIENT_MEETING">Client Meeting</option>
+          <option value="COURT_APPEARANCE">Court Appearance</option>
+          <option value="FILING">Filing</option>
+          <option value="CORRESPONDENCE">Correspondence</option>
+        </select>
+      </div>
+
+      <!-- Priority -->
+      <div class="col-md-6">
+        <label for="priority" class="form-label">
+          <i class="ri-flag-line me-1"></i>Priority
+        </label>
+        <select id="priority" class="form-select" formControlName="priority">
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="URGENT">Urgent</option>
+        </select>
+      </div>
+
+      <!-- Assign To -->
+      <div class="col-12">
+        <label for="assignedToId" class="form-label">
+          <i class="ri-user-line me-1"></i>Assign To (Optional)
+        </label>
+        <select 
+          id="assignedToId" 
+          class="form-select" 
+          formControlName="assignedToId">
+          <option value="">Leave unassigned for now</option>
+          <option *ngFor="let user of availableUsers" [value]="user.id">
+            {{ user.firstName }} {{ user.lastName }} - {{ user.title || user.role }}
+            <span [ngClass]="getUserWorkloadClass(user)">
+              ({{ user.workloadPercentage || 0 }}% - {{ getUserWorkloadText(user) }})
+            </span>
+          </option>
+        </select>
+        
+        <!-- Workload Warning -->
+        <div class="mt-2" *ngIf="taskForm.get('assignedToId')?.value">
+          <div class="alert alert-warning alert-sm mb-0" 
+               *ngIf="getSelectedUser()?.workloadPercentage >= 90">
+            <i class="ri-alarm-warning-line me-1"></i>
+            <strong>Warning:</strong> This team member is currently overloaded ({{ getSelectedUser()?.workloadPercentage }}% capacity).
+          </div>
+          <div class="alert alert-info alert-sm mb-0" 
+               *ngIf="getSelectedUser()?.workloadPercentage >= 70 && getSelectedUser()?.workloadPercentage < 90">
+            <i class="ri-information-line me-1"></i>
+            This team member is currently busy ({{ getSelectedUser()?.workloadPercentage }}% capacity).
+          </div>
+        </div>
+      </div>
+
+      <!-- Due Date and Estimated Hours -->
+      <div class="col-md-6">
+        <label for="dueDate" class="form-label">
+          <i class="ri-calendar-line me-1"></i>Due Date
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="ri-calendar-line"></i>
+          </span>
+          <input 
+            type="text" 
+            id="dueDate" 
+            class="form-control flatpickr-input" 
+            formControlName="dueDate"
+            placeholder="Select due date"
+            #dueDateInput>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="estimatedHours" class="form-label">
+          <i class="ri-time-line me-1"></i>Estimated Hours
+        </label>
+        <input 
+          type="number" 
+          id="estimatedHours" 
+          class="form-control" 
+          formControlName="estimatedHours"
+          min="0.5"
+          step="0.5"
+          placeholder="e.g., 2.5">
+      </div>
+    </div>
+
+    <!-- Quick Tips -->
+    <div class="mt-4">
+      <div class="alert alert-light border">
+        <h6 class="mb-2"><i class="ri-lightbulb-line me-1 text-warning"></i>Quick Tips:</h6>
+        <ul class="mb-0 fs-13">
+          <li>Keep titles concise but descriptive</li>
+          <li>You can assign tasks later if unsure about team member availability</li>
+          <li>Set realistic due dates and estimated hours for better planning</li>
+        </ul>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="onCancel()" [disabled]="isLoading">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" (click)="onCreate()" [disabled]="isLoading || taskForm.invalid">
+    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+    <i class="ri-add-line me-1" *ngIf="!isLoading"></i>
+    Create Task
+  </button>
+</div>

@@ -1,0 +1,149 @@
+<div class="task-list-container">
+  <!-- Header -->
+  <div class="task-list-header">
+    <h5 class="mb-0">{{ title }}</h5>
+    <div class="task-list-actions">
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="Search tasks..."
+        (input)="onSearch($event.target.value)"
+      />
+      <span class="badge badge-soft-primary ms-2">
+        {{ filteredTasks.length }} tasks
+      </span>
+    </div>
+  </div>
+
+  <!-- Task List Container -->
+  <div 
+    class="task-list-body"
+    [style.height.px]="containerHeight"
+    [appVirtualScroll]="enableVirtualScroll ? filteredTasks : []"
+    [config]="virtualScrollConfig"
+    (visibleItemsChange)="onVisibleItemsChange($event)"
+    #scrollContainer>
+    
+    <!-- Task Items -->
+    <div 
+      *ngFor="let task of visibleTasks$ | async; trackBy: trackByTask"
+      class="task-item"
+      [class.task-overdue]="isOverdue(task)"
+      (click)="onTaskClick(task, $event)">
+      
+      <!-- Task Content -->
+      <div class="task-content">
+        <!-- Task Header -->
+        <div class="task-header">
+          <h6 class="task-title mb-1">
+            {{ task.title }}
+            <span class="task-id text-muted">#{{ task.id }}</span>
+          </h6>
+          <div class="task-badges">
+            <span 
+              class="badge"
+              [ngClass]="getPriorityClass(task.priority)">
+              {{ task.priority }}
+            </span>
+            <span 
+              class="badge ms-1"
+              [ngClass]="getStatusClass(task.status)">
+              {{ task.status }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Task Description -->
+        <p class="task-description text-muted mb-2" *ngIf="task.description">
+          {{ task.description | slice:0:100 }}
+          <span *ngIf="task.description.length > 100">...</span>
+        </p>
+        
+        <!-- Task Meta -->
+        <div class="task-meta">
+          <!-- Assignee -->
+          <div class="task-assignee" *ngIf="task.assignedToName">
+            <i class="mdi mdi-account-circle"></i>
+            <span>{{ task.assignedToName }}</span>
+          </div>
+          
+          <!-- Due Date -->
+          <div class="task-due-date" *ngIf="task.dueDate">
+            <i class="mdi mdi-calendar-clock"></i>
+            <span [class.text-danger]="isOverdue(task)">
+              {{ formatDate(task.dueDate) }}
+            </span>
+          </div>
+          
+          <!-- Case Info -->
+          <div class="task-case" *ngIf="task.caseNumber">
+            <i class="mdi mdi-briefcase"></i>
+            <span>{{ task.caseNumber }}</span>
+          </div>
+          
+          <!-- Tags -->
+          <div class="task-tags" *ngIf="task.tags && task.tags.length > 0">
+            <span 
+              *ngFor="let tag of task.tags.slice(0, 3)" 
+              class="badge badge-soft-secondary me-1">
+              {{ tag }}
+            </span>
+            <span 
+              *ngIf="task.tags.length > 3" 
+              class="badge badge-soft-secondary">
+              +{{ task.tags.length - 3 }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Task Progress -->
+        <div class="task-progress mt-2" *ngIf="task.estimatedHours">
+          <div class="progress progress-sm">
+            <div 
+              class="progress-bar"
+              [style.width.%]="(task.actualHours / task.estimatedHours) * 100"
+              [class.bg-success]="task.status === 'COMPLETED'"
+              [class.bg-primary]="task.status === 'IN_PROGRESS'"
+              [class.bg-warning]="task.status === 'REVIEW'">
+            </div>
+          </div>
+          <small class="text-muted">
+            {{ task.actualHours || 0 }} / {{ task.estimatedHours }} hours
+          </small>
+        </div>
+      </div>
+      
+      <!-- Task Actions -->
+      <div class="task-actions">
+        <button 
+          class="btn btn-sm btn-soft-primary"
+          (click)="onTaskEdit(task, $event)"
+          title="Edit Task">
+          <i class="mdi mdi-pencil"></i>
+        </button>
+        <button 
+          class="btn btn-sm btn-soft-danger ms-1"
+          (click)="onTaskDelete(task, $event)"
+          title="Delete Task">
+          <i class="mdi mdi-delete"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div 
+      *ngIf="(visibleTasks$ | async)?.length === 0" 
+      class="empty-state">
+      <i class="mdi mdi-clipboard-text-outline"></i>
+      <p>No tasks found</p>
+    </div>
+  </div>
+  
+  <!-- Performance Indicator (Development Only) -->
+  <div class="performance-indicator" *ngIf="false">
+    <small class="text-muted">
+      Renders: {{ renderCount }} | 
+      Virtual Scroll: {{ enableVirtualScroll ? 'ON' : 'OFF' }}
+    </small>
+  </div>
+</div>

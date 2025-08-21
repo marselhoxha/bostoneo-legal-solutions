@@ -75,6 +75,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers(PUBLIC_URLS)
             .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
             .ignoringRequestMatchers("/api/time-entries/**", "/api/**")
+            .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
         );
         
         // CORS Configuration
@@ -97,10 +98,11 @@ public class EnhancedSecurityConfig {
             .authenticationEntryPoint(customAuthenticationEntryPoint)
         );
         
-        // Authorization
+        // Authorization - Allow WebSocket connections to bypass authentication
         http.authorizeHttpRequests(authorize -> authorize
             .requestMatchers(OPTIONS).permitAll()
             .requestMatchers(PUBLIC_URLS).permitAll()
+            .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
             .anyRequest().authenticated()
         );
         

@@ -567,3 +567,100 @@
   max-width: 500px !important;
   min-width: 480px !important;
 }
+
+// Task Assignment Details styling
+.info-item {
+  label {
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--vz-gray-600);
+  }
+  
+  p {
+    line-height: 1.4;
+    color: var(--vz-body-color);
+    
+    &.fw-medium {
+      font-weight: 600 !important;
+    }
+  }
+}
+
+// Enhanced task details section
+.bg-success-subtle {
+  background-color: rgba(25, 135, 84, 0.08) !important;
+  border-color: rgba(25, 135, 84, 0.2) !important;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+  }
+  
+  .text-success {
+    color: #198754 !important;
+    font-weight: 600;
+  }
+  
+  .bg-success {
+    background-color: #198754 !important;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.25);
+  }
+  
+  .row {
+    .col-6 {
+      .info-item {
+        padding: 0.25rem;
+        
+        label {
+          font-size: 0.75rem;
+          margin-bottom: 0.25rem;
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+        
+        p {
+          margin-bottom: 0;
+          font-size: 0.875rem;
+          
+          &.fw-medium {
+            color: var(--vz-gray-800);
+          }
+          
+          &.text-muted {
+            font-size: 0.75rem;
+            color: var(--vz-gray-500) !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark mode support for task details
+[data-bs-theme="dark"] {
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.15) !important;
+    
+    .info-item {
+      label {
+        color: var(--vz-gray-300);
+      }
+      
+      p {
+        color: var(--vz-gray-100);
+        
+        &.text-muted {
+          color: var(--vz-gray-400) !important;
+        }
+      }
+    }
+  }
+}

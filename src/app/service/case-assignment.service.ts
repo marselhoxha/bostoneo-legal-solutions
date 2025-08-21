@@ -44,9 +44,12 @@ export class CaseAssignmentService {
   }
 
   unassignCase(caseId: number, userId: number, reason: string): Observable<ApiResponse<void>> {
+    // Use the correct backend controller endpoint: DELETE /case-assignments/{caseId}/user/{userId}
     return this.http.delete<ApiResponse<void>>(
-      `${this.apiUrl}/case-assignments/unassign/${caseId}/${userId}`,
-      { params: new HttpParams().set('reason', reason) }
+      `${this.apiUrl}/case-assignments/${caseId}/user/${userId}`,
+      { 
+        params: new HttpParams().set('reason', reason || 'Unassigned by user')
+      }
     );
   }
 

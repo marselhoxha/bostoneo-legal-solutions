@@ -1,0 +1,179 @@
+<div class="modal-header">
+  <h4 class="modal-title">
+    <i class="ri-scales-line me-2 text-primary"></i>Workload Balancing
+  </h4>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
+
+<div class="modal-body">
+  
+  <!-- Current Workload Overview -->
+  <div class="mb-4">
+    <h6 class="mb-3"><i class="ri-team-line me-1"></i>Current Team Workload</h6>
+    <div class="workload-overview">
+      <div class="workload-member" *ngFor="let member of teamMembers">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="d-flex align-items-center">
+            <div class="avatar-xs me-2">
+              <div class="avatar-title rounded-circle bg-soft-primary text-primary fs-13">
+                {{ member.firstName?.charAt(0) }}{{ member.lastName?.charAt(0) }}
+              </div>
+            </div>
+            <div>
+              <h6 class="mb-0 fs-14">{{ member.firstName }} {{ member.lastName }}</h6>
+              <small class="text-muted">{{ member.title || member.role }}</small>
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="fs-13 fw-medium" [ngClass]="'text-' + getWorkloadColor(member.workloadPercentage || 0)">
+              {{ member.workloadPercentage || 0 }}%
+            </span>
+            <div class="fs-12 text-muted" *ngIf="getEstimatedNewWorkload(member.id) !== (member.workloadPercentage || 0)">
+              → {{ getEstimatedNewWorkload(member.id) }}%
+            </div>
+          </div>
+        </div>
+        <div class="progress progress-sm">
+          <div class="progress-bar" 
+               [ngClass]="'bg-' + getWorkloadColor(member.workloadPercentage || 0)"
+               [style.width]="getWorkloadWidth(member.workloadPercentage || 0)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Balancing Strategy -->
+  <div class="mb-4">
+    <h6 class="mb-3"><i class="ri-settings-line me-1"></i>Balancing Strategy</h6>
+    <div class="btn-group" role="group">
+      <input type="radio" class="btn-check" id="auto-balance" [(ngModel)]="balancingStrategy" value="auto">
+      <label class="btn btn-outline-primary" for="auto-balance">
+        <i class="ri-magic-line me-1"></i>Auto Recommendations
+      </label>
+
+      <input type="radio" class="btn-check" id="manual-balance" [(ngModel)]="balancingStrategy" value="manual">
+      <label class="btn btn-outline-primary" for="manual-balance">
+        <i class="ri-hand-heart-line me-1"></i>Manual Selection
+      </label>
+    </div>
+  </div>
+
+  <!-- Proposed Reassignments -->
+  <div class="mb-4" *ngIf="proposedReassignments.length > 0">
+    <h6 class="mb-3">
+      <i class="ri-exchange-line me-1"></i>Recommended Reassignments 
+      <span class="badge bg-primary ms-2">{{ proposedReassignments.length }}</span>
+    </h6>
+    
+    <div class="reassignment-list">
+      <div class="reassignment-item" *ngFor="let reassignment of proposedReassignments">
+        <div class="card border">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <h6 class="mb-2">{{ reassignment.task.title }}</h6>
+                <div class="d-flex align-items-center mb-2">
+                  <span class="badge fs-11" 
+                        [ngClass]="{
+                          'bg-warning-subtle text-warning': reassignment.task.priority === 'HIGH',
+                          'bg-info-subtle text-info': reassignment.task.priority === 'MEDIUM',
+                          'bg-secondary-subtle text-secondary': reassignment.task.priority === 'LOW'
+                        }">
+                    {{ reassignment.task.priority }}
+                  </span>
+                  <span class="badge bg-light text-muted fs-11 ms-2" *ngIf="reassignment.task.dueDate">
+                    Due: {{ reassignment.task.dueDate | date:'shortDate' }}
+                  </span>
+                </div>
+                
+                <div class="reassignment-flow">
+                  <div class="d-flex align-items-center">
+                    <div class="user-info">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title rounded-circle bg-danger text-white fs-12">
+                            {{ reassignment.fromUser.firstName?.charAt(0) }}{{ reassignment.fromUser.lastName?.charAt(0) }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="fs-13 fw-medium">{{ reassignment.fromUser.firstName }} {{ reassignment.fromUser.lastName }}</div>
+                          <div class="fs-12 text-danger">{{ reassignment.fromUser.workloadPercentage }}% (Overloaded)</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mx-3">
+                      <i class="ri-arrow-right-line text-muted"></i>
+                    </div>
+                    
+                    <div class="user-info">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title rounded-circle bg-success text-white fs-12">
+                            {{ reassignment.toUser.firstName?.charAt(0) }}{{ reassignment.toUser.lastName?.charAt(0) }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="fs-13 fw-medium">{{ reassignment.toUser.firstName }} {{ reassignment.toUser.lastName }}</div>
+                          <div class="fs-12 text-success">{{ reassignment.toUser.workloadPercentage }}% (Available)</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="ms-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" 
+                         [id]="'reassignment-' + reassignment.taskId"
+                         [checked]="isReassignmentSelected(reassignment.taskId, reassignment.fromUserId)"
+                         (change)="toggleReassignment(reassignment)">
+                  <label class="form-check-label" [for]="'reassignment-' + reassignment.taskId"></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Recommendations -->
+  <div class="alert alert-info" *ngIf="proposedReassignments.length === 0">
+    <div class="d-flex align-items-center">
+      <i class="ri-information-line me-2"></i>
+      <div>
+        <strong>Team workload appears well balanced!</strong>
+        <div class="mt-1 fs-13">No immediate reassignments recommended. All team members are operating within healthy workload ranges.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Balancing Tips -->
+  <div class="mt-4">
+    <div class="alert alert-light border">
+      <h6 class="mb-2"><i class="ri-lightbulb-line me-1 text-warning"></i>Workload Balancing Tips:</h6>
+      <ul class="mb-0 fs-13">
+        <li>Consider team member expertise when reassigning tasks</li>
+        <li>Avoid reassigning urgent or time-sensitive tasks unless necessary</li>
+        <li>Communicate changes with affected team members</li>
+        <li>Monitor workload distribution regularly to prevent imbalances</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="onCancel()" [disabled]="isLoading">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" 
+          (click)="onApplyRebalancing()" 
+          [disabled]="isLoading || proposedReassignments.length === 0">
+    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+    <i class="ri-scales-line me-1" *ngIf="!isLoading"></i>
+    Apply Rebalancing ({{ proposedReassignments.length }})
+  </button>
+</div>

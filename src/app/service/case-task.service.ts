@@ -29,6 +29,14 @@ export class CaseTaskService {
   }
 
   updateTask(taskId: number, task: TaskUpdateRequest): Observable<ApiResponse<CaseTask>> {
+    // Validate taskId to prevent undefined in URL
+    if (!taskId || taskId === undefined || taskId === null || isNaN(taskId)) {
+      console.error('❌ CaseTaskService.updateTask: Invalid taskId:', taskId);
+      throw new Error('Invalid task ID provided to updateTask');
+    }
+    
+    console.log('🔧 CaseTaskService.updateTask with validated taskId:', taskId);
+    
     return this.http.put<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}`, 
       task
@@ -147,7 +155,7 @@ export class CaseTaskService {
   updateTaskStatus(taskId: number, status: string): Observable<ApiResponse<CaseTask>> {
     const params = new HttpParams().set('status', status);
     
-    return this.http.put<ApiResponse<CaseTask>>(
+    return this.http.post<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}/status`,
       {},
       { params }
@@ -155,7 +163,20 @@ export class CaseTaskService {
   }
 
   assignTask(taskId: number, userId: number): Observable<ApiResponse<CaseTask>> {
-    return this.http.patch<ApiResponse<CaseTask>>(
+    // Validate inputs to prevent undefined in URL
+    if (!taskId || taskId === undefined || taskId === null || isNaN(taskId)) {
+      console.error('❌ CaseTaskService.assignTask: Invalid taskId:', taskId);
+      throw new Error('Invalid task ID provided to assignTask');
+    }
+    
+    if (!userId || userId === undefined || userId === null || isNaN(userId)) {
+      console.error('❌ CaseTaskService.assignTask: Invalid userId:', userId);
+      throw new Error('Invalid user ID provided to assignTask');
+    }
+    
+    console.log('🔧 CaseTaskService.assignTask with validated IDs:', { taskId, userId });
+    
+    return this.http.post<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}/assign/${userId}`,
       {}
     );
@@ -211,14 +232,14 @@ export class CaseTaskService {
 
   // Batch Operations
   batchUpdateStatus(taskIds: number[], status: string): Observable<ApiResponse<void>> {
-    return this.http.patch<ApiResponse<void>>(
+    return this.http.post<ApiResponse<void>>(
       `${this.apiUrl}/tasks/batch/status`,
       { taskIds, status }
     );
   }
 
   batchAssign(taskIds: number[], userId: number): Observable<ApiResponse<void>> {
-    return this.http.patch<ApiResponse<void>>(
+    return this.http.post<ApiResponse<void>>(
       `${this.apiUrl}/tasks/batch/assign`,
       { taskIds, userId }
     );

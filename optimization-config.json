@@ -1,0 +1,75 @@
+{
+  "buildOptimizations": {
+    "production": {
+      "fileReplacements": [
+        {
+          "replace": "src/environments/environment.ts",
+          "with": "src/environments/environment.prod.ts"
+        }
+      ],
+      "optimization": {
+        "scripts": true,
+        "styles": {
+          "minify": true,
+          "inlineCritical": true
+        },
+        "fonts": {
+          "inline": true
+        }
+      },
+      "outputHashing": "all",
+      "sourceMap": false,
+      "namedChunks": false,
+      "extractLicenses": true,
+      "vendorChunk": false,
+      "buildOptimizer": true,
+      "budgets": [
+        {
+          "type": "initial",
+          "maximumWarning": "2mb",
+          "maximumError": "5mb"
+        },
+        {
+          "type": "anyComponentStyle",
+          "maximumWarning": "6kb",
+          "maximumError": "10kb"
+        }
+      ]
+    }
+  },
+  "optimizationStrategies": {
+    "lazyLoading": {
+      "enabled": true,
+      "preloadingStrategy": "PreloadAllModules",
+      "priorityModules": [
+        "legal",
+        "case-management",
+        "clients"
+      ]
+    },
+    "caching": {
+      "enabled": true,
+      "apiMaxAge": 300000,
+      "assetMaxAge": 31536000
+    },
+    "compression": {
+      "gzip": true,
+      "brotli": true,
+      "threshold": 10240
+    },
+    "imageOptimization": {
+      "enabled": true,
+      "lazy": true,
+      "formats": ["webp", "avif"],
+      "quality": 85
+    }
+  },
+  "performanceTargets": {
+    "firstContentfulPaint": 1800,
+    "largestContentfulPaint": 2500,
+    "firstInputDelay": 100,
+    "timeToInteractive": 5000,
+    "cumulativeLayoutShift": 0.1,
+    "totalBlockingTime": 200
+  }
+}

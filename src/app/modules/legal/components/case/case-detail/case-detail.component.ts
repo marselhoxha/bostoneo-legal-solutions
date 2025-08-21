@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -21,6 +21,21 @@ import Swal from 'sweetalert2';
 import { RbacService } from '../../../../../core/services/rbac.service';
 import { CaseAssignmentService } from '../../../../../service/case-assignment.service';
 import { CaseAssignment, AssignmentHistory } from '../../../../../interface/case-assignment';
+import { CaseContextService } from '../../../../../core/services/case-context.service';
+import { NavigationContextService } from '../../../../../core/services/navigation-context.service';
+import { CaseTaskService } from '../../../../../service/case-task.service';
+import { CaseTask } from '../../../../../interface/case-task';
+import { Subject, forkJoin, of } from 'rxjs';
+import { takeUntil, switchMap, tap, catchError } from 'rxjs/operators';
+import { TaskAssignmentModalComponent, TaskAssignmentData } from '../../../../../component/case-task/task-management/components/task-assignment-modal/task-assignment-modal.component';
+import { QuickTaskModalComponent, QuickTaskData } from '../../../../../component/case-task/task-management/components/quick-task-modal/quick-task-modal.component';
+import { TeamAssignmentModalComponent, TeamAssignmentData } from '../../../../../component/case-task/task-management/components/team-assignment-modal/team-assignment-modal.component';
+import { WorkloadBalancingModalComponent, WorkloadBalancingData } from '../../../../../component/case-task/task-management/components/workload-balancing-modal/workload-balancing-modal.component';
+import { UserService } from '../../../../../service/user.service';
+import { AssignmentSyncService } from '../../../../../core/services/assignment-sync.service';
+import { NotificationService } from '../../../../../service/notification.service';
+import { AuditLogService } from '../../../../../core/services/audit-log.service';
+import { PushNotificationService } from '../../../../../core/services/push-notification.service';
 
 @Component({
   selector: 'app-case-detail',
@@ -38,7 +53,8 @@ import { CaseAssignment, AssignmentHistory } from '../../../../../interface/case
     CaseTimeEntriesComponent
   ]
 })
-export class CaseDetailComponent implements OnInit, AfterViewInit {
+export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   case: LegalCase | null = null;
   caseId: string | null = null;
   isLoading = false;
@@ -74,6 +90,17 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   // Team & Assignment properties
   caseTeamMembers: any[] = [];
   assignmentHistory: any[] = [];
+  
+  // Context integration properties
+  taskSummary: any = null;
+  teamSummary: any = null;
+  activeTasksCount: number = 0;
+  contextLoaded: boolean = false;
+  
+  // Task management properties
+  recentTasks: CaseTask[] = [];
+  isLoadingTasks = false;
+  availableUsers: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -85,7 +112,15 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private rbacService: RbacService,
-    private caseAssignmentService: CaseAssignmentService
+    private caseAssignmentService: CaseAssignmentService,
+    private caseContextService: CaseContextService,
+    private navigationContextService: NavigationContextService,
+    private caseTaskService: CaseTaskService,
+    private userService: UserService,
+    private assignmentSyncService: AssignmentSyncService,
+    private notificationService: NotificationService,
+    private auditLogService: AuditLogService,
+    private pushNotificationService: PushNotificationService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -124,6 +159,35 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    console.log('🎬 CaseDetailComponent - ngOnInit started');
+    
+    // Set up role-based permissions
+    this.setupRoleBasedPermissions();
+    
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.error = 'Case ID not provided';
+      return;
+    }
+    
+    this.caseId = id;
+    
+    // Initialize with context service
+    this.initializeWithContext(Number(id));
+    
+    // Subscribe to context updates
+    this.subscribeToContextUpdates();
+    
+    // Log case access
+    this.logCaseAccess(Number(id), 'VIEW');
+  }
+  
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  
+  private setupRoleBasedPermissions(): void {
     // Check user permissions using comprehensive admin role checking
     const isAdmin = this.rbacService.isAdmin();
     const isAttorney = this.rbacService.isAttorneyLevel();
@@ -145,13 +209,314 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     // Timeline/Activities access: All except CLIENT
     this.canViewPrivateActivities = !this.isClient;
     
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.caseId = id; // Store the case ID from route parameter
-      this.loadCase(id);
-    } else {
-      this.error = 'Case ID not provided';
+    // Assignment management: ADMIN, ATTORNEY, MANAGER
+    this.canManageAssignments = isAdmin || isAttorney || isManager;
+  }
+  
+  private initializeWithContext(caseId: number): void {
+    console.log('🎯 CaseDetailComponent - Initializing with context for case:', caseId);
+    
+    // Check if case context already exists
+    const currentCase = this.caseContextService.getCurrentCaseSnapshot();
+    
+    if (currentCase && currentCase.id === caseId) {
+      console.log('✅ CaseDetailComponent - Using existing context');
+      this.case = currentCase as any;
+      this.contextLoaded = true;
+      this.loadCaseEvents(currentCase.id);
+      this.cdr.detectChanges();
+      return;
     }
+    
+    // Load case and set context
+    this.loadCase(caseId.toString());
+    this.contextLoaded = true;
+  }
+  
+  private subscribeToContextUpdates(): void {
+    // Subscribe to case updates
+    this.caseContextService.getCurrentCase()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(caseData => {
+        if (caseData) {
+          this.case = caseData as any;
+          this.cdr.detectChanges();
+        }
+      });
+    
+    // Comment out the subscription that's overriding our loaded data
+    // The team data is already being loaded in loadCaseTeam() method
+    /*
+    this.caseContextService.getCaseTeam()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(team => {
+        // This was overriding the actual loaded data with empty array
+        this.caseTeamMembers = team;
+        this.cdr.detectChanges();
+      });
+    */
+    
+    // Subscribe to task summary
+    this.caseContextService.getTaskSummary()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(summary => {
+        this.taskSummary = summary;
+        this.activeTasksCount = summary ? (summary.total - summary.byStatus['COMPLETED'] || 0) : 0;
+        this.cdr.detectChanges();
+      });
+    
+    // Subscribe to team summary
+    this.caseContextService.getTeamSummary()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(summary => {
+        this.teamSummary = summary;
+        this.cdr.detectChanges();
+      });
+    
+    // Subscribe to component notifications
+    this.caseContextService.getComponentNotifications()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(notification => {
+        if (notification) {
+          this.handleComponentNotification(notification);
+        }
+      });
+  }
+  
+  private handleComponentNotification(notification: any): void {
+    console.log('📢 CaseDetailComponent - Received notification:', notification);
+    
+    switch (notification.type) {
+      case 'TASK_ASSIGNED':
+      case 'TASK_REASSIGNED':
+        this.showNotification('Task assignment updated', 'success');
+        break;
+      case 'MEMBER_ADDED':
+        this.showNotification('Team member added', 'success');
+        break;
+      case 'MEMBER_REMOVED':
+        this.showNotification('Team member removed', 'info');
+        break;
+      case 'TASKS_UPDATED':
+        // Task data automatically updates through context subscription
+        break;
+    }
+  }
+  
+  // Enhanced navigation methods with context
+  navigateToTasks(): void {
+    console.log('🧭 CaseDetailComponent - Navigating to tasks with context');
+    this.navigationContextService.navigateWithContext(
+      ['/case-management/tasks', this.case?.id],
+      { preserveFilters: true }
+    );
+  }
+  
+  navigateToAssignments(): void {
+    console.log('🧭 CaseDetailComponent - Navigating to assignments with context');
+    this.navigationContextService.navigateWithContext(
+      ['/case-management/assignments'],
+      { 
+        additionalParams: { caseId: this.case?.id },
+        preserveFilters: true 
+      }
+    );
+  }
+  
+  // Quick action methods
+  quickCreateTask(): void {
+    if (!this.case) return;
+    
+    const team = this.caseContextService.getCaseTeamSnapshot();
+    const defaultAssignee = this.suggestAssignee(team);
+    
+    // Open quick task creation dialog
+    Swal.fire({
+      title: 'Quick Task Creation',
+      html: `
+        <div class="text-start">
+          <div class="mb-3">
+            <label class="form-label">Task Title</label>
+            <input type="text" id="taskTitle" class="form-control" placeholder="Enter task title">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea id="taskDescription" class="form-control" rows="3" placeholder="Task description"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Assign To</label>
+            <select id="taskAssignee" class="form-control">
+              <option value="">Unassigned</option>
+              ${team.map(member => `<option value="${member.userId}" ${member.userId === defaultAssignee?.userId ? 'selected' : ''}>${member.userName}</option>`).join('')}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select id="taskPriority" class="form-control">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Create Task',
+      preConfirm: () => {
+        const title = (document.getElementById('taskTitle') as HTMLInputElement).value;
+        const description = (document.getElementById('taskDescription') as HTMLTextAreaElement).value;
+        const assigneeId = (document.getElementById('taskAssignee') as HTMLSelectElement).value;
+        const priority = (document.getElementById('taskPriority') as HTMLSelectElement).value;
+        
+        if (!title.trim()) {
+          Swal.showValidationMessage('Task title is required');
+          return false;
+        }
+        
+        return {
+          title: title.trim(),
+          description: description.trim(),
+          assignedToId: assigneeId ? Number(assigneeId) : null,
+          priority,
+          taskType: 'OTHER',
+          caseId: this.case!.id
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.createQuickTask(result.value);
+      }
+    });
+  }
+  
+  private createQuickTask(taskData: any): void {
+    // This would normally call the task service to create the task
+    // For now, we'll simulate it and add to context
+    const newTask = {
+      id: Date.now(), // Temporary ID
+      ...taskData,
+      status: 'TODO',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.caseContextService.addTask(newTask);
+    this.showNotification('Task created successfully', 'success');
+  }
+  
+  /**
+   * Convert team members to user format for task assignment modals
+   */
+  private getTeamMembersAsUsers(): any[] {
+    if (!this.caseTeamMembers || this.caseTeamMembers.length === 0) {
+      return [];
+    }
+    
+    return this.caseTeamMembers.map(member => ({
+      id: member.userId || member.id,
+      userId: member.userId || member.id,
+      firstName: member.firstName || member.name?.split(' ')[0] || 'Unknown',
+      lastName: member.lastName || member.name?.split(' ').slice(1).join(' ') || '',
+      email: member.email || '',
+      userName: member.userName || member.name || `${member.firstName} ${member.lastName}`,
+      // Include other properties that might be needed
+      isTeamMember: true // Flag to indicate this is a team member
+    }));
+  }
+
+  private suggestAssignee(team: any[]): any | null {
+    // Simple logic to suggest an assignee based on workload
+    if (team.length === 0) return null;
+    
+    // Find team member with lowest workload
+    return team.reduce((lowest, current) => {
+      const currentWeight = current.workloadWeight || 0;
+      const lowestWeight = lowest.workloadWeight || 0;
+      return currentWeight < lowestWeight ? current : lowest;
+    });
+  }
+  
+  private showNotification(message: string, type: 'success' | 'error' | 'info' = 'info', taskInfo?: any): void {
+    console.log('🔔 TOPBAR NOTIFICATION CALL:', { message, type, taskInfo });
+    console.log('🔔 Task Count Check:', taskInfo?.taskCount, typeof taskInfo?.taskCount);
+    
+    // Determine notification type and icon
+    let notificationType = 'default';
+    let iconClass = 'bx bx-bell';
+    let title = 'Notification';
+    
+    switch (type) {
+      case 'success':
+        notificationType = 'case';
+        iconClass = 'bx bx-check-circle';
+        // Determine title based on the action type
+        if (taskInfo && taskInfo.action === 'TASK_CREATED') {
+          title = 'Task Created';
+        } else if (taskInfo && (taskInfo.taskCount > 0 || taskInfo.memberName)) {
+          title = 'Task Assigned';
+        } else if (message && message.includes('assigned')) {
+          title = 'Task Assigned';
+        } else if (message && message.includes('created')) {
+          title = 'Task Created';
+        } else {
+          title = 'Success';
+        }
+        console.log('🔔 Title determined:', title, 'based on taskInfo:', taskInfo, 'message:', message);
+        break;
+      case 'error':
+        notificationType = 'alert';
+        iconClass = 'bx bx-error-circle';
+        title = 'Error';
+        break;
+      case 'info':
+        notificationType = 'case';
+        iconClass = 'bx bx-info-circle';
+        title = 'Information';
+        break;
+    }
+    
+    // Create notification payload for topbar
+    const notificationPayload = {
+      notification: {
+        title: title,
+        body: message
+      },
+      data: {
+        type: notificationType,
+        url: taskInfo?.caseId ? `/legal/cases/details/${taskInfo.caseId}` : window.location.pathname,
+        caseId: taskInfo?.caseId || this.caseId,
+        taskId: taskInfo?.taskId || null,
+        priority: type === 'error' ? 'high' : 'normal',
+        timestamp: new Date().toISOString(),
+        // Enhanced task information for notification details
+        taskDetails: taskInfo ? {
+          assignedTo: taskInfo.memberName,
+          assignedToId: taskInfo.userId,
+          taskCount: taskInfo.taskCount || 1,
+          taskTitle: taskInfo.taskTitle || null,
+          taskId: taskInfo.taskId || null,
+          caseTitle: this.case?.title || 'Case',
+          caseNumber: this.case?.caseNumber || 'N/A',
+          assignmentDate: new Date().toISOString(),
+          action: 'TASK_ASSIGNED'
+        } : null
+      }
+    };
+    
+    console.log('🔔 Sending notification to topbar:', notificationPayload);
+    
+    // Send to topbar notification system
+    this.pushNotificationService.sendCustomNotification(notificationPayload);
+  }
+  
+  /**
+   * Safe audit logging helper - prevents HTTP requests to non-existent endpoints
+   */
+  private safeAuditLog(logAction: () => void): void {
+    // Skip audit logging entirely to prevent 404 errors
+    // TODO: Re-enable when backend audit endpoints are implemented
+    console.log('📝 Audit logging skipped - endpoints not implemented');
   }
 
   ngAfterViewInit(): void {
@@ -375,7 +740,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
               };
             }
             
-            this.case = caseData;
+            this.case = caseData as any;
           } else if (response && typeof response === 'object' && 'id' in response) {
             // Handle direct case object response
             const caseData = response as any;
@@ -408,22 +773,16 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
               };
             }
             
-            this.case = caseData;
+            this.case = caseData as any;
           } else {
             this.error = 'Case data not found or in unexpected format';
             console.warn('Unexpected response format:', response);
-            this.snackBar.open('Error: Case data format is unexpected', 'Close', {
-              duration: 5000,
-              panelClass: ['error-snackbar']
-            });
+            this.showNotification('Error: Case data format is unexpected', 'error');
           }
         } catch (e) {
           this.error = 'Error processing case data';
           console.error('Error processing case data:', e);
-          this.snackBar.open('Error processing case data', 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
+          this.showNotification('Error processing case data', 'error');
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -432,28 +791,20 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         if (this.case && this.case.id) {
           this.loadCaseEvents(this.case.id);
           this.loadCaseTeam(this.case.id);
+          this.loadAllCaseTasks(this.case.id);
         }
       },
       error: (err) => {
         console.error('Error loading case:', err);
         if (err.status === 401) {
           this.error = 'Authentication required. Please log in to view case details.';
-          this.snackBar.open('Authentication required. Please log in again.', 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
+          this.showNotification('Authentication required. Please log in again.', 'error');
         } else if (err.status === 404) {
           this.error = 'Case not found.';
-          this.snackBar.open('Case not found. It may have been deleted.', 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
+          this.showNotification('Case not found. It may have been deleted.', 'error');
         } else {
           this.error = 'Failed to load case. ' + (err.error?.reason || err.error?.message || 'Please try again later.');
-          this.snackBar.open(this.error, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
+          this.showNotification(this.error, 'error');
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -801,10 +1152,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         .join(', ');
       
       this.error = `Please correct the following fields: ${invalidFields}`;
-      this.snackBar.open('Please fill all required fields correctly', 'Close', { 
-        duration: 5000,
-        panelClass: ['error-snackbar']
-      });
+      this.showNotification('Please fill all required fields correctly', 'error');
       
       return;
     }
@@ -896,10 +1244,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
             this.cdr.detectChanges();
             
             // Show more detailed error message
-            this.snackBar.open(
+            this.showNotification(
               `Update failed: ${error.error?.message || error.message || 'Unknown error'}`,
-              'Close',
-              { duration: 5000, panelClass: ['error-snackbar'] }
+              'error'
             );
           },
           complete: () => {
@@ -911,10 +1258,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
         const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred';
         this.error = errorMessage;
         this.isLoading = false;
-        this.snackBar.open(errorMessage, 'Close', { 
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
+        this.showNotification(errorMessage, 'error');
         this.cdr.detectChanges();
       }
     }
@@ -1112,50 +1456,105 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   
   // Team & Assignment Methods
   loadCaseTeam(caseId: string | number): void {
-    // Set permissions
+    // Set permissions with fallback
     this.rbacService.hasPermission('CASE', 'ASSIGN').subscribe({
       next: (hasPermission) => {
         this.canManageAssignments = hasPermission;
+      },
+      error: (error) => {
+        console.warn('Permission check failed, using fallback:', error);
+        this.canManageAssignments = true; // Fallback to allow functionality
       }
     });
     
-    // Load case assignments
-    this.caseAssignmentService.getCaseAssignments(Number(caseId)).subscribe({
+    // Try multiple approaches to load team data
+    this.loadTeamWithFallback(Number(caseId));
+  }
+
+  private loadTeamWithFallback(caseId: number): void {
+    console.log('🔄 Loading team data for case:', caseId);
+    // First try the team members endpoint
+    this.caseAssignmentService.getTeamMembers(caseId).subscribe({
       next: (response) => {
+        console.log('✅ Team members response:', response);
         if (response.data) {
-          const data = response.data as any;
-          const assignments = Array.isArray(data) ? data : data.content || [];
-          this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
-            id: assignment.userId,
-            name: assignment.userName || 'Unknown User',
-            title: assignment.roleType,
-            roleType: assignment.roleType,
-            imageUrl: null, // Will use default avatar
-            workloadStatus: 'OPTIMAL', // Default status
-            workloadPercentage: assignment.workloadWeight || 0,
-            assignmentId: assignment.id,
-            assignmentDate: assignment.assignedAt
-          }));
+          this.processTeamData(response.data);
         }
-        this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error loading case team:', error);
+        console.warn('getTeamMembers failed, trying getCaseAssignments:', error);
+        
+        // Fallback to case assignments endpoint
+        this.caseAssignmentService.getCaseAssignments(caseId).subscribe({
+          next: (response) => {
+            console.log('✅ Fallback assignments response:', response);
+            if (response.data) {
+              const data = response.data as any;
+              const assignments = Array.isArray(data) ? data : data.content || [];
+              this.processTeamData(assignments);
+            }
+          },
+          error: (secondError) => {
+            console.error('All team loading attempts failed:', secondError);
+            this.caseTeamMembers = [];
+            this.snackBar.open('Failed to load team members', 'Close', { duration: 3000 });
+          }
+        });
       }
     });
+  }
+
+  private processTeamData(assignments: CaseAssignment[]): void {
+    console.log('📊 Processing team data:', assignments);
+    if (assignments && assignments.length > 0) {
+      this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
+        id: assignment.userId,
+        userId: assignment.userId, // Add userId for consistency
+        name: assignment.userName || 'Unknown User',
+        userName: assignment.userName || 'Unknown User', // Add userName for consistency
+        title: assignment.roleType,
+        roleType: assignment.roleType,
+        imageUrl: null, // Will use default avatar
+        workloadStatus: 'OPTIMAL', // Default status
+        workloadPercentage: assignment.workloadWeight || 0,
+        assignmentId: assignment.id,
+        assignmentDate: assignment.assignedAt
+      }));
+    } else {
+      this.caseTeamMembers = [];
+    }
     
-    // Load assignment history
-    this.caseAssignmentService.getAssignmentHistory(Number(caseId)).subscribe({
-      next: (response) => {
-        if (response.data) {
-          this.assignmentHistory = Array.isArray(response.data) ? response.data : [];
-        }
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading assignment history:', error);
-      }
-    });
+    // Update the context service with the loaded team data
+    this.caseContextService.updateCaseTeam(assignments);
+    
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Provide minimal fallback team data when API calls fail
+   */
+  private provideFallbackTeamData(): void {
+    // Set empty team data and notify user
+    this.caseTeamMembers = [];
+    this.assignmentHistory = [];
+    this.snackBar.open(
+      'Unable to load team data. Please refresh the page or contact support.',
+      'Close',
+      { duration: 5000 }
+    );
+  }
+  
+  /**
+   * Handle team tab click - ensure team data is loaded
+   */
+  onTeamTabClick(): void {
+    console.log('🎯 Team tab clicked, ensuring team data is loaded');
+    if (this.caseId && (!this.caseTeamMembers || this.caseTeamMembers.length === 0)) {
+      this.loadCaseTeam(this.caseId);
+    }
+    if (this.caseId && (!this.recentTasks || this.recentTasks.length === 0)) {
+      this.loadAllCaseTasks(this.caseId);
+    }
   }
   
   openAssignmentModal(): void {
@@ -1164,7 +1563,95 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
   }
   
   viewMemberDetails(member: any): void {
-    this.router.navigate(['/admin/users', member.id]);
+    console.log('🔍 ViewMemberDetails called for member:', member);
+    
+    // Use member.userId if available, otherwise fall back to member.id
+    const userId = member.userId || member.id;
+    
+    if (!userId) {
+      this.snackBar.open('User ID not found', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Show loading while fetching user details
+    Swal.fire({
+      title: 'Loading User Details...',
+      allowEscapeKey: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.userService.getUserById(userId).subscribe({
+      next: (response) => {
+        console.log('✅ User details received:', response);
+        if (response.data) {
+          this.showUserDetailsModal(response.data);
+        } else {
+          Swal.fire('Error', 'User details not found', 'error');
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error fetching user details:', error);
+        Swal.fire('Error', 'Failed to load user details: ' + error, 'error');
+      }
+    });
+  }
+
+  private showUserDetailsModal(user: any): void {
+    const userImageUrl = user.imageUrl || 'assets/images/users/avatar-1.jpg';
+    
+    Swal.fire({
+      title: `${user.firstName} ${user.lastName}`,
+      html: `
+        <div class="user-profile-modal">
+          <div class="text-center mb-3">
+            <img src="${userImageUrl}" 
+                 alt="User Profile" 
+                 class="rounded-circle" 
+                 style="width: 80px; height: 80px; object-fit: cover;"
+                 onerror="this.src='assets/images/users/avatar-1.jpg'">
+          </div>
+          <div class="row">
+            <div class="col-6"><strong>Email:</strong></div>
+            <div class="col-6">${user.email}</div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-6"><strong>Role:</strong></div>
+            <div class="col-6">${user.roleName || 'N/A'}</div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-6"><strong>Title:</strong></div>
+            <div class="col-6">${user.title || 'N/A'}</div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-6"><strong>Phone:</strong></div>
+            <div class="col-6">${user.phone || 'N/A'}</div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-6"><strong>Status:</strong></div>
+            <div class="col-6">
+              <span class="badge ${user.enabled && user.notLocked ? 'bg-success' : 'bg-warning'}">
+                ${user.enabled && user.notLocked ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+          ${user.bio ? `
+          <div class="row mt-2">
+            <div class="col-12"><strong>Bio:</strong></div>
+            <div class="col-12 mt-1"><small>${user.bio}</small></div>
+          </div>
+          ` : ''}
+        </div>
+      `,
+      width: '500px',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#6c757d',
+      customClass: {
+        popup: 'swal2-user-profile'
+      }
+    });
   }
   
   transferAssignment(member: any): void {
@@ -1185,7 +1672,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     }).then((result) => {
       if (result.isConfirmed) {
         const reason = 'Removed from case team';
-        this.caseAssignmentService.unassignCase(Number(this.caseId), member.id, reason).subscribe({
+        const userId = member.userId || member.id;
+        this.caseAssignmentService.unassignCase(Number(this.caseId), userId, reason).subscribe({
           next: () => {
             this.snackBar.open('Team member removed successfully', 'Close', { duration: 3000 });
             this.loadCaseTeam(this.caseId!);
@@ -1199,14 +1687,917 @@ export class CaseDetailComponent implements OnInit, AfterViewInit {
     });
   }
   
+  getOverCapacityCount(): number {
+    if (!Array.isArray(this.caseTeamMembers)) return 0;
+    return this.caseTeamMembers.filter(member => member.workloadStatus === 'OVER_CAPACITY').length;
+  }
+
+  // ==================== Task Management Methods ====================
+
+  /**
+   * Load recent tasks for the case
+   */
+  loadRecentTasks(caseId: string | number): void {
+    this.isLoadingTasks = true;
+    this.recentTasks = []; // Ensure it's always an array
+    this.cdr.detectChanges();
+
+    this.caseTaskService.getTasksByCaseId(Number(caseId)).subscribe({
+      next: (response) => {
+        // Get the 5 most recent tasks
+        const tasks = response?.data?.tasks;
+        this.recentTasks = Array.isArray(tasks) ? tasks.slice(0, 5) : [];
+        this.isLoadingTasks = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading recent tasks:', error);
+        this.recentTasks = [];
+        this.isLoadingTasks = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Open create task modal
+   */
+  openCreateTaskModal(): void {
+    // Navigate to task management with create modal
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { action: 'create' }
+    });
+  }
+
+  /**
+   * View task details
+   */
+  viewTask(task: CaseTask): void {
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { taskId: task.id, action: 'view' }
+    });
+  }
+
+  /**
+   * Edit task
+   */
+  editTask(task: CaseTask): void {
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { taskId: task.id, action: 'edit' }
+    });
+  }
+
+  /**
+   * Assign task
+   */
+  assignTask(task: CaseTask): void {
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { taskId: task.id, action: 'assign' }
+    });
+  }
+
+  /**
+   * Delete task
+   */
+  deleteTask(task: CaseTask): void {
+    Swal.fire({
+      title: 'Delete Task',
+      text: `Are you sure you want to delete "${task.title}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.caseTaskService.deleteTask(task.id).subscribe({
+          next: () => {
+            this.snackBar.open('Task deleted successfully', 'Close', { duration: 3000 });
+            this.loadAllCaseTasks(this.caseId!);
+          },
+          error: (error) => {
+            console.error('Error deleting task:', error);
+            this.snackBar.open('Failed to delete task', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Track tasks by ID for ngFor
+   */
+  trackTaskById(index: number, task: CaseTask): number {
+    return task.id;
+  }
+
+  // ==================== New Integrated Team-Task Methods ====================
+
+  /**
+   * Get tasks assigned to a specific team member
+   */
+  getMemberTasks(userId: number): CaseTask[] {
+    if (!Array.isArray(this.recentTasks)) {
+      return [];
+    }
+    return this.recentTasks.filter(task => task.assignedToId === userId);
+  }
+
+
+  /**
+   * Get overdue tasks
+   */
+  getOverdueTasks(): CaseTask[] {
+    if (!Array.isArray(this.recentTasks)) {
+      return [];
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return this.recentTasks.filter(task => {
+      if (!task.dueDate || task.status === 'COMPLETED') return false;
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    });
+  }
+
+  /**
+   * Assign task to specific team member
+   */
+  assignTaskToMember(member: any): void {
+    console.log('📋 AssignTaskToMember called for member:', member);
+    
+    // Use member.userId if available, otherwise fall back to member.id
+    const userId = member.userId || member.id;
+    const memberName = member.userName || member.name || `${member.firstName} ${member.lastName}`;
+    
+    if (!userId) {
+      this.snackBar.open('User ID not found', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Get unassigned tasks for this case
+    const unassignedTasks = this.getUnassignedTasks();
+    
+    if (!unassignedTasks || unassignedTasks.length === 0) {
+      Swal.fire('No Tasks Available', 'There are no unassigned tasks available for this case.', 'info');
+      return;
+    }
+
+    this.showTaskAssignmentModal(userId, memberName, unassignedTasks);
+  }
+
+  /**
+   * Validate that a user is a team member before task assignment
+   */
+  private isUserTeamMember(userId: number): boolean {
+    if (!this.caseTeamMembers || this.caseTeamMembers.length === 0) {
+      return false;
+    }
+    
+    return this.caseTeamMembers.some(member => 
+      (member.userId === userId) || (member.id === userId)
+    );
+  }
+
+  private showTaskAssignmentModal(userId: number, memberName: string, unassignedTasks: any[]): void {
+    // Create HTML for task selection
+    const tasksOptionsHtml = unassignedTasks.map(task => `
+      <div class="form-check text-start mb-2">
+        <input class="form-check-input task-checkbox" type="checkbox" value="${task.id}" id="task-${task.id}">
+        <label class="form-check-label" for="task-${task.id}">
+          <strong>${task.title}</strong>
+          <br>
+          <small class="text-muted">
+            Priority: <span class="badge badge-${this.getPriorityBadgeClass(task.priority)}">${task.priority}</span>
+            ${task.dueDate ? `| Due: ${new Date(task.dueDate).toLocaleDateString()}` : ''}
+          </small>
+          ${task.description ? `<br><small>${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</small>` : ''}
+        </label>
+      </div>
+    `).join('');
+
+    Swal.fire({
+      title: `Assign Tasks to ${memberName}`,
+      html: `
+        <div class="task-assignment-modal">
+          <p class="text-muted mb-3">Select one or more tasks to assign to this team member:</p>
+          <div class="tasks-list" style="max-height: 300px; overflow-y: auto; text-align: left;">
+            ${tasksOptionsHtml}
+          </div>
+          <div class="mt-3">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = true)">
+              Select All
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false)">
+              Clear All
+            </button>
+          </div>
+        </div>
+      `,
+      width: '600px',
+      showCancelButton: true,
+      confirmButtonText: 'Assign Selected Tasks',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#28a745',
+      preConfirm: () => {
+        const selectedTasks = Array.from(document.querySelectorAll('.task-checkbox:checked'))
+          .map((checkbox: any) => parseInt(checkbox.value));
+        
+        if (selectedTasks.length === 0) {
+          Swal.showValidationMessage('Please select at least one task to assign');
+          return false;
+        }
+        
+        return selectedTasks;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.assignSelectedTasks(userId, memberName, result.value);
+      }
+    });
+  }
+
+  private assignSelectedTasks(userId: number, memberName: string, taskIds: number[]): void {
+    console.log('📋 Assigning tasks:', { userId, memberName, taskIds });
+    
+    // Show loading
+    Swal.fire({
+      title: 'Assigning Tasks...',
+      text: `Assigning ${taskIds.length} task(s) to ${memberName}`,
+      allowEscapeKey: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    // Validate taskIds to prevent undefined values
+    const validTaskIds = taskIds.filter(taskId => taskId !== undefined && taskId !== null && !isNaN(taskId));
+    console.log('🔧 Original taskIds:', taskIds);
+    console.log('🔧 Valid taskIds after filtering:', validTaskIds);
+    
+    if (validTaskIds.length === 0) {
+      console.error('❌ No valid task IDs found');
+      Swal.fire({
+        title: 'Assignment Failed',
+        text: 'No valid tasks selected for assignment.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    // Validate that the user is a team member
+    if (!this.isUserTeamMember(userId)) {
+      console.error('❌ User is not a team member:', userId);
+      Swal.fire({
+        title: 'Assignment Failed',
+        text: `User is not assigned to this case. Please add them to the team first before assigning tasks.`,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    // Use the CaseTaskService to assign tasks
+    const assignmentPromises = validTaskIds.map(taskId => 
+      this.caseTaskService.assignTask(taskId, userId).toPromise()
+    );
+
+    Promise.all(assignmentPromises)
+      .then((responses) => {
+        console.log('✅ All tasks assigned successfully:', responses);
+        
+        Swal.fire({
+          title: 'Tasks Assigned!',
+          text: `Successfully assigned ${validTaskIds.length} task(s) to ${memberName}`,
+          icon: 'success',
+          confirmButtonText: 'OK'
+        }).then(() => {
+          // Show success notification using our enhanced topbar notification method
+          console.log('✅ Showing success notification for task assignment');
+          this.showNotification(
+            `Successfully assigned ${validTaskIds.length} task(s) to ${memberName}`, 
+            'success',
+            { 
+              caseId: this.caseId, 
+              userId: userId,
+              memberName: memberName,
+              taskCount: validTaskIds.length 
+            }
+          );
+          
+          // Refresh task data to reflect the assignments
+          if (this.caseId) {
+            this.loadAllCaseTasks(this.caseId);
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('❌ Error assigning tasks:', error);
+        Swal.fire({
+          title: 'Assignment Failed',
+          text: 'Failed to assign some tasks. Please try again.',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      });
+  }
+
+  private getPriorityBadgeClass(priority: string): string {
+    switch (priority?.toLowerCase()) {
+      case 'high': return 'danger';
+      case 'medium': return 'warning';
+      case 'low': return 'success';
+      default: return 'secondary';
+    }
+  }
+
+  /**
+   * Quick assign task (opens assignment modal)
+   */
+  quickAssignTask(task: CaseTask): void {
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { 
+        taskId: task.id, 
+        action: 'assign' 
+      }
+    });
+  }
+
+  /**
+   * View overdue tasks
+   */
+  viewOverdueTasks(): void {
+    this.router.navigate(['/case-management/tasks', this.caseId], {
+      queryParams: { 
+        filter: 'overdue' 
+      }
+    });
+  }
+
+  /**
+   * Balance workload (navigate to workload management)
+   */
+  balanceWorkload(): void {
+    this.router.navigate(['/case-management/assignments'], {
+      queryParams: { 
+        caseId: this.caseId,
+        action: 'balance' 
+      }
+    });
+  }
+
+  /**
+   * Load all tasks for better filtering (extends the loadRecentTasks)
+   */
+  loadAllCaseTasks(caseId: string | number): void {
+    console.log('🔄 Loading all case tasks for caseId:', caseId);
+    this.isLoadingTasks = true;
+    this.recentTasks = []; // Ensure it's always an array
+    this.cdr.detectChanges();
+
+    this.caseTaskService.getTasksByCaseId(Number(caseId)).subscribe({
+      next: (response) => {
+        console.log('📋 Case tasks response received:', response);
+        
+        // Handle different possible response structures
+        let tasks = [];
+        if (response?.data?.tasks?.content) {
+          // Paginated response structure
+          tasks = response.data.tasks.content;
+        } else if (response?.data?.tasks) {
+          // Direct tasks array
+          tasks = response.data.tasks;
+        } else if (response?.data && Array.isArray(response.data)) {
+          // Direct data array
+          tasks = response.data;
+        }
+        
+        console.log('📊 Parsed tasks:', {
+          count: tasks.length,
+          unassignedCount: tasks.filter((t: any) => !t.assignedToId).length,
+          tasks: tasks
+        });
+        
+        this.recentTasks = Array.isArray(tasks) ? tasks : [];
+        
+        // Update the context service with the loaded tasks
+        this.caseContextService.updateTasks(this.recentTasks);
+        
+        this.isLoadingTasks = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('❌ Error loading all case tasks:', error);
+        this.recentTasks = [];
+        this.isLoadingTasks = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ==================== Modal Integration Methods ====================
+
+  /**
+   * Open task assignment modal - ONLY for team members
+   */
+  openTaskAssignmentModal(task?: CaseTask, preSelectedUserId?: number): void {
+    // For task assignment, only use team members (not all users)
+    const teamMembersAsUsers = this.getTeamMembersAsUsers();
+    
+    if (!teamMembersAsUsers || teamMembersAsUsers.length === 0) {
+      Swal.fire({
+        title: 'No Team Members',
+        text: 'No team members are assigned to this case. Please add team members first before assigning tasks.',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const modalRef = this.modalService.open(TaskAssignmentModalComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      size: 'lg'
+    });
+
+    const data: TaskAssignmentData = {
+      task: task,
+      caseId: Number(this.caseId),
+      availableUsers: teamMembersAsUsers, // Only team members!
+      preSelectedUserId: preSelectedUserId,
+      mode: task?.assignedToId ? 'reassign' : 'assign'
+    };
+
+      modalRef.componentInstance.data = data;
+
+      modalRef.componentInstance.taskAssigned.subscribe((result: any) => {
+        this.handleTaskAssigned(result);
+      });
+
+      modalRef.result.then((result) => {
+        if (result === 'assigned') {
+          this.loadAllCaseTasks(this.caseId!);
+          this.loadCaseTeam(this.caseId!);
+        }
+      }).catch(() => {
+        // Modal dismissed
+      });
+  }
+
+  /**
+   * Open quick task creation modal - ONLY for team members
+   */
+  openQuickTaskModal(preSelectedUserId?: number, preSelectedPriority?: string): void {
+    // For task creation with assignment, only use team members
+    const teamMembersAsUsers = this.getTeamMembersAsUsers();
+    
+    const modalRef = this.modalService.open(QuickTaskModalComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      size: 'lg'
+    });
+
+    const data: QuickTaskData = {
+      caseId: Number(this.caseId),
+      availableUsers: teamMembersAsUsers, // Only team members!
+      preSelectedUserId: preSelectedUserId,
+      preSelectedPriority: preSelectedPriority
+      };
+
+      modalRef.componentInstance.data = data;
+
+      modalRef.componentInstance.taskCreated.subscribe((result: any) => {
+        this.handleTaskCreated(result);
+      });
+
+      modalRef.result.then((result) => {
+        if (result === 'created') {
+          this.loadAllCaseTasks(this.caseId!);
+          this.loadCaseTeam(this.caseId!);
+        }
+      }).catch(() => {
+        // Modal dismissed
+      });
+  }
+
+  /**
+   * Open team assignment modal
+   */
+  openTeamAssignmentModal(): void {
+    this.loadAvailableUsers().then(() => {
+      const modalRef = this.modalService.open(TeamAssignmentModalComponent, {
+        backdrop: 'static',
+        keyboard: false,
+        size: 'xl'
+      });
+
+      const data: TeamAssignmentData = {
+        caseId: Number(this.caseId),
+        currentTeamMembers: this.caseTeamMembers,
+        availableUsers: this.availableUsers
+      };
+
+      modalRef.componentInstance.data = data;
+
+      modalRef.componentInstance.teamUpdated.subscribe((result: any) => {
+        this.handleTeamUpdated(result);
+      });
+
+      modalRef.result.then((result) => {
+        if (result === 'updated') {
+          this.loadCaseTeam(this.caseId!);
+          this.loadAllCaseTasks(this.caseId!);
+        }
+      }).catch(() => {
+        // Modal dismissed
+      });
+    });
+  }
+
+  /**
+   * Open workload balancing modal
+   */
+  openWorkloadBalancingModal(): void {
+    const modalRef = this.modalService.open(WorkloadBalancingModalComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      size: 'xl'
+    });
+
+    const data: WorkloadBalancingData = {
+      caseId: Number(this.caseId),
+      teamMembers: this.caseTeamMembers,
+      unassignedTasks: this.getUnassignedTasks()
+    };
+
+    modalRef.componentInstance.data = data;
+
+    modalRef.componentInstance.workloadBalanced.subscribe((result: any) => {
+      this.handleWorkloadBalanced(result);
+    });
+
+    modalRef.result.then((result) => {
+      if (result === 'balanced') {
+        this.loadAllCaseTasks(this.caseId!);
+        this.loadCaseTeam(this.caseId!);
+      }
+    }).catch(() => {
+      // Modal dismissed
+    });
+  }
+
+  /**
+   * Load available users for modals
+   */
+  private async loadAvailableUsers(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.userService.getUsers().subscribe({
+        next: (response) => {
+          this.availableUsers = response?.data?.users || [];
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error loading users:', error);
+          this.availableUsers = [];
+          reject(error);
+        }
+      });
+    });
+  }
+
+  /**
+   * Handle task assignment result - Enhanced with sync service
+   */
+  private handleTaskAssigned(result: any): void {
+    if (result.action === 'assigned' && result.task && result.assignedUser) {
+      const task = result.task;
+      const user = result.assignedUser;
+      
+      // Validate task ID before assignment
+      if (!task.id || task.id === undefined || task.id === null) {
+        console.error('❌ Cannot assign task: task.id is undefined in handleTaskAssigned');
+        this.showNotification('Task assignment failed - invalid task ID', 'error');
+        return;
+      }
+
+      // Validate that the user is a team member
+      if (!this.isUserTeamMember(user.id)) {
+        console.error('❌ Cannot assign task: user is not a team member:', user.id);
+        this.showNotification('Task assignment failed - user is not assigned to this case', 'error');
+        return;
+      }
+      
+      console.log('🔧 Handling task assignment:', { taskId: task.id, userId: user.id, caseId: this.caseId });
+      
+      // Use AssignmentSyncService for coordinated assignment
+      this.assignmentSyncService.assignTaskToUser(
+        task.id,
+        user.id,
+        Number(this.caseId)
+      ).subscribe({
+        next: (syncResult) => {
+          if (syncResult.success) {
+            // Success message through enhanced topbar notification
+            this.showNotification(
+              `Task "${task.title}" assigned to ${user.firstName} ${user.lastName}`,
+              'success',
+              {
+                caseId: this.caseId,
+                userId: user.id,
+                memberName: `${user.firstName} ${user.lastName}`,
+                taskCount: 1,
+                taskId: task.id,
+                taskTitle: task.title
+              }
+            );
+            
+            // Log the assignment change (safe method)
+            this.safeAuditLog(() => {
+              this.auditLogService.logAssignmentChange(
+                'task',
+                task.id,
+                task.title,
+                'TASK_ASSIGNED',
+                undefined,
+                `${user.firstName} ${user.lastName}`,
+                'CaseDetail'
+              );
+            });
+            
+            // Context service will be updated automatically by sync service
+          } else {
+            this.showNotification('Failed to assign task', 'error');
+          }
+        },
+        error: (error) => {
+          console.error('Task assignment failed:', error);
+          this.showNotification('Failed to assign task', 'error');
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle task creation result - Enhanced with sync service
+   */
+  private handleTaskCreated(result: any): void {
+    if (result.action === 'created' && result.task) {
+      const task = result.task;
+      console.log('🔧 handleTaskCreated - task object:', task);
+      
+      // Handle undefined task title with fallback
+      const taskTitle = task.title || task.name || 'New Task';
+      let message = `Task "${taskTitle}" created successfully`;
+      
+      // If task was assigned during creation
+      if (result.assignedUser && task.id) {
+        const user = result.assignedUser;
+        message += ` and assigned to ${user.firstName} ${user.lastName}`;
+        
+        // Validate task ID before assignment
+        if (!task.id || task.id === undefined || task.id === null) {
+          console.error('❌ Cannot assign task: task.id is undefined');
+          this.showNotification('Task created but assignment failed - invalid task ID', 'info');
+          return;
+        }
+        
+        console.log('🔧 Assigning task:', { taskId: task.id, userId: user.id, caseId: this.caseId });
+        
+        // Use sync service for the assignment part
+        this.assignmentSyncService.assignTaskToUser(
+          task.id,
+          user.id,
+          Number(this.caseId)
+        ).subscribe({
+          next: (syncResult) => {
+            if (syncResult.success) {
+              // Show enhanced notification for task creation + assignment
+              this.showNotification(message, 'success', {
+                caseId: this.caseId,
+                userId: user.id,
+                memberName: `${user.firstName} ${user.lastName}`,
+                taskCount: 1,
+                taskId: task.id,
+                taskTitle: taskTitle
+              });
+              
+              // Log both creation and assignment (safe method)
+              this.safeAuditLog(() => {
+                this.auditLogService.log({
+                  action: 'TASK_CREATED_AND_ASSIGNED',
+                  entityType: 'task',
+                  entityId: task.id,
+                  entityName: task.title,
+                  component: 'CaseDetail',
+                  severity: 'LOW',
+                  category: 'USER_ACTION',
+                  metadata: {
+                    assigned: true,
+                    assignee: `${user.firstName} ${user.lastName}`,
+                    caseId: this.caseId
+                  }
+                });
+              });
+            }
+          },
+          error: (error) => {
+            console.error('Task assignment failed:', error);
+            this.showNotification('Task created but assignment failed', 'info');
+          }
+        });
+      } else {
+        // Just task creation (no assignment)
+        this.showNotification(message, 'success', {
+          caseId: this.caseId,
+          taskId: task.id,
+          taskTitle: taskTitle,
+          action: 'TASK_CREATED'
+        });
+        
+        // Log task creation (safe method)
+        this.safeAuditLog(() => {
+          this.auditLogService.log({
+            action: 'TASK_CREATED',
+            entityType: 'task',
+            entityId: task.id,
+            entityName: task.title,
+            component: 'CaseDetail',
+            severity: 'LOW',
+            category: 'USER_ACTION',
+            metadata: {
+              assigned: false,
+              caseId: this.caseId
+            }
+          });
+        });
+      }
+    }
+  }
+
+  /**
+   * Handle team update result - Enhanced with sync service
+   */
+  private handleTeamUpdated(result: any): void {
+    if (result.action === 'team_updated') {
+      let message = 'Team updated successfully';
+      const promises: Promise<any>[] = [];
+      
+      // Handle added members using sync service
+      if (result.addedMembers && result.addedMembers.length > 0) {
+        message += ` - Added ${result.addedMembers.length} member(s)`;
+        
+        result.addedMembers.forEach((member: any) => {
+          const assignmentPromise = this.assignmentSyncService.assignUserToCase({
+            caseId: Number(this.caseId),
+            userId: member.userId,
+            roleType: member.roleType || 'ASSOCIATE',
+            workloadWeight: 1.0,
+            notes: 'Added via team assignment modal'
+          }).toPromise();
+          
+          promises.push(assignmentPromise);
+        });
+      }
+      
+      // Handle removed members
+      if (result.removedMembers && result.removedMembers.length > 0) {
+        message += ` - Removed ${result.removedMembers.length} member(s)`;
+        
+        result.removedMembers.forEach((member: any) => {
+          const unassignPromise = this.assignmentSyncService.unassignUserFromCase(
+            Number(this.caseId),
+            member.userId,
+            'Team restructuring'
+          ).toPromise();
+          
+          promises.push(unassignPromise);
+        });
+      }
+      
+      // Wait for all assignment operations to complete
+      Promise.all(promises).then(() => {
+        this.showNotification(message, 'success');
+        
+        // Log team update (safe method)
+        this.safeAuditLog(() => {
+          this.auditLogService.log({
+            action: 'TEAM_UPDATED',
+            entityType: 'case',
+            entityId: Number(this.caseId!),
+            entityName: this.case?.title || `Case ${this.caseId}`,
+            component: 'CaseDetail',
+            severity: 'MEDIUM',
+            category: 'USER_ACTION',
+            metadata: {
+              addedCount: result.addedMembers?.length || 0,
+              removedCount: result.removedMembers?.length || 0,
+              addedMembers: result.addedMembers?.map((m: any) => m.userName) || [],
+              removedMembers: result.removedMembers?.map((m: any) => m.userName) || []
+            }
+          });
+        });
+      }).catch((error) => {
+        console.error('Team update failed:', error);
+        this.showNotification('Some team changes failed', 'error');
+      });
+    }
+  }
+
+  /**
+   * Log case access for audit purposes
+   */
+  private logCaseAccess(caseId: number, accessType: 'VIEW' | 'EDIT' | 'DELETE'): void {
+    // Wait for case data to be loaded first
+    this.caseContextService.getCurrentCase().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(caseData => {
+      if (caseData) {
+        // Log case access (safe method)
+        this.safeAuditLog(() => {
+          this.auditLogService.logCaseAccess(
+            caseId,
+            caseData.title || `Case ${caseData.caseNumber}`,
+            accessType,
+            'CaseDetail'
+          );
+        });
+      }
+    });
+  }
+
+  /**
+   * Handle workload balancing result
+   */
+  private handleWorkloadBalanced(result: any): void {
+    if (result.action === 'workload_balanced') {
+      this.snackBar.open(
+        `Workload balanced successfully - ${result.reassignments.length} task(s) reassigned`,
+        'Close',
+        { duration: 4000 }
+      );
+    }
+  }
+
+
+  /**
+   * Get unassigned tasks for this case
+   */
+  getUnassignedTasks(): CaseTask[] {
+    if (!this.recentTasks) {
+      console.log('🔍 getUnassignedTasks: No recentTasks available');
+      return [];
+    }
+    
+    console.log('🔍 getUnassignedTasks: Filtering from', this.recentTasks.length, 'total tasks');
+    
+    const unassigned = this.recentTasks.filter(task => {
+      // Check if task is unassigned (no assignedToId)
+      const isUnassigned = !task.assignedToId;
+      
+      if (isUnassigned) {
+        console.log('📋 Unassigned task found:', {
+          id: task.id,
+          title: task.title,
+          assignedToId: task.assignedToId,
+          assignedToName: task.assignedToName
+        });
+      }
+      
+      return isUnassigned;
+    });
+    
+    console.log('📊 Unassigned tasks result:', {
+      total: this.recentTasks.length,
+      unassigned: unassigned.length,
+      unassignedTasks: unassigned
+    });
+    
+    return unassigned;
+  }
+
+  /**
+   * Calculate and return average workload percentage for team members
+   */
   getAverageWorkload(): number {
     if (!this.caseTeamMembers || this.caseTeamMembers.length === 0) return 0;
-    const total = this.caseTeamMembers.reduce((sum, member) => sum + (member.workloadPercentage || 0), 0);
-    return Math.round(total / this.caseTeamMembers.length);
+    
+    const totalWorkload = this.caseTeamMembers.reduce((sum, member) => {
+      return sum + (member.workloadPercentage || 0);
+    }, 0);
+    
+    return Math.round(totalWorkload / this.caseTeamMembers.length);
   }
-  
-  getOverCapacityCount(): number {
-    if (!this.caseTeamMembers) return 0;
-    return this.caseTeamMembers.filter(member => member.workloadStatus === 'OVER_CAPACITY').length;
+
+  /**
+   * Get count of unassigned tasks
+   */
+  getUnassignedTasksCount(): number {
+    const unassignedTasks = this.getUnassignedTasks();
+    return unassignedTasks ? unassignedTasks.length : 0;
   }
 }

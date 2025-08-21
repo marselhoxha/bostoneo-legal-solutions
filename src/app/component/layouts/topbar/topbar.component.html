@@ -447,6 +447,49 @@
                         <p class="mb-0 fs-15 lh-base">{{ activeNotification.body }}</p>
                     </div>
                     
+                    <!-- Task Assignment Details (if available) -->
+                    <div *ngIf="activeNotification.data?.taskDetails" class="mb-4 p-3 rounded bg-success-subtle border border-success shadow-sm">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="avatar-xs me-3 flex-shrink-0 rounded-circle bg-success text-white">
+                                <i class="bx bx-task fs-16"></i>
+                            </div>
+                            <h6 class="mb-0 fs-15 fw-semibold text-success">Task Assignment Details</h6>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="info-item">
+                                    <label class="fs-12 fw-medium text-muted text-uppercase mb-1">Assigned To</label>
+                                    <p class="mb-0 fs-14 fw-medium">{{ activeNotification.data.taskDetails.assignedTo }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-item">
+                                    <label class="fs-12 fw-medium text-muted text-uppercase mb-1">Task Count</label>
+                                    <p class="mb-0 fs-14 fw-medium">{{ activeNotification.data.taskDetails.taskCount }} task{{ activeNotification.data.taskDetails.taskCount > 1 ? 's' : '' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-12" *ngIf="activeNotification.data.taskDetails.taskTitle">
+                                <div class="info-item">
+                                    <label class="fs-12 fw-medium text-muted text-uppercase mb-1">Task Title</label>
+                                    <p class="mb-0 fs-14 fw-medium">{{ activeNotification.data.taskDetails.taskTitle }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-item">
+                                    <label class="fs-12 fw-medium text-muted text-uppercase mb-1">Case</label>
+                                    <p class="mb-0 fs-14 fw-medium">{{ activeNotification.data.taskDetails.caseTitle }}</p>
+                                    <p class="mb-0 fs-12 text-muted">{{ activeNotification.data.taskDetails.caseNumber }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-item">
+                                    <label class="fs-12 fw-medium text-muted text-uppercase mb-1">Assignment Date</label>
+                                    <p class="mb-0 fs-14 fw-medium">{{ activeNotification.data.taskDetails.assignmentDate | date:'short' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Time info -->
                     <div class="d-flex align-items-center mb-4 p-3 rounded bg-light-subtle border shadow-sm">
                         <div class="avatar-xs me-3 flex-shrink-0 rounded-circle bg-primary-subtle text-primary">

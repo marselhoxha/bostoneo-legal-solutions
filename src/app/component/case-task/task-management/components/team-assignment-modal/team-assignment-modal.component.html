@@ -1,0 +1,136 @@
+<div class="modal-header">
+  <h4 class="modal-title">
+    <i class="ri-team-line me-2 text-primary"></i>Manage Case Team
+  </h4>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
+
+<div class="modal-body">
+  <form [formGroup]="teamForm" (ngSubmit)="onUpdateTeam()">
+    
+    <!-- Summary Section -->
+    <div class="row mb-4" *ngIf="getAddedMembers().length > 0 || getRemovedMembers().length > 0">
+      <div class="col-12">
+        <div class="alert alert-info">
+          <h6 class="mb-2"><i class="ri-information-line me-1"></i>Changes Summary:</h6>
+          <div class="row">
+            <div class="col-md-6" *ngIf="getAddedMembers().length > 0">
+              <strong class="text-primary">Adding ({{ getAddedMembers().length }}):</strong>
+              <ul class="mb-0 mt-1">
+                <li *ngFor="let member of getAddedMembers()" class="fs-13">
+                  {{ member.firstName }} {{ member.lastName }}
+                </li>
+              </ul>
+            </div>
+            <div class="col-md-6" *ngIf="getRemovedMembers().length > 0">
+              <strong class="text-warning">Removing ({{ getRemovedMembers().length }}):</strong>
+              <ul class="mb-0 mt-1">
+                <li *ngFor="let member of getRemovedMembers()" class="fs-13">
+                  {{ member.firstName }} {{ member.lastName }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Member Selection -->
+    <div class="row">
+      <div class="col-12">
+        <label class="form-label">
+          <i class="ri-user-line me-1"></i>Team Members <span class="text-danger">*</span>
+          <small class="text-muted">({{ selectedUsers.length }} selected)</small>
+        </label>
+        
+        <div class="user-selection-grid" *ngIf="availableUsers.length > 0">
+          <div class="user-card" *ngFor="let user of availableUsers">
+            <div class="form-check">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                [id]="'user-' + user.id"
+                [checked]="isUserSelected(user.id)"
+                (change)="onUserToggle(user.id, $event.target?.checked)">
+              
+              <label class="form-check-label w-100" [for]="'user-' + user.id">
+                <div class="d-flex align-items-center">
+                  <div class="user-avatar me-3">
+                    <div class="avatar-sm">
+                      <div class="avatar-title rounded-circle bg-soft-primary text-primary">
+                        {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">{{ user.firstName }} {{ user.lastName }}</h6>
+                    <p class="text-muted mb-1 fs-13">{{ user.title || user.role }}</p>
+                    <div class="d-flex align-items-center">
+                      <span class="badge fs-11" [ngClass]="getUserStatusClass(user.id)">
+                        {{ getUserStatusText(user.id) }}
+                      </span>
+                      <span class="ms-2 fs-12" 
+                            [ngClass]="user.workloadPercentage >= 90 ? 'text-danger' : 
+                                       user.workloadPercentage >= 70 ? 'text-warning' : 'text-success'">
+                        {{ user.workloadPercentage || 0 }}% capacity
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning" *ngIf="availableUsers.length === 0">
+          <i class="ri-alert-line me-1"></i>
+          No users available. Please check user management.
+        </div>
+
+        <div class="invalid-feedback" *ngIf="teamForm.get('teamMembers')?.invalid && teamForm.get('teamMembers')?.touched">
+          Please select at least one team member.
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <label for="notes" class="form-label">
+          <i class="ri-sticky-note-line me-1"></i>Update Notes
+        </label>
+        <textarea 
+          id="notes" 
+          class="form-control" 
+          formControlName="notes" 
+          rows="3"
+          placeholder="Add notes about this team update..."></textarea>
+      </div>
+    </div>
+
+    <!-- Team Guidelines -->
+    <div class="mt-4">
+      <div class="alert alert-light border">
+        <h6 class="mb-2"><i class="ri-lightbulb-line me-1 text-warning"></i>Team Management Guidelines:</h6>
+        <ul class="mb-0 fs-13">
+          <li>Ensure all team members have appropriate permissions for this case</li>
+          <li>Consider workload distribution when adding new members</li>
+          <li>Notify removed members about ongoing task assignments</li>
+          <li>Update case access permissions after team changes</li>
+        </ul>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="onCancel()" [disabled]="isLoading">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" (click)="onUpdateTeam()" [disabled]="isLoading || teamForm.invalid">
+    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+    <i class="ri-team-line me-1" *ngIf="!isLoading"></i>
+    Update Team
+  </button>
+</div>

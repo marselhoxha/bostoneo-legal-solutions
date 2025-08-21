@@ -1,7 +1,15 @@
 package com.***REMOVED***.***REMOVED***solutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.*;
+import com.***REMOVED***.***REMOVED***solutions.dto.CaseAssignmentDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.CaseAssignmentRequest;
+import com.***REMOVED***.***REMOVED***solutions.dto.CaseTransferRequest;
+import com.***REMOVED***.***REMOVED***solutions.dto.CaseTransferRequestDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.UserWorkloadDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.WorkloadAnalyticsDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentRuleDTO;
+import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentHistoryDTO;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
+import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,16 +39,17 @@ public class CaseAssignmentResource {
     
     @PostMapping("/assign")
     @Operation(summary = "Assign a case to a user")
-    @PreAuthorize("hasAuthority('case:assign') or hasRole('ROLE_MANAGER')")
-    public ResponseEntity<CaseAssignmentDTO> assignCase(@Valid @RequestBody CaseAssignmentRequest request) {
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_MANAGING_PARTNER')")
+    public ResponseEntity<CustomHttpResponse<CaseAssignmentDTO>> assignCase(@Valid @RequestBody CaseAssignmentRequest request) {
         log.info("Assigning case {} to user {}", request.getCaseId(), request.getUserId());
         CaseAssignmentDTO assignment = caseAssignmentService.assignCase(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(assignment);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new CustomHttpResponse<>(201, "Case assigned successfully", assignment));
     }
     
     @PostMapping("/auto-assign/{caseId}")
     @Operation(summary = "Auto-assign a case based on expertise and workload")
-    @PreAuthorize("hasAuthority('case:assign') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('CASE:ASSIGN') or hasRole('ROLE_MANAGER')")
     public ResponseEntity<CaseAssignmentDTO> autoAssignCase(@PathVariable Long caseId) {
         log.info("Auto-assigning case {}", caseId);
         CaseAssignmentDTO assignment = caseAssignmentService.autoAssignCase(caseId);
@@ -49,7 +58,7 @@ public class CaseAssignmentResource {
     
     @PostMapping("/transfer")
     @Operation(summary = "Request case transfer between users")
-    @PreAuthorize("hasAuthority('case:transfer') or hasRole('ROLE_ATTORNEY')")
+    @PreAuthorize("hasAuthority('CASE:TRANSFER') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<CaseAssignmentDTO> transferCase(@Valid @RequestBody CaseTransferRequest request) {
         log.info("Requesting case transfer for case {}", request.getCaseId());
         CaseAssignmentDTO assignment = caseAssignmentService.transferCase(request);
@@ -58,7 +67,7 @@ public class CaseAssignmentResource {
     
     @DeleteMapping("/{caseId}/user/{userId}")
     @Operation(summary = "Unassign a user from a case")
-    @PreAuthorize("hasAuthority('case:unassign') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_MANAGING_PARTNER')")
     public ResponseEntity<Map<String, String>> unassignCase(
             @PathVariable Long caseId,
             @PathVariable Long userId,
@@ -70,11 +79,11 @@ public class CaseAssignmentResource {
     
     @GetMapping("/case/{caseId}")
     @Operation(summary = "Get all assignments for a case")
-    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
-    public ResponseEntity<List<CaseAssignmentDTO>> getCaseAssignments(@PathVariable Long caseId) {
+    // @PreAuthorize("hasRole('ROLE_USER') or @securityService.hasAccessToCase(#caseId)")
+    public ResponseEntity<CustomHttpResponse<List<CaseAssignmentDTO>>> getCaseAssignments(@PathVariable Long caseId) {
         log.info("Getting assignments for case {}", caseId);
         List<CaseAssignmentDTO> assignments = caseAssignmentService.getCaseAssignments(caseId);
-        return ResponseEntity.ok(assignments);
+        return ResponseEntity.ok(new CustomHttpResponse<>("Case assignments retrieved successfully", assignments));
     }
     
     @GetMapping("/user/{userId}")
@@ -97,7 +106,7 @@ public class CaseAssignmentResource {
     
     @GetMapping("/case/{caseId}/primary")
     @Operation(summary = "Get primary assignment for a case")
-    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('ROLE_USER') or @securityService.hasAccessToCase(#caseId)")
     public ResponseEntity<CaseAssignmentDTO> getPrimaryAssignment(@PathVariable Long caseId) {
         log.info("Getting primary assignment for case {}", caseId);
         CaseAssignmentDTO assignment = caseAssignmentService.getPrimaryAssignment(caseId);
@@ -106,11 +115,11 @@ public class CaseAssignmentResource {
     
     @GetMapping("/case/{caseId}/team")
     @Operation(summary = "Get case team members")
-    @PreAuthorize("hasAuthority('case:read') or hasRole('ROLE_USER')")
-    public ResponseEntity<List<CaseAssignmentDTO>> getTeamMembers(@PathVariable Long caseId) {
+    // @PreAuthorize("hasRole('ROLE_USER') or @securityService.hasAccessToCase(#caseId)")
+    public ResponseEntity<CustomHttpResponse<List<CaseAssignmentDTO>>> getTeamMembers(@PathVariable Long caseId) {
         log.info("Getting team members for case {}", caseId);
         List<CaseAssignmentDTO> team = caseAssignmentService.getTeamMembers(caseId);
-        return ResponseEntity.ok(team);
+        return ResponseEntity.ok(new CustomHttpResponse<>("Team members retrieved successfully", team));
     }
     
     // Workload endpoints
@@ -177,7 +186,7 @@ public class CaseAssignmentResource {
     
     @GetMapping("/history/case/{caseId}")
     @Operation(summary = "Get assignment history for a case")
-    @PreAuthorize("hasAuthority('case:history') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('CASE:HISTORY') or hasRole('ROLE_MANAGER')")
     public ResponseEntity<Page<AssignmentHistoryDTO>> getAssignmentHistory(
             @PathVariable Long caseId,
             @RequestParam(defaultValue = "0") int page,

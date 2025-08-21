@@ -124,6 +124,7 @@
           </div>
         </div>
       </div>
+      
     </div>
     
     <div class="col-xl-8">
@@ -138,15 +139,22 @@
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
               <button class="btn btn-soft-info btn-animation waves-effect waves-light" 
-                      [routerLink]="['/case-management/tasks', case?.id]">
+                      (click)="navigateToTasks()">
                 <i class="ri-task-line align-bottom me-1"></i>
                 Tasks
+                <span class="badge bg-info ms-2" *ngIf="activeTasksCount > 0">{{ activeTasksCount }}</span>
               </button>
               <button class="btn btn-soft-success btn-animation waves-effect waves-light" 
-                      [routerLink]="['/case-management/assignments']"
-                      [queryParams]="{caseId: case?.id}">
+                      (click)="navigateToAssignments()">
                 <i class="ri-user-add-line align-bottom me-1"></i>
                 Assignments
+                <span class="badge bg-success ms-2" *ngIf="teamSummary?.total > 0">{{ teamSummary.total }}</span>
+              </button>
+              <button class="btn btn-soft-primary btn-animation waves-effect waves-light" 
+                      (click)="quickCreateTask()"
+                      *ngIf="canManageAssignments">
+                <i class="ri-add-line align-bottom me-1"></i>
+                Quick Task
               </button>
               <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="toggleEdit()">
                 <i class="ri-edit-line align-bottom me-1"></i>
@@ -482,7 +490,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#team" role="tab">
+            <a class="nav-link" data-bs-toggle="tab" href="#team" role="tab" (click)="onTeamTabClick()">
               <i class="ri-team-line me-1 align-bottom"></i>
               <span class="d-none d-sm-inline">Team & Assignments</span>
             </a>
@@ -790,171 +798,339 @@
           <!-- Team & Assignments Tab -->
           <div class="tab-pane fade" id="team" role="tabpanel">
             <div class="p-4">
-              <!-- Team Overview Header -->
+              <!-- Top Overview Stats -->
+              <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                  <div class="card border-0 shadow-sm bg-primary-subtle">
+                    <div class="card-body text-center py-3">
+                      <div class="avatar-sm mx-auto mb-2">
+                        <div class="avatar-title rounded-circle bg-primary text-white">
+                          <i class="ri-team-line fs-18"></i>
+                        </div>
+                      </div>
+                      <h4 class="text-primary mb-1">{{ caseTeamMembers?.length || 0 }}</h4>
+                      <p class="text-muted mb-0 fs-13">Team Members</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card border-0 shadow-sm bg-info-subtle">
+                    <div class="card-body text-center py-3">
+                      <div class="avatar-sm mx-auto mb-2">
+                        <div class="avatar-title rounded-circle bg-info text-white">
+                          <i class="ri-task-line fs-18"></i>
+                        </div>
+                      </div>
+                      <h4 class="text-info mb-1">{{ taskSummary?.total || 0 }}</h4>
+                      <p class="text-muted mb-0 fs-13">Total Tasks</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card border-0 shadow-sm bg-warning-subtle">
+                    <div class="card-body text-center py-3">
+                      <div class="avatar-sm mx-auto mb-2">
+                        <div class="avatar-title rounded-circle bg-warning text-white">
+                          <i class="ri-alert-line fs-18"></i>
+                        </div>
+                      </div>
+                      <h4 class="text-warning mb-1">{{ getUnassignedTasksCount() }}</h4>
+                      <p class="text-muted mb-0 fs-13">Unassigned</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                  <div class="card border-0 shadow-sm bg-success-subtle">
+                    <div class="card-body text-center py-3">
+                      <div class="avatar-sm mx-auto mb-2">
+                        <div class="avatar-title rounded-circle bg-success text-white">
+                          <i class="ri-bar-chart-line fs-18"></i>
+                        </div>
+                      </div>
+                      <h4 class="text-success mb-1">{{ getAverageWorkload() }}%</h4>
+                      <p class="text-muted mb-0 fs-13">Avg Workload</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
               <div class="d-flex align-items-center justify-content-between mb-4">
                 <h5 class="mb-0">
-                  <i class="ri-team-line me-2 text-primary"></i>Case Team & Assignments
+                  <i class="ri-team-line me-2 text-primary"></i>Team & Task Assignments
                 </h5>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-soft-primary btn-sm" (click)="openAssignmentModal()">
-                    <i class="ri-user-add-line me-1"></i>Assign Team Member
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-primary btn-sm" (click)="openQuickTaskModal()">
+                    <i class="ri-add-line me-1"></i>Create Task
                   </button>
-                  <button class="btn btn-soft-info btn-sm" [routerLink]="['/case-management/assignments']" [queryParams]="{caseId: caseId}">
-                    <i class="ri-dashboard-line me-1"></i>View Workload
+                  <button class="btn btn-soft-info btn-sm" (click)="openTeamAssignmentModal()">
+                    <i class="ri-user-add-line me-1"></i>Manage Team
+                  </button>
+                  <button class="btn btn-soft-warning btn-sm" (click)="openWorkloadBalancingModal()">
+                    <i class="ri-scales-line me-1"></i>Balance Workload
+                  </button>
+                  <button class="btn btn-soft-secondary btn-sm" 
+                          [routerLink]="['/case-management/tasks', caseId]">
+                    <i class="ri-kanban-view me-1"></i>Full Task View
                   </button>
                 </div>
               </div>
 
-              <!-- Team Members Grid -->
-              <div class="row g-3 mb-4">
-                <div class="col-md-6 col-xl-4" *ngFor="let member of caseTeamMembers">
-                  <div class="card border shadow-sm h-100">
+              <!-- Main Content: Two Column Layout -->
+              <div class="row g-4">
+                <!-- Left Column: Team Members with Their Tasks -->
+                <div class="col-lg-8">
+                  <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom">
+                      <h6 class="card-title mb-0">
+                        <i class="ri-user-line me-2 text-primary"></i>Team Members & Their Tasks
+                      </h6>
+                    </div>
                     <div class="card-body">
-                      <div class="d-flex align-items-start">
-                        <div class="flex-shrink-0">
-                          <img [src]="member.imageUrl || 'assets/images/users/avatar-' + (member.id % 8 + 1) + '.jpg'" 
-                               alt="{{ member.name }}" 
-                               class="avatar-md rounded-circle">
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                          <h6 class="mb-1">{{ member.name }}</h6>
-                          <p class="text-muted mb-2 fs-13">{{ member.title || member.roleType }}</p>
-                          <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-primary-subtle text-primary fs-11">{{ member.roleType }}</span>
-                            <span class="badge fs-11" 
-                                  [ngClass]="{
-                                    'bg-success-subtle text-success': member.workloadStatus === 'OPTIMAL',
-                                    'bg-warning-subtle text-warning': member.workloadStatus === 'NEAR_CAPACITY',
-                                    'bg-danger-subtle text-danger': member.workloadStatus === 'OVER_CAPACITY'
-                                  }">
-                              {{ member.workloadPercentage || 0 }}% Capacity
-                            </span>
-                          </div>
-                          <div class="d-flex gap-2">
-                            <button class="btn btn-soft-primary btn-sm" (click)="viewMemberDetails(member)">
-                              <i class="ri-eye-line"></i>
-                            </button>
-                            <button class="btn btn-soft-info btn-sm" (click)="transferAssignment(member)">
-                              <i class="ri-arrow-left-right-line"></i>
-                            </button>
-                            <button class="btn btn-soft-danger btn-sm" (click)="removeAssignment(member)" 
-                                    *ngIf="canManageAssignments">
-                              <i class="ri-user-unfollow-line"></i>
-                            </button>
+                      <!-- Team Member Cards with Tasks -->
+                      <div class="team-members-scrollable">
+                        <div class="row g-3" *ngIf="caseTeamMembers && caseTeamMembers.length > 0">
+                        <div class="col-12" *ngFor="let member of caseTeamMembers">
+                          <div class="card border h-100">
+                            <div class="card-body p-3">
+                              <!-- Member Header -->
+                              <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="d-flex align-items-center">
+                                  <img [src]="member.imageUrl || 'assets/images/users/avatar-' + (member.id % 8 + 1) + '.jpg'" 
+                                       alt="{{ member.name }}" 
+                                       class="avatar-sm rounded-circle me-3">
+                                  <div>
+                                    <h6 class="mb-1">{{ member.name }}</h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                      <span class="badge bg-primary-subtle text-primary fs-11">{{ member.roleType }}</span>
+                                      <span class="badge fs-11" 
+                                            [ngClass]="{
+                                              'bg-success-subtle text-success': member.workloadStatus === 'OPTIMAL',
+                                              'bg-warning-subtle text-warning': member.workloadStatus === 'NEAR_CAPACITY',
+                                              'bg-danger-subtle text-danger': member.workloadStatus === 'OVER_CAPACITY'
+                                            }">
+                                        {{ member.workloadPercentage || 0 }}% Capacity
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="dropdown">
+                                  <button class="btn btn-soft-secondary btn-sm dropdown-toggle" 
+                                          data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri-more-line"></i>
+                                  </button>
+                                  <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" (click)="viewMemberDetails(member)">
+                                      <i class="ri-eye-line me-2"></i>View Details</a></li>
+                                    <li><a class="dropdown-item" (click)="assignTaskToMember(member)">
+                                      <i class="ri-task-line me-2"></i>Assign Task</a></li>
+                                    <li><a class="dropdown-item" (click)="transferAssignment(member)">
+                                      <i class="ri-arrow-left-right-line me-2"></i>Transfer Tasks</a></li>
+                                    <li><hr class="dropdown-divider" *ngIf="canManageAssignments"></li>
+                                    <li *ngIf="canManageAssignments">
+                                      <a class="dropdown-item text-danger" (click)="removeAssignment(member)">
+                                        <i class="ri-user-unfollow-line me-2"></i>Remove from Case
+                                      </a>
+                                    </li>
+                                  </ul>
+                                </div>
+                              </div>
+
+                              <!-- Member's Tasks -->
+                              <div class="mt-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                  <span class="text-muted fs-13">Assigned Tasks ({{ getMemberTasks(member.userId).length }})</span>
+                                  <button class="btn btn-soft-primary btn-xs" (click)="openQuickTaskModal(member.id)">
+                                    <i class="ri-add-line me-1"></i>Add Task
+                                  </button>
+                                </div>
+                                
+                                <!-- Task List -->
+                                <div class="task-list member-tasks-scrollable" *ngIf="getMemberTasks(member.userId).length > 0; else noTasks">
+                                  <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-light" 
+                                       *ngFor="let task of getMemberTasks(member.userId); let last = last"
+                                       [class.border-bottom-0]="last">
+                                    <div class="flex-grow-1">
+                                      <h6 class="mb-1 fs-13">{{ task.title }}</h6>
+                                      <div class="d-flex align-items-center gap-2">
+                                        <span class="badge fs-11" [ngClass]="{
+                                          'bg-secondary-subtle text-secondary': task.status === 'TODO',
+                                          'bg-warning-subtle text-warning': task.status === 'IN_PROGRESS',
+                                          'bg-info-subtle text-info': task.status === 'REVIEW',
+                                          'bg-success-subtle text-success': task.status === 'COMPLETED'
+                                        }">{{ task.status }}</span>
+                                        <span class="badge fs-11" [ngClass]="{
+                                          'bg-success-subtle text-success': task.priority === 'LOW',
+                                          'bg-warning-subtle text-warning': task.priority === 'MEDIUM',
+                                          'bg-danger-subtle text-danger': task.priority === 'HIGH' || task.priority === 'URGENT'
+                                        }">{{ task.priority }}</span>
+                                        <span class="text-muted fs-12" *ngIf="task.dueDate">
+                                          Due {{ task.dueDate | date:'shortDate' }}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-2">
+                                      <button class="btn btn-soft-secondary btn-xs" (click)="openTaskAssignmentModal(task)">
+                                        <i class="ri-edit-line"></i>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <ng-template #noTasks>
+                                  <div class="text-center py-3 bg-light-subtle rounded">
+                                    <i class="ri-task-line text-muted fs-20 mb-2"></i>
+                                    <p class="text-muted mb-2 fs-13">No tasks assigned</p>
+                                    <button class="btn btn-soft-primary btn-xs" (click)="openQuickTaskModal(member.id)">
+                                      <i class="ri-add-line me-1"></i>Add Task
+                                    </button>
+                                  </div>
+                                </ng-template>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Add Team Member Card -->
-                <div class="col-md-6 col-xl-4">
-                  <div class="card border border-dashed shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-center">
-                      <div class="text-center">
+
+                      <!-- Empty Team State -->
+                      <div *ngIf="!caseTeamMembers || caseTeamMembers.length === 0" class="text-center py-5">
                         <div class="avatar-lg mx-auto mb-3">
-                          <div class="avatar-title bg-light text-primary rounded-circle fs-24">
-                            <i class="ri-user-add-line"></i>
+                          <div class="avatar-title bg-light-subtle text-muted rounded-circle fs-24">
+                            <i class="ri-team-line"></i>
                           </div>
                         </div>
-                        <h6 class="mb-2">Add Team Member</h6>
-                        <p class="text-muted mb-3 fs-13">Assign another attorney or staff member to this case</p>
-                        <button class="btn btn-primary btn-sm" (click)="openAssignmentModal()">
-                          <i class="ri-add-line me-1"></i>Add Member
+                        <h6 class="mb-2">No team members assigned</h6>
+                        <p class="text-muted mb-3">Add team members to start assigning tasks and managing workload.</p>
+                        <button class="btn btn-primary btn-sm" (click)="openTeamAssignmentModal()">
+                          <i class="ri-user-add-line me-1"></i>Add Team Member
                         </button>
                       </div>
+                      </div> <!-- Close team-members-scrollable -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Column: Unassigned Tasks & Insights -->
+                <div class="col-lg-4">
+                  <!-- Unassigned Tasks -->
+                  <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent border-bottom">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <h6 class="card-title mb-0">
+                          <i class="ri-alert-line me-2 text-warning"></i>Unassigned Tasks
+                        </h6>
+                        <span class="badge bg-warning-subtle text-warning">{{ getUnassignedTasks().length }}</span>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="unassigned-tasks-scrollable" *ngIf="getUnassignedTasks().length > 0; else noUnassignedTasks">
+                        <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-light" 
+                             *ngFor="let task of getUnassignedTasks(); let last = last"
+                             [class.border-bottom-0]="last">
+                          <div class="flex-grow-1">
+                            <h6 class="mb-1 fs-13">{{ task.title }}</h6>
+                            <div class="d-flex align-items-center gap-2">
+                              <span class="badge fs-11" [ngClass]="{
+                                'bg-success-subtle text-success': task.priority === 'LOW',
+                                'bg-warning-subtle text-warning': task.priority === 'MEDIUM',
+                                'bg-danger-subtle text-danger': task.priority === 'HIGH' || task.priority === 'URGENT'
+                              }">{{ task.priority }}</span>
+                              <span class="text-muted fs-12" *ngIf="task.dueDate">
+                                Due {{ task.dueDate | date:'shortDate' }}
+                              </span>
+                            </div>
+                          </div>
+                          <div class="flex-shrink-0 ms-2">
+                            <button class="btn btn-soft-primary btn-xs" (click)="openTaskAssignmentModal(task)">
+                              <i class="ri-user-add-line"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div> <!-- Close unassigned-tasks-scrollable -->
+
+                      <ng-template #noUnassignedTasks>
+                        <div class="text-center py-3">
+                          <i class="ri-check-line text-success fs-20 mb-2"></i>
+                          <p class="text-muted mb-0 fs-13">All tasks are assigned!</p>
+                        </div>
+                      </ng-template>
+                    </div>
+                  </div>
+
+                  <!-- Quick Insights -->
+                  <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom">
+                      <h6 class="card-title mb-0">
+                        <i class="ri-lightbulb-line me-2 text-info"></i>Quick Insights
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <!-- Overdue Tasks Alert -->
+                      <div class="alert alert-warning alert-sm mb-3" *ngIf="getOverdueTasks().length > 0">
+                        <i class="ri-alarm-warning-line me-2"></i>
+                        <strong>{{ getOverdueTasks().length }}</strong> overdue tasks need attention
+                        <button class="btn btn-warning btn-xs float-end" (click)="viewOverdueTasks()">View</button>
+                      </div>
+
+                      <!-- Workload Alerts -->
+                      <div class="alert alert-danger alert-sm mb-3" *ngIf="getOverCapacityCount() > 0">
+                        <i class="ri-error-warning-line me-2"></i>
+                        <strong>{{ getOverCapacityCount() }}</strong> team members over capacity
+                        <button class="btn btn-danger btn-xs float-end" (click)="openWorkloadBalancingModal()">Balance</button>
+                      </div>
+
+                      <!-- Success State -->
+                      <div class="alert alert-success alert-sm mb-0" *ngIf="getOverdueTasks().length === 0 && getOverCapacityCount() === 0 && getUnassignedTasks().length === 0">
+                        <i class="ri-checkbox-circle-line me-2"></i>
+                        Team workload is well-balanced and all tasks are assigned!
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Assignment History -->
-              <div class="card border-0 shadow-sm">
+              <!-- Assignment History (Collapsible) -->
+              <div class="card border-0 shadow-sm mt-4">
                 <div class="card-header bg-transparent border-bottom">
-                  <h6 class="card-title mb-0">
-                    <i class="ri-history-line me-2 text-primary"></i>Assignment History
-                  </h6>
-                </div>
-                <div class="card-body">
-                  <div class="timeline">
-                    <div class="timeline-item" *ngFor="let history of assignmentHistory">
-                      <div class="timeline-marker"></div>
-                      <div class="timeline-content">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                          <h6 class="mb-0 fs-14">{{ history.action }}</h6>
-                          <span class="text-muted fs-12">{{ history.date | date:'short' }}</span>
-                        </div>
-                        <p class="text-muted mb-0 fs-13">
-                          <strong>{{ history.userName }}</strong> 
-                          <span *ngIf="history.action === 'ASSIGNED'">was assigned as {{ history.roleType }}</span>
-                          <span *ngIf="history.action === 'TRANSFERRED'">transferred from {{ history.fromUser }} to {{ history.toUser }}</span>
-                          <span *ngIf="history.action === 'REMOVED'">was removed from the case</span>
-                        </p>
-                        <p class="text-muted mb-0 fs-12" *ngIf="history.notes">
-                          <i class="ri-sticky-note-line me-1"></i>{{ history.notes }}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Empty state -->
-                  <div *ngIf="!assignmentHistory || assignmentHistory.length === 0" class="text-center py-4">
-                    <div class="avatar-lg mx-auto mb-3">
-                      <div class="avatar-title bg-light-subtle text-muted rounded-circle fs-24">
-                        <i class="ri-history-line"></i>
-                      </div>
-                    </div>
-                    <p class="text-muted mb-0">No assignment history available</p>
+                  <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="card-title mb-0">
+                      <i class="ri-history-line me-2 text-primary"></i>Assignment History
+                    </h6>
+                    <button class="btn btn-soft-secondary btn-sm" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#assignmentHistory"
+                            aria-expanded="false">
+                      <i class="ri-eye-line me-1"></i>Toggle
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              <!-- Workload Distribution Chart -->
-              <div class="card border-0 shadow-sm mt-4" *ngIf="caseTeamMembers && caseTeamMembers.length > 0">
-                <div class="card-header bg-transparent border-bottom">
-                  <h6 class="card-title mb-0">
-                    <i class="ri-bar-chart-line me-2 text-primary"></i>Team Workload Distribution
-                  </h6>
-                </div>
-                <div class="card-body">
-                  <div class="row g-3">
-                    <div class="col-md-8">
-                      <div class="workload-chart" style="height: 300px;">
-                        <!-- Placeholder for workload chart -->
-                        <canvas id="workloadChart"></canvas>
+                <div class="collapse" id="assignmentHistory">
+                  <div class="card-body">
+                    <div class="timeline" *ngIf="assignmentHistory && assignmentHistory.length > 0">
+                      <div class="timeline-item" *ngFor="let history of assignmentHistory">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="mb-0 fs-14">{{ history.action }}</h6>
+                            <span class="text-muted fs-12">{{ history.date | date:'short' }}</span>
+                          </div>
+                          <p class="text-muted mb-0 fs-13">
+                            <strong>{{ history.userName }}</strong> 
+                            <span *ngIf="history.action === 'ASSIGNED'">was assigned as {{ history.roleType }}</span>
+                            <span *ngIf="history.action === 'TRANSFERRED'">transferred from {{ history.fromUser }} to {{ history.toUser }}</span>
+                            <span *ngIf="history.action === 'REMOVED'">was removed from the case</span>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div class="col-md-4">
-                      <div class="workload-summary">
-                        <h6 class="mb-3">Summary</h6>
-                        <div class="mb-3">
-                          <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Team Members</span>
-                            <span class="fw-semibold">{{ caseTeamMembers.length }}</span>
-                          </div>
-                          <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Avg. Workload</span>
-                            <span class="fw-semibold">{{ getAverageWorkload() }}%</span>
-                          </div>
-                          <div class="d-flex justify-content-between">
-                            <span class="text-muted">Over Capacity</span>
-                            <span class="fw-semibold text-danger">{{ getOverCapacityCount() }}</span>
-                          </div>
-                        </div>
-                        <hr>
-                        <div class="recommendations">
-                          <h6 class="mb-2 fs-13">Recommendations</h6>
-                          <div class="alert alert-info alert-sm mb-0" *ngIf="getOverCapacityCount() > 0">
-                            <i class="ri-information-line me-1"></i>
-                            Consider reassigning tasks from over-capacity team members.
-                          </div>
-                          <div class="alert alert-success alert-sm mb-0" *ngIf="getOverCapacityCount() === 0">
-                            <i class="ri-checkbox-circle-line me-1"></i>
-                            Team workload is well-balanced.
-                          </div>
+                    
+                    <div *ngIf="!assignmentHistory || assignmentHistory.length === 0" class="text-center py-4">
+                      <div class="avatar-lg mx-auto mb-3">
+                        <div class="avatar-title bg-light-subtle text-muted rounded-circle fs-24">
+                          <i class="ri-history-line"></i>
                         </div>
                       </div>
+                      <p class="text-muted mb-0">No assignment history available</p>
                     </div>
                   </div>
                 </div>

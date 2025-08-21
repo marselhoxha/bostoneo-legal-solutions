@@ -1,200 +1,410 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { RbacService } from './rbac.service';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, BehaviorSubject, of } from 'rxjs';
+import { map, tap, catchError } from 'rxjs/operators';
+import { CustomHttpResponse } from '../../interface/custom-http-response';
+import { AuditEntry, AuditQuery, AuditReport, ComplianceAlert, AuditChange } from '../../interface/audit-log';
 import { UserService } from '../../service/user.service';
-import { environment } from '../../../environments/environment';
-
-export interface AuditLogEntry {
-  id?: number;
-  userId: number;
-  userEmail: string;
-  userRole: string;
-  action: string;
-  resource: string;
-  resourceId?: string;
-  details?: any;
-  ipAddress?: string;
-  userAgent?: string;
-  timestamp: Date;
-  success: boolean;
-  errorMessage?: string;
-}
-
-export interface AuditLogFilter {
-  userId?: number;
-  action?: string;
-  resource?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  success?: boolean;
-  page?: number;
-  size?: number;
-}
+import { User } from '../../interface/user';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuditLogService {
-  private readonly apiUrl = '/api/audit-logs';
-  private recentActivities = new BehaviorSubject<AuditLogEntry[]>([]);
+  private readonly apiUrl = 'http://localhost:8085/api/v1';
   
-  // Define sensitive actions that should be audited
-  private readonly SENSITIVE_ACTIONS = [
-    'CASE_CREATE',
-    'CASE_DELETE', 
-    'CASE_UPDATE',
-    'DOCUMENT_DELETE',
-    'DOCUMENT_DOWNLOAD',
-    'USER_LOGIN',
-    'USER_LOGOUT',
-    'ROLE_ASSIGN',
-    'ROLE_REMOVE',
-    'PERMISSION_GRANT',
-    'PERMISSION_REVOKE',
-    'DATA_EXPORT',
-    'BILLING_VIEW',
-    'CLIENT_INFO_ACCESS',
-    'CONFIDENTIAL_DOCUMENT_ACCESS'
-  ];
-
+  // Current user info for audit entries
+  private currentUser: User | null = null;
+  private sessionId: string;
+  
+  // Recent audit entries cache
+  private recentEntries$ = new BehaviorSubject<AuditEntry[]>([]);
+  
   constructor(
     private http: HttpClient,
-    private rbacService: RbacService,
     private userService: UserService
-  ) {}
+  ) {
+    this.sessionId = this.generateSessionId();
+    this.initializeUserSubscription();
+  }
+
+  // ==================== Public API ====================
 
   /**
-   * Log a sensitive action
+   * Log an audit entry
    */
-  logAction(
-    action: string,
-    resource: string,
-    resourceId?: string,
-    details?: any,
-    success: boolean = true,
-    errorMessage?: string
-  ): Observable<any> {
-    const currentUser = this.userService.getCurrentUser();
-    
-    // Get current user roles
-    const currentRoles: string[] = [];
-    this.rbacService.roles$.subscribe(roles => {
-      currentRoles.push(...roles.map(role => role.name));
-    }).unsubscribe();
-    
-    const logEntry: AuditLogEntry = {
-      userId: currentUser?.id || 0,
-      userEmail: currentUser?.email || 'unknown',
-      userRole: currentRoles.join(','),
-      action,
-      resource,
-      resourceId,
-      details,
+  log(entry: Omit<AuditEntry, 'id' | 'timestamp' | 'userId' | 'userName' | 'ipAddress' | 'userAgent' | 'sessionId'>): Observable<AuditEntry> {
+    if (!this.currentUser) {
+      console.warn('AuditLogService: Cannot log entry, no current user');
+      return of({} as AuditEntry);
+    }
+
+    const auditEntry: Omit<AuditEntry, 'id'> = {
+      ...entry,
+      timestamp: new Date(),
+      userId: this.currentUser.id,
+      userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
       ipAddress: this.getClientIP(),
       userAgent: navigator.userAgent,
-      timestamp: new Date(),
-      success,
-      errorMessage
+      sessionId: this.sessionId
     };
 
-    // Log to console in development
-    if (this.isDevelopment()) {
-      console.log('🔒 Audit Log:', logEntry);
-    }
-
-    // Send to backend
-    return this.http.post(`${this.apiUrl}`, logEntry);
+    return this.http.post<CustomHttpResponse<AuditEntry>>(
+      `${this.apiUrl}/audit/log`,
+      auditEntry
+    ).pipe(
+      map(response => response.data),
+      tap(savedEntry => {
+        // Add to recent entries cache
+        const recent = [savedEntry, ...this.recentEntries$.value.slice(0, 99)];
+        this.recentEntries$.next(recent);
+      }),
+      catchError(error => {
+        console.error('Failed to log audit entry:', error);
+        // Still return the entry for local logging
+        return of({ ...auditEntry, id: this.generateTempId() } as AuditEntry);
+      })
+    );
   }
 
   /**
-   * Log case-related actions
+   * Log assignment change
    */
-  logCaseAction(action: string, caseId: string, details?: any): Observable<any> {
-    return this.logAction(action, 'CASE', caseId, details);
-  }
-
-  /**
-   * Log document-related actions  
-   */
-  logDocumentAction(action: string, documentId: string, details?: any): Observable<any> {
-    return this.logAction(action, 'DOCUMENT', documentId, details);
-  }
-
-  /**
-   * Log user/role related actions
-   */
-  logUserAction(action: string, userId?: string, details?: any): Observable<any> {
-    return this.logAction(action, 'USER', userId, details);
-  }
-
-  /**
-   * Log financial/billing actions
-   */
-  logBillingAction(action: string, resourceId?: string, details?: any): Observable<any> {
-    return this.logAction(action, 'BILLING', resourceId, details);
-  }
-
-  /**
-   * Get audit logs with filtering
-   */
-  getAuditLogs(filter?: AuditLogFilter): Observable<any> {
-    let params: any = {};
+  logAssignmentChange(
+    entityType: 'case' | 'task',
+    entityId: number,
+    entityName: string,
+    action: string,
+    oldAssignee?: string,
+    newAssignee?: string,
+    component: string = 'AssignmentSyncService'
+  ): Observable<AuditEntry> {
+    const changes: AuditChange[] = [];
     
-    if (filter) {
-      if (filter.userId) params.userId = filter.userId;
-      if (filter.action) params.action = filter.action;
-      if (filter.resource) params.resource = filter.resource;
-      if (filter.dateFrom) params.dateFrom = filter.dateFrom.toISOString();
-      if (filter.dateTo) params.dateTo = filter.dateTo.toISOString();
-      if (filter.success !== undefined) params.success = filter.success;
-      if (filter.page) params.page = filter.page;
-      if (filter.size) params.size = filter.size;
+    if (oldAssignee !== newAssignee) {
+      changes.push({
+        field: 'assignee',
+        oldValue: oldAssignee || 'unassigned',
+        newValue: newAssignee || 'unassigned',
+        dataType: 'string'
+      });
     }
 
-    return this.http.get(`${this.apiUrl}`, { params });
-  }
-
-  /**
-   * Get recent activities for dashboard
-   */
-  getRecentActivities(limit: number = 10): Observable<AuditLogEntry[]> {
-    return this.http.get<AuditLogEntry[]>(`${this.apiUrl}/recent?limit=${limit}`);
-  }
-
-  /**
-   * Get user-specific audit trail
-   */
-  getUserAuditTrail(userId: number, days: number = 30): Observable<AuditLogEntry[]> {
-    const dateTo = new Date();
-    const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - days);
-
-    return this.getAuditLogs({
-      userId,
-      dateFrom,
-      dateTo,
-      page: 0,
-      size: 100
+    return this.log({
+      action,
+      entityType,
+      entityId,
+      entityName,
+      changes,
+      component,
+      severity: 'MEDIUM',
+      category: 'USER_ACTION',
+      metadata: {
+        changeType: 'assignment',
+        previousAssignee: oldAssignee,
+        newAssignee: newAssignee
+      }
     });
   }
 
   /**
-   * Check if action is sensitive and should be audited
+   * Log task status change
    */
-  isSensitiveAction(action: string): boolean {
-    return this.SENSITIVE_ACTIONS.includes(action);
+  logTaskStatusChange(
+    taskId: number,
+    taskName: string,
+    oldStatus: string,
+    newStatus: string,
+    component: string = 'TaskManagement'
+  ): Observable<AuditEntry> {
+    return this.log({
+      action: 'TASK_STATUS_CHANGED',
+      entityType: 'task',
+      entityId: taskId,
+      entityName: taskName,
+      changes: [{
+        field: 'status',
+        oldValue: oldStatus,
+        newValue: newStatus,
+        dataType: 'string'
+      }],
+      component,
+      severity: 'LOW',
+      category: 'DATA_CHANGE',
+      metadata: {
+        statusTransition: `${oldStatus} -> ${newStatus}`
+      }
+    });
   }
 
   /**
-   * Helper methods
+   * Log case access
    */
-  private getClientIP(): string {
-    // In a real app, this would be determined by the backend
-    return 'client-ip';
+  logCaseAccess(
+    caseId: number,
+    caseName: string,
+    accessType: 'VIEW' | 'EDIT' | 'DELETE',
+    component: string = 'CaseDetail'
+  ): Observable<AuditEntry> {
+    const severity = accessType === 'DELETE' ? 'HIGH' : accessType === 'EDIT' ? 'MEDIUM' : 'LOW';
+    
+    return this.log({
+      action: `CASE_${accessType}`,
+      entityType: 'case',
+      entityId: caseId,
+      entityName: caseName,
+      component,
+      severity,
+      category: 'USER_ACTION',
+      metadata: {
+        accessType,
+        timestamp: new Date().toISOString()
+      }
+    });
   }
 
-  private isDevelopment(): boolean {
-    return !environment.production;
+  /**
+   * Log security event
+   */
+  logSecurityEvent(
+    action: string,
+    description: string,
+    entityType: string = 'system',
+    entityId: number = 0,
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'HIGH'
+  ): Observable<AuditEntry> {
+    return this.log({
+      action,
+      entityType,
+      entityId,
+      entityName: description,
+      component: 'SecurityService',
+      severity,
+      category: 'SECURITY',
+      metadata: {
+        securityEvent: true,
+        description,
+        riskLevel: severity
+      }
+    });
   }
-} 
+
+  /**
+   * Query audit log
+   */
+  queryAuditLog(query: AuditQuery): Observable<AuditEntry[]> {
+    let params = new HttpParams();
+    
+    if (query.userId) params = params.set('userId', query.userId.toString());
+    if (query.entityType) params = params.set('entityType', query.entityType);
+    if (query.entityId) params = params.set('entityId', query.entityId.toString());
+    if (query.action) params = params.set('action', query.action);
+    if (query.startDate) params = params.set('startDate', query.startDate.toISOString());
+    if (query.endDate) params = params.set('endDate', query.endDate.toISOString());
+    if (query.severity) params = params.set('severity', query.severity.join(','));
+    if (query.category) params = params.set('category', query.category.join(','));
+    if (query.page) params = params.set('page', query.page.toString());
+    if (query.size) params = params.set('size', query.size.toString());
+    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+
+    return this.http.get<CustomHttpResponse<AuditEntry[]>>(
+      `${this.apiUrl}/audit/query`,
+      { params }
+    ).pipe(
+      map(response => response.data || []),
+      catchError(error => {
+        console.error('Failed to query audit log:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get audit trail for specific entity
+   */
+  getEntityAuditTrail(entityType: string, entityId: number): Observable<AuditEntry[]> {
+    return this.queryAuditLog({
+      entityType,
+      entityId,
+      sortBy: 'timestamp',
+      sortDirection: 'DESC'
+    });
+  }
+
+  /**
+   * Get recent audit entries
+   */
+  getRecentEntries(): Observable<AuditEntry[]> {
+    return this.recentEntries$.asObservable();
+  }
+
+  /**
+   * Generate compliance report
+   */
+  generateComplianceReport(
+    startDate: Date,
+    endDate: Date,
+    includeCategories: string[] = ['SECURITY', 'DATA_CHANGE']
+  ): Observable<AuditReport> {
+    const query: AuditQuery = {
+      startDate,
+      endDate,
+      category: includeCategories,
+      sortBy: 'timestamp',
+      sortDirection: 'DESC'
+    };
+
+    return this.http.post<CustomHttpResponse<AuditReport>>(
+      `${this.apiUrl}/audit/report/compliance`,
+      query
+    ).pipe(
+      map(response => response.data),
+      catchError(error => {
+        console.error('Failed to generate compliance report:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Get compliance alerts
+   */
+  getComplianceAlerts(): Observable<ComplianceAlert[]> {
+    return this.http.get<CustomHttpResponse<ComplianceAlert[]>>(
+      `${this.apiUrl}/audit/alerts`
+    ).pipe(
+      map(response => response.data || []),
+      catchError(error => {
+        console.error('Failed to get compliance alerts:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Export audit log
+   */
+  exportAuditLog(
+    query: AuditQuery,
+    format: 'JSON' | 'CSV' | 'PDF' = 'CSV'
+  ): Observable<Blob> {
+    let params = new HttpParams().set('format', format);
+    
+    // Add query parameters
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          params = params.set(key, value.join(','));
+        } else if (value instanceof Date) {
+          params = params.set(key, value.toISOString());
+        } else {
+          params = params.set(key, value.toString());
+        }
+      }
+    });
+
+    return this.http.get(`${this.apiUrl}/audit/export`, {
+      params,
+      responseType: 'blob'
+    }).pipe(
+      catchError(error => {
+        console.error('Failed to export audit log:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ==================== Convenience Methods ====================
+
+  /**
+   * Log user login
+   */
+  logUserLogin(success: boolean, reason?: string): Observable<AuditEntry> {
+    return this.logSecurityEvent(
+      success ? 'USER_LOGIN_SUCCESS' : 'USER_LOGIN_FAILED',
+      success ? 'User logged in successfully' : `Login failed: ${reason}`,
+      'user',
+      this.currentUser?.id || 0,
+      success ? 'LOW' : 'MEDIUM'
+    );
+  }
+
+  /**
+   * Log user logout
+   */
+  logUserLogout(): Observable<AuditEntry> {
+    return this.logSecurityEvent(
+      'USER_LOGOUT',
+      'User logged out',
+      'user',
+      this.currentUser?.id || 0,
+      'LOW'
+    );
+  }
+
+  /**
+   * Log permission denied
+   */
+  logPermissionDenied(
+    resource: string,
+    action: string,
+    entityId?: number
+  ): Observable<AuditEntry> {
+    return this.logSecurityEvent(
+      'PERMISSION_DENIED',
+      `Access denied to ${resource} for action: ${action}`,
+      resource,
+      entityId || 0,
+      'HIGH'
+    );
+  }
+
+  /**
+   * Log data export
+   */
+  logDataExport(
+    dataType: string,
+    recordCount: number,
+    format: string,
+    component: string = 'ExportService'
+  ): Observable<AuditEntry> {
+    return this.log({
+      action: 'DATA_EXPORT',
+      entityType: 'data',
+      entityId: 0,
+      entityName: `${dataType} export`,
+      component,
+      severity: 'MEDIUM',
+      category: 'USER_ACTION',
+      metadata: {
+        dataType,
+        recordCount,
+        format,
+        exportedAt: new Date().toISOString()
+      }
+    });
+  }
+
+  // ==================== Private Methods ====================
+
+  private initializeUserSubscription(): void {
+    this.userService.userData$.subscribe(user => {
+      this.currentUser = user;
+    });
+  }
+
+  private generateSessionId(): string {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private generateTempId(): string {
+    return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getClientIP(): string {
+    // This would typically be provided by the backend or a service
+    // For now, return a placeholder
+    return 'client_ip';
+  }
+}

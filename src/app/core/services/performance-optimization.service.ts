@@ -1,114 +1,125 @@
 import { Injectable } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Observable, BehaviorSubject, combineLatest, timer } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { CaseContextService } from './case-context.service';
+import { TaskAnalyticsService } from './task-analytics.service';
+import { PredictiveAssignmentService } from './predictive-assignment.service';
+
+export interface PerformanceOptimization {
+  type: 'task_prioritization' | 'workload_balancing' | 'skill_development' | 'process_improvement';
+  title: string;
+  description: string;
+  impact: 'low' | 'medium' | 'high';
+  effort: 'low' | 'medium' | 'high';
+  implementationSteps: string[];
+  expectedBenefit: string;
+}
+
+export interface CacheConfig {
+  analyticsCache: boolean;
+  performanceCache: boolean;
+  predictionCache: boolean;
+  cacheTimeout: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class PerformanceOptimizationService {
-  private preloadedModules = new Set<string>();
+  private cacheConfig = new BehaviorSubject<CacheConfig>({
+    analyticsCache: true,
+    performanceCache: true,
+    predictionCache: true,
+    cacheTimeout: 300000
+  });
 
-  constructor(private router: Router) {
-    this.initializePerformanceOptimizations();
+  private cachedData = new Map<string, { data: any; timestamp: number }>();
+
+  constructor(
+    private caseContext: CaseContextService,
+    private analytics: TaskAnalyticsService,
+    private predictive: PredictiveAssignmentService
+  ) {
+    this.initializeCacheCleanup();
   }
 
-  private initializePerformanceOptimizations() {
-    // Preload critical modules after initial load
-    this.setupSmartPreloading();
+  getOptimizationRecommendations(caseId: number): Observable<PerformanceOptimization[]> {
+    return combineLatest([
+      this.analytics.getTaskAnalytics(caseId),
+      this.analytics.getTeamInsights(caseId),
+      this.predictive.predictTeamCapacity(caseId)
+    ]).pipe(
+      map(([analytics, insights, capacity]) => {
+        const optimizations: PerformanceOptimization[] = [];
+
+        if (analytics.overdueTasks > analytics.totalTasks * 0.2) {
+          optimizations.push({
+            type: 'task_prioritization',
+            title: 'Implement Dynamic Task Prioritization',
+            description: 'Use AI-driven prioritization to focus on high-impact tasks',
+            impact: 'high',
+            effort: 'medium',
+            implementationSteps: [
+              'Enable intelligent task scoring',
+              'Set up automated priority adjustments',
+              'Configure deadline-based escalation'
+            ],
+            expectedBenefit: `Reduce overdue tasks by up to 40%`
+          });
+        }
+
+        const overloadedMembers = capacity.filter(c => c.burnoutRisk > 70).length;
+        if (overloadedMembers > 0) {
+          optimizations.push({
+            type: 'workload_balancing',
+            title: 'Automated Workload Distribution',
+            description: 'Implement real-time workload balancing',
+            impact: 'high',
+            effort: 'low',
+            implementationSteps: [
+              'Enable auto-balancing feature',
+              'Set workload thresholds',
+              'Configure redistribution triggers'
+            ],
+            expectedBenefit: `Reduce burnout risk for ${overloadedMembers} member(s)`
+          });
+        }
+
+        return optimizations;
+      })
+    );
+  }
+
+  getCachedData<T>(key: string, dataFactory: () => Observable<T>): Observable<T> {
+    const cached = this.cachedData.get(key);
+    const config = this.cacheConfig.value;
     
-    // Enable performance monitoring
-    this.enablePerformanceMonitoring();
-    
-    // Setup image lazy loading
-    this.setupImageLazyLoading();
-  }
-
-  private setupSmartPreloading() {
-    // Preload modules based on user navigation patterns
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        this.predictAndPreloadModules(event.url);
-      });
-  }
-
-  private predictAndPreloadModules(currentUrl: string) {
-    // Smart preloading based on current route
-    const preloadMap: { [key: string]: string[] } = {
-      '/home': ['legal', 'clients'],
-      '/legal': ['legal/cases', 'legal/documents'],
-      '/clients': ['invoices'],
-      '/admin': ['admin/users', 'admin/roles']
-    };
-
-    const modulesToPreload = preloadMap[currentUrl] || [];
-    modulesToPreload.forEach(module => this.preloadModule(module));
-  }
-
-  private preloadModule(modulePath: string) {
-    if (this.preloadedModules.has(modulePath)) {
-      return;
+    if (cached && Date.now() - cached.timestamp < config.cacheTimeout) {
+      return new BehaviorSubject(cached.data).asObservable();
     }
 
-    // Dynamic import for preloading
-    switch (modulePath) {
-      case 'legal':
-        import('../../modules/legal/legal.module').then(() => {
-          this.preloadedModules.add(modulePath);
-        });
-        break;
-      case 'clients':
-        import('../../component/client/client.module').then(() => {
-          this.preloadedModules.add(modulePath);
-        });
-        break;
-      // Add more cases as needed
-    }
+    return dataFactory().pipe(
+      map(data => {
+        this.cachedData.set(key, { data, timestamp: Date.now() });
+        return data;
+      })
+    );
   }
 
-  private enablePerformanceMonitoring() {
-    if ('PerformanceObserver' in window) {
-      // Monitor long tasks
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          console.warn('Long task detected:', entry);
+  clearCache(): void {
+    this.cachedData.clear();
+  }
+
+  private initializeCacheCleanup(): void {
+    timer(300000, 300000).subscribe(() => {
+      const now = Date.now();
+      const timeout = this.cacheConfig.value.cacheTimeout;
+      
+      Array.from(this.cachedData.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > timeout) {
+          this.cachedData.delete(key);
         }
       });
-      observer.observe({ entryTypes: ['longtask'] });
-    }
-  }
-
-  private setupImageLazyLoading() {
-    if ('IntersectionObserver' in window) {
-      const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target as HTMLImageElement;
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-              img.removeAttribute('data-src');
-              imageObserver.unobserve(img);
-            }
-          }
-        });
-      });
-
-      // Observe all images with data-src
-      document.querySelectorAll('img[data-src]').forEach(img => {
-        imageObserver.observe(img);
-      });
-    }
-  }
-
-  // Bundle size optimization helpers
-  removeUnusedImports() {
-    console.log('Checking for unused imports...');
-    // This would be handled by build tools
-  }
-
-  // Memory leak prevention
-  clearCache() {
-    // Clear any in-memory caches
-    this.preloadedModules.clear();
+    });
   }
 }

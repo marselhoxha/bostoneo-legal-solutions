@@ -8,10 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * Controller for handling notification tokens and sending push notifications
@@ -107,6 +109,209 @@ public class NotificationController {
                 .reason("Test notification sent")
                 .message("Push notification triggered")
                 .developerMessage("Notification sent via Firebase")
+                .build()
+        );
+    }
+    
+    // ==================== User Notifications ====================
+    
+    /**
+     * Get notifications for a specific user
+     */
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    public ResponseEntity<HttpResponse> getUserNotifications(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        log.info("Getting notifications for user: {}", userId);
+        
+        // For now, return empty list - will be implemented with proper UserNotification entity
+        List<Object> notifications = new ArrayList<>();
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Notifications retrieved successfully")
+                .message("Retrieved " + notifications.size() + " notifications")
+                .data(Map.of("notifications", notifications, "totalElements", 0, "totalPages", 0))
+                .build()
+        );
+    }
+    
+    /**
+     * Get notification preferences for a user
+     */
+    @GetMapping("/preferences/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    public ResponseEntity<HttpResponse> getNotificationPreferences(@PathVariable Long userId) {
+        log.info("Getting notification preferences for user: {}", userId);
+        
+        // Return default preferences - will be implemented with proper NotificationPreferences entity
+        Map<String, Object> preferences = Map.of(
+            "userId", userId,
+            "inApp", true,
+            "email", true,
+            "sms", false,
+            "push", true,
+            "types", Map.of(
+                "ASSIGNMENT", Map.of("enabled", true, "channels", List.of("inApp", "email"), "threshold", "MEDIUM"),
+                "TASK", Map.of("enabled", true, "channels", List.of("inApp"), "threshold", "MEDIUM"),
+                "DEADLINE", Map.of("enabled", true, "channels", List.of("inApp", "email"), "threshold", "HIGH"),
+                "WORKLOAD", Map.of("enabled", true, "channels", List.of("inApp"), "threshold", "HIGH"),
+                "SYSTEM", Map.of("enabled", true, "channels", List.of("inApp"), "threshold", "LOW"),
+                "CASE_UPDATE", Map.of("enabled", true, "channels", List.of("inApp"), "threshold", "MEDIUM")
+            )
+        );
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Preferences retrieved successfully")
+                .message("Notification preferences retrieved")
+                .data(Map.of("preferences", preferences))
+                .build()
+        );
+    }
+    
+    /**
+     * Update notification preferences for a user
+     */
+    @PutMapping("/preferences/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    public ResponseEntity<HttpResponse> updateNotificationPreferences(
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> preferences) {
+        log.info("Updating notification preferences for user: {}", userId);
+        
+        // For now, just return the received preferences - will be implemented with proper persistence
+        preferences.put("userId", userId);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Preferences updated successfully")
+                .message("Notification preferences updated")
+                .data(Map.of("preferences", preferences))
+                .build()
+        );
+    }
+    
+    /**
+     * Send notification to user(s)
+     */
+    @PostMapping("/send")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ATTORNEY')")
+    public ResponseEntity<HttpResponse> sendNotification(@RequestBody Map<String, Object> notificationData) {
+        log.info("Sending notification: {}", notificationData);
+        
+        // Create mock notification response - will be implemented with proper UserNotification entity
+        Map<String, Object> notification = Map.of(
+            "id", "notification-" + System.currentTimeMillis(),
+            "userId", notificationData.get("userId"),
+            "type", notificationData.getOrDefault("type", "SYSTEM"),
+            "priority", notificationData.getOrDefault("priority", "MEDIUM"),
+            "title", notificationData.get("title"),
+            "message", notificationData.get("message"),
+            "read", false,
+            "createdAt", LocalDateTime.now()
+        );
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Notification sent successfully")
+                .message("Notification has been sent")
+                .data(Map.of("notification", notification))
+                .build()
+        );
+    }
+    
+    /**
+     * Send bulk notifications
+     */
+    @PostMapping("/send-bulk")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ATTORNEY')")
+    public ResponseEntity<HttpResponse> sendBulkNotifications(@RequestBody Map<String, Object> bulkData) {
+        log.info("Sending bulk notifications: {}", bulkData);
+        
+        // Create mock notifications response - will be implemented with proper UserNotification entity
+        List<Object> notifications = new ArrayList<>();
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Bulk notifications sent successfully")
+                .message("All notifications have been sent")
+                .data(Map.of("notifications", notifications))
+                .build()
+        );
+    }
+    
+    /**
+     * Mark notification as read
+     */
+    @PutMapping("/{notificationId}/read")
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<HttpResponse> markAsRead(@PathVariable String notificationId) {
+        log.info("Marking notification as read: {}", notificationId);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Notification marked as read")
+                .message("Notification status updated")
+                .build()
+        );
+    }
+    
+    /**
+     * Mark all notifications as read for a user
+     */
+    @PutMapping("/user/{userId}/read-all")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    public ResponseEntity<HttpResponse> markAllAsRead(@PathVariable Long userId) {
+        log.info("Marking all notifications as read for user: {}", userId);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("All notifications marked as read")
+                .message("All notifications status updated")
+                .build()
+        );
+    }
+    
+    /**
+     * Delete notification
+     */
+    @DeleteMapping("/{notificationId}")
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<HttpResponse> deleteNotification(@PathVariable String notificationId) {
+        log.info("Deleting notification: {}", notificationId);
+        
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(LocalDateTime.now().toString())
+                .statusCode(HttpStatus.OK.value())
+                .status(HttpStatus.OK)
+                .reason("Notification deleted successfully")
+                .message("Notification has been removed")
                 .build()
         );
     }

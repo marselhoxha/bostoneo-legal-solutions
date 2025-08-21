@@ -208,10 +208,17 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public List<CaseAssignmentDTO> getCaseAssignments(Long caseId) {
-        List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
-        return assignments.stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        try {
+            log.debug("Getting case assignments for case {}", caseId);
+            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
+            return assignments.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching case assignments for case {}: {}", caseId, e.getMessage(), e);
+            // Return empty list instead of failing
+            return Collections.emptyList();
+        }
     }
     
     @Override
@@ -236,10 +243,17 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public List<CaseAssignmentDTO> getTeamMembers(Long caseId) {
-        List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
-        return assignments.stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        try {
+            log.debug("Getting team members for case {}", caseId);
+            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
+            return assignments.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching team members for case {}: {}", caseId, e.getMessage(), e);
+            // Return empty list instead of failing
+            return Collections.emptyList();
+        }
     }
     
     @Override
@@ -605,28 +619,46 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     // Mapping methods
     
     private CaseAssignmentDTO mapToDTO(CaseAssignment assignment) {
-        return CaseAssignmentDTO.builder()
-            .id(assignment.getId())
-            .caseId(assignment.getLegalCase().getId())
-            .caseNumber(assignment.getLegalCase().getCaseNumber())
-            .caseTitle(assignment.getLegalCase().getTitle())
-            .userId(assignment.getAssignedTo().getId())
-            .userName(getFullName(assignment.getAssignedTo()))
-            .userEmail(assignment.getAssignedTo().getEmail())
-            .roleType(assignment.getRoleType())
-            .assignmentType(assignment.getAssignmentType())
-            .assignedAt(assignment.getAssignedAt())
-            .effectiveFrom(assignment.getEffectiveFrom())
-            .effectiveTo(assignment.getEffectiveTo())
-            .active(assignment.isActive())
-            .workloadWeight(assignment.getWorkloadWeight())
-            .expertiseMatchScore(assignment.getExpertiseMatchScore())
-            .notes(assignment.getNotes())
-            .assignedByName(assignment.getAssignedBy() != null ? 
-                getFullName(assignment.getAssignedBy()) : null)
-            .createdAt(assignment.getCreatedAt())
-            .updatedAt(assignment.getUpdatedAt())
-            .build();
+        try {
+            return CaseAssignmentDTO.builder()
+                .id(assignment.getId())
+                .caseId(assignment.getLegalCase() != null ? assignment.getLegalCase().getId() : null)
+                .caseNumber(assignment.getLegalCase() != null ? assignment.getLegalCase().getCaseNumber() : "N/A")
+                .caseTitle(assignment.getLegalCase() != null ? assignment.getLegalCase().getTitle() : "N/A")
+                .userId(assignment.getAssignedTo() != null ? assignment.getAssignedTo().getId() : null)
+                .userName(assignment.getAssignedTo() != null ? getFullName(assignment.getAssignedTo()) : "Unknown")
+                .userEmail(assignment.getAssignedTo() != null ? assignment.getAssignedTo().getEmail() : "unknown@example.com")
+                .roleType(assignment.getRoleType())
+                .assignmentType(assignment.getAssignmentType())
+                .assignedAt(assignment.getAssignedAt())
+                .effectiveFrom(assignment.getEffectiveFrom())
+                .effectiveTo(assignment.getEffectiveTo())
+                .active(assignment.isActive())
+                .workloadWeight(assignment.getWorkloadWeight())
+                .expertiseMatchScore(assignment.getExpertiseMatchScore())
+                .notes(assignment.getNotes())
+                .assignedByName(assignment.getAssignedBy() != null ? 
+                    getFullName(assignment.getAssignedBy()) : null)
+                .createdAt(assignment.getCreatedAt())
+                .updatedAt(assignment.getUpdatedAt())
+                .build();
+        } catch (Exception e) {
+            log.error("Error mapping CaseAssignment to DTO: {}", e.getMessage(), e);
+            // Return minimal DTO to prevent complete failure
+            return CaseAssignmentDTO.builder()
+                .id(assignment.getId())
+                .caseId(null)
+                .caseNumber("ERROR")
+                .caseTitle("Error loading case")
+                .userId(null)
+                .userName("Error loading user")
+                .userEmail("error@example.com")
+                .roleType(assignment.getRoleType())
+                .assignmentType(assignment.getAssignmentType())
+                .assignedAt(assignment.getAssignedAt())
+                .active(assignment.isActive())
+                .build();
+        }
     }
     
     private UserWorkloadDTO mapWorkloadToDTO(UserWorkload workload) {

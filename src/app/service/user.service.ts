@@ -190,6 +190,16 @@ export class UserService {
       );
   }
 
+  /**
+   * Get user by ID
+   */
+  getUserById(userId: number): Observable<CustomHttpResponse<User>> {
+    return this.http.get<CustomHttpResponse<User>>(`${this.server}/api/users/${userId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   logOut() {
     this.httpCache.evictAll();
     this.clearUserCache();
