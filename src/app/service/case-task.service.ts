@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { CustomHttpResponse as ApiResponse } from '../interface/custom-http-response';
 import { 
   CaseTask, 
@@ -16,14 +17,14 @@ import { tap, catchError } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class CaseTaskService {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = 'http://localhost:8085/api/legal';
 
   constructor(private http: HttpClient) {}
 
   // Task CRUD Operations
   createTask(task: TaskCreateRequest): Observable<ApiResponse<{task: CaseTask}>> {
     return this.http.post<ApiResponse<{task: CaseTask}>>(
-      `http://localhost:8085/api/legal/tasks`, 
+      `${this.apiUrl}/tasks`, 
       task
     );
   }
@@ -111,6 +112,16 @@ export class CaseTaskService {
             tasksCount: response.data?.tasks?.content?.length || 0
           });
         }),
+        map(response => {
+          // Backend returns { data: { tasks: Page } }
+          // Return the response with tasks in the expected format
+          return {
+            ...response,
+            data: {
+              tasks: response.data?.tasks || { content: [], totalElements: 0 }
+            }
+          };
+        }),
         catchError(error => {
           console.error('❌ CaseTaskService - Error in getAllTasks:', error);
           throw error;
@@ -133,9 +144,15 @@ export class CaseTaskService {
       params = params.set('dueDate', filter.dueDate);
     }
 
-    return this.http.get<ApiResponse<CaseTask[]>>(
+    return this.http.get<ApiResponse<any>>(
       `${this.apiUrl}/tasks/user/${userId}`,
       { params }
+    ).pipe(
+      map(response => ({
+        ...response,
+        // Backend returns { data: { tasks: Page } } where Page has content array
+        data: response.data?.tasks?.content || response.data?.tasks || []
+      }))
     );
   }
 

@@ -19,6 +19,7 @@ const routes: Routes = [
     canActivate: [AuthenticationGuard],
     children: [
       { path: 'user', loadChildren: () => import('./component/profile/user.module').then(m => m.UserModule) },
+      { path: 'profile', redirectTo: 'user', pathMatch: 'full' },
       { path: 'users', loadChildren: () => import('./component/users/users.module').then(m => m.UsersModule) },
       { path: 'clients', loadChildren: () => import('./component/client/client.module').then(m => m.ClientModule) },
       { path: 'invoices', loadChildren: () => import('./component/invoice/invoice.module').then(m => m.InvoiceModule) },

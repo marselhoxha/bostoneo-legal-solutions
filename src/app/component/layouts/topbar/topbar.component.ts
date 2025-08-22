@@ -122,8 +122,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }, 100);
     
-    // Load case management data
-    this.loadCaseManagementData();
+    // Load case management data with a delay to ensure user data is ready
+    setTimeout(() => {
+      this.loadCaseManagementData();
+    }, 1000);
   }
   
   /**
@@ -131,21 +133,53 @@ export class TopbarComponent implements OnInit, OnDestroy {
    */
   private loadCaseManagementData(): void {
     // Skip if user not authenticated
-    if (!this.userService.isAuthenticated()) return;
+    if (!this.userService.isAuthenticated()) {
+      console.log('User not authenticated, skipping case management data load');
+      return;
+    }
     
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (!user) return;
+      if (!user || !user.id) {
+        console.log('No user data available, retrying...');
+        // Retry after a delay if user data not available
+        setTimeout(() => {
+          this.loadCaseManagementDataDirect();
+        }, 500);
+        return;
+      }
+      
+      console.log('Loading case management data for user:', user.id);
+      this.loadCaseDataForUser(user.id);
+    });
+  }
+  
+  /**
+   * Direct load without subscription
+   */
+  private loadCaseManagementDataDirect(): void {
+    const userData = this.userService.getCurrentUser();
+    if (userData && userData.id) {
+      console.log('Direct loading case management data for user:', userData.id);
+      this.loadCaseDataForUser(userData.id);
+    }
+  }
+  
+  /**
+   * Load case data for a specific user
+   */
+  private loadCaseDataForUser(userId: number): void {
+    console.log('Loading case data for user ID:', userId);
       
       // Load user's case assignments
-      this.caseAssignmentService.getUserAssignments(user.id, 0, 10)
+      this.caseAssignmentService.getUserAssignments(userId, 0, 10)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            if (response.data) {
-              // Handle paginated response
-              const data = response.data as any;
-              const assignments = data.content ? data.content : 
-                                 Array.isArray(data) ? data : [];
+            console.log('Case assignments response:', response);
+            if (response && response.data) {
+              // Service now handles the mapping
+              const assignments = response.data;
+              console.log('Processed assignments:', assignments);
               if (assignments.length > 0) {
                 this.recentAssignments = assignments.slice(0, 3).map((assignment: CaseAssignment) => ({
                   id: assignment.id,
@@ -159,52 +193,80 @@ export class TopbarComponent implements OnInit, OnDestroy {
                 this.pendingAssignments = assignments.filter((a: CaseAssignment) => 
                   a.active === true
                 ).length;
+              } else {
+                // Set default values when no assignments
+                this.recentAssignments = [];
+                this.myCasesCount = 0;
+                this.pendingAssignments = 0;
               }
+            } else {
+              // Set default values when no data
+              this.recentAssignments = [];
+              this.myCasesCount = 0;
+              this.pendingAssignments = 0;
             }
             this.cdr.detectChanges();
           },
           error: (error) => {
             console.error('Error loading case assignments:', error);
+            // Set default values on error
+            this.recentAssignments = [];
+            this.myCasesCount = 0;
+            this.pendingAssignments = 0;
+            this.cdr.detectChanges();
           }
         });
       
       // Load user's workload
-      this.caseAssignmentService.calculateUserWorkload(user.id)
+      this.caseAssignmentService.calculateUserWorkload(userId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            if (response.data) {
-              this.teamWorkloadPercentage = Math.round(response.data.capacityPercentage || 0);
+            console.log('Workload response:', response);
+            if (response && response.data) {
+              // Service now handles the mapping
+              const workload = response.data;
+              this.teamWorkloadPercentage = Math.round(workload.capacityPercentage || 0);
+              console.log('Team workload percentage:', this.teamWorkloadPercentage);
             }
             this.cdr.detectChanges();
           },
           error: (error) => {
             console.error('Error loading workload:', error);
+            // Set default value on error
+            this.teamWorkloadPercentage = 0;
+            this.cdr.detectChanges();
           }
         });
       
       // Load active tasks count
-      this.caseTaskService.getUserTasks(user.id, { page: 0, size: 100 })
+      this.caseTaskService.getUserTasks(userId, { page: 0, size: 100 })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            if (response.data) {
-              const data = response.data as any;
-              const tasks = data.content ? data.content : 
-                           Array.isArray(data) ? data : [];
+            console.log('Tasks response:', response);
+            if (response && response.data) {
+              // Service now handles the mapping
+              const tasks = response.data;
+              console.log('Processed tasks:', tasks);
               if (tasks.length > 0) {
                 this.myTasksCount = tasks.filter((task: any) => 
                   task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
                 ).length;
+              } else {
+                this.myTasksCount = 0;
               }
+              console.log('Active tasks count:', this.myTasksCount);
             }
             this.cdr.detectChanges();
           },
           error: (error) => {
             console.error('Error loading tasks:', error);
+            // Set default value on error
+            this.myTasksCount = 0;
+            this.cdr.detectChanges();
           }
         });
-    });
   }
   
   /**

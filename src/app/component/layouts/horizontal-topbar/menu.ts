@@ -283,29 +283,36 @@ export const MENU: MenuItem[] = [
     requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
     subItems: [
       {
-        id: 'role-hierarchy',
-        label: 'Roles',
-        link: '/admin/role-hierarchy',
+        id: 'team-directory',
+        label: 'Team Directory',
+        link: '/users',
         parentId: 8,
-        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
+        requiredPermission: { resource: 'USER', action: 'VIEW' }
       },
       {
         id: 'roles',
-        label: 'Management',
+        label: 'Role Management',
         link: '/admin/roles',
         parentId: 8,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       },
       {
         id: 'user-roles',
-        label: 'Users',
+        label: 'User Role Assignment',
         link: '/admin/user-roles',
         parentId: 8,
-        requiredPermission: { resource: 'SYSTEM', action: 'EDIT' }
+        requiredPermission: { resource: 'ADMINISTRATIVE', action: 'EDIT' }
+      },
+      {
+        id: 'role-hierarchy',
+        label: 'Role Hierarchy',
+        link: '/admin/hierarchy',
+        parentId: 8,
+        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       },
       {
         id: 'audit-logs',
-        label: 'Audit',
+        label: 'Audit Logs',
         link: '/admin/audit-logs',
         parentId: 8,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
@@ -318,7 +325,7 @@ export const MENU: MenuItem[] = [
     id: 9,
     label: 'Profile',
     icon: 'ri-user-settings-line',
-    link: '/profile'
+    link: '/user'
   },
   
   {

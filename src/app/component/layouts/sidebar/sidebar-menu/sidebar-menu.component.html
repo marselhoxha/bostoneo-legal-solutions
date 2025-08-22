@@ -131,6 +131,9 @@
       <li class="nav-item" *ngIf="hasPermission('ADMINISTRATIVE', 'EDIT')">
         <a routerLink="/admin/user-roles" routerLinkActive="active" class="nav-link" data-key="t-user-roles">User Role Assignment</a>
       </li>
+      <li class="nav-item" *ngIf="hasPermission('SYSTEM', 'VIEW')">
+        <a routerLink="/admin/audit-logs" routerLinkActive="active" class="nav-link" data-key="t-audit-logs">Audit Logs</a>
+      </li>
     </ul>
   </div>
 </li>
@@ -144,7 +147,7 @@
 
 <!-- User Profile -->
 <li class="nav-item">
-  <a routerLink="/profile" routerLinkActive="active" class="nav-link menu-link">
+  <a routerLink="/user" routerLinkActive="active" class="nav-link menu-link">
     <i class="ri-user-settings-line"></i> <span data-key="t-profile">My Profile</span>
   </a>
 </li>

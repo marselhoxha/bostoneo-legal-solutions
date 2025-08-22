@@ -87,6 +87,31 @@ public class TaskManagementController {
                         .build());
     }
 
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getAllTasks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+        log.info("Getting all tasks - page: {}, size: {}", page, size);
+        
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? 
+            Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        
+        Page<CaseTaskDTO> tasks = taskManagementService.getAllTasks(pageable);
+        
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("tasks", tasks))
+                        .message("All tasks retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     @GetMapping("/{taskId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> getTask(@PathVariable Long taskId) {

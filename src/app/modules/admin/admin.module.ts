@@ -9,6 +9,7 @@ import { RoleAdminComponent } from './components/role-management/role-admin.comp
 import { PermissionAssignmentComponent } from './components/role-management/permission-assignment.component';
 import { UserRoleAssignmentComponent } from './components/user-role-management/user-role-assignment.component';
 import { RoleHierarchyComponent } from './components/role-hierarchy/role-hierarchy.component';
+import { AuditLogsComponent } from './components/audit-logs/audit-logs.component';
 import { SharedModule } from '../../shared/shared.module';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -45,6 +46,14 @@ const routes: Routes = [
         data: { 
           permission: { resource: 'SYSTEM', action: 'VIEW' } 
         }
+      },
+      { 
+        path: 'audit-logs', 
+        component: AuditLogsComponent,
+        canActivate: [AuthenticationGuard, PermissionGuard],
+        data: { 
+          permission: { resource: 'SYSTEM', action: 'VIEW' } 
+        }
       }
     ]
   }
@@ -56,7 +65,8 @@ const routes: Routes = [
     RoleFormComponent,
     PermissionAssignmentComponent,
     UserRoleAssignmentComponent,
-    RoleHierarchyComponent
+    RoleHierarchyComponent,
+    AuditLogsComponent
   ],
   imports: [
     CommonModule,

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { CustomHttpResponse as ApiResponse } from '../interface/custom-http-response';
 import { 
   CaseAssignment, 
@@ -17,7 +18,7 @@ import {
   providedIn: 'root'
 })
 export class CaseAssignmentService {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = 'http://localhost:8085/api/legal';
 
   constructor(private http: HttpClient) {}
 
@@ -54,8 +55,13 @@ export class CaseAssignmentService {
   }
 
   getCaseAssignments(caseId: number): Observable<ApiResponse<CaseAssignment[]>> {
-    return this.http.get<ApiResponse<CaseAssignment[]>>(
+    return this.http.get<ApiResponse<any>>(
       `${this.apiUrl}/case-assignments/case/${caseId}`
+    ).pipe(
+      map(response => ({
+        ...response,
+        data: response.data?.assignments || response.data || []
+      }))
     );
   }
 
@@ -75,9 +81,15 @@ export class CaseAssignmentService {
       .set('page', page.toString())
       .set('size', size.toString());
     
-    return this.http.get<ApiResponse<CaseAssignment[]>>(
+    return this.http.get<ApiResponse<any>>(
       `${this.apiUrl}/case-assignments/user/${userId}`,
       { params }
+    ).pipe(
+      map(response => ({
+        ...response,
+        // Backend returns { data: { assignments: Page } } where Page has content array
+        data: response.data?.assignments?.content || response.data?.assignments || []
+      }))
     );
   }
 
@@ -88,15 +100,25 @@ export class CaseAssignmentService {
   }
 
   getTeamMembers(caseId: number): Observable<ApiResponse<CaseAssignment[]>> {
-    return this.http.get<ApiResponse<CaseAssignment[]>>(
+    return this.http.get<ApiResponse<any>>(
       `${this.apiUrl}/case-assignments/case/${caseId}/team`
+    ).pipe(
+      map(response => ({
+        ...response,
+        data: response.data?.teamMembers || response.data || []
+      }))
     );
   }
 
   // Workload Management
   calculateUserWorkload(userId: number): Observable<ApiResponse<UserWorkload>> {
-    return this.http.get<ApiResponse<UserWorkload>>(
+    return this.http.get<ApiResponse<any>>(
       `${this.apiUrl}/case-assignments/workload/user/${userId}`
+    ).pipe(
+      map(response => ({
+        ...response,
+        data: response.data?.workload || response.data || {}
+      }))
     );
   }
 

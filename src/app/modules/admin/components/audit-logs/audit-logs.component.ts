@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditLogService, AuditLogEntry, AuditLogFilter } from '../../../../core/services/audit-log.service';
+import { AuditLogService } from '../../../../core/services/audit-log.service';
+import { AuditEntry, AuditQuery } from '../../../../interface/audit-log';
 import { RbacService } from '../../../../core/services/rbac.service';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,8 +11,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrls: ['./audit-logs.component.scss']
 })
 export class AuditLogsComponent implements OnInit {
-  auditLogs: AuditLogEntry[] = [];
-  recentActivities: AuditLogEntry[] = [];
+  auditLogs: AuditEntry[] = [];
+  recentActivities: AuditEntry[] = [];
   loading = false;
   filterForm: FormGroup;
   
@@ -66,21 +67,21 @@ export class AuditLogsComponent implements OnInit {
   loadAuditLogs(): void {
     this.loading = true;
     
-    const filter: AuditLogFilter = {
-      ...this.filterForm.value,
+    const query: AuditQuery = {
+      userId: this.filterForm.value.userId || undefined,
+      action: this.filterForm.value.action || undefined,
+      entityType: this.filterForm.value.resource || undefined,
+      startDate: this.filterForm.value.dateFrom ? new Date(this.filterForm.value.dateFrom) : undefined,
+      endDate: this.filterForm.value.dateTo ? new Date(this.filterForm.value.dateTo) : undefined,
       page: this.currentPage,
-      size: this.pageSize
+      size: this.pageSize,
+      sortBy: 'timestamp',
+      sortDirection: 'DESC'
     };
     
-    // Convert date strings to Date objects
-    if (filter.dateFrom) filter.dateFrom = new Date(filter.dateFrom);
-    if (filter.dateTo) filter.dateTo = new Date(filter.dateTo);
-    
-    this.auditLogService.getAuditLogs(filter).subscribe({
-      next: (response) => {
-        this.auditLogs = response.data?.content || [];
-        this.totalPages = response.data?.totalPages || 0;
-        this.totalElements = response.data?.totalElements || 0;
+    this.auditLogService.queryAuditLog(query).subscribe({
+      next: (entries) => {
+        this.auditLogs = entries || [];
         this.loading = false;
       },
       error: (error) => {
@@ -92,9 +93,9 @@ export class AuditLogsComponent implements OnInit {
   }
 
   loadRecentActivities(): void {
-    this.auditLogService.getRecentActivities(10).subscribe({
+    this.auditLogService.getRecentEntries().subscribe({
       next: (activities) => {
-        this.recentActivities = activities;
+        this.recentActivities = activities.slice(0, 10);
       },
       error: (error) => {
         console.error('Error loading recent activities:', error);
@@ -125,10 +126,7 @@ export class AuditLogsComponent implements OnInit {
     }
     
     // Log the export action
-    this.auditLogService.logAction('DATA_EXPORT', 'AUDIT_LOG', '', { 
-      exportType: 'audit_logs',
-      filters: this.filterForm.value 
-    }).subscribe();
+    this.auditLogService.logDataExport('AUDIT_LOG', this.auditLogs.length, 'CSV', 'AuditLogsComponent').subscribe();
     
     // TODO: Implement actual export functionality
     this.snackBar.open('Export functionality will be implemented', 'Close', { duration: 3000 });
