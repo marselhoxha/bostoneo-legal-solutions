@@ -130,7 +130,8 @@ export class TokenInterceptor implements HttpInterceptor {
   }
 
   private isPublicEndpoint(url: string): boolean {
+    // Note: refresh/token endpoint needs authentication, so don't treat it as public
     return url.includes('verify') || url.includes('login') || url.includes('register') 
-            || url.includes('refresh') || url.includes('resetpassword');
+            || url.includes('resetpassword');
   }
 }

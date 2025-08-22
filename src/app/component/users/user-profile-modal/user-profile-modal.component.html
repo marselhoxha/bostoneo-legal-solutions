@@ -1,0 +1,304 @@
+<div class="modal-header bg-light-subtle">
+  <h5 class="modal-title">
+    <i class="ri-user-line me-2"></i>User Profile
+  </h5>
+  <button type="button" class="btn-close" (click)="close()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Loading State -->
+  <div class="text-center py-4" *ngIf="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mt-2 mb-0">Loading user details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="text-center py-4" *ngIf="error && !loading">
+    <div class="avatar-lg mx-auto mb-3">
+      <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-24">
+        <i class="ri-error-warning-line"></i>
+      </div>
+    </div>
+    <h6 class="mb-2">Error Loading Profile</h6>
+    <p class="text-muted mb-0">{{ error }}</p>
+  </div>
+
+  <!-- User Profile Content -->
+  <div *ngIf="userDetails && !loading && !error">
+    <!-- Profile Header -->
+    <div class="text-center mb-4 pb-4 border-bottom">
+      <div class="profile-user position-relative d-inline-block mb-3">
+        <img *ngIf="userDetails.imageUrl" 
+             [src]="userDetails.imageUrl" 
+             alt="{{ userDetails.firstName }} {{ userDetails.lastName }}"
+             class="rounded-circle avatar-xl img-thumbnail">
+        <div *ngIf="!userDetails.imageUrl" 
+             class="avatar-xl rounded-circle bg-primary d-flex align-items-center justify-content-center">
+          <span class="text-white fs-20 fw-bold">{{ getUserInitials(userDetails) }}</span>
+        </div>
+        
+        <!-- Status Badge -->
+        <span class="position-absolute bottom-0 end-0 badge rounded-pill"
+              [ngClass]="'bg-' + getUserStatusClass(userDetails)">
+          {{ getUserStatusText(userDetails) }}
+        </span>
+      </div>
+      
+      <h4 class="mb-1">{{ userDetails.firstName }} {{ userDetails.lastName }}</h4>
+      <p class="text-muted mb-2">{{ userDetails.title || getRoleDisplayName(userDetails.roleName) }}</p>
+      
+      <!-- MFA Badge -->
+      <div class="mb-3" *ngIf="userDetails.usingMFA">
+        <span class="badge bg-success-subtle text-success">
+          <i class="ri-shield-check-line me-1"></i>Multi-Factor Authentication Enabled
+        </span>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="d-flex gap-2 justify-content-center" *ngIf="canViewContactInfo()">
+        <button class="btn btn-primary btn-sm" 
+                (click)="sendEmail()"
+                *ngIf="userDetails.email">
+          <i class="ri-mail-line me-1"></i>Email
+        </button>
+        <button class="btn btn-outline-primary btn-sm" 
+                (click)="callUser()"
+                *ngIf="userDetails.phone">
+          <i class="ri-phone-line me-1"></i>Call
+        </button>
+      </div>
+    </div>
+
+    <!-- Profile Details -->
+    <div class="row g-3">
+      <!-- Basic Information -->
+      <div class="col-12">
+        <h6 class="fw-semibold mb-3">
+          <i class="ri-information-line me-2 text-primary"></i>Basic Information
+        </h6>
+        
+        <div class="row g-3">
+          <div class="col-md-6" *ngIf="canViewContactInfo()">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-mail-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Email Address</h6>
+                <p class="text-muted mb-0">
+                  <a [href]="'mailto:' + userDetails.email" class="text-decoration-none">
+                    {{ userDetails.email }}
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6" *ngIf="userDetails.phone && canViewContactInfo()">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-phone-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Phone Number</h6>
+                <p class="text-muted mb-0">
+                  <a [href]="'tel:' + userDetails.phone" class="text-decoration-none">
+                    {{ userDetails.phone }}
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6" *ngIf="userDetails.address && canViewContactInfo()">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-map-pin-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Address</h6>
+                <p class="text-muted mb-0">{{ userDetails.address }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-calendar-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Member Since</h6>
+                <p class="text-muted mb-0">
+                  {{ userDetails.createdAt | date:'fullDate' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role & Permissions (Admin Only) -->
+      <div class="col-12" *ngIf="canViewSensitiveInfo()">
+        <hr class="my-4">
+        <h6 class="fw-semibold mb-3">
+          <i class="ri-shield-user-line me-2 text-primary"></i>Role & Access
+        </h6>
+        
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-user-settings-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Primary Role</h6>
+                <span class="badge bg-primary-subtle text-primary">
+                  {{ getRoleDisplayName(userDetails.roleName) }}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6" *ngIf="userDetails.roles && userDetails.roles.length > 1">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-xs">
+                  <div class="avatar-title bg-light text-muted rounded-circle fs-16">
+                    <i class="ri-group-line"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="mb-1 fs-14">Additional Roles</h6>
+                <div class="d-flex flex-wrap gap-1">
+                  <span *ngFor="let role of userDetails.roles.slice(1)" 
+                        class="badge bg-secondary-subtle text-secondary fs-12">
+                    {{ getRoleDisplayName(role) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="mt-3" *ngIf="userDetails.permissions && getPermissionsList(userDetails.permissions).length > 0">
+          <h6 class="mb-2 fs-14">Permissions</h6>
+          <div class="permissions-list">
+            <div class="d-flex flex-wrap gap-1">
+              <span *ngFor="let permission of getPermissionsList(userDetails.permissions).slice(0, 10)" 
+                    class="badge bg-info-subtle text-info fs-12">
+                {{ formatPermissionName(permission) }}
+              </span>
+              <span *ngIf="getPermissionsList(userDetails.permissions).length > 10"
+                    class="badge bg-light text-muted fs-12">
+                +{{ getPermissionsList(userDetails.permissions).length - 10 }} more
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bio Section -->
+      <div class="col-12" *ngIf="userDetails.bio">
+        <hr class="my-4">
+        <h6 class="fw-semibold mb-3">
+          <i class="ri-file-text-line me-2 text-primary"></i>About
+        </h6>
+        <p class="text-muted mb-0">{{ userDetails.bio }}</p>
+      </div>
+
+      <!-- Account Status -->
+      <div class="col-12" *ngIf="canViewSensitiveInfo()">
+        <hr class="my-4">
+        <h6 class="fw-semibold mb-3">
+          <i class="ri-settings-line me-2 text-primary"></i>Account Status
+        </h6>
+        
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-center">
+              <div class="avatar-sm mx-auto mb-2">
+                <div class="avatar-title rounded-circle"
+                     [ngClass]="userDetails.enabled ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                  <i [class]="userDetails.enabled ? 'ri-check-line' : 'ri-close-line'"></i>
+                </div>
+              </div>
+              <h6 class="mb-1 fs-14">Account</h6>
+              <p class="mb-0 fs-13" 
+                 [class]="userDetails.enabled ? 'text-success' : 'text-danger'">
+                {{ userDetails.enabled ? 'Enabled' : 'Disabled' }}
+              </p>
+            </div>
+          </div>
+          
+          <div class="col-md-4">
+            <div class="text-center">
+              <div class="avatar-sm mx-auto mb-2">
+                <div class="avatar-title rounded-circle"
+                     [ngClass]="userDetails.notLocked ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
+                  <i [class]="userDetails.notLocked ? 'ri-lock-unlock-line' : 'ri-lock-line'"></i>
+                </div>
+              </div>
+              <h6 class="mb-1 fs-14">Access</h6>
+              <p class="mb-0 fs-13" 
+                 [class]="userDetails.notLocked ? 'text-success' : 'text-warning'">
+                {{ userDetails.notLocked ? 'Unlocked' : 'Locked' }}
+              </p>
+            </div>
+          </div>
+          
+          <div class="col-md-4">
+            <div class="text-center">
+              <div class="avatar-sm mx-auto mb-2">
+                <div class="avatar-title rounded-circle"
+                     [ngClass]="userDetails.usingMFA ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                  <i [class]="userDetails.usingMFA ? 'ri-shield-check-line' : 'ri-shield-line'"></i>
+                </div>
+              </div>
+              <h6 class="mb-1 fs-14">MFA</h6>
+              <p class="mb-0 fs-13" 
+                 [class]="userDetails.usingMFA ? 'text-success' : 'text-muted'">
+                {{ userDetails.usingMFA ? 'Enabled' : 'Disabled' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer bg-light-subtle">
+  <button type="button" class="btn btn-light" (click)="close()">Close</button>
+  <div class="ms-auto" *ngIf="userDetails && canViewContactInfo()">
+    <button class="btn btn-primary" 
+            (click)="sendEmail()"
+            *ngIf="userDetails.email">
+      <i class="ri-mail-send-line me-1"></i>Send Email
+    </button>
+  </div>
+</div>

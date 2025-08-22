@@ -28,5 +28,10 @@ public class UserQuery {
     public static final String UPDATE_USER_PASSWORD_BY_USER_ID_QUERY = "UPDATE users SET password = :password WHERE id = :id";
     public static final String SELECT_ALL_USERS_QUERY = "SELECT * FROM users ORDER BY id LIMIT :pageSize OFFSET :offset";
     public static final String COUNT_ALL_USERS_QUERY = "SELECT COUNT(*) FROM users";
+    
+    // Delete user and related data
+    public static final String DELETE_USER_ROLES_QUERY = "DELETE FROM user_roles WHERE user_id = :userId";
+    public static final String DELETE_USER_EVENTS_QUERY = "DELETE FROM userevents WHERE user_id = :userId";
+    public static final String DELETE_USER_QUERY = "DELETE FROM users WHERE id = :userId";
 
 }

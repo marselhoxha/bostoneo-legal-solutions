@@ -122,6 +122,9 @@
   </a>
   <div class="collapse menu-dropdown" id="sidebarAdmin">
     <ul class="nav nav-sm flex-column">
+      <li class="nav-item" *ngIf="hasPermission('USER', 'VIEW')">
+        <a routerLink="/users" routerLinkActive="active" class="nav-link" data-key="t-team-directory">Team Directory</a>
+      </li>
       <li class="nav-item" *ngIf="hasPermission('ADMINISTRATIVE', 'VIEW')">
         <a routerLink="/admin/roles" routerLinkActive="active" class="nav-link" data-key="t-roles">Role Management</a>
       </li>

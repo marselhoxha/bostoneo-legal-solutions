@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { AccountType, CustomHttpResponse, Profile } from '../interface/appstates';
 import { User } from '../interface/user';
@@ -184,7 +185,7 @@ export class UserService {
    * Get all users
    */
   getUsers(): Observable<CustomHttpResponse<any>> {
-    return this.http.get<CustomHttpResponse<any>>(`${this.server}/api/users`)
+    return this.http.get<CustomHttpResponse<any>>(`${this.server}/user/list`)
       .pipe(
         catchError(this.handleError)
       );
@@ -194,8 +195,34 @@ export class UserService {
    * Get user by ID
    */
   getUserById(userId: number): Observable<CustomHttpResponse<User>> {
-    return this.http.get<CustomHttpResponse<User>>(`${this.server}/api/users/${userId}`)
+    // For now, get user from the list since there's no specific getUserById endpoint
+    // TODO: Create a specific backend endpoint for getting user by ID
+    return this.getUsers().pipe(
+      map(response => {
+        const users = response?.data?.users || [];
+        const user = users.find((u: User) => u.id === userId);
+        if (user) {
+          return {
+            ...response,
+            data: user
+          };
+        } else {
+          throw new Error(`User with ID ${userId} not found`);
+        }
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Delete user by ID
+   */
+  deleteUser(userId: number): Observable<CustomHttpResponse<any>> {
+    return this.http.delete<CustomHttpResponse<any>>(`${this.server}/user/delete/${userId}`)
       .pipe(
+        tap(response => {
+          console.log('User deleted:', response);
+        }),
         catchError(this.handleError)
       );
   }

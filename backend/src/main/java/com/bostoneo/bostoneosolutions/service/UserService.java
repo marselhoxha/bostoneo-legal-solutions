@@ -24,4 +24,5 @@ public interface UserService {
     UserDTO toggleMfa(String email);
     void updateImage(UserDTO user, MultipartFile image);
     Collection<User> getUsers(int page, int pageSize);
+    void deleteUser(Long userId);
 }

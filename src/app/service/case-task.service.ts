@@ -21,9 +21,9 @@ export class CaseTaskService {
   constructor(private http: HttpClient) {}
 
   // Task CRUD Operations
-  createTask(task: TaskCreateRequest): Observable<ApiResponse<CaseTask>> {
-    return this.http.post<ApiResponse<CaseTask>>(
-      `${this.apiUrl}/tasks`, 
+  createTask(task: TaskCreateRequest): Observable<ApiResponse<{task: CaseTask}>> {
+    return this.http.post<ApiResponse<{task: CaseTask}>>(
+      `http://localhost:8085/api/legal/tasks`, 
       task
     );
   }

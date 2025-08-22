@@ -2,6 +2,7 @@ package com.***REMOVED***.***REMOVED***solutions.config;
 
 import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
@@ -55,15 +56,35 @@ public class AuditAspect {
                 return result;
             }
             
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String username = userDetails.getUsername();
+            // Handle both UserDetails and UserDTO as principal
+            String username = null;
+            Long userId = null;
             
-            // Find user by email/username
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDetails) {
+                UserDetails userDetails = (UserDetails) principal;
+                username = userDetails.getUsername();
+            } else if (principal instanceof UserDTO) {
+                UserDTO userDTO = (UserDTO) principal;
+                username = userDTO.getEmail();
+                userId = userDTO.getId();
+            } else {
+                log.debug("Unknown principal type: " + principal.getClass().getName());
+                return result;
+            }
+            
+            // Find user by email/username or use the userId from UserDTO
             User user = null;
             try {
-                user = userRepository.getUserByEmail(username);
+                if (userId != null) {
+                    // If we have userId from UserDTO, get the user directly
+                    user = userRepository.get(userId);
+                } else if (username != null) {
+                    // Otherwise, try to find by email
+                    user = userRepository.getUserByEmail(username);
+                }
             } catch (Exception e) {
-                log.debug("User not found: " + username);
+                log.debug("User not found: " + (userId != null ? "ID " + userId : username));
                 return result;
             }
             

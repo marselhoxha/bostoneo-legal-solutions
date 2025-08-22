@@ -2,6 +2,7 @@ package com.***REMOVED***.***REMOVED***solutions.service.implementation;
 
 import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper;
+import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
 import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
 import com.***REMOVED***.***REMOVED***solutions.model.Permission;
 import com.***REMOVED***.***REMOVED***solutions.model.Role;
@@ -70,7 +71,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO getUserById(Long userId) {
-        return mapToUserDTO(userRepository.get(userId));
+        return mapToUserDTO(userRepository.findByIdWithRoles(userId));
     }
 
     @Override
@@ -103,6 +104,18 @@ public class UserServiceImpl implements UserService {
      */
     public Collection<User> getUsers(int page, int pageSize) {
         return userRepository.list(page, pageSize);
+    }
+
+    @Override
+    public void deleteUser(Long userId) {
+        // Check if user exists before deletion
+        User user = userRepository.get(userId);
+        if (user == null) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+        
+        // Delete the user
+        userRepository.delete(userId);
     }
 
     private UserDTO mapToUserDTO(User user) {

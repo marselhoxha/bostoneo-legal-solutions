@@ -2346,16 +2346,37 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Handle task creation result - Enhanced with sync service
    */
   private handleTaskCreated(result: any): void {
+    console.log('🔧 handleTaskCreated - full result object:', result);
     if (result.action === 'created' && result.task) {
       const task = result.task;
       console.log('🔧 handleTaskCreated - task object:', task);
+      console.log('🔧 handleTaskCreated - task.title:', task.title);
+      console.log('🔧 handleTaskCreated - task.name:', task.name);
+      console.log('🔧 handleTaskCreated - result.assignedUser:', result.assignedUser);
       
       // Handle undefined task title with fallback
       const taskTitle = task.title || task.name || 'New Task';
       let message = `Task "${taskTitle}" created successfully`;
       
-      // If task was assigned during creation
-      if (result.assignedUser && task.id) {
+      // Check if task was assigned during creation - use task data instead of modal data
+      if (task.assignedToId && task.assignedToName) {
+        message += ` and assigned to ${task.assignedToName}`;
+        console.log('✅ Task already assigned in backend to:', task.assignedToName);
+        
+        // Show notification for task with assignment
+        this.showNotification(message, 'success', {
+          caseId: this.caseId,
+          taskId: task.id,
+          taskTitle: taskTitle,
+          assignedTo: task.assignedToName,
+          action: 'TASK_CREATED_AND_ASSIGNED'
+        });
+        
+        // Refresh the tasks and team data
+        this.loadAllCaseTasks(this.caseId!);
+        this.loadCaseTeam(this.caseId!);
+      } else if (result.assignedUser && task.id) {
+        // Fallback to modal selected user if task doesn't have assignment info
         const user = result.assignedUser;
         message += ` and assigned to ${user.firstName} ${user.lastName}`;
         
@@ -2599,5 +2620,110 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   getUnassignedTasksCount(): number {
     const unassignedTasks = this.getUnassignedTasks();
     return unassignedTasks ? unassignedTasks.length : 0;
+  }
+
+  /**
+   * Get all tasks for the case
+   */
+  getAllTasks(): CaseTask[] {
+    return this.recentTasks || [];
+  }
+
+  /**
+   * Get completed tasks
+   */
+  getCompletedTasks(): CaseTask[] {
+    return this.recentTasks?.filter(task => task.status === 'COMPLETED') || [];
+  }
+
+  /**
+   * Get in progress tasks
+   */
+  getInProgressTasks(): CaseTask[] {
+    return this.recentTasks?.filter(task => task.status === 'IN_PROGRESS') || [];
+  }
+
+  /**
+   * Get tasks in review
+   */
+  getTasksInReview(): CaseTask[] {
+    return this.recentTasks?.filter(task => task.status === 'REVIEW') || [];
+  }
+
+  /**
+   * Calculate case progress percentage based on completed tasks
+   */
+  getCaseProgressPercentage(): number {
+    const totalTasks = this.getAllTasks().length;
+    if (totalTasks === 0) return 0;
+    
+    const completedTasks = this.getCompletedTasks().length;
+    return Math.round((completedTasks / totalTasks) * 100);
+  }
+
+  /**
+   * Get tasks with upcoming deadlines (within 3 days)
+   */
+  getUpcomingDeadlines(): CaseTask[] {
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    
+    return this.recentTasks?.filter(task => {
+      if (!task.dueDate) return false;
+      const dueDate = new Date(task.dueDate);
+      const today = new Date();
+      return dueDate >= today && dueDate <= threeDaysFromNow && task.status !== 'COMPLETED';
+    }) || [];
+  }
+
+  /**
+   * View upcoming deadlines
+   */
+  viewUpcomingDeadlines(): void {
+    const upcomingTasks = this.getUpcomingDeadlines();
+    const taskList = upcomingTasks.map(task => 
+      `• ${task.title} (Due: ${new Date(task.dueDate!).toLocaleDateString()})`
+    ).join('\n');
+
+    Swal.fire({
+      title: 'Upcoming Deadlines',
+      text: upcomingTasks.length > 0 ? taskList : 'No upcoming deadlines',
+      icon: 'info',
+      confirmButtonText: 'OK'
+    });
+  }
+
+  /**
+   * Get team efficiency tip based on current workload and task distribution
+   */
+  getTeamEfficiencyTip(): string | null {
+    const totalTasks = this.getAllTasks().length;
+    const unassignedTasks = this.getUnassignedTasks().length;
+    const overdueTasks = this.getOverdueTasks().length;
+    const teamMembers = this.caseTeamMembers?.length || 0;
+
+    if (totalTasks === 0) return null;
+
+    if (unassignedTasks > totalTasks * 0.3) {
+      return 'Consider assigning unassigned tasks to balance workload across team members.';
+    }
+
+    if (overdueTasks > 0) {
+      return 'Focus on completing overdue tasks first to keep the case on track.';
+    }
+
+    if (teamMembers > 0 && this.getOverCapacityCount() > 0) {
+      return 'Some team members are overloaded. Consider redistributing tasks for better efficiency.';
+    }
+
+    if (this.getInProgressTasks().length > this.getCompletedTasks().length * 2) {
+      return 'Too many tasks in progress. Focus on completing current tasks before starting new ones.';
+    }
+
+    if (this.getCaseProgressPercentage() > 75) {
+      return 'Great progress! Consider reviewing completed work and preparing for case conclusion.';
+    }
+
+    return null;
   }
 }

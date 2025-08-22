@@ -26,7 +26,7 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+//@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class EnhancedSecurityConfig {
     
@@ -75,6 +75,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers(PUBLIC_URLS)
             .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
             .ignoringRequestMatchers("/api/time-entries/**", "/api/**")
+            .ignoringRequestMatchers("/user/delete/**")  // Ignore CSRF for user deletion
             .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
         );
         

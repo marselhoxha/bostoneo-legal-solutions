@@ -1011,10 +1011,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
           
           // Add through context service for real-time sync
           if (this.caseMode) {
-            this.caseContextService.addTask({ ...response.data });
+            this.caseContextService.addTask({ ...response.data.task });
           } else {
             // Add to local array for all-tasks mode
-            this.allTasks.unshift({ ...response.data });
+            this.allTasks.unshift({ ...response.data.task });
             this.filterTasksByStatus();
           }
           this.cdr.detectChanges();

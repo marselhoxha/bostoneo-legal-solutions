@@ -1,0 +1,255 @@
+<!-- Start Breadcrumbs -->
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0 fw-bold">Team Directory</h4>
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="javascript: void(0);">Administration</a></li>
+          <li class="breadcrumb-item active">Team Directory</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End Breadcrumbs -->
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <div class="flex-grow-1">
+                        <button class="btn btn-secondary add-btn" *ngIf="rbacService.hasPermissionSync('USER', 'CREATE')" (click)="openAddUserModal()">
+                            <i class="ri-add-fill me-1 align-bottom"></i> Add User
+                        </button>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="hstack text-nowrap gap-2">
+                            <button class="btn btn-soft-danger" id="remove-actions" style="display: none"><i class="ri-delete-bin-2-line"></i></button>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" type="button" data-bs-toggle="dropdown">
+                                    <i class="ri-filter-2-line me-1 align-bottom"></i> Filters
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header">Filter by Role</h6></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);" (click)="onRoleFilter('')">All Roles</a></li>
+                                    <li *ngFor="let role of availableRoles">
+                                        <a class="dropdown-item" href="javascript:void(0);" (click)="onRoleFilter(role)">{{ role }}</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);" (click)="clearFilters()">Clear Filters</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-soft-success" (click)="csvFileExport()">Export</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--end col-->
+    <div class="col-xxl-9">
+        <div class="card" id="usersList">
+            <div class="card-header">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <div class="search-box">
+                            <input type="text" name="searchTerm" class="form-control"
+                                placeholder="Search for user..." 
+                                [value]="state.searchTerm"
+                                (input)="onSearch($any($event.target).value)">
+                            <i class="ri-search-line search-icon"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-auto ms-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted text-nowrap">Sort by: </span>
+                            <select class="form-control mb-0" 
+                                    [value]="state.sortBy"
+                                    (change)="onSort($any($event.target).value)">
+                                <option value="firstName">Name</option>
+                                <option value="email">Email</option>
+                                <option value="title">Title</option>
+                                <option value="createdAt">Joined Date</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div>
+
+                    <div class="table-responsive table-card mb-2">
+                        <table class="table">
+                            <thead>
+                                <tr class="bg-light">
+                                    <th scope="col" style="width: 50px;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="checkAll" [checked]="masterSelected" (change)="checkUncheckAll($event)">
+                                        </div>
+                                    </th>
+                                    <th class="sort" (click)="onSort('firstName')">Name</th>
+                                    <th class="sort" (click)="onSort('email')">Email</th>
+                                    <th class="sort" (click)="onSort('title')">Title</th>
+                                    <th class="sort" (click)="onSort('createdAt')">Joined</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let user of getPaginatedUsers(); trackBy: trackByUserId; let i = index" [id]="'u_' + user.id">
+                                    <th scope="row">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="checkAll"
+                                                [value]="user.id" [checked]="user.state"
+                                                (change)="onCheckboxChange($event)">
+                                        </div>
+                                    </th>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <img *ngIf="user.imageUrl" [src]="user.imageUrl" alt=""
+                                                    class="avatar-xxs rounded-circle image_src">
+                                                <div *ngIf="!user.imageUrl" class="avatar-xxs rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fs-10">
+                                                    {{ getUserInitials(user) }}
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-2 name">{{ user.firstName }} {{ user.lastName }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.title || 'Legal Professional' }}</td>
+                                    <td>{{ getJoinedDate(user) }}</td>
+                                    <td>
+                                        <ul class="list-inline hstack gap-2 mb-0">
+                                            <li class="list-inline-item edit" title="Call" placement="top">
+                                                <a [href]="'tel:' + user.phone" class="text-muted d-inline-block" *ngIf="user.phone">
+                                                    <i class="ri-phone-line fs-16"></i>
+                                                </a>
+                                            </li>
+                                            <li class="list-inline-item edit" title="Email" placement="top">
+                                                <a [href]="'mailto:' + user.email" class="text-muted d-inline-block">
+                                                    <i class="ri-mail-line fs-16"></i>
+                                                </a>
+                                            </li>
+                                            <li class="list-inline-item" title="View" placement="top">
+                                                <a href="javascript:void(0);" (click)="viewDataGet(i)"><i
+                                                        class="ri-eye-fill align-bottom text-muted"></i></a>
+                                            </li>
+                                            <li class="list-inline-item me-0" title="Delete" placement="top" *ngIf="rbacService.hasPermissionSync('USER', 'DELETE')">
+                                                <a class="remove-item-btn" href="javascript:void(0);" (click)="deleteUser(user)">
+                                                    <i class="ri-delete-bin-fill align-bottom text-muted"></i>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <!-- Pagination -->
+                        <div class="pagination-wrap hstack gap-2" 
+                             *ngIf="!state.loading && !state.error && state.filteredUsers.length > 0 && getTotalPages() > 1">
+                            <a class="page-item pagination-prev" 
+                               [class.disabled]="state.currentPage === 1"
+                               href="javascript:void(0);"
+                               (click)="onPageChange(state.currentPage - 1)">
+                              Previous
+                            </a>
+                            <ul class="pagination listjs-pagination mb-0">
+                              <li *ngFor="let page of getPageNumbers()"
+                                  [class.active]="page === state.currentPage">
+                                <a class="page" 
+                                   href="javascript:void(0);"
+                                   (click)="onPageChange(page)">{{ page }}</a>
+                              </li>
+                            </ul>
+                            <a class="page-item pagination-next"
+                               [class.disabled]="state.currentPage === getTotalPages()"
+                               href="javascript:void(0);"
+                               (click)="onPageChange(state.currentPage + 1)">
+                              Next
+                            </a>
+                        </div>
+                        <!-- End Pagination -->
+                    </div>
+                    <div id="elmLoader" *ngIf="state.loading">
+                        <div class="spinner-border text-primary avatar-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <!--end card-->
+    </div>
+    <!--end col-->
+    <div class="col-xxl-3">
+        <div class="card" id="user-view-detail">
+            <div class="card-body text-center user-details">
+                <div class="position-relative d-inline-block">
+                    <div class="avatar-md">
+                        <div class="avatar-title bg-light rounded-circle">
+                            <img src="assets/images/users/avatar-1.jpg" alt=""
+                                class="avatar-sm rounded-circle object-fit-cover">
+                        </div>
+                    </div>
+                </div>
+                <h5 class="mt-3 mb-1">Select a User</h5>
+                <p class="text-muted">Click on a user to view details</p>
+
+                <ul class="list-inline mb-0">
+                    <li class="list-inline-item avatar-xs">
+                        <a href="javascript:void(0);" class="avatar-title bg-success-subtle text-success fs-15 rounded sidebar-email-btn" title="Send Email">
+                            <i class="ri-mail-line"></i>
+                        </a>
+                    </li>
+                    <li class="list-inline-item avatar-xs">
+                        <a href="javascript:void(0);" class="avatar-title bg-primary-subtle text-primary fs-15 rounded sidebar-phone-btn" title="Call">
+                            <i class="ri-phone-line"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase fw-semibold mb-3">Information</h6>
+                <p class="text-muted mb-4 user-bio">Select a team member from the list to view their detailed information and contact details.</p>
+                <div class="table-responsive table-card">
+                    <table class="table table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="fw-medium" scope="row">Role</td>
+                                <td class="role">-</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium" scope="row">Location</td>
+                                <td class="location">-</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium" scope="row">Status</td>
+                                <td class="status">-</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium" scope="row">Email</td>
+                                <td class="email">-</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium" scope="row">Phone</td>
+                                <td class="phone">-</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium" scope="row">Joined</td>
+                                <td class="joined">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!--end card-->
+    </div>
+    <!--end col-->
+</div>
+<!--end row-->

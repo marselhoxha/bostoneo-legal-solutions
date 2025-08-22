@@ -940,9 +940,6 @@
                               <div class="mt-3">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                   <span class="text-muted fs-13">Assigned Tasks ({{ getMemberTasks(member.userId).length }})</span>
-                                  <button class="btn btn-soft-primary btn-xs" (click)="openQuickTaskModal(member.id)">
-                                    <i class="ri-add-line me-1"></i>Add Task
-                                  </button>
                                 </div>
                                 
                                 <!-- Task List -->
@@ -980,10 +977,7 @@
                                 <ng-template #noTasks>
                                   <div class="text-center py-3 bg-light-subtle rounded">
                                     <i class="ri-task-line text-muted fs-20 mb-2"></i>
-                                    <p class="text-muted mb-2 fs-13">No tasks assigned</p>
-                                    <button class="btn btn-soft-primary btn-xs" (click)="openQuickTaskModal(member.id)">
-                                      <i class="ri-add-line me-1"></i>Add Task
-                                    </button>
+                                    <p class="text-muted mb-0 fs-13">No tasks assigned</p>
                                   </div>
                                 </ng-template>
                               </div>
@@ -1065,18 +1059,74 @@
                       </h6>
                     </div>
                     <div class="card-body">
-                      <!-- Overdue Tasks Alert -->
+                      <!-- Task Status Overview -->
+                      <div class="row g-3 mb-3">
+                        <div class="col-6">
+                          <div class="text-center">
+                            <div class="fs-18 fw-bold text-primary">{{ getAllTasks().length }}</div>
+                            <div class="text-muted fs-13">Total Tasks</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center">
+                            <div class="fs-18 fw-bold text-success">{{ getCompletedTasks().length }}</div>
+                            <div class="text-muted fs-13">Completed</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center">
+                            <div class="fs-18 fw-bold text-warning">{{ getInProgressTasks().length }}</div>
+                            <div class="text-muted fs-13">In Progress</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center">
+                            <div class="fs-18 fw-bold text-info">{{ getTasksInReview().length }}</div>
+                            <div class="text-muted fs-13">In Review</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Progress Bar -->
+                      <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                          <span class="fs-13 text-muted">Case Progress</span>
+                          <span class="fs-13 fw-medium">{{ getCaseProgressPercentage() }}%</span>
+                        </div>
+                        <div class="progress progress-sm">
+                          <div class="progress-bar" [style.width.%]="getCaseProgressPercentage()"></div>
+                        </div>
+                      </div>
+
+                      <!-- Alerts -->
                       <div class="alert alert-warning alert-sm mb-3" *ngIf="getOverdueTasks().length > 0">
                         <i class="ri-alarm-warning-line me-2"></i>
                         <strong>{{ getOverdueTasks().length }}</strong> overdue tasks need attention
                         <button class="btn btn-warning btn-xs float-end" (click)="viewOverdueTasks()">View</button>
                       </div>
 
-                      <!-- Workload Alerts -->
                       <div class="alert alert-danger alert-sm mb-3" *ngIf="getOverCapacityCount() > 0">
                         <i class="ri-error-warning-line me-2"></i>
                         <strong>{{ getOverCapacityCount() }}</strong> team members over capacity
                         <button class="btn btn-danger btn-xs float-end" (click)="openWorkloadBalancingModal()">Balance</button>
+                      </div>
+
+                      <!-- Upcoming Deadlines -->
+                      <div class="alert alert-info alert-sm mb-3" *ngIf="getUpcomingDeadlines().length > 0">
+                        <i class="ri-calendar-line me-2"></i>
+                        <strong>{{ getUpcomingDeadlines().length }}</strong> tasks due within 3 days
+                        <button class="btn btn-info btn-xs float-end" (click)="viewUpcomingDeadlines()">View</button>
+                      </div>
+
+                      <!-- Team Efficiency Tip -->
+                      <div class="bg-light-subtle p-3 rounded mb-3" *ngIf="getTeamEfficiencyTip()">
+                        <div class="d-flex align-items-start">
+                          <i class="ri-lightbulb-line text-warning me-2 mt-1"></i>
+                          <div class="flex-grow-1">
+                            <h6 class="mb-1 fs-14">Efficiency Tip</h6>
+                            <p class="mb-0 fs-13 text-muted">{{ getTeamEfficiencyTip() }}</p>
+                          </div>
+                        </div>
                       </div>
 
                       <!-- Success State -->

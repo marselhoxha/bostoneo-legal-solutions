@@ -126,7 +126,118 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
     @Override
     public Boolean delete(Long id) {
-        return null;
+        try {
+            // Check if user exists
+            User user = get(id);
+            if (user == null) {
+                throw new ApiException("User not found with ID: " + id);
+            }
+            
+            // DELETE ALL FOREIGN KEY REFERENCES - BASED ON ACTUAL DATABASE SCHEMA
+            
+            // Delete verifications
+            jdbc.update("DELETE FROM TwoFactorVerifications WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM ResetPasswordVerifications WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM AccountVerifications WHERE user_id = :userId", of("userId", id));
+            
+            // Delete user events and activities
+            jdbc.update("DELETE FROM UserEvents WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM activity_summary WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM audit_log WHERE user_id = :userId", of("userId", id));
+            
+            // Delete attorney expertise
+            jdbc.update("DELETE FROM attorney_expertise WHERE user_id = :userId", of("userId", id));
+            
+            // Delete timer and time tracking
+            jdbc.update("DELETE FROM active_timers WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM timer_sessions WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM mobile_time_entries WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM time_entry_approvals WHERE approver_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM time_reports_cache WHERE user_id = :userId", of("userId", id));
+            
+            // Delete billing
+            jdbc.update("DELETE FROM billing_rates WHERE user_id = :userId", of("userId", id));
+            
+            // Delete calendar
+            jdbc.update("DELETE FROM calendar_event_participants WHERE user_id = :userId OR added_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM calendar_events WHERE user_id = :userId", of("userId", id));
+            
+            // Delete case related - handle foreign keys in correct order
+            jdbc.update("DELETE FROM case_timeline WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM case_reminders WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM case_activities WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM case_access_requests WHERE requested_by = :userId OR reviewed_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM case_notes WHERE user_id = :userId OR updated_by = :userId", of("userId", id));
+            
+            // Delete case transfers
+            jdbc.update("DELETE FROM case_transfer_requests WHERE from_user_id = :userId OR to_user_id = :userId OR requested_by = :userId OR approved_by = :userId", of("userId", id));
+            
+            // Delete case team assignments
+            jdbc.update("DELETE FROM case_team_assignments WHERE user_id = :userId OR assigned_by = :userId", of("userId", id));
+            
+            // Delete case assignment history BEFORE case_assignments
+            jdbc.update("DELETE FROM case_assignment_history WHERE user_id = :userId OR previous_user_id = :userId OR new_user_id = :userId OR performed_by = :userId", of("userId", id));
+            
+            // Delete case assignments
+            jdbc.update("DELETE FROM case_assignments WHERE user_id = :userId OR assigned_by = :userId", of("userId", id));
+            
+            // Handle case_tasks self-referencing parent_task_id
+            jdbc.update("UPDATE case_tasks ct1 INNER JOIN case_tasks ct2 ON ct1.parent_task_id = ct2.id SET ct1.parent_task_id = NULL WHERE ct2.assigned_to = :userId OR ct2.assigned_by = :userId", of("userId", id));
+            
+            // Delete task comments BEFORE case_tasks
+            jdbc.update("DELETE FROM task_comments WHERE user_id = :userId", of("userId", id));
+            
+            // Delete case tasks
+            jdbc.update("DELETE FROM case_tasks WHERE assigned_to = :userId OR assigned_by = :userId", of("userId", id));
+            
+            // Delete department role assignments
+            jdbc.update("DELETE FROM department_role_assignments WHERE user_id = :userId", of("userId", id));
+            
+            // Delete document/file related
+            jdbc.update("DELETE FROM document_access_log WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM document_versions WHERE uploaded_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM document_visibility_overrides WHERE user_id = :userId OR granted_by = :userId", of("userId", id));
+            jdbc.update("UPDATE documents SET uploaded_by = NULL WHERE uploaded_by = :userId", of("userId", id));
+            
+            // Delete file system related
+            jdbc.update("DELETE FROM file_access_logs WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_comments WHERE created_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_items WHERE created_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_permissions WHERE user_id = :userId OR granted_by = :userId OR revoked_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_shares WHERE shared_by = :userId OR shared_with = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_tags WHERE created_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_versions WHERE uploaded_by = :userId", of("userId", id));
+            jdbc.update("UPDATE folders SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+            
+            // Delete financial
+            jdbc.update("DELETE FROM financial_access_permissions WHERE user_id = :userId OR granted_by = :userId", of("userId", id));
+            jdbc.update("UPDATE expenses SET created_by_user_id = NULL WHERE created_by_user_id = :userId", of("userId", id));
+            jdbc.update("UPDATE invoice_templates SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+            jdbc.update("UPDATE invoice_workflow_rules SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+            jdbc.update("UPDATE invoices SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+            jdbc.update("UPDATE payment_transactions SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+            
+            // Delete legal documents
+            jdbc.update("UPDATE legaldocument SET uploadedBy = NULL WHERE uploadedBy = :userId", of("userId", id));
+            
+            // Delete workload
+            jdbc.update("DELETE FROM user_workload WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM workload_calculations WHERE user_id = :userId", of("userId", id));
+            
+            // Delete user roles (appears twice in FK list, but delete once)
+            jdbc.update(DELETE_USER_ROLES_QUERY, of("userId", id));
+            
+            // NOTE: We're NOT deleting time_entries as they are needed for billing/audit
+            
+            // FINALLY, delete the user
+            int rowsAffected = jdbc.update(DELETE_USER_QUERY, of("userId", id));
+            
+            return rowsAffected > 0;
+            
+        } catch (Exception exception) {
+            log.error("Error deleting user with ID: " + id, exception);
+            throw new ApiException("An error occurred while deleting the user. Error: " + exception.getMessage());
+        }
     }
 
     private Integer getEmailCount(String email) {

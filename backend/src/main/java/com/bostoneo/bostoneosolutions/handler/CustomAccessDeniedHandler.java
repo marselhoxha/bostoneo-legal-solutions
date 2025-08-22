@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
@@ -19,9 +21,23 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Component
+@Slf4j
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        log.error("🚨 ACCESS DENIED HANDLER TRIGGERED!");
+        log.error("- Request: {} {}", request.getMethod(), request.getRequestURI());
+        log.error("- Exception: {}", accessDeniedException.getMessage());
+        
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            log.error("- Principal: {}", auth.getPrincipal());
+            log.error("- Authorities: {}", auth.getAuthorities());
+            log.error("- Authenticated: {}", auth.isAuthenticated());
+        } else {
+            log.error("- No Authentication found in SecurityContext");
+        }
+        
         HttpResponse httpResponse = HttpResponse
                 .builder()
                 .timeStamp(now().toString())

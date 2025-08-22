@@ -19,10 +19,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,9 +33,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.TOKEN_PREFIX;
 import static com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper.toUser;
@@ -51,6 +57,7 @@ import static org.springframework.web.servlet.support.ServletUriComponentsBuilde
 @RestController
 @RequestMapping(path = "/user")
 @RequiredArgsConstructor
+@Slf4j
 public class UserResource {
     private final UserService userService;
     private final RoleService roleService;
@@ -263,9 +270,14 @@ public class UserResource {
 
     @GetMapping("/refresh/token")
     public ResponseEntity<HttpResponse> refreshToken(HttpServletRequest request) {
+        log.info("Token refresh request received");
+        log.info("Authorization header: {}", request.getHeader(AUTHORIZATION));
+        
         if(isHeaderAndTokenValid(request)) {
             String token = request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length());
+            log.info("Extracted token for refresh: {}", token != null ? "present" : "null");
             UserDTO user = userService.getUserById(tokenProvider.getSubject(token, request));
+            log.info("User found for refresh: {}", user != null ? user.getEmail() : "null");
             return ResponseEntity.ok().body(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
@@ -317,14 +329,74 @@ public class UserResource {
                 .build(), NOT_FOUND);
     }*/
 
+    @GetMapping("/test-delete/{userId}")
+    public ResponseEntity<String> testDeleteEndpoint(@PathVariable("userId") Long userId) {
+        log.info("🧪 TEST DELETE ENDPOINT REACHED! User ID: {}", userId);
+        return ResponseEntity.ok("Test delete endpoint works for user: " + userId);
+    }
+
     @GetMapping("/list")
     public ResponseEntity<HttpResponse> getUsers() {
-        // Retrieve users through the service
+        // Retrieve users through the service and convert to DTOs
+        Collection<User> users = userService.getUsers(0, 1000);
+        List<UserDTO> userDTOs = users.stream()
+            .map(user -> userService.getUserByEmail(user.getEmail()))
+            .collect(Collectors.toList());
+            
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("users", userService.getUsers(0, 1000)))
+                        .data(of("users", userDTOs))
                         .message("Users retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    @DeleteMapping("/delete/{userId}")
+    //@AuditLog(action = "DELETE", entityType = "USER", description = "User account deleted")
+    public ResponseEntity<HttpResponse> deleteUser(@PathVariable("userId") Long userId) {
+        log.info("🚀 DELETE REQUEST REACHED CONTROLLER! User ID: {}", userId);
+        // Debug logging and manual permission check
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            log.info("Delete user request - Principal: {}", auth.getPrincipal());
+            log.info("Delete user request - Authorities: {}", auth.getAuthorities());
+            auth.getAuthorities().forEach(authority -> 
+                log.info("Authority: {}", authority.getAuthority())
+            );
+            
+            // Manual permission check
+            boolean hasPermission = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("USER:DELETE") || 
+                              a.getAuthority().equals("USER:ADMIN"));
+            
+            if (!hasPermission) {
+                log.warn("User does not have USER:DELETE or USER:ADMIN permission");
+                return ResponseEntity.status(FORBIDDEN).body(
+                    HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("You don't have permission to delete users")
+                        .status(FORBIDDEN)
+                        .statusCode(FORBIDDEN.value())
+                        .build());
+            }
+        } else {
+            log.warn("No authentication found in SecurityContext for delete request");
+            return ResponseEntity.status(UNAUTHORIZED).body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Authentication required")
+                    .status(UNAUTHORIZED)
+                    .statusCode(UNAUTHORIZED.value())
+                    .build());
+        }
+        
+        userService.deleteUser(userId);
+        return ResponseEntity.ok().body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("User deleted successfully")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());
