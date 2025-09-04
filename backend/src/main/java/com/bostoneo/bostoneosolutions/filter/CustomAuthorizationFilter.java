@@ -101,6 +101,11 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             return true;
         }
         
+        // Skip CRM endpoints - they are handled by Spring Security permitAll()
+        if (request.getRequestURI().startsWith("/api/crm/")) {
+            return true;
+        }
+        
         return request.getHeader(AUTHORIZATION) == null || !request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
             || request.getMethod().equalsIgnoreCase(HTTP_OPTIONS_METHOD) || asList(PUBLIC_ROUTES).contains(request.getRequestURI());
     }

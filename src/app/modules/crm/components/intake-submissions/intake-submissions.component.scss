@@ -1,0 +1,249 @@
+/* Intake Submissions Component Styles */
+
+.table {
+  th {
+    font-weight: 600;
+    color: #495057;
+  }
+  
+  td {
+    vertical-align: middle;
+  }
+}
+
+.avatar-xs {
+  width: 2rem;
+  height: 2rem;
+  
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lead-score {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.dropdown-toggle::after {
+  margin-left: 0.5rem;
+}
+
+.pagination {
+  .page-link {
+    color: #6c757d;
+    border-color: #dee2e6;
+    
+    &:hover {
+      color: #495057;
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+  
+  .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+  }
+}
+
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  
+  &:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transition: box-shadow 0.15s ease-in-out;
+  }
+}
+
+.text-truncate {
+  max-width: 200px;
+}
+
+.priority-critical {
+  animation: pulse 2s infinite;
+  position: relative;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+// Attorney-focused enhancements
+.attorney-dashboard {
+  .card {
+    transition: all 0.3s ease;
+    border-width: 2px;
+    
+    &.border-warning {
+      border-color: #f39c12 !important;
+      
+      &:hover {
+        border-color: #e67e22 !important;
+        transform: translateY(-2px);
+      }
+    }
+    
+    &.border-success {
+      border-color: #27ae60 !important;
+    }
+    
+    &.border-info {
+      border-color: #3498db !important;
+    }
+    
+    &.border-secondary {
+      border-color: #7f8c8d !important;
+    }
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #495057;
+    
+    i {
+      opacity: 0.7;
+    }
+  }
+  
+  tr {
+    &:hover {
+      background-color: rgba(0, 123, 255, 0.05) !important;
+    }
+  }
+}
+
+.high-priority-row {
+  border-left: 4px solid #e74c3c !important;
+  background-color: rgba(231, 76, 60, 0.05) !important;
+}
+
+.conversion-score-high {
+  color: #27ae60 !important;
+  font-weight: 700;
+}
+
+.conversion-score-medium {
+  color: #f39c12 !important;
+  font-weight: 600;
+}
+
+.conversion-score-low {
+  color: #e74c3c !important;
+  font-weight: 500;
+}
+
+.filter-section {
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-select,
+  .form-control {
+    border-color: #e9ecef;
+    
+    &:focus {
+      border-color: #80bdff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .pagination {
+    justify-content: center;
+  }
+  
+  .card-body.p-0 {
+    padding: 0 !important;
+  }
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+  
+  .avatar-lg {
+    width: 4rem;
+    height: 4rem;
+    
+    .avatar-title {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+.submission-actions {
+  .dropdown-menu {
+    min-width: 160px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    
+    i {
+      width: 1rem;
+    }
+    
+    &:hover {
+      background-color: #f8f9fa;
+    }
+    
+    &.text-danger:hover {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  }
+}

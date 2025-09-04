@@ -1,0 +1,36 @@
+.practice-area-card {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  &.border-primary {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+  }
+}
+
+.form-card {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+    border-color: var(--vz-primary) !important;
+    
+    .btn-primary {
+      background-color: var(--vz-primary-darker);
+      border-color: var(--vz-primary-darker);
+    }
+  }
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(45deg, var(--vz-primary), var(--vz-primary-rgb)) !important;
+}

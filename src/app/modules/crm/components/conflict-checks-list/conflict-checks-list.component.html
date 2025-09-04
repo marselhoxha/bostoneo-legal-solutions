@@ -1,0 +1,428 @@
+<!-- Page Header -->
+<div class="row" style="margin-top: 120px;">
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <h4 class="mb-sm-0">
+        <i class="ri-shield-check-line me-2 text-primary"></i>
+        Conflict Checks
+      </h4>
+      
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="/">Home</a></li>
+          <li class="breadcrumb-item"><a href="/crm/dashboard">CRM</a></li>
+          <li class="breadcrumb-item active">Conflict Checks</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="row" *ngIf="isLoading">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading conflict checks...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading conflict checks...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error State -->
+<div class="row" *ngIf="error && !isLoading">
+  <div class="col-12">
+    <div class="alert alert-danger" role="alert">
+      <i class="ri-error-warning-line me-2"></i>
+      {{ error }}
+      <button class="btn btn-sm btn-outline-danger ms-3" (click)="loadConflictChecks()">
+        <i class="ri-refresh-line me-1"></i>Try Again
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="row" *ngIf="!isLoading && !error">
+  <!-- Summary Cards -->
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 p-2">
+              <div class="avatar-title text-warning rounded-circle bg-transparent">
+                <i class="ri-time-line fs-2"></i>
+              </div>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <h5 class="mb-1">{{ getPendingChecksCount() }}</h5>
+            <p class="text-muted mb-0 fs-13">Pending Checks</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="avatar-sm rounded-circle bg-danger bg-opacity-10 p-2">
+              <div class="avatar-title text-danger rounded-circle bg-transparent">
+                <i class="ri-alert-line fs-2"></i>
+              </div>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <h5 class="mb-1">{{ getConflictFoundCount() }}</h5>
+            <p class="text-muted mb-0 fs-13">Conflicts Found</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="avatar-sm rounded-circle bg-success bg-opacity-10 p-2">
+              <div class="avatar-title text-success rounded-circle bg-transparent">
+                <i class="ri-check-line fs-2"></i>
+              </div>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <h5 class="mb-1">{{ getClearedResolvedCount() }}</h5>
+            <p class="text-muted mb-0 fs-13">Cleared/Resolved</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 p-2">
+              <div class="avatar-title text-primary rounded-circle bg-transparent">
+                <i class="ri-shield-check-line fs-2"></i>
+              </div>
+            </div>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <h5 class="mb-1">{{ conflictChecks.length }}</h5>
+            <p class="text-muted mb-0 fs-13">Total Checks</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="row" *ngIf="!isLoading && !error">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light-subtle border-bottom-dashed">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="card-title mb-0">
+            <i class="ri-filter-3-line me-2 text-primary"></i>
+            Filters
+          </h5>
+          <button class="btn btn-primary btn-sm" (click)="runNewConflictCheck()">
+            <i class="ri-shield-check-line me-1"></i>
+            New Check
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Search -->
+          <div class="col-md-3">
+            <label class="form-label">Search</label>
+            <div class="input-group">
+              <input type="text" class="form-control" placeholder="Search checks..." 
+                     [(ngModel)]="searchTerm" (input)="onSearch()">
+              <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
+                <i class="ri-search-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select class="form-select" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+              <option *ngFor="let status of statusOptions" [value]="status.value">
+                {{ status.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Entity Type Filter -->
+          <div class="col-md-2">
+            <label class="form-label">Entity Type</label>
+            <select class="form-select" [(ngModel)]="selectedEntityType" (change)="onFilterChange()">
+              <option *ngFor="let type of entityTypeOptions" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Check Type Filter -->
+          <div class="col-md-2">
+            <label class="form-label">Check Type</label>
+            <select class="form-select" [(ngModel)]="selectedCheckType" (change)="onFilterChange()">
+              <option *ngFor="let type of checkTypeOptions" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Actions -->
+          <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" (click)="clearFilters()">
+                <i class="ri-close-line me-1"></i>Clear
+              </button>
+              <button class="btn btn-outline-primary" (click)="exportChecks()">
+                <i class="ri-download-line me-1"></i>Export
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Conflict Checks Table -->
+<div class="row" *ngIf="!isLoading && !error">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light-subtle border-bottom-dashed">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="card-title mb-0">
+            <i class="ri-shield-check-line me-2 text-primary"></i>
+            Conflict Checks ({{ totalElements }})
+          </h5>
+          
+          <!-- Bulk Actions -->
+          <div class="d-flex gap-2" *ngIf="selectedChecks.size > 0">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" 
+                      data-bs-toggle="dropdown">
+                <i class="ri-more-2-fill me-1"></i>
+                Bulk Actions ({{ selectedChecks.size }})
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" (click)="onBulkAction('approve')">
+                  <i class="ri-check-line me-2"></i>Approve Selected
+                </a></li>
+                <li><a class="dropdown-item" href="#" (click)="onBulkAction('reject')">
+                  <i class="ri-close-line me-2"></i>Reject Selected
+                </a></li>
+                <li><a class="dropdown-item" href="#" (click)="onBulkAction('rerun')">
+                  <i class="ri-refresh-line me-2"></i>Re-run Selected
+                </a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <!-- Table -->
+        <div class="table-responsive">
+          <table class="table table-nowrap mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>
+                  <input type="checkbox" class="form-check-input" 
+                         [checked]="selectAll" (change)="toggleSelectAll()">
+                </th>
+                <th>Entity</th>
+                <th>Check Type</th>
+                <th>Status</th>
+                <th>Confidence</th>
+                <th>Matches</th>
+                <th>Checked By</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let check of filteredChecks.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
+                <td>
+                  <input type="checkbox" class="form-check-input" 
+                         [checked]="selectedChecks.has(check.id)"
+                         (change)="toggleSelection(check.id)">
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-3">
+                      <div class="avatar-title rounded-circle" 
+                           [ngClass]="{
+                             'bg-success-subtle text-success': check.entityType === 'CLIENT',
+                             'bg-warning-subtle text-warning': check.entityType === 'LEAD',
+                             'bg-info-subtle text-info': check.entityType === 'MATTER',
+                             'bg-secondary-subtle text-secondary': check.entityType === 'CONTACT'
+                           }">
+                        <i class="ri-user-line" *ngIf="check.entityType === 'CLIENT' || check.entityType === 'LEAD'"></i>
+                        <i class="ri-briefcase-line" *ngIf="check.entityType === 'MATTER'"></i>
+                        <i class="ri-contacts-line" *ngIf="check.entityType === 'CONTACT'"></i>
+                      </div>
+                    </div>
+                    <div>
+                      <h6 class="mb-0">{{ check.entityName || 'Entity #' + check.entityId }}</h6>
+                      <small class="text-muted">{{ check.entityType }} • ID: {{ check.entityId }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-secondary-subtle text-secondary">
+                    {{ check.checkType.replace('_', ' ') }}
+                  </span>
+                  <div *ngIf="check.autoChecked" class="mt-1">
+                    <small class="text-muted">
+                      <i class="ri-robot-line me-1"></i>Automated
+                    </small>
+                  </div>
+                </td>
+                <td>
+                  <span [class]="getStatusBadgeClass(check.status)">
+                    {{ check.status.replace('_', ' ') }}
+                  </span>
+                </td>
+                <td>
+                  <span [class]="getConfidenceScoreClass(check.confidenceScore)" *ngIf="check.confidenceScore > 0">
+                    {{ check.confidenceScore }}%
+                  </span>
+                  <span class="text-muted" *ngIf="check.confidenceScore === 0">-</span>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <span [class]="getRiskIndicatorClass(check.totalMatches, check.highRiskMatches)">
+                      {{ check.totalMatches }}
+                    </span>
+                    <small class="text-muted ms-1">total</small>
+                  </div>
+                  <div *ngIf="check.highRiskMatches > 0">
+                    <small class="text-danger fw-bold">
+                      {{ check.highRiskMatches }} high risk
+                    </small>
+                  </div>
+                </td>
+                <td>
+                  <div *ngIf="check.checkedByName; else autoCheck">
+                    <small>
+                      <i class="ri-user-line me-1"></i>{{ check.checkedByName }}
+                      <br><span class="text-muted">{{ formatDateTime(check.checkedAt) }}</span>
+                    </small>
+                  </div>
+                  <ng-template #autoCheck>
+                    <small class="text-muted">
+                      <i class="ri-robot-line me-1"></i>Automated
+                    </small>
+                  </ng-template>
+                </td>
+                <td>
+                  <small>{{ formatDateTime(check.createdAt) }}</small>
+                </td>
+                <td>
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#" (click)="viewCheckDetails(check.id)">
+                        <i class="ri-eye-line me-2"></i>View Details
+                      </a></li>
+                      <li *ngIf="check.status === 'PENDING'">
+                        <a class="dropdown-item" href="#" (click)="onCheckAction(check.id, 'review')">
+                          <i class="ri-check-line me-2"></i>Review
+                        </a>
+                      </li>
+                      <li *ngIf="check.status === 'CONFLICT_FOUND' || check.status === 'POTENTIAL_CONFLICT'">
+                        <a class="dropdown-item" href="#" (click)="onCheckAction(check.id, 'resolve')">
+                          <i class="ri-settings-line me-2"></i>Resolve
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item" href="#" (click)="onCheckAction(check.id, 'rerun')">
+                        <i class="ri-refresh-line me-2"></i>Re-run Check
+                      </a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex align-items-center justify-content-between p-3 border-top" *ngIf="totalPages > 1">
+          <div class="text-muted">
+            Showing {{ currentPage * pageSize + 1 }} to {{ Math.min((currentPage + 1) * pageSize, totalElements) }} 
+            of {{ totalElements }} entries
+          </div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 0">
+                <button class="page-link" (click)="previousPage()">
+                  <i class="ri-arrow-left-line"></i>
+                </button>
+              </li>
+              <li class="page-item" 
+                  *ngFor="let page of [].constructor(totalPages); let i = index"
+                  [class.active]="currentPage === i">
+                <button class="page-link" (click)="goToPage(i)">{{ i + 1 }}</button>
+              </li>
+              <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+                <button class="page-link" (click)="nextPage()">
+                  <i class="ri-arrow-right-line"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty State -->
+<div class="row" *ngIf="!isLoading && !error && filteredChecks.length === 0">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="avatar-lg mx-auto mb-4">
+          <div class="avatar-title rounded-circle bg-light text-muted">
+            <i class="ri-shield-check-line display-6"></i>
+          </div>
+        </div>
+        <h5 class="mb-3">No Conflict Checks Found</h5>
+        <p class="text-muted mb-4">No conflict checks match your current filters.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-outline-primary" (click)="clearFilters()">
+            Clear Filters
+          </button>
+          <button class="btn btn-primary" (click)="runNewConflictCheck()">
+            <i class="ri-shield-check-line me-1"></i>Run New Check
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

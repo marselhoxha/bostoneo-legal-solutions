@@ -17,6 +17,10 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
     @Query("SELECT c FROM Client c WHERE c.name LIKE CONCAT('%', :name, '%')")
     Page<Client> findByNameContaining(@Param("name") String name, Pageable pageable);
     
+    // Find client by email
+    @Query("SELECT c FROM Client c WHERE c.email = :email")
+    List<Client> findByEmail(@Param("email") String email);
+    
     // Get clients who have time entries
     @Query("SELECT DISTINCT c FROM Client c " +
            "JOIN LegalCase lc ON c.name = lc.clientName " +

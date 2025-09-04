@@ -1,0 +1,195 @@
+<!-- Conflict Check Modal -->
+<div class="modal fade" [class.show]="showModal" [style.display]="showModal ? 'block' : 'none'" 
+     tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ri-shield-check-line me-2"></i>
+          Conflict Check - {{formatConversionType(conversionType)}}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading State -->
+        <div class="text-center py-4" *ngIf="loading">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="text-muted mt-2">Performing conflict check...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="alert alert-danger" *ngIf="error">
+          <i class="ri-error-warning-line me-2"></i>
+          {{error}}
+        </div>
+
+        <!-- Conflict Check Results -->
+        <div *ngIf="checkingComplete && conflictCheck && !loading">
+          <!-- Status Summary -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card border-0 bg-light">
+                <div class="card-body text-center">
+                  <div class="mb-2">
+                    <span class="badge fs-6" [class]="getStatusBadgeClass(conflictCheck.status)">
+                      {{conflictCheck.status.replace('_', ' ')}}
+                    </span>
+                  </div>
+                  <h6 class="card-title mb-1">Check Status</h6>
+                  <p class="text-muted small mb-0">{{formatDateTime(conflictCheck.createdAt)}}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card border-0 bg-light">
+                <div class="card-body text-center">
+                  <div class="mb-2">
+                    <span class="h4" [class]="conflictCheck.confidenceScore >= 80 ? 'text-success' : 
+                                              conflictCheck.confidenceScore >= 50 ? 'text-warning' : 'text-danger'">
+                      {{conflictCheck.confidenceScore}}%
+                    </span>
+                  </div>
+                  <h6 class="card-title mb-1">Confidence Score</h6>
+                  <p class="text-muted small mb-0">
+                    {{conflictCheck.results?.length || 0}} potential matches found
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search Parameters -->
+          <div class="mb-4" *ngIf="conflictCheck.searchTerms?.length > 0">
+            <h6 class="fw-semibold">Search Terms Used:</h6>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge badge-soft-secondary" *ngFor="let term of conflictCheck.searchTerms">
+                {{term}}
+              </span>
+            </div>
+          </div>
+
+          <!-- No Conflicts Found -->
+          <div class="text-center py-4" *ngIf="!hasConflicts">
+            <i class="ri-shield-check-line display-4 text-success"></i>
+            <h5 class="mt-3 text-success">No Conflicts Found</h5>
+            <p class="text-muted">This conversion can proceed without any conflict concerns.</p>
+          </div>
+
+          <!-- Conflicts Found -->
+          <div *ngIf="hasConflicts">
+            <h6 class="fw-semibold mb-3">
+              <i class="ri-alert-line me-2 text-warning"></i>
+              Potential Conflicts Detected ({{conflictCheck.results?.length}})
+            </h6>
+            
+            <div class="card mb-3" *ngFor="let match of conflictCheck.results">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-2">
+                      <h6 class="mb-0 me-3">{{match.entityName}}</h6>
+                      <span class="badge" [class]="getRiskBadgeClass(match.riskLevel)">
+                        {{match.riskLevel}} Risk
+                      </span>
+                    </div>
+                    <p class="text-muted mb-1">
+                      <strong>Match Type:</strong> {{match.matchType?.replace('_', ' ')}}
+                    </p>
+                    <p class="text-muted mb-1">
+                      <strong>Reason:</strong> {{match.matchReason}}
+                    </p>
+                    <p class="text-muted mb-0">
+                      <strong>Recommended Action:</strong> {{match.recommendedAction}}
+                    </p>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <div class="h5 mb-1" [class]="match.matchScore >= 80 ? 'text-danger' : 
+                                                  match.matchScore >= 50 ? 'text-warning' : 'text-info'">
+                      {{match.matchScore}}%
+                    </div>
+                    <small class="text-muted">Match Score</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conflict Review Form -->
+            <div class="card bg-light" *ngIf="conflictCheck.status === 'CONFLICT_FOUND' || conflictCheck.status === 'POTENTIAL_CONFLICT'">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="ri-user-settings-line me-2"></i>
+                  Conflict Review Required
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Resolution Decision</label>
+                  <select class="form-select" [(ngModel)]="reviewForm.resolution">
+                    <option value="">Select resolution...</option>
+                    <option value="approved">Approve - No actual conflict</option>
+                    <option value="requires_waiver">Requires Client Waiver</option>
+                    <option value="rejected">Reject - Cannot proceed</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Review Notes</label>
+                  <textarea class="form-control" rows="3" [(ngModel)]="reviewForm.notes"
+                            placeholder="Explain the reasoning for this decision..."></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" 
+                          (click)="submitReview()"
+                          [disabled]="!reviewForm.resolution || loading">
+                    <i class="ri-save-line me-1"></i>
+                    Submit Review
+                  </button>
+                  <button type="button" class="btn btn-success" 
+                          *ngIf="reviewForm.resolution === 'requires_waiver'"
+                          (click)="resolveConflict()"
+                          [disabled]="loading">
+                    <i class="ri-check-line me-1"></i>
+                    Approve with Waiver
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resolution Status -->
+          <div class="alert alert-info" *ngIf="conflictCheck.resolution && conflictCheck.resolutionNotes">
+            <h6 class="alert-heading">
+              <i class="ri-information-line me-2"></i>
+              Resolution: {{conflictCheck.resolution}}
+            </h6>
+            <p class="mb-0">{{conflictCheck.resolutionNotes}}</p>
+            <small class="text-muted">
+              Resolved by {{conflictCheck.resolvedByName}} on {{formatDateTime(conflictCheck.resolvedAt)}}
+            </small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" *ngIf="checkingComplete && !loading">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">
+          Close
+        </button>
+        <button type="button" class="btn btn-danger" 
+                *ngIf="!canProceed" 
+                (click)="cancelConversion()">
+          <i class="ri-close-line me-1"></i>
+          Cannot Proceed
+        </button>
+        <button type="button" class="btn btn-success" 
+                *ngIf="canProceed" 
+                (click)="proceedWithConversion()">
+          <i class="ri-check-line me-1"></i>
+          Proceed with Conversion
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>

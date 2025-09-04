@@ -1,0 +1,270 @@
+<!-- Loading State -->
+<div class="row" *ngIf="isLoading">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading form...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading intake form...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error State -->
+<div class="row" *ngIf="error && !isLoading && !intakeForm">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="avatar-lg mx-auto mb-4">
+          <div class="avatar-title rounded-circle bg-soft-danger text-danger">
+            <i class="ri-error-warning-line display-6"></i>
+          </div>
+        </div>
+        <h5 class="mb-3 text-danger">Form Not Available</h5>
+        <p class="text-muted mb-4">{{ error }}</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <a routerLink="/public/intake-forms" class="btn btn-primary">
+            <i class="ri-arrow-left-line me-1"></i>View All Forms
+          </a>
+          <button class="btn btn-soft-primary" (click)="loadForm()">
+            <i class="ri-refresh-line me-1"></i>Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form Content -->
+<div class="row" *ngIf="!isLoading && intakeForm">
+  <div class="col-lg-8 mx-auto">
+    <!-- Form Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="text-center">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title rounded-circle bg-primary bg-opacity-10 text-primary">
+              <i class="ri-file-text-line display-6"></i>
+            </div>
+          </div>
+          <h4 class="mb-2 fw-bold">{{ intakeForm.name }}</h4>
+          <p class="text-muted mb-0 fs-15" *ngIf="intakeForm.description">
+            {{ intakeForm.description }}
+          </p>
+          <div class="mt-3">
+            <span class="badge bg-primary-subtle text-primary fs-13 me-2">
+              <i class="ri-shield-check-line me-1"></i>Secure & Confidential
+            </span>
+            <span class="badge bg-success-subtle text-success fs-13">
+              <i class="ri-time-line me-1"></i>Free Consultation
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <i class="ri-information-line text-info me-2 fs-18"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="mb-1">Legal Intake Form - {{ intakeForm.practiceArea }}</h6>
+            <p class="text-muted mb-0 fs-14">Please fill out all required fields marked with *</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-light-subtle border-bottom-dashed py-4">
+        <h5 class="card-title mb-0">
+          <i class="ri-edit-line me-2 text-primary"></i>Client Information
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <!-- Error Alert -->
+        <div class="alert alert-danger" *ngIf="error && intakeForm" role="alert">
+          <i class="ri-error-warning-line me-2"></i>
+          {{ error }}
+        </div>
+
+        <form [formGroup]="submissionForm" (ngSubmit)="onSubmit()">
+          <!-- Dynamic Form Fields -->
+          <div class="row g-4" *ngFor="let field of formFields; let i = index">
+            <div [ngClass]="{
+              'col-12': field.type === 'textarea' || field.fullWidth,
+              'col-md-6': field.type !== 'textarea' && !field.fullWidth
+            }">
+              <!-- Text Input -->
+              <div class="mb-3" *ngIf="field.type === 'text' || field.type === 'email' || field.type === 'tel' || field.type === 'date'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <input 
+                  [type]="field.type" 
+                  class="form-control"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Textarea -->
+              <div class="mb-3" *ngIf="field.type === 'textarea'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <textarea 
+                  class="form-control"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [rows]="field.rows || 3"
+                  [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
+                </textarea>
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Select Dropdown -->
+              <div class="mb-3" *ngIf="field.type === 'select'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <select 
+                  class="form-select"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name">
+                  <option value="">Select {{ field.label.toLowerCase() }}</option>
+                  <option *ngFor="let option of field.options" [value]="option">
+                    {{ option }}
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Radio Buttons -->
+              <div class="mb-3" *ngIf="field.type === 'radio'">
+                <label class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <div class="mt-2" [class.is-invalid]="hasFieldError(field.name)">
+                  <div class="form-check" *ngFor="let option of field.options">
+                    <input 
+                      class="form-check-input" 
+                      type="radio" 
+                      [id]="field.name + '_' + option.value"
+                      [formControlName]="field.name"
+                      [value]="option.value">
+                    <label class="form-check-label" [for]="field.name + '_' + option.value">
+                      {{ option.label }}
+                    </label>
+                  </div>
+                </div>
+                <div class="text-danger fs-12 mt-1" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Privacy Notice -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="alert alert-info border-0 bg-info-subtle">
+                <div class="d-flex align-items-start">
+                  <i class="ri-shield-check-line text-info me-2 mt-1 fs-18"></i>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-2 fw-semibold">Privacy & Confidentiality</h6>
+                    <p class="mb-2 fs-14">
+                      All information you provide is protected by attorney-client privilege and will be kept strictly confidential. 
+                      We use secure encryption to protect your data during transmission.
+                    </p>
+                    <ul class="mb-0 fs-13 ps-3">
+                      <li>Your information will only be shared with assigned attorneys</li>
+                      <li>We comply with all applicable privacy laws and regulations</li>
+                      <li>You can request to update or delete your information at any time</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center">
+                <a routerLink="/public/intake-forms" class="btn btn-soft-secondary">
+                  <i class="ri-arrow-left-line me-1"></i>Back to Forms
+                </a>
+                <button 
+                  type="submit" 
+                  class="btn btn-primary btn-animation waves-effect waves-light"
+                  [disabled]="!submissionForm.valid || isSubmitting">
+                  <span *ngIf="!isSubmitting">
+                    <i class="ri-send-plane-line me-1"></i>Submit Form
+                  </span>
+                  <span *ngIf="isSubmitting">
+                    <i class="ri-loader-line animate-spin me-1"></i>Submitting...
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="card shadow-sm mt-4">
+      <div class="card-body p-4">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar-xs me-3">
+                <div class="avatar-title rounded-circle bg-success-subtle text-success">
+                  <i class="ri-phone-line fs-14"></i>
+                </div>
+              </div>
+              <div>
+                <h6 class="mb-0">Need Help?</h6>
+                <p class="text-muted mb-0 fs-13">Call us at (555) 123-4567</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar-xs me-3">
+                <div class="avatar-title rounded-circle bg-info-subtle text-info">
+                  <i class="ri-time-line fs-14"></i>
+                </div>
+              </div>
+              <div>
+                <h6 class="mb-0">Quick Response</h6>
+                <p class="text-muted mb-0 fs-13">We'll contact you within 24 hours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

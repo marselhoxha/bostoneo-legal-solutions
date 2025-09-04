@@ -12,6 +12,9 @@ const routes: Routes = [
   // Auth routes (no layout)
   { path: 'login', loadChildren: () => import('./component/auth/auth.module').then(m => m.AuthModule) },
   
+  // Public routes (no auth required)
+  { path: 'public', loadChildren: () => import('./modules/public/public.module').then(m => m.PublicModule) },
+  
   // Main app routes (with layout)
   {
     path: '',
@@ -32,6 +35,9 @@ const routes: Routes = [
       // Expenses module
       { path: 'expenses', loadChildren: () => import('./modules/expenses/expenses.module').then(m => m.ExpensesModule) },
       
+      // CRM module
+      { path: 'crm', loadChildren: () => import('./modules/crm/crm.module').then(m => m.CrmModule) },
+
       // Legal module
       { path: 'legal', loadChildren: () => import('./modules/legal/legal.module').then(m => m.LegalModule) },
 

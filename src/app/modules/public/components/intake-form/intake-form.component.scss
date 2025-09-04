@@ -1,0 +1,45 @@
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.form-check-input:checked {
+  background-color: var(--vz-primary);
+  border-color: var(--vz-primary);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--vz-primary);
+  box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+}
+
+.is-invalid {
+  border-color: var(--vz-danger);
+}
+
+.btn-animation {
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-animation:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-animation:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card {
+  transition: all 0.2s ease-in-out;
+}
+
+.alert-info {
+  border-left: 4px solid var(--vz-info);
+}

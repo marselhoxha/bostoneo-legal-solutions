@@ -9,9 +9,26 @@ export const MENU: MenuItem[] = [
     link: '/home'
   },
   
-  // ===== CLIENT MANAGEMENT =====
+  // ===== PUBLIC ACCESS =====
   {
     id: 2,
+    label: 'Public Forms',
+    icon: 'ri-file-list-3-line',
+    link: '/public/intake-forms'
+  },
+  
+  // ===== CRM MODULE =====
+  {
+    id: 3,
+    label: 'CRM',
+    icon: 'ri-customer-service-2-line',
+    link: '/crm/dashboard'
+    // Removed permission requirements for testing
+  },
+
+  // ===== CLIENT MANAGEMENT =====
+  {
+    id: 4,
     label: 'Clients',
     icon: 'ri-user-3-line',
     link: '/clients',
@@ -20,7 +37,7 @@ export const MENU: MenuItem[] = [
   
   // ===== LEGAL MODULE =====
   {
-    id: 3,
+    id: 5,
     label: 'Legal',
     icon: 'ri-scales-3-line',
     link: '/legal/cases',
@@ -30,21 +47,21 @@ export const MENU: MenuItem[] = [
         id: 'cases',
         label: 'Cases',
         link: '/legal/cases',
-        parentId: 3,
+        parentId: 5,
         requiredPermission: { resource: 'CASE', action: 'VIEW' }
       },
       {
         id: 'documents',
         label: 'Documents',
         link: '/legal/documents',
-        parentId: 3,
+        parentId: 5,
         requiredPermission: { resource: 'DOCUMENT', action: 'VIEW' }
       },
       {
         id: 'calendar',
         label: 'Calendar',
         link: '/legal/calendar',
-        parentId: 3,
+        parentId: 5,
         requiredPermission: { resource: 'CALENDAR', action: 'VIEW' }
       }
     ]
@@ -52,7 +69,7 @@ export const MENU: MenuItem[] = [
   
   // ===== FILE MANAGER =====
   {
-    id: 4,
+    id: 6,
     label: 'File Manager',
     icon: 'ri-folder-2-line',
     link: '/file-manager',
@@ -62,28 +79,28 @@ export const MENU: MenuItem[] = [
         id: 'file-dashboard',
         label: 'My Documents',
         link: '/file-manager',
-        parentId: 4,
+        parentId: 6,
         requiredPermission: { resource: 'DOCUMENT', action: 'VIEW' }
       },
       {
         id: 'file-templates',
         label: 'Templates',
         link: '/file-manager/templates',
-        parentId: 4,
+        parentId: 6,
         requiredPermission: { resource: 'DOCUMENT', action: 'VIEW' }
       },
       {
         id: 'firm-templates',
         label: 'Firm Templates',
         link: '/file-manager/firm-templates',
-        parentId: 4,
+        parentId: 6,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       },
       {
         id: 'permissions',
         label: 'Permissions',
         link: '/file-manager/permissions',
-        parentId: 4,
+        parentId: 6,
         requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
       }
     ]
@@ -91,7 +108,7 @@ export const MENU: MenuItem[] = [
   
   // ===== CASE MANAGEMENT =====
   {
-    id: 5,
+    id: 7,
     label: 'Cases',
     icon: 'ri-briefcase-4-line',
     link: '/case-management/dashboard',
@@ -101,28 +118,28 @@ export const MENU: MenuItem[] = [
         id: 'case-dashboard',
         label: 'Dashboard',
         link: '/case-management/dashboard',
-        parentId: 5,
+        parentId: 9,
         requiredPermission: { resource: 'CASE', action: 'VIEW' }
       },
       {
         id: 'case-assignments',
         label: 'Assignments',
         link: '/case-management/assignments',
-        parentId: 5,
+        parentId: 9,
         requiredPermission: { resource: 'CASE', action: 'VIEW' }
       },
       {
         id: 'assignment-management',
         label: 'Assign Mgmt',
         link: '/case-management/assignments/management',
-        parentId: 5,
+        parentId: 9,
         requiredPermission: { resource: 'CASE', action: 'EDIT' }
       },
       {
         id: 'task-management',
         label: 'Tasks',
         link: '/case-management/tasks',
-        parentId: 5,
+        parentId: 9,
         requiredPermission: { resource: 'TASK', action: 'VIEW_ALL' }
       }
     ]
@@ -130,7 +147,7 @@ export const MENU: MenuItem[] = [
   
   // ===== TIME TRACKING & BILLING =====
   {
-    id: 6,
+    id: 12,
     label: 'Time & Billing',
     icon: 'ri-time-line',
     link: '/time-tracking/dashboard',
@@ -140,56 +157,56 @@ export const MENU: MenuItem[] = [
         id: 'time-dashboard',
         label: 'Dashboard',
         link: '/time-tracking/dashboard',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'timesheet',
         label: 'Timesheet',
         link: '/time-tracking/entry',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'new-entry',
         label: 'New Entry',
         link: '/time-tracking/entry/new',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'CREATE' }
       },
       {
         id: 'approval',
         label: 'Approval',
         link: '/time-tracking/approval',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'APPROVE' }
       },
       {
         id: 'billing-rates',
         label: 'Rates',
         link: '/time-tracking/rates',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' }
       },
       {
         id: 'invoice-generation',
         label: 'Invoices',
         link: '/time-tracking/billing/invoice-generation',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'BILLING', action: 'CREATE' }
       },
       {
         id: 'time-reports',
         label: 'Reports',
         link: '/time-tracking/reports',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'TIME_TRACKING', action: 'VIEW_OWN' }
       },
       {
         id: 'billing-analytics',
         label: 'Analytics',
         link: '/time-tracking/billing/analytics',
-        parentId: 6,
+        parentId: 8,
         requiredPermission: { resource: 'BILLING', action: 'EDIT' }
       }
     ]
@@ -197,7 +214,7 @@ export const MENU: MenuItem[] = [
   
   // ===== FINANCIAL MODULE =====
   {
-    id: 7,
+    id: 11,
     label: 'Financial',
     icon: 'ri-money-dollar-circle-line',
     link: '/invoices',
@@ -207,14 +224,14 @@ export const MENU: MenuItem[] = [
         id: 'billing-dashboard',
         label: 'Dashboard',
         link: '/billing-dashboard',
-        parentId: 7,
+        parentId: 9,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' }
       },
       {
         id: 'invoices',
         label: 'Invoices',
         link: '/invoices',
-        parentId: 7,
+        parentId: 9,
         requiredPermission: { resource: 'BILLING', action: 'VIEW' },
         subItems: [
           {
@@ -241,7 +258,7 @@ export const MENU: MenuItem[] = [
         id: 'expenses',
         label: 'Expenses',
         link: '/expenses',
-        parentId: 7,
+        parentId: 9,
         requiredPermission: { resource: 'EXPENSE', action: 'VIEW' },
         subItems: [
           {
@@ -268,7 +285,7 @@ export const MENU: MenuItem[] = [
         id: 'analytics',
         label: 'Analytics',
         link: '/analytics',
-        parentId: 7,
+        parentId: 9,
         requiredPermission: { resource: 'BILLING', action: 'EDIT' }
       }
     ]
@@ -276,7 +293,7 @@ export const MENU: MenuItem[] = [
   
   // ===== ADMINISTRATION (Admin/Manager only) =====
   {
-    id: 8,
+    id: 12,
     label: 'Admin',
     icon: 'ri-admin-line',
     link: '/admin',
@@ -322,14 +339,14 @@ export const MENU: MenuItem[] = [
   
   // ===== USER PROFILE & SUPPORT =====
   {
-    id: 9,
+    id: 11,
     label: 'Profile',
     icon: 'ri-user-settings-line',
     link: '/user'
   },
   
   {
-    id: 10,
+    id: 12,
     label: 'Help',
     icon: 'ri-question-answer-line',
     link: '/faq'

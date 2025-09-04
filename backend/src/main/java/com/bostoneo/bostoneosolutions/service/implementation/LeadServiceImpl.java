@@ -1,0 +1,814 @@
+package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+
+import com.***REMOVED***.***REMOVED***solutions.model.Lead;
+import com.***REMOVED***.***REMOVED***solutions.model.LeadActivity;
+import com.***REMOVED***.***REMOVED***solutions.model.LeadPipelineHistory;
+import com.***REMOVED***.***REMOVED***solutions.model.PipelineStage;
+import com.***REMOVED***.***REMOVED***solutions.repository.LeadRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.LeadActivityRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.LeadPipelineHistoryRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.PipelineStageRepository;
+import com.***REMOVED***.***REMOVED***solutions.service.LeadService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class LeadServiceImpl implements LeadService {
+
+    private final LeadRepository leadRepository;
+    private final LeadActivityRepository leadActivityRepository;
+    private final LeadPipelineHistoryRepository leadPipelineHistoryRepository;
+    private final PipelineStageRepository pipelineStageRepository;
+
+    // Valid pipeline status transitions
+    private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
+        "NEW", Set.of("CONTACTED", "UNQUALIFIED", "LOST"),
+        "CONTACTED", Set.of("QUALIFIED", "UNQUALIFIED", "LOST"),
+        "QUALIFIED", Set.of("CONSULTATION_SCHEDULED", "UNQUALIFIED", "LOST"),
+        "CONSULTATION_SCHEDULED", Set.of("PROPOSAL_SENT", "QUALIFIED", "UNQUALIFIED", "LOST"),
+        "PROPOSAL_SENT", Set.of("NEGOTIATION", "CONVERTED", "LOST"),
+        "NEGOTIATION", Set.of("CONVERTED", "PROPOSAL_SENT", "LOST"),
+        "CONVERTED", Set.of(), // Final state
+        "LOST", Set.of(), // Final state
+        "UNQUALIFIED", Set.of() // Final state
+    );
+
+    @Override
+    public Lead save(Lead lead) {
+        return leadRepository.save(lead);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Lead> findById(Long id) {
+        return leadRepository.findById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findAll() {
+        return leadRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findAll(Pageable pageable) {
+        return leadRepository.findAll(pageable);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        leadRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsById(Long id) {
+        return leadRepository.existsById(id);
+    }
+
+    @Override
+    public Lead createLead(Lead lead, Long createdBy) {
+        log.info("Creating new lead: {} {} by user: {}", lead.getFirstName(), lead.getLastName(), createdBy);
+        
+        // Set default values if not provided
+        if (lead.getStatus() == null) lead.setStatus("NEW");
+        if (lead.getSource() == null) lead.setSource("WEBSITE");
+        if (lead.getPriority() == null) lead.setPriority("MEDIUM");
+        if (lead.getLeadScore() == null) lead.setLeadScore(50);
+        if (lead.getUrgencyLevel() == null) lead.setUrgencyLevel("MEDIUM");
+        if (lead.getLeadQuality() == null) lead.setLeadQuality("UNKNOWN");
+        if (lead.getCommunicationPreference() == null) lead.setCommunicationPreference("EMAIL");
+        if (lead.getCaseComplexity() == null) lead.setCaseComplexity("MEDIUM");
+        
+        Lead savedLead = save(lead);
+        
+        // Add initial activity
+        addActivity(savedLead.getId(), "LEAD_CREATED", "Lead Created", 
+            "Lead was created from intake submission", createdBy);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead updateLead(Long id, Lead lead, Long userId) {
+        log.info("Updating lead ID: {} by user: {}", id, userId);
+        
+        Lead existing = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        // Update fields
+        existing.setFirstName(lead.getFirstName());
+        existing.setLastName(lead.getLastName());
+        existing.setEmail(lead.getEmail());
+        existing.setPhone(lead.getPhone());
+        existing.setCompany(lead.getCompany());
+        existing.setPracticeArea(lead.getPracticeArea());
+        existing.setInitialInquiry(lead.getInitialInquiry());
+        existing.setEstimatedCaseValue(lead.getEstimatedCaseValue());
+        existing.setNotes(lead.getNotes());
+        existing.setReferralSource(lead.getReferralSource());
+        existing.setMarketingCampaign(lead.getMarketingCampaign());
+        existing.setClientBudgetRange(lead.getClientBudgetRange());
+        existing.setGeographicLocation(lead.getGeographicLocation());
+        existing.setCommunicationPreference(lead.getCommunicationPreference());
+        existing.setBestContactTime(lead.getBestContactTime());
+        
+        return save(existing);
+    }
+
+    @Override
+    public Lead assignLead(Long id, Long assignedTo, Long assignedBy) {
+        log.info("Assigning lead ID: {} to user: {} by user: {}", id, assignedTo, assignedBy);
+        
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        Long previousAssignee = lead.getAssignedTo();
+        lead.setAssignedTo(assignedTo);
+        
+        Lead savedLead = save(lead);
+        
+        // Add activity
+        String description = previousAssignee == null ? 
+            "Lead assigned to attorney" : "Lead reassigned to new attorney";
+        addActivity(id, "ASSIGNMENT", "Lead Assignment", description, assignedBy);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead reassignLead(Long id, Long newAssignedTo, Long assignedBy, String reason) {
+        log.info("Reassigning lead ID: {} to user: {} by user: {} for reason: {}", id, newAssignedTo, assignedBy, reason);
+        
+        Lead lead = assignLead(id, newAssignedTo, assignedBy);
+        
+        // Add specific reassignment activity
+        addActivity(id, "REASSIGNMENT", "Lead Reassigned", 
+            "Lead reassigned. Reason: " + reason, assignedBy);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead updateStatus(Long id, String newStatus, Long userId, String notes) {
+        log.info("Updating lead ID: {} status to: {} by user: {}", id, newStatus, userId);
+        
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        String oldStatus = lead.getStatus();
+        
+        if (!canTransitionToStatus(oldStatus, newStatus)) {
+            throw new RuntimeException("Invalid status transition from " + oldStatus + " to " + newStatus);
+        }
+        
+        lead.setStatus(newStatus);
+        if ("CONVERTED".equals(newStatus)) {
+            lead.setConvertedAt(new Timestamp(System.currentTimeMillis()));
+        }
+        
+        Lead savedLead = save(lead);
+        
+        // Record pipeline history
+        recordPipelineTransition(id, oldStatus, newStatus, userId, notes);
+        
+        // Add activity
+        addActivity(id, "STATUS_CHANGE", "Status Updated", 
+            "Status changed from " + oldStatus + " to " + newStatus + 
+            (notes != null ? ". Notes: " + notes : ""), userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead markAsContacted(Long id, Long userId, String contactMethod, String notes) {
+        log.info("Marking lead ID: {} as contacted via {} by user: {}", id, contactMethod, userId);
+        
+        Lead lead = updateStatus(id, "CONTACTED", userId, notes);
+        
+        // Add specific contact activity
+        addActivity(id, "CONTACT", "First Contact Made", 
+            "Lead contacted via " + contactMethod + 
+            (notes != null ? ". Notes: " + notes : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead markAsQualified(Long id, Long userId, String qualificationNotes) {
+        log.info("Marking lead ID: {} as qualified by user: {}", id, userId);
+        
+        Lead lead = updateStatus(id, "QUALIFIED", userId, qualificationNotes);
+        
+        addActivity(id, "QUALIFICATION", "Lead Qualified", 
+            "Lead has been qualified" + 
+            (qualificationNotes != null ? ". Notes: " + qualificationNotes : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead scheduleConsultation(Long id, Timestamp consultationDate, Long userId, String notes) {
+        log.info("Scheduling consultation for lead ID: {} on {} by user: {}", id, consultationDate, userId);
+        
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setConsultationDate(consultationDate);
+        lead = updateStatus(id, "CONSULTATION_SCHEDULED", userId, notes);
+        
+        addActivity(id, "CONSULTATION_SCHEDULED", "Consultation Scheduled", 
+            "Consultation scheduled for " + consultationDate + 
+            (notes != null ? ". Notes: " + notes : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead markProposalSent(Long id, Long userId, String proposalDetails) {
+        log.info("Marking proposal sent for lead ID: {} by user: {}", id, userId);
+        
+        Lead lead = updateStatus(id, "PROPOSAL_SENT", userId, proposalDetails);
+        
+        addActivity(id, "PROPOSAL", "Proposal Sent", 
+            "Legal proposal sent to client" + 
+            (proposalDetails != null ? ". Details: " + proposalDetails : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead startNegotiation(Long id, Long userId, String negotiationNotes) {
+        log.info("Starting negotiation for lead ID: {} by user: {}", id, userId);
+        
+        Lead lead = updateStatus(id, "NEGOTIATION", userId, negotiationNotes);
+        
+        addActivity(id, "NEGOTIATION", "Negotiation Started", 
+            "Contract negotiation phase started" + 
+            (negotiationNotes != null ? ". Notes: " + negotiationNotes : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead markAsConverted(Long id, Long userId, String conversionNotes) {
+        log.info("Converting lead ID: {} by user: {}", id, userId);
+        
+        Lead lead = updateStatus(id, "CONVERTED", userId, conversionNotes);
+        
+        addActivity(id, "CONVERSION", "Lead Converted", 
+            "Lead successfully converted to client" + 
+            (conversionNotes != null ? ". Notes: " + conversionNotes : ""), userId);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead markAsLost(Long id, String lostReason, Long userId) {
+        log.info("Marking lead ID: {} as lost by user: {} for reason: {}", id, userId, lostReason);
+        
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setLostReason(lostReason);
+        lead = updateStatus(id, "LOST", userId, "Lead marked as lost: " + lostReason);
+        
+        return lead;
+    }
+
+    @Override
+    public Lead markAsUnqualified(Long id, String unqualificationReason, Long userId) {
+        log.info("Marking lead ID: {} as unqualified by user: {} for reason: {}", id, userId, unqualificationReason);
+        
+        Lead lead = updateStatus(id, "UNQUALIFIED", userId, "Lead unqualified: " + unqualificationReason);
+        
+        return lead;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findByStatus(String status) {
+        return leadRepository.findByStatus(status);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findByStatus(String status, Pageable pageable) {
+        return leadRepository.findByStatus(status, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findByPracticeArea(String practiceArea) {
+        return leadRepository.findByPracticeArea(practiceArea);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findByPracticeArea(String practiceArea, Pageable pageable) {
+        return leadRepository.findByPracticeArea(practiceArea, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findByAssignedTo(Long assignedTo) {
+        return leadRepository.findByAssignedTo(assignedTo);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findByAssignedTo(Long assignedTo, Pageable pageable) {
+        return leadRepository.findByAssignedTo(assignedTo, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findActiveLead() {
+        return leadRepository.findActiveLeadsOrderByScoreAndCreatedAt();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findActiveLeads(Pageable pageable) {
+        return leadRepository.findActiveLeadsOrderByScoreAndCreatedAt(pageable);
+    }
+
+    @Override
+    public Lead updateLeadScore(Long id, Integer leadScore, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        Integer oldScore = lead.getLeadScore();
+        lead.setLeadScore(leadScore);
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "SCORE_UPDATE", "Lead Score Updated", 
+            "Lead score changed from " + oldScore + " to " + leadScore, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead updatePriority(Long id, String priority, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        String oldPriority = lead.getPriority();
+        lead.setPriority(priority);
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "PRIORITY_UPDATE", "Priority Updated", 
+            "Priority changed from " + oldPriority + " to " + priority, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findHighScoreLeads(Integer minScore) {
+        return leadRepository.findByLeadScoreGreaterThanEqualOrderByLeadScoreDesc(minScore);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findByPriority(String priority) {
+        return leadRepository.findByPriority(priority);
+    }
+
+    @Override
+    public Lead scheduleFollowUp(Long id, Timestamp followUpDate, Long userId, String notes) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setFollowUpDate(followUpDate);
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "FOLLOW_UP_SCHEDULED", "Follow-up Scheduled", 
+            "Follow-up scheduled for " + followUpDate + 
+            (notes != null ? ". Notes: " + notes : ""), userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findLeadsRequiringFollowUp(Timestamp date) {
+        return leadRepository.findLeadsRequiringFollowUp(date);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findOverdueFollowUps() {
+        return findLeadsRequiringFollowUp(new Timestamp(System.currentTimeMillis()));
+    }
+
+    @Override
+    public Lead updateEstimatedCaseValue(Long id, BigDecimal estimatedValue, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        BigDecimal oldValue = lead.getEstimatedCaseValue();
+        lead.setEstimatedCaseValue(estimatedValue);
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "VALUE_UPDATE", "Estimated Case Value Updated", 
+            "Estimated case value changed from " + oldValue + " to " + estimatedValue, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public LeadActivity addActivity(Long leadId, String activityType, String title, String description, Long userId) {
+        LeadActivity activity = LeadActivity.builder()
+            .leadId(leadId)
+            .activityType(activityType)
+            .title(title)
+            .description(description)
+            .activityDate(new Timestamp(System.currentTimeMillis()))
+            .createdBy(userId)
+            .isBillable(false)
+            .build();
+        
+        return leadActivityRepository.save(activity);
+    }
+
+    @Override
+    public LeadActivity addCallActivity(Long leadId, Integer durationMinutes, String outcome, Long userId) {
+        LeadActivity activity = LeadActivity.builder()
+            .leadId(leadId)
+            .activityType("CALL")
+            .title("Phone Call")
+            .description("Phone call with lead")
+            .activityDate(new Timestamp(System.currentTimeMillis()))
+            .durationMinutes(durationMinutes)
+            .outcome(outcome)
+            .createdBy(userId)
+            .isBillable(false)
+            .build();
+        
+        return leadActivityRepository.save(activity);
+    }
+
+    @Override
+    public LeadActivity addEmailActivity(Long leadId, String subject, String notes, Long userId) {
+        LeadActivity activity = LeadActivity.builder()
+            .leadId(leadId)
+            .activityType("EMAIL")
+            .title("Email: " + subject)
+            .description("Email communication with lead")
+            .activityDate(new Timestamp(System.currentTimeMillis()))
+            .outcome(notes)
+            .createdBy(userId)
+            .isBillable(false)
+            .build();
+        
+        return leadActivityRepository.save(activity);
+    }
+
+    @Override
+    public LeadActivity addMeetingActivity(Long leadId, Timestamp meetingDate, Integer durationMinutes, String outcome, Long userId) {
+        LeadActivity activity = LeadActivity.builder()
+            .leadId(leadId)
+            .activityType("MEETING")
+            .title("Meeting with Lead")
+            .description("In-person or virtual meeting")
+            .activityDate(meetingDate)
+            .durationMinutes(durationMinutes)
+            .outcome(outcome)
+            .createdBy(userId)
+            .isBillable(false)
+            .build();
+        
+        return leadActivityRepository.save(activity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LeadActivity> getLeadActivities(Long leadId) {
+        return leadActivityRepository.findByLeadIdOrderByActivityDateDesc(leadId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LeadActivity> getLeadActivities(Long leadId, Pageable pageable) {
+        return leadActivityRepository.findByLeadIdOrderByActivityDateDesc(leadId, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countByStatus(String status) {
+        return leadRepository.countByStatus(status);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Object[]> getStatusStatistics() {
+        return leadRepository.countByStatusGrouped();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Object[]> getPracticeAreaStatistics() {
+        return leadRepository.countByPracticeAreaGrouped();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findLeadsByDateRange(Timestamp startDate, Timestamp endDate) {
+        return leadRepository.findByCreatedAtBetween(startDate, endDate);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findStaleLeads(String status, int daysStale) {
+        Timestamp staleDate = new Timestamp(System.currentTimeMillis() - (daysStale * 24 * 60 * 60 * 1000L));
+        return leadRepository.findStaleLeads(status, staleDate);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findLeadsByStatusIn(List<String> statuses) {
+        return leadRepository.findByStatusIn(statuses);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Lead> findLeadsByStatusIn(List<String> statuses, Pageable pageable) {
+        return leadRepository.findByStatusIn(statuses, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canTransitionToStatus(String currentStatus, String newStatus) {
+        return VALID_TRANSITIONS.getOrDefault(currentStatus, Collections.emptySet()).contains(newStatus);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getValidNextStatuses(String currentStatus) {
+        return new ArrayList<>(VALID_TRANSITIONS.getOrDefault(currentStatus, Collections.emptySet()));
+    }
+
+    @Override
+    public Lead updateLeadQuality(Long id, String leadQuality, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        String oldQuality = lead.getLeadQuality();
+        lead.setLeadQuality(leadQuality);
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "QUALITY_UPDATE", "Lead Quality Updated", 
+            "Lead quality changed from " + oldQuality + " to " + leadQuality, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead updateClientBudgetRange(Long id, String budgetRange, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setClientBudgetRange(budgetRange);
+        return save(lead);
+    }
+
+    @Override
+    public Lead updateCaseComplexity(Long id, String complexity, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setCaseComplexity(complexity);
+        return save(lead);
+    }
+
+    @Override
+    public Lead updateCommunicationPreference(Long id, String preference, Long userId) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setCommunicationPreference(preference);
+        return save(lead);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> findUpcomingConsultations(Timestamp startDate, Timestamp endDate) {
+        return leadRepository.findByConsultationDateBetween(startDate, endDate);
+    }
+
+    @Override
+    public Lead rescheduleConsultation(Long id, Timestamp newDate, Long userId, String reason) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        Timestamp oldDate = lead.getConsultationDate();
+        lead.setConsultationDate(newDate);
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "CONSULTATION_RESCHEDULED", "Consultation Rescheduled", 
+            "Consultation rescheduled from " + oldDate + " to " + newDate + 
+            ". Reason: " + reason, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead cancelConsultation(Long id, Long userId, String reason) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        lead.setConsultationDate(null);
+        if ("CONSULTATION_SCHEDULED".equals(lead.getStatus())) {
+            lead.setStatus("QUALIFIED");
+        }
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "CONSULTATION_CANCELLED", "Consultation Cancelled", 
+            "Consultation cancelled. Reason: " + reason, userId);
+        
+        return savedLead;
+    }
+
+    @Override
+    public Lead completeConsultation(Long id, Long userId, String outcome, String nextSteps) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        
+        Lead savedLead = save(lead);
+        
+        addActivity(id, "CONSULTATION_COMPLETED", "Consultation Completed", 
+            "Consultation completed. Outcome: " + outcome + 
+            (nextSteps != null ? ". Next steps: " + nextSteps : ""), userId);
+        
+        return savedLead;
+    }
+
+    private void recordPipelineTransition(Long leadId, String fromStatus, String toStatus, Long userId, String notes) {
+        LeadPipelineHistory history = LeadPipelineHistory.builder()
+            .leadId(leadId)
+            .fromStageId(null) // We could map status to stage IDs if needed
+            .toStageId(null)   // We could map status to stage IDs if needed
+            .movedBy(userId)
+            .notes(notes)
+            .automated(false)
+            .build();
+        
+        leadPipelineHistoryRepository.save(history);
+    }
+
+    // Additional methods for CrmLeadsResource support
+    @Override
+    @Transactional(readOnly = true)
+    public List<PipelineStage> getAllPipelineStages() {
+        return pipelineStageRepository.findAll();
+    }
+
+    @Override
+    public Lead advanceInPipeline(Long leadId, String newStatus, Long userId, String notes) {
+        return updateStatus(leadId, newStatus, userId, notes);
+    }
+
+    @Override
+    public Lead moveToStage(Long leadId, Long stageId, Long userId, String notes) {
+        Lead lead = findById(leadId)
+            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
+        
+        // Get the stage to determine the status
+        PipelineStage stage = pipelineStageRepository.findById(stageId)
+            .orElseThrow(() -> new RuntimeException("Pipeline stage not found with ID: " + stageId));
+        
+        // Update lead status based on stage name
+        String newStatus = mapStageToStatus(stage.getName());
+        return updateStatus(leadId, newStatus, userId, notes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getLeadCountsByStatus() {
+        List<Object[]> statusCounts = leadRepository.countByStatusGrouped();
+        Map<String, Long> result = new HashMap<>();
+        
+        for (Object[] row : statusCounts) {
+            String status = (String) row[0];
+            Long count = (Long) row[1];
+            result.put(status, count);
+        }
+        
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> getRecentlyMovedLeads(int limit) {
+        // Get leads with recent pipeline history - simplified implementation
+        return leadRepository.findAll().stream()
+            .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+            .limit(limit)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> getStaleLeads() {
+        // Find leads that haven't been updated in 7 days
+        Timestamp staleDate = new Timestamp(System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L));
+        return leadRepository.findStaleLeads("NEW", staleDate);
+    }
+
+    @Override
+    public Lead assignLeadWithNotes(Long leadId, Long assignedTo, Long assignedBy, String notes) {
+        // Call the original 3-parameter method
+        Lead lead = assignLead(leadId, assignedTo, assignedBy);
+        
+        // Add activity for assignment with notes
+        if (notes != null && !notes.trim().isEmpty()) {
+            addActivity(leadId, "ASSIGNMENT", "Lead Assigned", notes, assignedBy);
+        }
+        
+        return lead;
+    }
+
+    @Override
+    public Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes) {
+        try {
+            // Parse the date string - expecting ISO format
+            Timestamp consultationDate = Timestamp.valueOf(consultationDateStr.replace("T", " "));
+            return scheduleConsultation(leadId, consultationDate, scheduledBy, notes);
+        } catch (Exception e) {
+            log.error("Failed to parse consultation date: {}", consultationDateStr, e);
+            throw new RuntimeException("Invalid consultation date format: " + consultationDateStr);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getLeadCountsByPracticeArea() {
+        List<Object[]> practiceAreaCounts = leadRepository.countByPracticeAreaGrouped();
+        Map<String, Long> result = new HashMap<>();
+        
+        for (Object[] row : practiceAreaCounts) {
+            String practiceArea = (String) row[0];
+            Long count = (Long) row[1];
+            if (practiceArea != null) {
+                result.put(practiceArea, count);
+            }
+        }
+        
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Lead> getRecentLeads(int limit) {
+        return leadRepository.findAll().stream()
+            .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+            .limit(limit)
+            .toList();
+    }
+
+    private String mapStageToStatus(String stageName) {
+        // Map stage names to lead statuses
+        switch (stageName.toUpperCase()) {
+            case "NEW LEAD":
+            case "NEW":
+                return "NEW";
+            case "CONTACTED":
+                return "CONTACTED";
+            case "QUALIFIED":
+                return "QUALIFIED";
+            case "CONSULTATION SCHEDULED":
+                return "CONSULTATION_SCHEDULED";
+            case "PROPOSAL SENT":
+                return "PROPOSAL_SENT";
+            case "NEGOTIATION":
+                return "NEGOTIATION";
+            case "CONVERTED":
+                return "CONVERTED";
+            case "LOST":
+                return "LOST";
+            case "UNQUALIFIED":
+                return "UNQUALIFIED";
+            default:
+                return "NEW";
+        }
+    }
+}
