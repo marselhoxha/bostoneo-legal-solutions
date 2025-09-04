@@ -734,6 +734,78 @@ export class IntakeSubmissionsComponent implements OnInit {
     return Math.round((this.getConvertedCount() / this.submissions.length) * 100);
   }
 
+  // Business logic for contextual action buttons
+  canReview(submission: IntakeSubmissionDTO): boolean {
+    return submission.status === 'PENDING';
+  }
+
+  canConvertToLead(submission: IntakeSubmissionDTO): boolean {
+    return submission.status === 'PENDING' || submission.status === 'REVIEWED';
+  }
+
+  canReject(submission: IntakeSubmissionDTO): boolean {
+    return submission.status === 'PENDING' || submission.status === 'REVIEWED';
+  }
+
+  canMarkAsSpam(submission: IntakeSubmissionDTO): boolean {
+    return submission.status !== 'SPAM' && submission.status !== 'CONVERTED_TO_LEAD';
+  }
+
+  isSubmissionFinal(submission: IntakeSubmissionDTO): boolean {
+    const finalStatuses = ['SPAM', 'REJECTED', 'CONVERTED_TO_LEAD'];
+    return finalStatuses.includes(submission.status);
+  }
+
+  getAvailableActionsCount(submission: IntakeSubmissionDTO): number {
+    let count = 1; // View Details is always available
+    
+    if (this.canReview(submission)) count++;
+    if (this.canConvertToLead(submission)) count++;
+    if (this.canReject(submission)) count++;
+    if (this.canMarkAsSpam(submission)) count++;
+    
+    return count;
+  }
+
+  // Bulk action contextual logic
+  canBulkApprove(): boolean {
+    const selectedSubmissionsList = this.submissions.filter(s => 
+      this.selectedSubmissions.has(s.id)
+    );
+    return selectedSubmissionsList.some(s => this.canConvertToLead(s));
+  }
+
+  canBulkReject(): boolean {
+    const selectedSubmissionsList = this.submissions.filter(s => 
+      this.selectedSubmissions.has(s.id)
+    );
+    return selectedSubmissionsList.some(s => this.canReject(s));
+  }
+
+  canBulkMarkAsSpam(): boolean {
+    const selectedSubmissionsList = this.submissions.filter(s => 
+      this.selectedSubmissions.has(s.id)
+    );
+    return selectedSubmissionsList.some(s => this.canMarkAsSpam(s));
+  }
+
+  getBulkEligibleCount(action: string): number {
+    const selectedSubmissionsList = this.submissions.filter(s => 
+      this.selectedSubmissions.has(s.id)
+    );
+    
+    switch (action) {
+      case 'approve':
+        return selectedSubmissionsList.filter(s => this.canConvertToLead(s)).length;
+      case 'reject':
+        return selectedSubmissionsList.filter(s => this.canReject(s)).length;
+      case 'spam':
+        return selectedSubmissionsList.filter(s => this.canMarkAsSpam(s)).length;
+      default:
+        return 0;
+    }
+  }
+
   viewSubmissionDetails(submissionId: number): void {
     const submission = this.submissions.find(s => s.id === submissionId);
     if (!submission) return;

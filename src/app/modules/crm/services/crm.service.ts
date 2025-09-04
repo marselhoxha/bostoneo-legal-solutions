@@ -79,7 +79,7 @@ export class CrmService {
   }
 
   reviewSubmission(id: number, notes: string): Observable<IntakeSubmission> {
-    return this.http.post<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/review`, { notes });
+    return this.http.put<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/review`, { reviewNotes: notes });
   }
 
   convertToLead(id: number, assignedTo: number, notes: string): Observable<any> {
@@ -90,40 +90,40 @@ export class CrmService {
   }
 
   rejectSubmission(id: number, reason: string): Observable<IntakeSubmission> {
-    return this.http.post<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/reject`, { reason });
+    return this.http.put<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/reject`, { rejectionReason: reason });
   }
 
   markAsSpam(id: number, reason: string): Observable<IntakeSubmission> {
-    return this.http.post<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/spam`, { reason });
+    return this.http.put<IntakeSubmission>(`${this.apiUrl}/intake-submissions/${id}/mark-spam`, { spamReason: reason });
   }
 
   // Bulk operations
-  bulkReview(submissionIds: number[], notes: string): Observable<IntakeSubmission[]> {
-    return this.http.post<IntakeSubmission[]>(`${this.apiUrl}/intake-submissions/bulk/review`, {
+  bulkReview(submissionIds: number[], notes: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/intake-submissions/bulk/review`, {
       submissionIds,
+      reviewNotes: notes
+    });
+  }
+
+  bulkConvertToLead(submissionIds: number[], assignedTo: number, notes: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/intake-submissions/bulk/convert-to-leads`, {
+      submissionIds,
+      assignToAttorney: assignedTo,
       notes
     });
   }
 
-  bulkConvertToLead(submissionIds: number[], assignedTo: number, notes: string): Observable<any[]> {
-    return this.http.post<any[]>(`${this.apiUrl}/intake-submissions/bulk/convert-to-lead`, {
+  bulkReject(submissionIds: number[], reason: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/intake-submissions/bulk/reject`, {
       submissionIds,
-      assignedTo,
-      notes
+      rejectionReason: reason
     });
   }
 
-  bulkReject(submissionIds: number[], reason: string): Observable<IntakeSubmission[]> {
-    return this.http.post<IntakeSubmission[]>(`${this.apiUrl}/intake-submissions/bulk/reject`, {
+  bulkMarkAsSpam(submissionIds: number[], reason: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/intake-submissions/bulk/mark-spam`, {
       submissionIds,
-      reason
-    });
-  }
-
-  bulkMarkAsSpam(submissionIds: number[], reason: string): Observable<IntakeSubmission[]> {
-    return this.http.post<IntakeSubmission[]>(`${this.apiUrl}/intake-submissions/bulk/spam`, {
-      submissionIds,
-      reason
+      spamReason: reason
     });
   }
 

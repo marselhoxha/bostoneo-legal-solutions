@@ -234,19 +234,42 @@
                 Bulk Actions ({{ selectedSubmissions.size }})
               </button>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" (click)="onBulkAction('approve'); $event.preventDefault()">
-                  <i class="ri-check-line me-2"></i>Approve Selected
-                </a></li>
-                <li><a class="dropdown-item" href="#" (click)="onBulkAction('reject'); $event.preventDefault()">
-                  <i class="ri-close-line me-2"></i>Reject Selected
-                </a></li>
-                <li><a class="dropdown-item" href="#" (click)="onBulkAction('assign'); $event.preventDefault()">
-                  <i class="ri-user-add-line me-2"></i>Assign Selected
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning" href="#" (click)="onBulkAction('spam'); $event.preventDefault()">
-                  <i class="ri-spam-line me-2"></i>Mark as Spam
-                </a></li>
+                <!-- Convert to Leads - Only show if eligible submissions exist -->
+                <li *ngIf="canBulkApprove()">
+                  <a class="dropdown-item text-success" href="#" (click)="onBulkAction('approve'); $event.preventDefault()">
+                    <i class="ri-user-add-line me-2"></i>Convert to Leads 
+                    <span class="badge bg-success ms-1">{{getBulkEligibleCount('approve')}}</span>
+                  </a>
+                </li>
+                
+                <!-- Reject Selected - Only show if eligible submissions exist -->
+                <li *ngIf="canBulkReject()">
+                  <a class="dropdown-item text-danger" href="#" (click)="onBulkAction('reject'); $event.preventDefault()">
+                    <i class="ri-close-line me-2"></i>Reject Selected
+                    <span class="badge bg-danger ms-1">{{getBulkEligibleCount('reject')}}</span>
+                  </a>
+                </li>
+                
+                <!-- Divider - Only show if there are actions above and below -->
+                <li *ngIf="(canBulkApprove() || canBulkReject()) && canBulkMarkAsSpam()">
+                  <hr class="dropdown-divider">
+                </li>
+                
+                <!-- Mark as Spam - Only show if eligible submissions exist -->
+                <li *ngIf="canBulkMarkAsSpam()">
+                  <a class="dropdown-item text-warning" href="#" (click)="onBulkAction('spam'); $event.preventDefault()">
+                    <i class="ri-spam-line me-2"></i>Mark as Spam
+                    <span class="badge bg-warning ms-1">{{getBulkEligibleCount('spam')}}</span>
+                  </a>
+                </li>
+                
+                <!-- No actions available message -->
+                <li *ngIf="!canBulkApprove() && !canBulkReject() && !canBulkMarkAsSpam()">
+                  <div class="dropdown-item-text text-muted">
+                    <i class="ri-information-line me-2"></i>
+                    <small>No actions available for selected items</small>
+                  </div>
+                </li>
               </ul>
             </div>
           </div>
@@ -337,22 +360,53 @@
                       Actions
                     </button>
                     <ul class="dropdown-menu">
+                      <!-- View Details - Always available -->
                       <li><a class="dropdown-item" href="#" (click)="viewSubmissionDetails(submission.id); $event.preventDefault()">
                         <i class="ri-eye-line me-2"></i>View Details
                       </a></li>
-                      <li><a class="dropdown-item" href="#" (click)="onSubmissionAction(submission.id, 'review'); $event.preventDefault()">
-                        <i class="ri-check-line me-2"></i>Review
-                      </a></li>
-                      <li><a class="dropdown-item" href="#" (click)="convertToLead(submission.id); $event.preventDefault()">
-                        <i class="ri-user-add-line me-2"></i>Convert to Lead
-                      </a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-warning" href="#" (click)="onSubmissionAction(submission.id, 'spam'); $event.preventDefault()">
-                        <i class="ri-spam-line me-2"></i>Mark as Spam
-                      </a></li>
-                      <li><a class="dropdown-item text-danger" href="#" (click)="onSubmissionAction(submission.id, 'reject'); $event.preventDefault()">
-                        <i class="ri-close-line me-2"></i>Reject
-                      </a></li>
+                      
+                      <!-- Review - Only for PENDING submissions -->
+                      <li *ngIf="canReview(submission)">
+                        <a class="dropdown-item" href="#" (click)="onSubmissionAction(submission.id, 'review'); $event.preventDefault()">
+                          <i class="ri-check-line me-2"></i>Review
+                        </a>
+                      </li>
+                      
+                      <!-- Convert to Lead - Only for PENDING or REVIEWED submissions -->
+                      <li *ngIf="canConvertToLead(submission)">
+                        <a class="dropdown-item text-success" href="#" (click)="convertToLead(submission.id); $event.preventDefault()">
+                          <i class="ri-user-add-line me-2"></i>Convert to Lead
+                        </a>
+                      </li>
+                      
+                      <!-- Divider - Only show if there are action items below -->
+                      <li *ngIf="canReject(submission) || canMarkAsSpam(submission)">
+                        <hr class="dropdown-divider">
+                      </li>
+                      
+                      <!-- Mark as Spam - Not available for SPAM or CONVERTED_TO_LEAD -->
+                      <li *ngIf="canMarkAsSpam(submission)">
+                        <a class="dropdown-item text-warning" href="#" (click)="onSubmissionAction(submission.id, 'spam'); $event.preventDefault()">
+                          <i class="ri-spam-line me-2"></i>Mark as Spam
+                        </a>
+                      </li>
+                      
+                      <!-- Reject - Only for PENDING or REVIEWED submissions -->
+                      <li *ngIf="canReject(submission)">
+                        <a class="dropdown-item text-danger" href="#" (click)="onSubmissionAction(submission.id, 'reject'); $event.preventDefault()">
+                          <i class="ri-close-line me-2"></i>Reject
+                        </a>
+                      </li>
+                      
+                      <!-- Final status message - Show for final statuses -->
+                      <li *ngIf="isSubmissionFinal(submission)">
+                        <div class="dropdown-item-text text-muted">
+                          <i class="ri-lock-line me-2"></i>
+                          <small>{{ submission.status === 'SPAM' ? 'Marked as spam' : 
+                                   submission.status === 'REJECTED' ? 'Rejected' : 
+                                   'Converted to lead' }}</small>
+                        </div>
+                      </li>
                     </ul>
                   </div>
                 </td>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CrmService } from '../../services/crm.service';
 
 export interface LeadDTO {
@@ -81,7 +81,10 @@ export class LeadsDashboardComponent implements OnInit {
   showLeadModal = false;
   showPipelineModal = false;
   
-  constructor(private crmService: CrmService) {}
+  // Make Math available in template
+  Math = Math;
+  
+  constructor(private crmService: CrmService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.loadPipelineStages();
@@ -91,6 +94,7 @@ export class LeadsDashboardComponent implements OnInit {
 
   loadLeads() {
     this.loading = true;
+    this.cdr.detectChanges();
     
     const params = {
       page: this.currentPage - 1,
@@ -103,16 +107,24 @@ export class LeadsDashboardComponent implements OnInit {
       ...(this.selectedAssignedTo && { assignedTo: this.selectedAssignedTo })
     };
     
+    console.log('🚀 Loading leads with params:', params);
+    
     this.crmService.getLeads(params).subscribe({
       next: (response: any) => {
+        console.log('✅ Leads loaded successfully:', response);
         this.leads = response.content || [];
         this.totalItems = response.totalElements || 0;
         this.totalPages = response.totalPages || 0;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error loading leads:', error);
+        console.error('❌ Error loading leads:', error);
+        this.leads = [];
+        this.totalItems = 0;
+        this.totalPages = 0;
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -121,9 +133,12 @@ export class LeadsDashboardComponent implements OnInit {
     this.crmService.getPipelineStages().subscribe({
       next: (stages: PipelineStage[]) => {
         this.pipelineStages = stages.sort((a, b) => a.stageOrder - b.stageOrder);
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading pipeline stages:', error);
+        this.pipelineStages = [];
+        this.cdr.detectChanges();
       }
     });
   }
@@ -132,9 +147,12 @@ export class LeadsDashboardComponent implements OnInit {
     this.crmService.getPipelineSummary().subscribe({
       next: (summary: PipelineSummary) => {
         this.pipelineSummary = summary;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading pipeline summary:', error);
+        this.pipelineSummary = null;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -248,9 +266,11 @@ export class LeadsDashboardComponent implements OnInit {
       next: () => {
         this.loadLeads();
         this.loadPipelineSummary();
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error moving lead to stage:', error);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -259,9 +279,11 @@ export class LeadsDashboardComponent implements OnInit {
     this.crmService.assignLead(leadId, assignToUserId, notes).subscribe({
       next: () => {
         this.loadLeads();
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error assigning lead:', error);
+        this.cdr.detectChanges();
       }
     });
   }

@@ -17,11 +17,10 @@
 }
 
 .modal-header {
-  border-bottom: 1px solid #e9ecef;
   
   .modal-title {
     font-weight: 600;
-    color: #495057;
+   // color: #495057;
   }
 }
 
@@ -30,7 +29,6 @@
 }
 
 .modal-footer {
-  border-top: 1px solid #e9ecef;
   padding: 1rem 1.5rem;
 }
 
@@ -40,11 +38,7 @@
 
 .alert {
   border-radius: 6px;
-  
-  &.alert-info {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
-  }
+ 
   
   &.alert-warning {
     background-color: #fff3cd;
@@ -52,7 +46,6 @@
   }
   
   &.alert-light {
-    background-color: #f8f9fa;
     border-color: #dee2e6;
   }
 }

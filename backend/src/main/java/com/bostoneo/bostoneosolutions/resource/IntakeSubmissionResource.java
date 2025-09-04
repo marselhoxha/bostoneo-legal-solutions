@@ -101,7 +101,8 @@ public class IntakeSubmissionResource {
             @RequestBody Map<String, String> reviewData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Marking submission {} as reviewed by attorney: {}", id, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Marking submission {} as reviewed by attorney: {}", id, username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         String reviewNotes = reviewData.get("reviewNotes");
@@ -118,7 +119,8 @@ public class IntakeSubmissionResource {
             @RequestBody @Valid LeadConversionRequestDTO conversionRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Converting submission {} to lead by attorney: {}", id, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Converting submission {} to lead by attorney: {}", id, username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         
@@ -143,7 +145,8 @@ public class IntakeSubmissionResource {
             @RequestBody Map<String, String> rejectionData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Rejecting submission {} by attorney: {}", id, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Rejecting submission {} by attorney: {}", id, username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         String rejectionReason = rejectionData.get("rejectionReason");
@@ -160,7 +163,8 @@ public class IntakeSubmissionResource {
             @RequestBody Map<String, String> spamData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Marking submission {} as spam by attorney: {}", id, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Marking submission {} as spam by attorney: {}", id, username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         String spamReason = spamData.get("spamReason");
@@ -181,7 +185,8 @@ public class IntakeSubmissionResource {
         List<Long> submissionIds = (List<Long>) bulkData.get("submissionIds");
         String reviewNotes = (String) bulkData.get("reviewNotes");
         
-        log.info("Bulk reviewing {} submissions by attorney: {}", submissionIds.size(), userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Bulk reviewing {} submissions by attorney: {}", submissionIds.size(), username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         
@@ -204,7 +209,8 @@ public class IntakeSubmissionResource {
         Long assignToAttorney = ((Number) bulkData.get("assignToAttorney")).longValue();
         String notes = (String) bulkData.get("notes");
         
-        log.info("Bulk converting {} submissions to leads by attorney: {}", submissionIds.size(), userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Bulk converting {} submissions to leads by attorney: {}", submissionIds.size(), username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         
@@ -227,7 +233,8 @@ public class IntakeSubmissionResource {
         List<Long> submissionIds = (List<Long>) bulkData.get("submissionIds");
         String rejectionReason = (String) bulkData.get("rejectionReason");
         
-        log.info("Bulk rejecting {} submissions by attorney: {}", submissionIds.size(), userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Bulk rejecting {} submissions by attorney: {}", submissionIds.size(), username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         
@@ -249,7 +256,8 @@ public class IntakeSubmissionResource {
         List<Long> submissionIds = (List<Long>) bulkData.get("submissionIds");
         String spamReason = (String) bulkData.get("spamReason");
         
-        log.info("Bulk marking {} submissions as spam by attorney: {}", submissionIds.size(), userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Bulk marking {} submissions as spam by attorney: {}", submissionIds.size(), username);
         
         Long attorneyId = 1L; // Extract from userDetails in real implementation
         
