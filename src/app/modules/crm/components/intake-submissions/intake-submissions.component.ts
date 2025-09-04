@@ -100,59 +100,28 @@ export class IntakeSubmissionsComponent implements OnInit {
     this.error = '';
     this.cdr.detectChanges();
     
-    // Debug: Check if token exists
-    const token = localStorage.getItem('[KEY] TOKEN');
-    console.log('🔑 Token exists:', !!token);
-    console.log('🔑 Token value (first 20 chars):', token?.substring(0, 20));
-    
-    // Clean up parameters - remove empty values that might be filtering out data
+    // Load all submissions at once (like activities page)
     const params: any = {
-      page: this.currentPage,
-      size: this.pageSize
+      page: 0,
+      size: 100 // Load more submissions at once
     };
     
-    // Only add filter parameters if they have actual values
-    if (this.selectedStatus && this.selectedStatus.trim()) {
-      params.status = this.selectedStatus;
-    }
-    if (this.selectedPriority && this.selectedPriority.trim()) {
-      params.priority = this.selectedPriority;
-    }
-    if (this.selectedPracticeArea && this.selectedPracticeArea.trim()) {
-      params.practiceArea = this.selectedPracticeArea;
-    }
-    if (this.searchTerm && this.searchTerm.trim()) {
-      params.search = this.searchTerm;
-    }
-    
-    console.log('📤 Request params:', params);
-    console.log('🌐 API endpoint: http://localhost:8085/api/crm/intake-submissions');
+    console.log('📤 Loading all submissions for client-side pagination');
     
     this.crmService.getIntakeSubmissions$(params).subscribe({
       next: (response: any) => {
         console.log('📊 Raw Backend Response:', response);
-        console.log('📊 Response type:', typeof response);
-        console.log('📊 Response.content exists:', !!response?.content);
-        console.log('📊 Response.content type:', typeof response?.content);
-        console.log('📊 Response.content length:', response?.content?.length);
         
         // Handle different response structures
         let dataArray: any[] = [];
         
         if (response && response.content && Array.isArray(response.content)) {
-          // Standard paginated response
           dataArray = response.content;
           this.totalElements = response.totalElements || response.content.length;
-          this.totalPages = response.totalPages || 1;
-          this.currentPage = response.number || 0;
         } else if (Array.isArray(response)) {
-          // Direct array response
           dataArray = response;
           this.totalElements = response.length;
-          this.totalPages = Math.ceil(response.length / this.pageSize);
-          this.currentPage = 0;
         } else if (response && typeof response === 'object') {
-          // Try to find data in other possible structures
           const possibleArrays = ['data', 'items', 'results', 'submissions'];
           for (const key of possibleArrays) {
             if (response[key] && Array.isArray(response[key])) {
@@ -160,32 +129,27 @@ export class IntakeSubmissionsComponent implements OnInit {
               break;
             }
           }
-          // If still no array found, check if the response itself contains submission-like objects
           if (dataArray.length === 0) {
             const responseKeys = Object.keys(response);
             if (responseKeys.some(key => response[key] && typeof response[key] === 'object' && response[key].id)) {
               dataArray = Object.values(response).filter((item: any) => item && typeof item === 'object' && item.id);
             }
           }
+          this.totalElements = dataArray.length;
         } else {
-          alert('⚠️ No valid data structure found');
+          console.warn('⚠️ No valid data structure found');
         }
         
         if (dataArray.length > 0) {
           console.log('🔄 Processing', dataArray.length, 'submissions');
           this.submissions = this.mapSubmissions(dataArray);
-          this.filteredSubmissions = [...this.submissions];
-          if (!this.totalElements) {
-            this.applyFilters();
-            this.totalElements = this.filteredSubmissions.length;
-            this.totalPages = Math.ceil(this.totalElements / this.pageSize);
-          }
+          // Apply filters after loading all data
+          this.applyFilters();
           console.log('✅ Successfully processed', this.submissions.length, 'submissions');
         } else {
           this.submissions = [];
           this.filteredSubmissions = [];
           this.totalElements = 0;
-          this.totalPages = 0;
           console.log('⚠️ No submissions found in response');
         }
         this.isLoading = false;
@@ -193,23 +157,15 @@ export class IntakeSubmissionsComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ Error loading submissions:', error);
-        console.error('❌ Error status:', error.status);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error details:', error.error);
-        console.error('❌ Full error object:', error);
         
         if (error.status === 401) {
           this.error = 'Authentication required. Please log in to access intake submissions.';
-          console.error('🔒 401 Unauthorized - Token may be invalid or expired');
         } else if (error.status === 404) {
           this.error = 'API endpoint not found. Please check backend configuration.';
-          console.error('🔍 404 Not Found - Endpoint may not exist');
         } else if (error.status === 500) {
           this.error = 'Server error. Please check backend logs.';
-          console.error('💥 500 Server Error - Check backend logs');
         } else if (error.status === 0) {
           this.error = 'Cannot connect to backend. Please ensure the backend is running on port 8085.';
-          console.error('🌐 Network error - Backend may not be running or CORS issue');
         } else {
           this.error = `Failed to load submissions. Error: ${error.message || 'Unknown error'}`;
         }
@@ -218,7 +174,6 @@ export class IntakeSubmissionsComponent implements OnInit {
         this.submissions = [];
         this.filteredSubmissions = [];
         this.totalElements = 0;
-        this.totalPages = 0;
         this.cdr.detectChanges();
       }
     });
@@ -285,8 +240,8 @@ export class IntakeSubmissionsComponent implements OnInit {
       filtered = filtered.filter(s => s.practiceArea === this.selectedPracticeArea);
     }
     
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
+    if (this.searchTerm && this.searchTerm.trim()) {
+      const search = this.searchTerm.toLowerCase().trim();
       filtered = filtered.filter(s => 
         s.firstName.toLowerCase().includes(search) ||
         s.lastName.toLowerCase().includes(search) ||
@@ -297,8 +252,8 @@ export class IntakeSubmissionsComponent implements OnInit {
     }
     
     this.filteredSubmissions = filtered;
-    this.totalElements = filtered.length;
-    this.totalPages = Math.ceil(this.totalElements / this.pageSize);
+    this.totalPages = Math.ceil(this.filteredSubmissions.length / this.pageSize);
+    // Reset to first page when filters change
     this.currentPage = 0;
   }
 
@@ -882,23 +837,72 @@ export class IntakeSubmissionsComponent implements OnInit {
     });
   }
 
-  // Pagination methods
+  // Client-side pagination methods (like activities page)
   previousPage(): void {
     if (this.currentPage > 0) {
       this.currentPage--;
-      this.loadSubmissions();
     }
   }
 
   nextPage(): void {
     if (this.currentPage < this.totalPages - 1) {
       this.currentPage++;
-      this.loadSubmissions();
     }
   }
 
   goToPage(page: number): void {
     this.currentPage = page;
-    this.loadSubmissions();
+  }
+
+  // Pagination helpers (like activities page)
+  get paginatedSubmissions(): IntakeSubmissionDTO[] {
+    const startIndex = this.currentPage * this.pageSize;
+    return this.filteredSubmissions.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  get hasPreviousPage(): boolean {
+    return this.currentPage > 0;
+  }
+
+  get hasNextPage(): boolean {
+    return (this.currentPage + 1) * this.pageSize < this.filteredSubmissions.length;
+  }
+
+  get pageInfo(): string {
+    const start = this.currentPage * this.pageSize + 1;
+    const end = Math.min((this.currentPage + 1) * this.pageSize, this.filteredSubmissions.length);
+    return `${start}-${end} of ${this.filteredSubmissions.length}`;
+  }
+
+  // Get visible page numbers for pagination
+  getVisiblePages(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    
+    if (this.totalPages <= maxVisible) {
+      // Show all pages if total pages is less than or equal to max visible
+      for (let i = 0; i < this.totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show a subset of pages around current page
+      const startPage = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+      const endPage = Math.min(this.totalPages - 1, startPage + maxVisible - 1);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+    return pages;
+  }
+
+
+  getItemRangeText(): string {
+    if (this.totalElements === 0) return 'No entries';
+    
+    const start = this.currentPage * this.pageSize + 1;
+    const end = Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+    
+    return `${start} to ${end} of ${this.totalElements}`;
   }
 }

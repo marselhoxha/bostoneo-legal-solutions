@@ -296,7 +296,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let submission of filteredSubmissions.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
+              <tr *ngFor="let submission of paginatedSubmissions"
                   [class.high-priority-row]="submission.priority === 'HIGH' || submission.priority === 'CRITICAL'">
                 <td>
                   <input type="checkbox" class="form-check-input" 
@@ -415,31 +415,44 @@
           </table>
         </div>
 
-        <!-- Pagination -->
-        <div class="d-flex align-items-center justify-content-between p-3 border-top" *ngIf="totalPages > 1">
-          <div class="text-muted">
-            Showing {{ currentPage * pageSize + 1 }} to {{ Math.min((currentPage + 1) * pageSize, totalElements) }} 
-            of {{ totalElements }} entries
+        <!-- Pagination Controls -->
+        <div class="px-4 py-3 border-top" *ngIf="filteredSubmissions.length > pageSize">
+          <div class="row align-items-center">
+            <div class="col-sm-6">
+              <div class="text-muted">
+                Showing <strong>{{ pageInfo }}</strong> entries
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="d-flex justify-content-sm-end">
+                <nav>
+                  <ul class="pagination pagination-sm mb-0">
+                    <!-- Previous Button -->
+                    <li class="page-item" [class.disabled]="!hasPreviousPage">
+                      <button class="page-link" (click)="previousPage()" [disabled]="!hasPreviousPage">
+                        Previous
+                      </button>
+                    </li>
+                    
+                    <!-- Page Numbers -->
+                    <li class="page-item" *ngFor="let pageNum of getVisiblePages()" 
+                        [class.active]="currentPage === pageNum">
+                      <button class="page-link" (click)="goToPage(pageNum)">
+                        {{ pageNum + 1 }}
+                      </button>
+                    </li>
+                    
+                    <!-- Next Button -->
+                    <li class="page-item" [class.disabled]="!hasNextPage">
+                      <button class="page-link" (click)="nextPage()" [disabled]="!hasNextPage">
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
           </div>
-          <nav>
-            <ul class="pagination pagination-sm mb-0">
-              <li class="page-item" [class.disabled]="currentPage === 0">
-                <button class="page-link" (click)="previousPage()">
-                  <i class="ri-arrow-left-line"></i>
-                </button>
-              </li>
-              <li class="page-item" 
-                  *ngFor="let page of [].constructor(totalPages); let i = index"
-                  [class.active]="currentPage === i">
-                <button class="page-link" (click)="goToPage(i)">{{ i + 1 }}</button>
-              </li>
-              <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                <button class="page-link" (click)="nextPage()">
-                  <i class="ri-arrow-right-line"></i>
-                </button>
-              </li>
-            </ul>
-          </nav>
         </div>
       </div>
     </div>
