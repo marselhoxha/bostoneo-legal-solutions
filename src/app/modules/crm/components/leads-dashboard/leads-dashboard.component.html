@@ -48,12 +48,11 @@
                 <option value="NEW">New</option>
                 <option value="CONTACTED">Contacted</option>
                 <option value="QUALIFIED">Qualified</option>
-                <option value="CONSULTATION_SCHEDULED">Consultation</option>
+                <option value="CONSULTATION_SCHEDULED">Consultation Scheduled</option>
                 <option value="PROPOSAL_SENT">Proposal Sent</option>
-                <option value="NEGOTIATING">Negotiating</option>
+                <option value="NEGOTIATION">Negotiation</option>
                 <option value="CONVERTED">Converted</option>
                 <option value="LOST">Lost</option>
-                <option value="UNRESPONSIVE">Unresponsive</option>
               </select>
             </div>
             <div class="col-lg-2 col-md-6">
@@ -152,8 +151,10 @@
                     </div>
                   </td>
                   <td>
-                    <span class="badge" [class]="getStatusBadgeClass(lead.status)">
-                      {{lead.status?.replace('_', ' ')}}
+                    <span class="badge" [class]="getStatusBadgeClass(lead.status)"
+                          [title]="'Valid next steps: ' + getValidNextStatuses(lead.status || 'NEW').join(', ')">
+                      {{getStatusDisplayName(lead.status || 'NEW')}}
+                      <i class="ri-lock-line ms-1" *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0" title="Final status"></i>
                     </span>
                   </td>
                   <td>
@@ -190,23 +191,48 @@
                         Actions
                       </button>
                       <ul class="dropdown-menu">
+                        <!-- Always show View Details -->
                         <li><a class="dropdown-item" href="#" (click)="viewLead(lead); $event.preventDefault()">
                           <i class="ri-eye-line me-2"></i>View Details
                         </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" (click)="editLead(lead); $event.preventDefault()">
+                        
+                        <!-- Edit Lead - only if not converted -->
+                        <li *ngIf="canEditLead(lead)"><hr class="dropdown-divider"></li>
+                        <li *ngIf="canEditLead(lead)"><a class="dropdown-item" href="#" (click)="editLead(lead); $event.preventDefault()">
                           <i class="ri-edit-2-line me-2"></i>Edit Lead
                         </a></li>
-                        <li><a class="dropdown-item" href="#" (click)="assignLead(lead); $event.preventDefault()">
-                          <i class="ri-user-add-line me-2"></i>Assign
+                        
+                        <!-- Assignment - only if not in final states -->
+                        <li *ngIf="canAssignLead(lead)"><a class="dropdown-item" href="#" (click)="assignLead(lead); $event.preventDefault()">
+                          <i class="ri-user-add-line me-2"></i>Assign to Attorney
                         </a></li>
-                        <li><a class="dropdown-item" href="#" (click)="scheduleCall(lead); $event.preventDefault()">
-                          <i class="ri-calendar-2-line me-2"></i>Schedule Call
+                        
+                        <!-- Schedule Consultation - only if valid transition -->
+                        <li *ngIf="canScheduleConsultation(lead)"><a class="dropdown-item" href="#" (click)="scheduleCall(lead); $event.preventDefault()">
+                          <i class="ri-calendar-2-line me-2"></i>Schedule Consultation
                         </a></li>
+                        
+                        <!-- Convert - only if valid transition -->
+                        <li *ngIf="canConvertLead(lead)"><hr class="dropdown-divider"></li>
+                        <li *ngIf="canConvertLead(lead)"><a class="dropdown-item text-success" href="#" (click)="convertLead(lead); $event.preventDefault()">
+                          <i class="ri-arrow-right-circle-line me-2"></i>Convert to Client
+                        </a></li>
+                        
+                        <!-- Status information -->
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-success" href="#" (click)="convertLead(lead); $event.preventDefault()">
-                          <i class="ri-arrow-right-circle-line me-2"></i>Convert
-                        </a></li>
+                        <li><h6 class="dropdown-header">
+                          Status: {{getStatusDisplayName(lead.status || 'NEW')}}
+                        </h6></li>
+                        <li *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0">
+                          <span class="dropdown-item-text text-muted small">
+                            <i class="ri-lock-line me-1"></i>Lead in final status
+                          </span>
+                        </li>
+                        <li *ngIf="getValidNextStatuses(lead.status || 'NEW').length > 0">
+                          <span class="dropdown-item-text text-muted small">
+                            <i class="ri-information-line me-1"></i>Next: {{getFormattedNextStatuses(lead.status || 'NEW')}}
+                          </span>
+                        </li>
                       </ul>
                     </div>
                   </td>
@@ -381,8 +407,8 @@
                 </h6>
               </div>
               <div class="card-body p-2" style="min-height: 400px;">
-                <div class="mb-2" *ngFor="let lead of filteredLeads | slice:0:5">
-                  <div class="border rounded p-2" *ngIf="lead.status === stage.name.toUpperCase().replace(' ', '_')">
+                <div class="mb-2" *ngFor="let lead of getLeadsForStage(stage.name) | slice:0:5">
+                  <div class="border rounded p-2">
                     <div class="d-flex align-items-center">
                       <div class="avatar-xs me-2">
                         <span class="avatar-title rounded-circle bg-soft-primary text-primary font-size-12">
@@ -390,8 +416,12 @@
                         </span>
                       </div>
                       <div class="flex-grow-1">
-                        <h6 class="mb-1 font-size-12">{{lead.fullName}}</h6>
-                        <p class="mb-0 text-muted font-size-11">{{lead.practiceArea?.replace('_', ' ')}}</p>
+                        <h6 class="mb-1 font-size-12">{{lead.fullName || (lead.firstName + ' ' + lead.lastName)}}</h6>
+                        <p class="mb-0 text-muted font-size-11">{{lead.practiceArea?.replace('_', ' ') || '-'}}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                          <span class="badge badge-soft-secondary font-size-10">{{getPriorityDisplayName(lead.priority)}}</span>
+                          <span class="text-muted font-size-10">{{formatCurrency(lead.estimatedValue)}}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -399,6 +429,9 @@
                 <div class="text-center text-muted font-size-12" 
                      *ngIf="getLeadCountForStage(stage.name) === 0">
                   No leads in this stage
+                </div>
+                <div class="text-center mt-2" *ngIf="getLeadCountForStage(stage.name) > 5">
+                  <small class="text-muted">+{{getLeadCountForStage(stage.name) - 5}} more leads</small>
                 </div>
               </div>
             </div>
@@ -409,5 +442,541 @@
   </div>
 </div>
 
+<!-- Edit Lead Modal -->
+<div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="selectedLead && isEditMode">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Lead - {{selectedLead.fullName}}</h5>
+        <button type="button" class="btn-close" (click)="closeEditModal()"></button>
+      </div>
+      <form [formGroup]="editLeadForm" (ngSubmit)="saveEditLead()">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" 
+                       [class.is-invalid]="editLeadForm.get('firstName')?.invalid && editLeadForm.get('firstName')?.touched"
+                       formControlName="firstName">
+                <div class="invalid-feedback" *ngIf="editLeadForm.get('firstName')?.invalid && editLeadForm.get('firstName')?.touched">
+                  <div *ngIf="editLeadForm.get('firstName')?.errors?.['required']">First name is required</div>
+                  <div *ngIf="editLeadForm.get('firstName')?.errors?.['minlength']">First name must be at least 2 characters</div>
+                  <div *ngIf="editLeadForm.get('firstName')?.errors?.['maxlength']">First name cannot exceed 50 characters</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" 
+                       [class.is-invalid]="editLeadForm.get('lastName')?.invalid && editLeadForm.get('lastName')?.touched"
+                       formControlName="lastName">
+                <div class="invalid-feedback" *ngIf="editLeadForm.get('lastName')?.invalid && editLeadForm.get('lastName')?.touched">
+                  <div *ngIf="editLeadForm.get('lastName')?.errors?.['required']">Last name is required</div>
+                  <div *ngIf="editLeadForm.get('lastName')?.errors?.['minlength']">Last name must be at least 2 characters</div>
+                  <div *ngIf="editLeadForm.get('lastName')?.errors?.['maxlength']">Last name cannot exceed 50 characters</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" 
+                       [class.is-invalid]="editLeadForm.get('email')?.invalid && editLeadForm.get('email')?.touched"
+                       formControlName="email">
+                <div class="invalid-feedback" *ngIf="editLeadForm.get('email')?.invalid && editLeadForm.get('email')?.touched">
+                  <div *ngIf="editLeadForm.get('email')?.errors?.['required']">Email is required</div>
+                  <div *ngIf="editLeadForm.get('email')?.errors?.['email']">Please enter a valid email address</div>
+                  <div *ngIf="editLeadForm.get('email')?.errors?.['maxlength']">Email cannot exceed 100 characters</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-control" 
+                       [class.is-invalid]="editLeadForm.get('phone')?.invalid && editLeadForm.get('phone')?.touched"
+                       formControlName="phone">
+                <div class="invalid-feedback" *ngIf="editLeadForm.get('phone')?.invalid && editLeadForm.get('phone')?.touched">
+                  <div *ngIf="editLeadForm.get('phone')?.errors?.['pattern']">Please enter a valid phone number</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Company</label>
+                <input type="text" class="form-control" formControlName="company">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Practice Area <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="practiceArea">
+                  <option value="">Select Practice Area</option>
+                  <option value="FAMILY_LAW">Family Law</option>
+                  <option value="PERSONAL_INJURY">Personal Injury</option>
+                  <option value="CRIMINAL_DEFENSE">Criminal Defense</option>
+                  <option value="BUSINESS_LAW">Business Law</option>
+                  <option value="ESTATE_PLANNING">Estate Planning</option>
+                  <option value="REAL_ESTATE">Real Estate</option>
+                  <option value="IMMIGRATION">Immigration</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" formControlName="status">
+                  <option value="">Select Status</option>
+                  <option value="NEW">New</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="QUALIFIED">Qualified</option>
+                  <option value="CONSULTATION_SCHEDULED">Consultation Scheduled</option>
+                  <option value="PROPOSAL_SENT">Proposal Sent</option>
+                  <option value="NEGOTIATION">Negotiation</option>
+                  <option value="CONVERTED">Converted</option>
+                  <option value="LOST">Lost</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Priority</label>
+                <select class="form-select" formControlName="priority">
+                  <option value="">Select Priority</option>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Estimated Value</label>
+                <input type="number" class="form-control" formControlName="estimatedValue" placeholder="0">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Contact Preference</label>
+                <select class="form-select" formControlName="contactPreference">
+                  <option value="">Select Preference</option>
+                  <option value="EMAIL">Email</option>
+                  <option value="PHONE">Phone</option>
+                  <option value="TEXT">Text</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Additional Fields Row -->
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Lead Source</label>
+                <select class="form-select" formControlName="source">
+                  <option value="">Select Source</option>
+                  <option value="WEBSITE">Website</option>
+                  <option value="REFERRAL">Referral</option>
+                  <option value="GOOGLE_ADS">Google Ads</option>
+                  <option value="SOCIAL_MEDIA">Social Media</option>
+                  <option value="EMAIL_CAMPAIGN">Email Campaign</option>
+                  <option value="PHONE_INQUIRY">Phone Inquiry</option>
+                  <option value="WALK_IN">Walk-in</option>
+                  <option value="EVENT">Event/Seminar</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Case Type</label>
+                <input type="text" class="form-control" formControlName="caseType" placeholder="e.g., Personal Injury, Family Law">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Lead Score</label>
+                <input type="number" class="form-control" formControlName="leadScore" 
+                       placeholder="0-100" min="0" max="100">
+                <div class="form-text text-muted">Lead quality score (0-100)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Initial Inquiry</label>
+            <textarea class="form-control" rows="3" formControlName="initialInquiry"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" rows="3" formControlName="notes"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="!editLeadForm.valid">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Lead Modal -->
+<div class="modal fade" [class.show]="showAssignModal" [style.display]="showAssignModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="selectedLead">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Lead - {{selectedLead.fullName}}</h5>
+        <button type="button" class="btn-close" (click)="closeAssignModal()"></button>
+      </div>
+      <form [formGroup]="assignForm" (ngSubmit)="submitAssignment()">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Assign To <span class="text-danger">*</span></label>
+            <select class="form-select" 
+                    [class.is-invalid]="assignForm.get('assignedTo')?.invalid && assignForm.get('assignedTo')?.touched"
+                    formControlName="assignedTo">
+              <option value="">Select Attorney</option>
+              <option *ngFor="let attorney of availableAttorneys" [value]="attorney.id">
+                {{attorney.firstName}} {{attorney.lastName}} ({{attorney.email}}) - {{attorney.roleName}}
+              </option>
+            </select>
+            <div class="invalid-feedback" *ngIf="assignForm.get('assignedTo')?.invalid && assignForm.get('assignedTo')?.touched">
+              Please select an attorney to assign the lead to
+            </div>
+            <div class="form-text text-muted" *ngIf="availableAttorneys.length === 0">
+              Loading attorneys... If none appear, please check user management.
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Assignment Notes</label>
+            <textarea class="form-control" rows="3" 
+                      [class.is-invalid]="assignForm.get('notes')?.invalid && assignForm.get('notes')?.touched"
+                      formControlName="notes" 
+                      placeholder="Add any specific instructions or context for the assignee..."></textarea>
+            <div class="invalid-feedback" *ngIf="assignForm.get('notes')?.invalid && assignForm.get('notes')?.touched">
+              <div *ngIf="assignForm.get('notes')?.errors?.['maxlength']">Notes cannot exceed 500 characters</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeAssignModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="!assignForm.valid">Assign Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Call Modal -->
+<div class="modal fade" [class.show]="showScheduleModal" [style.display]="showScheduleModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="selectedLead">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Schedule Consultation - {{selectedLead.fullName}}</h5>
+        <button type="button" class="btn-close" (click)="closeScheduleModal()"></button>
+      </div>
+      <form [formGroup]="scheduleForm" (ngSubmit)="submitSchedule()">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Consultation Date & Time <span class="text-danger">*</span></label>
+                <input type="text" 
+                       id="consultationDatePicker"
+                       class="form-control" 
+                       placeholder="Select date and time"
+                       [class.is-invalid]="scheduleForm.get('consultationDateTime')?.invalid && scheduleForm.get('consultationDateTime')?.touched"
+                       formControlName="consultationDateTime"
+                       readonly>
+                <div class="invalid-feedback" *ngIf="scheduleForm.get('consultationDateTime')?.invalid && scheduleForm.get('consultationDateTime')?.touched">
+                  Please select a consultation date and time
+                </div>
+                <div class="form-text text-muted">
+                  <i class="ri-information-line me-1"></i>
+                  Available Monday-Friday, 8:00 AM - 6:00 PM
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Consultation Type <span class="text-danger">*</span></label>
+                <select class="form-select" 
+                        [class.is-invalid]="scheduleForm.get('consultationType')?.invalid && scheduleForm.get('consultationType')?.touched"
+                        formControlName="consultationType">
+                  <option value="INITIAL_CONSULTATION">Initial Consultation</option>
+                  <option value="FOLLOW_UP">Follow-up Meeting</option>
+                  <option value="CASE_REVIEW">Case Review</option>
+                  <option value="DOCUMENT_REVIEW">Document Review</option>
+                  <option value="SETTLEMENT_DISCUSSION">Settlement Discussion</option>
+                </select>
+                <div class="invalid-feedback" *ngIf="scheduleForm.get('consultationType')?.invalid && scheduleForm.get('consultationType')?.touched">
+                  Please select a consultation type
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" rows="3" 
+                      [class.is-invalid]="scheduleForm.get('notes')?.invalid && scheduleForm.get('notes')?.touched"
+                      formControlName="notes" 
+                      placeholder="Add any specific details about the consultation..."></textarea>
+            <div class="invalid-feedback" *ngIf="scheduleForm.get('notes')?.invalid && scheduleForm.get('notes')?.touched">
+              <div *ngIf="scheduleForm.get('notes')?.errors?.['maxlength']">Notes cannot exceed 500 characters</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeScheduleModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="!scheduleForm.valid">Schedule Consultation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Convert Lead Modal -->
+<div class="modal fade" [class.show]="showConvertModal" [style.display]="showConvertModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="selectedLead">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Convert Lead - {{selectedLead.fullName}}</h5>
+        <button type="button" class="btn-close" (click)="closeConvertModal()"></button>
+      </div>
+      <form [formGroup]="convertForm" (ngSubmit)="submitConversion()">
+        <div class="modal-body">
+          <div class="row mb-4">
+            <div class="col-12">
+              <label class="form-label">Conversion Type <span class="text-danger">*</span></label>
+              <div class="row">
+                <div class="col-md-4" *ngFor="let type of conversionTypes">
+                  <div class="card h-100" [class.border-primary]="selectedConversionType === type.value">
+                    <div class="card-body">
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" 
+                               [value]="type.value" 
+                               formControlName="conversionType"
+                               (change)="onConversionTypeChange(type.value)">
+                        <label class="form-check-label">
+                          <strong>{{type.label}}</strong>
+                        </label>
+                      </div>
+                      <p class="small text-muted mb-0 mt-1">{{type.description}}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Client Information Section -->
+          <div class="row" *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+            <div class="col-12">
+              <h6 class="text-primary border-bottom pb-2 mb-3">Client Information</h6>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="clientFirstName">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="clientLastName">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" formControlName="clientEmail">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-control" formControlName="clientPhone">
+              </div>
+            </div>
+          </div>
+
+          <!-- Case/Matter Information Section -->
+          <div class="row" *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+            <div class="col-12">
+              <h6 class="text-primary border-bottom pb-2 mb-3">Case/Matter Information</h6>
+            </div>
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Case Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="caseTitle" 
+                       placeholder="Brief title describing the case">
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Case Description <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="4" formControlName="caseDescription" 
+                          placeholder="Detailed description of the legal matter"></textarea>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Retainer Amount</label>
+                <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- General Notes -->
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Conversion Notes</label>
+                <textarea class="form-control" rows="3" formControlName="notes" 
+                          placeholder="Any additional notes about this conversion..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeConvertModal()">Cancel</button>
+          <button type="submit" class="btn btn-success" [disabled]="!convertForm.valid || !selectedConversionType">
+            Convert Lead
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Backdrop -->
-<div class="modal-backdrop fade show" *ngIf="showLeadModal || showPipelineModal"></div>
+<div class="modal-backdrop fade show" *ngIf="showLeadModal || showPipelineModal || showEditModal || showAssignModal || showScheduleModal || showConvertModal"></div>
+
+<!-- Custom Styles -->
+<style>
+  /* Conversion Progress Styling */
+  .conversion-progress {
+    text-align: left;
+    margin: 20px 0;
+  }
+  
+  .conversion-progress .step {
+    padding: 8px 16px;
+    margin: 5px 0;
+    border-radius: 5px;
+    background: #f8f9fa;
+    color: #6c757d;
+    border-left: 4px solid #dee2e6;
+  }
+  
+  .conversion-progress .step.active {
+    background: #fff3cd;
+    color: #856404;
+    border-left-color: #ffc107;
+  }
+  
+  .conversion-progress .step.completed {
+    background: #d1edff;
+    color: #155724;
+    border-left-color: #28a745;
+  }
+  
+  /* Flatpickr Customization */
+  .crm-datepicker {
+    z-index: 9999 !important;
+  }
+  
+  .crm-datepicker .flatpickr-day.selected {
+    background: #007bff;
+    border-color: #007bff;
+  }
+  
+  .crm-datepicker .flatpickr-day:hover {
+    background: #e9ecef;
+  }
+  
+  /* Conversion Confirmation Popup */
+  .conversion-confirmation-popup {
+    font-size: 14px;
+  }
+  
+  .conversion-confirmation-popup .swal2-html-container {
+    text-align: left;
+  }
+  
+  /* Form Validation Enhancements */
+  .form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+  }
+  
+  .form-select.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+  }
+  
+  .invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+  }
+  
+  /* Modal Enhancements */
+  .modal-header {
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+  }
+  
+  .modal-footer {
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+  }
+  
+  /* Priority Badge Pulse Animation */
+  .priority-urgent-pulse {
+    animation: pulse-urgent 2s infinite;
+  }
+  
+  @keyframes pulse-urgent {
+    0% {
+      box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+  }
+  
+  /* Dropdown Enhancement */
+  .dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+</style>

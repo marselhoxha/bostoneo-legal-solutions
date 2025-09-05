@@ -192,6 +192,42 @@ export class UserService {
   }
 
   /**
+   * Get all attorneys/lawyers for CRM assignments
+   */
+  getAttorneys(): Observable<User[]> {
+    return this.getUsers().pipe(
+      map(response => {
+        const users = response?.data?.users || [];
+        // Filter for attorneys/lawyers - using roleName and roles array
+        return users.filter((user: User) => {
+          const primaryRole = user.roleName?.toLowerCase() || '';
+          const allRoles = user.roles?.map(role => role.toLowerCase()) || [];
+          
+          return primaryRole.includes('attorney') || 
+                 primaryRole.includes('lawyer') ||
+                 primaryRole.includes('paralegal') ||
+                 primaryRole === 'admin' ||  // Admins can also be assigned leads
+                 allRoles.some(role => 
+                   role.includes('attorney') || 
+                   role.includes('lawyer') || 
+                   role.includes('paralegal') ||
+                   role === 'admin'
+                 );
+        }).map((user: User) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          roleName: user.roleName,
+          roles: user.roles,
+          imageUrl: user.imageUrl
+        }));
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Get user by ID
    */
   getUserById(userId: number): Observable<CustomHttpResponse<User>> {

@@ -83,10 +83,9 @@ public class CrmLeadsResource {
     @PutMapping("/{id}")
     public ResponseEntity<LeadDTO> updateLead(
             @PathVariable Long id,
-            @RequestBody @Valid LeadDTO leadDTO,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @RequestBody @Valid LeadDTO leadDTO) {
         
-        log.info("Updating lead {} by user: {}", id, userDetails.getUsername());
+        log.info("Updating lead {}", id);
         
         Long userId = 1L; // Extract from userDetails in real implementation
         Lead lead = leadDTOMapper.toEntity(leadDTO);
@@ -167,10 +166,26 @@ public class CrmLeadsResource {
             @RequestBody Map<String, Object> assignmentData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        Long assignToUserId = ((Number) assignmentData.get("assignToUserId")).longValue();
+        // Handle both assignedTo (from frontend) and assignToUserId (alternative)
+        Long assignToUserId;
+        Object assignToValue = assignmentData.get("assignedTo");
+        if (assignToValue == null) {
+            assignToValue = assignmentData.get("assignToUserId");
+        }
+        
+        if (assignToValue instanceof String) {
+            assignToUserId = Long.parseLong((String) assignToValue);
+        } else if (assignToValue instanceof Number) {
+            assignToUserId = ((Number) assignToValue).longValue();
+        } else {
+            throw new IllegalArgumentException("Invalid assignedTo value: " + assignToValue);
+        }
+        
         String notes = (String) assignmentData.get("notes");
         
-        log.info("Assigning lead {} to user {} by: {}", id, assignToUserId, userDetails.getUsername());
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Assigning lead {} to user {} by: {}", id, assignToUserId, username);
         
         Long assignedBy = 1L; // Extract from userDetails in real implementation
         Lead lead = leadService.assignLeadWithNotes(id, assignToUserId, assignedBy, notes);
@@ -185,11 +200,17 @@ public class CrmLeadsResource {
             @RequestBody Map<String, Object> consultationData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        String consultationDateStr = (String) consultationData.get("consultationDate");
+        // Handle both consultationDate and consultationDateTime from frontend
+        String consultationDateStr = (String) consultationData.get("consultationDateTime");
+        if (consultationDateStr == null) {
+            consultationDateStr = (String) consultationData.get("consultationDate");
+        }
         String notes = (String) consultationData.get("notes");
         
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Scheduling consultation for lead {} on {} by user: {}", 
-            id, consultationDateStr, userDetails.getUsername());
+            id, consultationDateStr, username);
         
         Long scheduledBy = 1L; // Extract from userDetails in real implementation
         Lead lead = leadService.scheduleConsultation(id, consultationDateStr, scheduledBy, notes);

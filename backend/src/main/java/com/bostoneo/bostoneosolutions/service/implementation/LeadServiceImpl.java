@@ -663,16 +663,46 @@ public class LeadServiceImpl implements LeadService {
     }
 
     private void recordPipelineTransition(Long leadId, String fromStatus, String toStatus, Long userId, String notes) {
+        // Map status to stage IDs - this is a temporary solution
+        // In a production system, you'd have a proper mapping table
+        Long fromStageId = mapStatusToStageId(fromStatus);
+        Long toStageId = mapStatusToStageId(toStatus);
+        
         LeadPipelineHistory history = LeadPipelineHistory.builder()
             .leadId(leadId)
-            .fromStageId(null) // We could map status to stage IDs if needed
-            .toStageId(null)   // We could map status to stage IDs if needed
+            .fromStageId(fromStageId)
+            .toStageId(toStageId)
             .movedBy(userId)
             .notes(notes)
             .automated(false)
             .build();
         
-        leadPipelineHistoryRepository.save(history);
+        try {
+            leadPipelineHistoryRepository.save(history);
+        } catch (Exception e) {
+            log.error("Failed to save pipeline history for lead {}: {}", leadId, e.getMessage());
+            // Don't fail the main operation if history recording fails
+        }
+    }
+    
+    private Long mapStatusToStageId(String status) {
+        // Map status strings to actual pipeline stage IDs from database
+        // 17=New Lead, 18=Initial Contact, 19=Qualification, 20=Consultation, 
+        // 21=Proposal, 22=Negotiation, 23=Won, 24=Lost
+        switch (status.toUpperCase()) {
+            case "NEW": return 17L;          // New Lead
+            case "CONTACTED": return 18L;    // Initial Contact
+            case "QUALIFIED": return 19L;    // Qualification
+            case "CONSULTATION_SCHEDULED": return 20L;  // Consultation
+            case "PROPOSAL_SENT": return 21L; // Proposal
+            case "NEGOTIATION": return 22L;   // Negotiation
+            case "CONVERTED": return 23L;     // Won
+            case "LOST": return 24L;          // Lost
+            case "UNQUALIFIED": return 24L;   // Map to Lost since there's no separate Unqualified stage
+            default: 
+                log.warn("Unknown status: {}, defaulting to stage ID 17 (New Lead)", status);
+                return 17L; // Default to "New Lead" stage
+        }
     }
 
     // Additional methods for CrmLeadsResource support
@@ -689,7 +719,8 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead moveToStage(Long leadId, Long stageId, Long userId, String notes) {
-        Lead lead = findById(leadId)
+        // Verify lead exists
+        findById(leadId)
             .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
         
         // Get the stage to determine the status
@@ -750,12 +781,39 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes) {
         try {
-            // Parse the date string - expecting ISO format
-            Timestamp consultationDate = Timestamp.valueOf(consultationDateStr.replace("T", " "));
+            log.info("Parsing consultation date string: {}", consultationDateStr);
+            
+            // Handle null or empty date string
+            if (consultationDateStr == null || consultationDateStr.trim().isEmpty()) {
+                throw new RuntimeException("Consultation date cannot be null or empty");
+            }
+            
+            // Clean and normalize the date string
+            String normalizedDateStr = consultationDateStr.trim().replace("T", " ");
+            
+            // Add seconds if missing (format: yyyy-MM-dd HH:mm)
+            if (normalizedDateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$")) {
+                normalizedDateStr += ":00";
+                log.info("Added seconds to date string: {}", normalizedDateStr);
+            }
+            
+            // Validate the final format before parsing
+            if (!normalizedDateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$")) {
+                throw new RuntimeException("Date format does not match expected pattern yyyy-MM-dd HH:mm:ss");
+            }
+            
+            Timestamp consultationDate = Timestamp.valueOf(normalizedDateStr);
+            log.info("Successfully parsed consultation date: {}", consultationDate);
+            
             return scheduleConsultation(leadId, consultationDate, scheduledBy, notes);
+        } catch (IllegalArgumentException e) {
+            log.error("Failed to parse consultation date: {} - {}", consultationDateStr, e.getMessage());
+            throw new RuntimeException("Invalid consultation date format: " + consultationDateStr + 
+                ". Expected format: yyyy-MM-dd HH:mm or yyyy-MM-dd HH:mm:ss. Error: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Failed to parse consultation date: {}", consultationDateStr, e);
-            throw new RuntimeException("Invalid consultation date format: " + consultationDateStr);
+            log.error("Unexpected error parsing consultation date: {}", consultationDateStr, e);
+            throw new RuntimeException("Failed to parse consultation date: " + consultationDateStr + 
+                ". Error: " + e.getMessage());
         }
     }
 
