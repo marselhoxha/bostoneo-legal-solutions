@@ -166,3 +166,34 @@
 .font-size-16 {
   font-size: 1rem;
 }
+
+// Urgent priority pulsing animation
+.priority-urgent-pulse {
+  animation: priority-pulse 2s infinite;
+  position: relative;
+}
+
+@keyframes priority-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(139, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 0, 0, 0);
+  }
+}
+
+// Custom colors for proposal sent and priority levels
+.proposal-sent-color {
+  background-color: #ff9800 !important;
+}
+
+.urgent-red {
+  background-color: #8b0000 !important; // Dark red for urgent
+}
+
+.high-red {
+  background-color: #dc3545 !important; // Standard red for high
+}

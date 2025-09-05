@@ -96,3 +96,60 @@ body.dark-mode .mobile-file-manager-sidebar * {
   color: inherit \!important;
 }
 
+/* ========================================
+   GLOBAL PAGINATION STYLING
+   Custom pagination styling with separate rounded buttons
+   Applied to all tables throughout the application
+========================================= */
+.pagination {
+  .page-item {
+    margin: 0 2px; // Add gap between buttons
+    
+    .page-link {
+      color: #6c757d;
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 6px !important; // Make buttons rounded individually
+      padding: 8px 12px;
+      min-width: 40px;
+      text-align: center;
+      
+      &:hover {
+        color: #495057;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+      }
+      
+      &:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+    }
+    
+    // Active page button styling (dark blue/gray)
+    &.active .page-link {
+      background-color: #495057 !important;
+      border-color: #495057 !important;
+      color: #fff !important;
+      
+      &:hover {
+        background-color: #3a3f44 !important;
+        border-color: #3a3f44 !important;
+      }
+    }
+    
+    // Disabled button styling
+    &.disabled .page-link {
+      color: #6c757d;
+      background-color: #fff;
+      border-color: #dee2e6;
+      opacity: 0.6;
+    }
+  }
+  
+  // Remove default Bootstrap connecting borders
+  .page-item:first-child .page-link,
+  .page-item:last-child .page-link {
+    border-radius: 6px !important;
+  }
+}
+

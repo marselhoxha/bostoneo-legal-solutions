@@ -427,25 +427,17 @@
               <div class="d-flex justify-content-sm-end">
                 <nav>
                   <ul class="pagination pagination-sm mb-0">
-                    <!-- Previous Button -->
                     <li class="page-item" [class.disabled]="!hasPreviousPage">
                       <button class="page-link" (click)="previousPage()" [disabled]="!hasPreviousPage">
-                        Previous
+                        <i class="ri-arrow-left-line"></i> Previous
                       </button>
                     </li>
-                    
-                    <!-- Page Numbers -->
-                    <li class="page-item" *ngFor="let pageNum of getVisiblePages()" 
-                        [class.active]="currentPage === pageNum">
-                      <button class="page-link" (click)="goToPage(pageNum)">
-                        {{ pageNum + 1 }}
-                      </button>
+                    <li class="page-item active">
+                      <span class="page-link">{{ currentPage + 1 }}</span>
                     </li>
-                    
-                    <!-- Next Button -->
                     <li class="page-item" [class.disabled]="!hasNextPage">
                       <button class="page-link" (click)="nextPage()" [disabled]="!hasNextPage">
-                        Next
+                        Next <i class="ri-arrow-right-line"></i>
                       </button>
                     </li>
                   </ul>
