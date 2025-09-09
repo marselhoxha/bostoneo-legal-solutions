@@ -56,8 +56,9 @@
               </select>
             </div>
             <div class="col-lg-2 col-md-6">
-              <select class="form-select form-select-sm" [(ngModel)]="selectedPriority" (change)="onFilterChange()">
-                <option value="">All Priority</option>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedUrgency" (change)="onFilterChange()">
+                <option value="">All Urgency</option>
+                <option value="URGENT">Urgent</option>
                 <option value="HIGH">High</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="LOW">Low</option>
@@ -111,8 +112,8 @@
                     Status
                     <i class="ri-arrow-up-down-line ms-1"></i>
                   </th>
-                  <th class="cursor-pointer" (click)="onSort('priority')">
-                    Priority
+                  <th class="cursor-pointer" (click)="onSort('urgencyLevel')">
+                    Urgency
                     <i class="ri-arrow-up-down-line ms-1"></i>
                   </th>
                   <th class="cursor-pointer" (click)="onSort('practiceArea')">
@@ -158,10 +159,10 @@
                     </span>
                   </td>
                   <td>
-                    <span class="badge" [class]="getPriorityBadgeClass(lead.priority)" *ngIf="lead.priority">
-                      {{lead.priority}}
+                    <span class="badge" [class]="getUrgencyBadgeClass(lead.urgencyLevel)" *ngIf="lead.urgencyLevel">
+                      {{lead.urgencyLevel}}
                     </span>
-                    <span class="text-muted" *ngIf="!lead.priority">-</span>
+                    <span class="text-muted" *ngIf="!lead.urgencyLevel">-</span>
                   </td>
                   <td>
                     <span class="text-muted small">{{lead.practiceArea?.replace('_', ' ') || '-'}}</span>
@@ -322,11 +323,11 @@
                     {{selectedLead.status?.replace('_', ' ')}}
                   </span>
                 </div>
-                <div class="mb-2"><strong>Priority:</strong> 
-                  <span class="badge ms-2" [class]="getPriorityBadgeClass(selectedLead.priority)" *ngIf="selectedLead.priority">
-                    {{selectedLead.priority}}
+                <div class="mb-2"><strong>Urgency:</strong> 
+                  <span class="badge ms-2" [class]="getUrgencyBadgeClass(selectedLead.urgencyLevel)" *ngIf="selectedLead.urgencyLevel">
+                    {{selectedLead.urgencyLevel}}
                   </span>
-                  <span *ngIf="!selectedLead.priority">-</span>
+                  <span *ngIf="!selectedLead.urgencyLevel">-</span>
                 </div>
                 <div class="mb-2"><strong>Lead Score:</strong> {{selectedLead.leadScore || '-'}}</div>
                 <div class="mb-0"><strong>Source:</strong> {{selectedLead.source || '-'}}</div>
@@ -341,7 +342,6 @@
               <label class="form-label fw-semibold">Case Details</label>
               <div class="border rounded p-3">
                 <div class="mb-2"><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || '-'}}</div>
-                <div class="mb-2"><strong>Case Type:</strong> {{selectedLead.caseType || '-'}}</div>
                 <div class="mb-0"><strong>Estimated Value:</strong> {{formatCurrency(selectedLead.estimatedValue)}}</div>
               </div>
             </div>
@@ -419,7 +419,7 @@
                         <h6 class="mb-1 font-size-12">{{lead.fullName || (lead.firstName + ' ' + lead.lastName)}}</h6>
                         <p class="mb-0 text-muted font-size-11">{{lead.practiceArea?.replace('_', ' ') || '-'}}</p>
                         <div class="d-flex justify-content-between align-items-center mt-1">
-                          <span class="badge badge-soft-secondary font-size-10">{{getPriorityDisplayName(lead.priority)}}</span>
+                          <span class="badge badge-soft-secondary font-size-10">{{getUrgencyDisplayName(lead.urgencyLevel)}}</span>
                           <span class="text-muted font-size-10">{{formatCurrency(lead.estimatedValue)}}</span>
                         </div>
                       </div>
@@ -552,9 +552,9 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label class="form-label">Priority</label>
-                <select class="form-select" formControlName="priority">
-                  <option value="">Select Priority</option>
+                <label class="form-label">Urgency</label>
+                <select class="form-select" formControlName="urgencyLevel">
+                  <option value="">Select Urgency</option>
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
                   <option value="HIGH">High</option>
@@ -602,8 +602,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label class="form-label">Case Type</label>
-                <input type="text" class="form-control" formControlName="caseType" placeholder="e.g., Personal Injury, Family Law">
+                <label class="form-label">Practice Area</label>
+                <input type="text" class="form-control" formControlName="practiceArea" placeholder="e.g., Personal Injury, Family Law">
               </div>
             </div>
             <div class="col-md-4">
@@ -754,34 +754,99 @@
   </div>
 </div>
 
-<!-- Convert Lead Modal -->
+<!-- Convert Lead Modal - Three-Stage Wizard -->
 <div class="modal fade" [class.show]="showConvertModal" [style.display]="showConvertModal ? 'block' : 'none'" 
      tabindex="-1" *ngIf="selectedLead">
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
+      <!-- Modal Header with Progress Indicator -->
       <div class="modal-header">
-        <h5 class="modal-title">Convert Lead - {{selectedLead.fullName}}</h5>
-        <button type="button" class="btn-close" (click)="closeConvertModal()"></button>
+        <div class="w-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="modal-title mb-0">
+              <i class="ri-arrow-right-circle-line me-2"></i>
+              Convert Lead - {{selectedLead.fullName}}
+            </h5>
+            <button type="button" class="btn-close" (click)="closeConvertModal()"></button>
+          </div>
+          
+          <!-- Progress Steps -->
+          <div class="conversion-wizard-progress mt-3">
+            <div class="row">
+              <div class="col-4">
+                <div class="step-indicator" [class.active]="conversionStep === 1" [class.completed]="conversionStep > 1">
+                  <div class="step-circle">
+                    <i class="ri-settings-line" *ngIf="conversionStep <= 1"></i>
+                    <i class="ri-check-line" *ngIf="conversionStep > 1"></i>
+                  </div>
+                  <div class="step-label">Select Type</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="step-indicator" [class.active]="conversionStep === 2" [class.completed]="conversionStep > 2">
+                  <div class="step-circle">
+                    <i class="ri-file-edit-line" *ngIf="conversionStep <= 2"></i>
+                    <i class="ri-check-line" *ngIf="conversionStep > 2"></i>
+                  </div>
+                  <div class="step-label">Enter Information</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="step-indicator" [class.active]="conversionStep === 3" [class.completed]="conversionStep > 3">
+                  <div class="step-circle">
+                    <i class="ri-eye-line" *ngIf="conversionStep <= 3"></i>
+                    <i class="ri-check-line" *ngIf="conversionStep > 3"></i>
+                  </div>
+                  <div class="step-label">Review & Confirm</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <form [formGroup]="convertForm" (ngSubmit)="submitConversion()">
-        <div class="modal-body">
-          <div class="row mb-4">
-            <div class="col-12">
-              <label class="form-label">Conversion Type <span class="text-danger">*</span></label>
-              <div class="row">
-                <div class="col-md-4" *ngFor="let type of conversionTypes">
-                  <div class="card h-100" [class.border-primary]="selectedConversionType === type.value">
-                    <div class="card-body">
-                      <div class="form-check">
-                        <input class="form-check-input" type="radio" 
-                               [value]="type.value" 
-                               formControlName="conversionType"
-                               (change)="onConversionTypeChange(type.value)">
-                        <label class="form-check-label">
-                          <strong>{{type.label}}</strong>
-                        </label>
-                      </div>
-                      <p class="small text-muted mb-0 mt-1">{{type.description}}</p>
+
+      <form [formGroup]="convertForm">
+        <div class="modal-body" style="min-height: 500px;">
+          
+          <!-- Step 1: Conversion Type Selection -->
+          <div *ngIf="conversionStep === 1">
+            <div class="text-center mb-4">
+              <h5 class="text-primary">{{getStepTitle()}}</h5>
+              <p class="text-muted">{{getStepDescription()}}</p>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4" *ngFor="let type of conversionTypes">
+                <div class="conversion-type-card h-100" 
+                     [class.selected]="selectedConversionType === type.value"
+                     (click)="onConversionTypeChange(type.value)">
+                  <div class="card-icon" [style.color]="type.color">
+                    <i [class]="type.icon"></i>
+                  </div>
+                  <h6>{{type.label}}</h6>
+                  <p class="small text-muted">{{type.description}}</p>
+                  <div class="selection-indicator" *ngIf="selectedConversionType === type.value">
+                    <i class="ri-check-circle-fill"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lead Summary for Context -->
+            <div class="row mt-4" *ngIf="selectedConversionType">
+              <div class="col-12">
+                <div class="alert alert-info">
+                  <h6><i class="ri-information-line me-2"></i>Lead Summary</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p class="mb-1"><strong>Name:</strong> {{selectedLead.fullName}}</p>
+                      <p class="mb-1"><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
+                      <p class="mb-0"><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
+                    </div>
+                    <div class="col-md-6">
+                      <p class="mb-1"><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || 'N/A'}}</p>
+                      <p class="mb-1"><strong>Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
+                      <p class="mb-0"><strong>Est. Value:</strong> {{formatCurrency(selectedLead.estimatedValue)}}</p>
                     </div>
                   </div>
                 </div>
@@ -789,80 +854,421 @@
             </div>
           </div>
 
-          <!-- Client Information Section -->
-          <div class="row" *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
-            <div class="col-12">
-              <h6 class="text-primary border-bottom pb-2 mb-3">Client Information</h6>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">First Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" formControlName="clientFirstName">
+          <!-- Step 2: Data Entry -->
+          <div *ngIf="conversionStep === 2">
+            <div class="text-center mb-4">
+              <h5 class="text-primary">{{getStepTitle()}}</h5>
+              <p class="text-muted">{{getStepDescription()}}</p>
+              <div class="badge bg-info text-white">
+                Converting to: {{getSelectedConversionTypeLabel()}}
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" formControlName="clientLastName">
+
+            <!-- Validation Errors -->
+            <div class="alert alert-danger" *ngIf="validationErrors.length > 0">
+              <h6><i class="ri-alert-line me-2"></i>Please fix the following errors:</h6>
+              <ul class="mb-0">
+                <li *ngFor="let error of validationErrors">{{error}}</li>
+              </ul>
+            </div>
+
+            <!-- Client Information Section -->
+            <div class="row" *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="col-12">
+                <h6 class="text-info border-bottom pb-2 mb-3">
+                  <i class="ri-user-line me-2"></i>Client Information
+                </h6>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">First Name <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" 
+                         [class.is-invalid]="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched"
+                         formControlName="clientFirstName">
+                  <div class="invalid-feedback" *ngIf="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched">
+                    First name is required
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" 
+                         [class.is-invalid]="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched"
+                         formControlName="clientLastName">
+                  <div class="invalid-feedback" *ngIf="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched">
+                    Last name is required
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Email <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" 
+                         [class.is-invalid]="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched"
+                         formControlName="clientEmail">
+                  <div class="invalid-feedback" *ngIf="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched">
+                    <div *ngIf="convertForm.get('clientEmail')?.errors?.['required']">Email is required</div>
+                    <div *ngIf="convertForm.get('clientEmail')?.errors?.['email']">Please enter a valid email</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Phone <span class="text-danger">*</span></label>
+                  <input type="tel" class="form-control" 
+                         [class.is-invalid]="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched"
+                         formControlName="clientPhone">
+                  <div class="invalid-feedback" *ngIf="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched">
+                    Phone number is required
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                  <select class="form-select" 
+                          [class.is-invalid]="convertForm.get('clientType')?.invalid && convertForm.get('clientType')?.touched"
+                          formControlName="clientType">
+                    <option value="">Select client type</option>
+                    <option value="INDIVIDUAL">Individual</option>
+                    <option value="CORPORATE">Corporate</option>
+                    <option value="BUSINESS">Business</option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="convertForm.get('clientType')?.invalid && convertForm.get('clientType')?.touched">
+                    Client type is required
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Additional Client Fields for CLIENT_AND_MATTER -->
+              <div *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'" class="col-12">
+                <h6 class="text-muted mt-3 mb-3">Additional Client Details</h6>
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="mb-3">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control" formControlName="clientAddress">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">City</label>
+                      <input type="text" class="form-control" formControlName="clientCity">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">State</label>
+                      <input type="text" class="form-control" formControlName="clientState">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">ZIP Code</label>
+                      <input type="text" class="form-control" formControlName="clientZip">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Occupation</label>
+                      <input type="text" class="form-control" formControlName="clientOccupation">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Employer</label>
+                      <input type="text" class="form-control" formControlName="clientEmployer">
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" formControlName="clientEmail">
+
+            <!-- Case/Matter Information Section -->
+            <div class="row" *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="col-12">
+                <h6 class="text-warning border-bottom pb-2 mb-3">
+                  <i class="ri-briefcase-line me-2"></i>Case/Matter Information
+                </h6>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Case Title <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" 
+                         [class.is-invalid]="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched"
+                         formControlName="caseTitle" 
+                         placeholder="Brief title describing the case">
+                  <div class="invalid-feedback" *ngIf="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched">
+                    Case title is required
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="mb-3">
+                  <label class="form-label">Case Description <span class="text-danger">*</span></label>
+                  <textarea class="form-control" rows="4" 
+                            [class.is-invalid]="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched"
+                            formControlName="caseDescription" 
+                            placeholder="Detailed description of the legal matter"></textarea>
+                  <div class="invalid-feedback" *ngIf="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched">
+                    Case description is required
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Practice Area <span class="text-danger">*</span></label>
+                    <select class="form-select" 
+                            [class.is-invalid]="convertForm.get('practiceArea')?.invalid && convertForm.get('practiceArea')?.touched"
+                            formControlName="practiceArea">
+                      <option value="">Select Practice Area</option>
+                      <option value="FAMILY_LAW">Family Law</option>
+                      <option value="PERSONAL_INJURY">Personal Injury</option>
+                      <option value="CRIMINAL_DEFENSE">Criminal Defense</option>
+                      <option value="BUSINESS_LAW">Business Law</option>
+                      <option value="ESTATE_PLANNING">Estate Planning</option>
+                      <option value="REAL_ESTATE">Real Estate</option>
+                      <option value="IMMIGRATION">Immigration</option>
+                      <option value="EMPLOYMENT_LAW">Employment Law</option>
+                      <option value="INTELLECTUAL_PROPERTY">Intellectual Property</option>
+                      <option value="CORPORATE_LAW">Corporate Law</option>
+                      <option value="BANKRUPTCY">Bankruptcy</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                    <div class="invalid-feedback" *ngIf="convertForm.get('practiceArea')?.invalid && convertForm.get('practiceArea')?.touched">
+                      Practice area is required
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Additional Case Fields for CLIENT_AND_MATTER -->
+              <div *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'" class="col-12">
+                <h6 class="text-muted mt-3 mb-3">Additional Case Details</h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Jurisdiction</label>
+                      <input type="text" class="form-control" formControlName="jurisdiction" placeholder="Court jurisdiction">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Court Name</label>
+                      <input type="text" class="form-control" formControlName="courtName">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Opposing Party</label>
+                      <input type="text" class="form-control" formControlName="opposingParty">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Opposing Counsel</label>
+                      <input type="text" class="form-control" formControlName="opposingCounsel">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Retainer Amount</label>
+                      <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Hourly Rate</label>
+                      <input type="number" class="form-control" formControlName="hourlyRate" placeholder="0">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Urgency</label>
+                      <select class="form-select" formControlName="urgencyLevel">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Phone</label>
-                <input type="tel" class="form-control" formControlName="clientPhone">
+
+            <!-- General Notes -->
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-secondary border-bottom pb-2 mb-3">
+                  <i class="ri-file-text-line me-2"></i>Additional Information
+                </h6>
+                <div class="mb-3">
+                  <label class="form-label">Conversion Notes</label>
+                  <textarea class="form-control" rows="3" formControlName="conversionNotes" 
+                            placeholder="Any additional notes about this conversion..."></textarea>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Case/Matter Information Section -->
-          <div class="row" *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
-            <div class="col-12">
-              <h6 class="text-primary border-bottom pb-2 mb-3">Case/Matter Information</h6>
-            </div>
-            <div class="col-12">
-              <div class="mb-3">
-                <label class="form-label">Case Title <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" formControlName="caseTitle" 
-                       placeholder="Brief title describing the case">
+          <!-- Step 3: Review & Confirmation -->
+          <div *ngIf="conversionStep === 3">
+            <div class="text-center mb-4">
+              <h5 class="text-primary">{{getStepTitle()}}</h5>
+              <p class="text-muted">{{getStepDescription()}}</p>
+              <div class="badge bg-success text-white">
+                Ready to convert to: {{getSelectedConversionTypeLabel()}}
               </div>
             </div>
-            <div class="col-12">
-              <div class="mb-3">
-                <label class="form-label">Case Description <span class="text-danger">*</span></label>
-                <textarea class="form-control" rows="4" formControlName="caseDescription" 
-                          placeholder="Detailed description of the legal matter"></textarea>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Retainer Amount</label>
-                <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0">
-              </div>
-            </div>
-          </div>
 
-          <!-- General Notes -->
-          <div class="row">
-            <div class="col-12">
-              <div class="mb-3">
-                <label class="form-label">Conversion Notes</label>
-                <textarea class="form-control" rows="3" formControlName="notes" 
-                          placeholder="Any additional notes about this conversion..."></textarea>
+            <!-- Conflict Check Results -->
+            <div class="alert" 
+                 [class.alert-success]="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed"
+                 [class.alert-warning]="conflictCheckResult && (conflictCheckResult.hasConflicts || conflictCheckResult.checkFailed)">
+              <h6>
+                <i class="ri-shield-check-line me-2" *ngIf="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed"></i>
+                <i class="ri-alert-line me-2" *ngIf="conflictCheckResult && (conflictCheckResult.hasConflicts || conflictCheckResult.checkFailed)"></i>
+                Conflict Check Results
+              </h6>
+              <p class="mb-0" *ngIf="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
+                No conflicts detected. Safe to proceed with conversion.
+              </p>
+              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
+                {{conflictCheckResult.conflicts?.length || 0}} conflict(s) detected. Conversion may proceed with administrator approval or caution.
+              </p>
+              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && conflictCheckResult.proceedDespiteConflicts">
+                <i class="ri-alert-line me-1 text-warning"></i>
+                {{conflictCheckResult.conflicts?.length || 0}} conflict(s) detected - proceeding with administrator override.
+              </p>
+              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.checkFailed">
+                <i class="ri-information-line me-1"></i>{{conflictCheckResult.warning}}
+              </p>
+              <div *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && conflictCheckResult.conflicts && conflictCheckResult.conflicts.length > 0" class="mt-2">
+                <strong>Conflict Details:</strong>
+                <ul class="mt-1 mb-0">
+                  <li *ngFor="let conflict of conflictCheckResult.conflicts" class="small text-danger">
+                    <strong>{{formatConflictTypeForDisplay(conflict.type)}}:</strong> {{formatConflictDescription(conflict.description)}}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Review Summary -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0">Conversion Review</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <h6 class="text-primary">Lead Information</h6>
+                        <p><strong>Name:</strong> {{selectedLead.fullName}}</p>
+                        <p><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
+                        <p><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
+                        <p><strong>Current Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
+                        <p><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || 'N/A'}}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <h6 class="text-primary">Conversion Details</h6>
+                        <p><strong>Type:</strong> {{getSelectedConversionTypeLabel()}}</p>
+                        <p><strong>Will Create:</strong> 
+                          <span *ngIf="selectedConversionType === 'CLIENT_ONLY'">Client Record</span>
+                          <span *ngIf="selectedConversionType === 'MATTER_ONLY'">Case/Matter Record</span>
+                          <span *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'">Client & Case Records</span>
+                        </p>
+                        <p><strong>New Lead Status:</strong> CONVERTED</p>
+                      </div>
+                    </div>
+                    
+                    <!-- Client Information Review -->
+                    <div *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'" class="mt-4">
+                      <h6 class="text-info border-bottom pb-2 mb-3">Client Information to be Created</h6>
+                      <div class="row">
+                        <div class="col-md-6">
+                          <p><strong>Name:</strong> {{convertForm.get('clientFirstName')?.value}} {{convertForm.get('clientLastName')?.value}}</p>
+                          <p><strong>Email:</strong> {{convertForm.get('clientEmail')?.value}}</p>
+                          <p><strong>Phone:</strong> {{convertForm.get('clientPhone')?.value || 'N/A'}}</p>
+                        </div>
+                        <div class="col-md-6">
+                          <p *ngIf="convertForm.get('clientAddress')?.value"><strong>Address:</strong> {{convertForm.get('clientAddress')?.value}}</p>
+                          <p *ngIf="convertForm.get('clientOccupation')?.value"><strong>Occupation:</strong> {{convertForm.get('clientOccupation')?.value}}</p>
+                          <p *ngIf="convertForm.get('clientEmployer')?.value"><strong>Employer:</strong> {{convertForm.get('clientEmployer')?.value}}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Case Information Review -->
+                    <div *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'" class="mt-4">
+                      <h6 class="text-warning border-bottom pb-2 mb-3">Case Information to be Created</h6>
+                      <div class="row">
+                        <div class="col-md-6">
+                          <p><strong>Title:</strong> {{convertForm.get('caseTitle')?.value}}</p>
+                          <p><strong>Practice Area:</strong> {{convertForm.get('practiceArea')?.value?.replace('_', ' ') || 'N/A'}}</p>
+                        </div>
+                        <div class="col-md-6">
+                          <p *ngIf="convertForm.get('retainerAmount')?.value"><strong>Retainer:</strong> ${{convertForm.get('retainerAmount')?.value}}</p>
+                          <p *ngIf="convertForm.get('urgencyLevel')?.value"><strong>Urgency:</strong> {{convertForm.get('urgencyLevel')?.value}}</p>
+                          <p *ngIf="convertForm.get('jurisdiction')?.value"><strong>Jurisdiction:</strong> {{convertForm.get('jurisdiction')?.value}}</p>
+                        </div>
+                      </div>
+                      <div *ngIf="convertForm.get('caseDescription')?.value" class="mt-2">
+                        <p><strong>Description:</strong></p>
+                        <div class="bg-light p-2 rounded small">{{convertForm.get('caseDescription')?.value}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Modal Footer with Navigation -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-light" (click)="closeConvertModal()">Cancel</button>
-          <button type="submit" class="btn btn-success" [disabled]="!convertForm.valid || !selectedConversionType">
-            Convert Lead
-          </button>
+          <div class="w-100 d-flex justify-content-between align-items-center">
+            <div>
+              <button type="button" class="btn btn-outline-secondary" (click)="closeConvertModal()">
+                <i class="ri-close-line me-1"></i>Cancel
+              </button>
+            </div>
+            
+            <div class="step-info text-muted small">
+              Step {{conversionStep}} of {{maxSteps}}
+            </div>
+            
+            <div>
+              <button type="button" class="btn btn-outline-primary me-2" 
+                      *ngIf="canGoToPreviousStep()" 
+                      (click)="previousStep()">
+                <i class="ri-arrow-left-line me-1"></i>Previous
+              </button>
+              
+              <button type="button" class="btn btn-primary" 
+                      *ngIf="conversionStep < 3 && canGoToNextStep()" 
+                      (click)="nextStep()">
+                Next<i class="ri-arrow-right-line ms-1"></i>
+              </button>
+              
+              <button type="button" class="btn btn-success" 
+                      *ngIf="conversionStep === 3" 
+                      (click)="submitConversion()"
+                      [disabled]="conversionInProgress">
+                <span *ngIf="!conversionInProgress">
+                  <i class="ri-check-line me-1"></i>Convert Lead
+                </span>
+                <span *ngIf="conversionInProgress">
+                  <i class="spinner-border spinner-border-sm me-1"></i>Converting...
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -874,6 +1280,143 @@
 
 <!-- Custom Styles -->
 <style>
+  /* Conversion Wizard Progress Styling */
+  .conversion-wizard-progress {
+    margin-top: 15px;
+    padding: 15px 0;
+    border-top: 1px solid #e9ecef;
+  }
+  
+  .step-indicator {
+    text-align: center;
+    position: relative;
+  }
+  
+  .step-indicator::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: #dee2e6;
+    z-index: 1;
+  }
+  
+  .step-indicator:first-child::before {
+    left: 100%;
+    width: 50%;
+  }
+  
+  .step-indicator:last-child::before {
+    width: 50%;
+  }
+  
+  .step-indicator.completed::before {
+    background: #28a745;
+  }
+  
+  .step-indicator.active::before {
+    background: #007bff;
+  }
+  
+  .step-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    position: relative;
+    z-index: 2;
+    font-size: 18px;
+    color: #6c757d;
+  }
+  
+  .step-indicator.active .step-circle {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+  }
+  
+  .step-indicator.completed .step-circle {
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+  }
+  
+  .step-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6c757d;
+  }
+  
+  .step-indicator.active .step-label {
+    color: #007bff;
+    font-weight: 600;
+  }
+  
+  .step-indicator.completed .step-label {
+    color: #28a745;
+    font-weight: 600;
+  }
+  
+  /* Conversion Type Cards */
+  .conversion-type-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    margin-bottom: 20px;
+    background: #fff;
+  }
+  
+  .conversion-type-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .conversion-type-card.selected {
+    border-color: #28a745;
+    background: #f8fff9;
+    box-shadow: 0 4px 20px rgba(40, 167, 69, 0.15);
+  }
+  
+  .conversion-type-card .card-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.7;
+  }
+  
+  .conversion-type-card.selected .card-icon {
+    opacity: 1;
+  }
+  
+  .conversion-type-card h6 {
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #495057;
+  }
+  
+  .conversion-type-card.selected h6 {
+    color: #28a745;
+  }
+  
+  .conversion-type-card .selection-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #28a745;
+    font-size: 24px;
+  }
+  
   /* Conversion Progress Styling */
   .conversion-progress {
     text-align: left;
@@ -899,6 +1442,21 @@
     background: #d1edff;
     color: #155724;
     border-left-color: #28a745;
+  }
+  
+  /* Conflict Check Progress */
+  .conflict-check-progress {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .conflict-check-progress .progress {
+    height: 8px;
+    border-radius: 10px;
+  }
+  
+  .conflict-check-progress .progress-bar {
+    border-radius: 10px;
   }
   
   /* Flatpickr Customization */
@@ -947,6 +1505,27 @@
   .modal-header {
     border-bottom: 1px solid #dee2e6;
     background: #f8f9fa;
+  }
+  
+  /* Step Navigation */
+  .step-info {
+    font-weight: 500;
+  }
+  
+  /* Badge Enhancements */
+  .badge {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  /* Alert Enhancements */
+  .alert h6 {
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  
+  .alert p:last-child {
+    margin-bottom: 0;
   }
   
   .modal-footer {

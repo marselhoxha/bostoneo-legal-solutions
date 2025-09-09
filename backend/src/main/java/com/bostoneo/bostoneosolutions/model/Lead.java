@@ -89,8 +89,6 @@ public class Lead {
     @Column(name = "lost_reason")
     private String lostReason;
 
-    @Column(name = "case_type", length = 100)
-    private String caseType;
 
     @Column(name = "urgency_level", length = 20)
     private String urgencyLevel = "MEDIUM";

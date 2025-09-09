@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { CrmService } from '../../services/crm.service';
 import { UserService } from '../../../../service/user.service';
 import { User } from '../../../../interface/user';
@@ -16,7 +17,6 @@ export interface LeadDTO {
   company: string;
   status: string;
   practiceArea: string;
-  priority: string;
   leadScore: number;
   assignedTo: number;
   assignedToName: string;
@@ -28,7 +28,6 @@ export interface LeadDTO {
   consultationDate: string;
   followUpDate: string;
   estimatedValue: number;
-  caseType: string;
   qualified: boolean;
   contacted: boolean;
   lastContactDate: string;
@@ -77,7 +76,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   totalPages = 0;
   
   selectedStatus = '';
-  selectedPriority = '';
+  selectedUrgency = '';
   selectedPracticeArea = '';
   selectedAssignedTo = '';
   
@@ -104,11 +103,37 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   // Data arrays
   availableAttorneys: User[] = [];
   conversionTypes = [
-    { value: 'CLIENT_ONLY', label: 'Client Only', description: 'Create client record with contact information only' },
-    { value: 'MATTER_ONLY', label: 'Matter/Case Only', description: 'Create legal case without full client profile' },
-    { value: 'CLIENT_AND_MATTER', label: 'Client & Matter', description: 'Complete conversion with both client and case records' }
+    { 
+      value: 'CLIENT_ONLY', 
+      label: 'Client Only', 
+      description: 'Create client record with contact information only',
+      icon: 'ri-user-line',
+      color: '#17a2b8'
+    },
+    { 
+      value: 'MATTER_ONLY', 
+      label: 'Matter/Case Only', 
+      description: 'Create legal case without full client profile',
+      icon: 'ri-briefcase-line',
+      color: '#ffc107'
+    },
+    { 
+      value: 'CLIENT_AND_MATTER', 
+      label: 'Client & Matter', 
+      description: 'Complete conversion with both client and case records',
+      icon: 'ri-group-line',
+      color: '#28a745'
+    }
   ];
+  
+  // Conversion wizard state
   selectedConversionType = '';
+  conversionStep = 1; // 1: Type Selection, 2: Data Entry, 3: Review & Confirm
+  maxSteps = 3;
+  conversionInProgress = false;
+  validationErrors: string[] = [];
+  conflictCheckResult: any = null;
+  requiredFields: any = null;
   
   // Flatpickr instances
   @ViewChild('consultationDatePicker', { static: false }) consultationDatePicker!: ElementRef;
@@ -134,7 +159,8 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     private crmService: CrmService, 
     private userService: UserService,
     private cdr: ChangeDetectorRef,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {
     this.initializeForms();
   }
@@ -240,7 +266,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       company: ['', [Validators.maxLength(100)]],
       practiceArea: ['', Validators.required],
       status: [''],
-      priority: [''],
       estimatedValue: ['', [Validators.min(0), Validators.max(10000000)]],
       notes: ['', [Validators.maxLength(1000)]],
       contactPreference: [''],
@@ -248,7 +273,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       initialInquiry: ['', [Validators.maxLength(2000)]],
       // Additional fields that were missing
       source: [''],
-      caseType: [''],
       leadScore: ['', [Validators.min(0), Validators.max(100)]]
     });
 
@@ -265,14 +289,44 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
 
     this.convertForm = this.fb.group({
       conversionType: ['', Validators.required],
+      
+      // Client Information
       clientFirstName: [''],
       clientLastName: [''],
       clientEmail: [''],
       clientPhone: [''],
+      clientAddress: [''],
+      clientCity: [''],
+      clientState: [''],
+      clientZip: [''],
+      clientDateOfBirth: [''],
+      clientSSN: [''],
+      clientOccupation: [''],
+      clientEmployer: [''],
+      emergencyContact: [''],
+      emergencyContactPhone: [''],
+      
+      // Case/Matter Information
       caseTitle: [''],
       caseDescription: [''],
+      practiceArea: [''],
+      jurisdiction: [''],
+      courtName: [''],
+      opposingParty: [''],
+      opposingCounsel: [''],
       retainerAmount: [''],
-      notes: ['']
+      hourlyRate: [''],
+      estimatedDuration: [''],
+      urgencyLevel: [''],
+      caseNotes: [''],
+      expectedOutcome: [''],
+      riskAssessment: [''],
+      
+      // Additional Information
+      referralSource: [''],
+      marketingCampaign: [''],
+      leadSource: [''],
+      conversionNotes: ['']
     });
   }
 
@@ -329,12 +383,12 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   applyFilters() {
     this.filteredLeads = this.allLeads.filter(lead => {
       const matchesStatus = !this.selectedStatus || lead.status === this.selectedStatus;
-      const matchesPriority = !this.selectedPriority || lead.priority === this.selectedPriority;
+      const matchesUrgency = !this.selectedUrgency || lead.urgencyLevel === this.selectedUrgency;
       const matchesPracticeArea = !this.selectedPracticeArea || lead.practiceArea === this.selectedPracticeArea;
       const matchesAssignedTo = !this.selectedAssignedTo || 
         (lead.assignedToName && lead.assignedToName.toLowerCase().includes(this.selectedAssignedTo.toLowerCase()));
       
-      return matchesStatus && matchesPriority && matchesPracticeArea && matchesAssignedTo;
+      return matchesStatus && matchesUrgency && matchesPracticeArea && matchesAssignedTo;
     });
     
     this.totalItems = this.filteredLeads.length;
@@ -433,7 +487,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
 
   clearFilters() {
     this.selectedStatus = '';
-    this.selectedPriority = '';
+    this.selectedUrgency = '';
     this.selectedPracticeArea = '';
     this.selectedAssignedTo = '';
     this.applyFilters();
@@ -474,14 +528,16 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     return statusClasses[status] || 'bg-light text-dark';
   }
 
-  getPriorityBadgeClass(priority: string): string {
-    const priorityClasses: { [key: string]: string } = {
-      'URGENT': 'urgent-red text-white priority-urgent-pulse',
-      'HIGH': 'high-red text-white',
-      'MEDIUM': 'bg-info text-white', 
-      'LOW': 'bg-success text-white'
-    };
-    return priorityClasses[priority] || 'bg-secondary text-white';
+  getUrgencyBadgeClass(urgency?: string): string {
+    if (!urgency) return 'bg-light text-dark';
+    
+    switch (urgency) {
+      case 'LOW': return 'bg-success-subtle text-success';
+      case 'MEDIUM': return 'bg-warning-subtle text-warning';
+      case 'HIGH': return 'bg-danger-subtle text-danger';
+      case 'URGENT': return 'bg-danger text-white priority-urgent-pulse';
+      default: return 'bg-light text-dark';
+    }
   }
 
   getLeadCountForStage(stageName: string): number {
@@ -518,9 +574,13 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     return this.filteredLeads.filter(lead => lead.status === statusKey);
   }
 
-  getPriorityDisplayName(priority: string): string {
-    if (!priority) return 'No Priority';
-    return priority.charAt(0) + priority.slice(1).toLowerCase();
+  getUrgencyDisplayName(urgency: string): string {
+    if (!urgency) return 'No Urgency';
+    return urgency.charAt(0) + urgency.slice(1).toLowerCase();
+  }
+
+  getSelectedConversionTypeLabel(): string {
+    return this.conversionTypes.find(t => t.value === this.selectedConversionType)?.label || '';
   }
 
   formatCurrency(value: number): string {
@@ -592,7 +652,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       company: lead.company || '',
       practiceArea: lead.practiceArea || '',
       status: lead.status || '',
-      priority: lead.priority || '',
       estimatedValue: lead.estimatedValue || '',
       notes: lead.notes || '',
       contactPreference: lead.contactPreference || '',
@@ -600,7 +659,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       initialInquiry: lead.initialInquiry || '',
       // Additional fields
       source: lead.source || '',
-      caseType: lead.caseType || '',
       leadScore: lead.leadScore || 0
     });
     
@@ -668,13 +726,27 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Initialize conversion wizard
     this.selectedLead = lead;
-    this.selectedConversionType = '';
-    this.convertForm.reset();
+    this.resetConversionWizard();
+    this.showConvertModal = true;
     
-    // Perform pre-conversion checks
-    this.performPreConversionChecks(lead);
+    // Skip initial eligibility check to avoid redundancy
+    // Conflict check will be performed when user moves to step 3 with selected conversion type
+    this.conversionStep = 1;
   }
+
+  private resetConversionWizard() {
+    this.selectedConversionType = '';
+    this.conversionStep = 1;
+    this.conversionInProgress = false;
+    this.validationErrors = [];
+    this.conflictCheckResult = null;
+    this.requiredFields = null;
+    this.convertForm.reset();
+    this.convertForm.patchValue({ conversionType: '' });
+  }
+
 
   private performPreConversionChecks(lead: LeadDTO) {
     // Show loading state
@@ -750,8 +822,279 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   closeConvertModal() {
     this.showConvertModal = false;
     this.selectedLead = null;
-    this.selectedConversionType = '';
-    this.convertForm.reset();
+    this.resetConversionWizard();
+  }
+
+  // Helper methods for formatting conflict messages
+  public formatConflictTypeForDisplay(type: string): string {
+    if (!type) return 'Conflict';
+    
+    // Convert technical types to user-friendly labels
+    switch (type.toUpperCase()) {
+      case 'CONVERSION_CLIENT_ONLY':
+        return 'Client Conversion Issue';
+      case 'CONVERSION_MATTER_ONLY':
+        return 'Matter Conversion Issue';
+      case 'CONVERSION_CLIENT_AND_MATTER':
+        return 'Client & Matter Conversion Issue';
+      case 'POTENTIAL_CONFLICT':
+        return 'Potential Conflict';
+      case 'CLIENT_NAME':
+        return 'Client Name Issue';
+      case 'EMAIL_CONFLICT':
+        return 'Email Address Issue';
+      default:
+        return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+  }
+
+  public formatConflictDescription(description: string): string {
+    if (!description) return 'A conflict has been detected.';
+
+    // Check if description is raw JSON from backend
+    if (description.includes('"conflicts"') && description.includes('"status"')) {
+      try {
+        const parsed = JSON.parse(description);
+        if (parsed.conflicts && Array.isArray(parsed.conflicts)) {
+          return this.formatConflictDetailsFromJson(parsed.conflicts);
+        }
+      } catch (e) {
+        // Continue with string processing if JSON parsing fails
+      }
+    }
+
+    // Format technical messages to be user-friendly
+    let formatted = description;
+
+    // Handle client name conflicts
+    if (formatted.includes('Client with name') && formatted.includes('already exists')) {
+      const nameMatch = formatted.match(/Client with name '([^']+)' already exists \(ID: (\d+)\)/);
+      if (nameMatch) {
+        const [, clientName, clientId] = nameMatch;
+        formatted = `A client named "${clientName}" already exists in your system (Client ID: ${clientId}). This may be the same person or a different client with the same name.`;
+      }
+    }
+
+    // Handle email conflicts
+    if (formatted.includes('Client with email') && formatted.includes('already exists')) {
+      const emailMatch = formatted.match(/Client with email ([^\s]+) already exists/);
+      if (emailMatch) {
+        const [, email] = emailMatch;
+        formatted = `The email address "${email}" is already associated with an existing client in your system.`;
+      }
+    }
+
+    return formatted;
+  }
+
+  private formatConflictDetailsFromJson(conflicts: string[]): string {
+    if (!conflicts || conflicts.length === 0) {
+      return 'A conflict has been detected.';
+    }
+
+    const formattedConflicts = conflicts.map(conflict => this.formatConflictDescription(conflict));
+    
+    if (formattedConflicts.length === 1) {
+      return formattedConflicts[0];
+    } else {
+      return formattedConflicts.map((conflict, index) => `${index + 1}. ${conflict}`).join('<br>');
+    }
+  }
+
+  private buildFullAddress(formData: any): string {
+    const addressParts = [
+      formData.clientAddress,
+      formData.clientCity,
+      formData.clientState,
+      formData.clientZip
+    ].filter(part => part && part.toString().trim() !== '');
+    
+    return addressParts.join(', ');
+  }
+
+  private generateConflictResolutionSuggestion(conflict: any): string {
+    const type = conflict.type?.toUpperCase() || '';
+    const description = conflict.description || '';
+
+    if (type.includes('CLIENT') && description.includes('already exists')) {
+      if (description.includes('name')) {
+        return `<div class="alert alert-info py-2 px-3 mt-2 mb-0">
+          <strong><i class="ri-lightbulb-line me-1"></i>Suggestion:</strong> 
+          Verify if this is the same person. If so, you may want to update the existing client record instead of creating a new one. 
+          If it's a different person with the same name, consider adding distinguishing information like middle initial or suffix.
+        </div>`;
+      } else if (description.includes('email')) {
+        return `<div class="alert alert-info py-2 px-3 mt-2 mb-0">
+          <strong><i class="ri-lightbulb-line me-1"></i>Suggestion:</strong> 
+          Check with the existing client to confirm this is their correct email address, or use a different email address if this is a different person.
+        </div>`;
+      }
+    }
+
+    if (type.includes('MATTER')) {
+      return `<div class="alert alert-info py-2 px-3 mt-2 mb-0">
+        <strong><i class="ri-lightbulb-line me-1"></i>Suggestion:</strong> 
+        Review the existing matter to determine if this lead relates to the same legal issue or if it's a new, separate matter.
+      </div>`;
+    }
+
+    return `<div class="alert alert-info py-2 px-3 mt-2 mb-0">
+      <strong><i class="ri-lightbulb-line me-1"></i>Suggestion:</strong> 
+      Please review the existing records and resolve this conflict before proceeding with the conversion.
+    </div>`;
+  }
+
+
+  private deduplicateConflicts(conflicts: any[]): any[] {
+    if (!conflicts || conflicts.length === 0) {
+      return conflicts;
+    }
+
+    // Parse JSON descriptions and extract individual conflict messages
+    const individualConflicts: string[] = [];
+    const conflictMeta = conflicts.length > 0 ? conflicts[0] : {};
+    
+    conflicts.forEach(conflict => {
+      try {
+        // Try to parse the description as JSON
+        const parsed = JSON.parse(conflict.description);
+        if (parsed.conflicts && Array.isArray(parsed.conflicts)) {
+          // Extract individual conflict messages
+          parsed.conflicts.forEach((msg: string) => {
+            if (!individualConflicts.includes(msg)) {
+              individualConflicts.push(msg);
+            }
+          });
+        }
+      } catch (e) {
+        // If not JSON, treat as simple string and deduplicate
+        if (!individualConflicts.includes(conflict.description)) {
+          individualConflicts.push(conflict.description);
+        }
+      }
+    });
+
+    // Return a single combined conflict with unique messages
+    if (individualConflicts.length > 0) {
+      return [{
+        type: conflictMeta.type || 'CLIENT_CONFLICT',
+        description: individualConflicts.join(' AND '),
+        severity: conflictMeta.severity || 'WARNING',
+        checkedAt: conflictMeta.checkedAt,
+        status: conflictMeta.status
+      }];
+    }
+
+    return conflicts;
+  }
+
+  private filterConflictsByConversionType(conflicts: any[], conversionType: string): any[] {
+    if (!conflicts || conflicts.length === 0) {
+      return conflicts;
+    }
+
+    // Filter conflicts to only show those relevant to the selected conversion type
+    const filtered = conflicts.filter(conflict => {
+      const conflictType = conflict.type?.toUpperCase() || '';
+      const selectedType = conversionType?.toUpperCase() || '';
+
+      // Show all conflicts that involve the selected conversion type or are general
+      // For CLIENT_ONLY: show conflicts that involve client creation
+      if (selectedType === 'CLIENT_ONLY') {
+        return conflictType.includes('CLIENT') || 
+               conflictType === 'POTENTIAL_CONFLICT' ||
+               conflictType.includes('CONVERSION_CLIENT_ONLY');
+      }
+
+      // For MATTER_ONLY: show conflicts that involve matter/case creation
+      if (selectedType === 'MATTER_ONLY') {
+        return conflictType.includes('MATTER') || 
+               conflictType === 'POTENTIAL_CONFLICT' ||
+               conflictType.includes('CONVERSION_MATTER_ONLY');
+      }
+
+      // For CLIENT_AND_MATTER: show conflicts that involve either client or matter creation
+      if (selectedType === 'CLIENT_AND_MATTER') {
+        return conflictType.includes('CLIENT') ||
+               conflictType.includes('MATTER') || 
+               conflictType === 'POTENTIAL_CONFLICT' ||
+               conflictType.includes('CONVERSION_CLIENT_AND_MATTER');
+      }
+
+      // Default: show all conflicts if we can't determine the type
+      return true;
+    });
+    
+    // Deduplicate conflicts with identical descriptions
+    const deduplicatedConflicts = this.deduplicateConflicts(filtered);
+    
+    return deduplicatedConflicts;
+  }
+
+  // Wizard Navigation Methods
+  canGoToNextStep(): boolean {
+    switch (this.conversionStep) {
+      case 1:
+        return !!this.selectedConversionType;
+      case 2:
+        return this.validateCurrentStepFields();
+      case 3:
+        return false; // Step 3 is final review, no "next" from here
+      default:
+        return false;
+    }
+  }
+
+  canGoToPreviousStep(): boolean {
+    return this.conversionStep > 1;
+  }
+
+  nextStep() {
+    if (!this.canGoToNextStep()) return;
+    
+    if (this.conversionStep === 1) {
+      // Moving from step 1 (type selection) to step 2 (data entry)
+      this.loadRequiredFields();
+      this.prepopulateFormData();
+      this.conversionStep = 2;
+    } else if (this.conversionStep === 2) {
+      // Moving from step 2 (data entry) to step 3 (review)
+      // Don't increment step here - let conflict check handle it
+      this.performConflictCheck();
+    }
+  }
+
+  previousStep() {
+    if (this.canGoToPreviousStep() && this.conversionStep > 1) {
+      this.conversionStep--;
+      this.validationErrors = [];
+    }
+  }
+
+  getStepTitle(): string {
+    switch (this.conversionStep) {
+      case 1:
+        return 'Select Conversion Type';
+      case 2:
+        return 'Enter Information';
+      case 3:
+        return 'Review & Confirm';
+      default:
+        return 'Convert Lead';
+    }
+  }
+
+  getStepDescription(): string {
+    switch (this.conversionStep) {
+      case 1:
+        return 'Choose how you want to convert this lead';
+      case 2:
+        return 'Provide the necessary information for conversion';
+      case 3:
+        return 'Review all information before finalizing the conversion';
+      default:
+        return '';
+    }
   }
 
   // Save methods
@@ -1011,56 +1354,366 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
 
   onConversionTypeChange(type: string) {
     this.selectedConversionType = type;
+    this.convertForm.patchValue({ conversionType: type });
     
     if (!type) return;
     
-    // Load required fields for this conversion type
-    this.loadRequiredConversionFields(type);
+    // Reset validation errors
+    this.validationErrors = [];
+  }
+
+  private loadRequiredFields() {
+    if (!this.selectedLead || !this.selectedConversionType) return;
     
-    // Update form validators based on conversion type
-    const clientFields = ['clientFirstName', 'clientLastName', 'clientEmail'];
-    const caseFields = ['caseTitle', 'caseDescription'];
-    
+    this.crmService.getRequiredConversionFields(this.selectedLead.id, this.selectedConversionType).subscribe({
+      next: (response) => {
+        this.requiredFields = response;
+        this.setFieldValidators();
+      },
+      error: (error) => {
+        console.error('Error loading required fields:', error);
+        // Set default required fields if API fails
+        this.setDefaultFieldValidators();
+      }
+    });
+  }
+
+  private setFieldValidators() {
     // Clear all validators first
-    clientFields.forEach(field => {
-      this.convertForm.get(field)?.clearValidators();
-      this.convertForm.get(field)?.updateValueAndValidity();
+    Object.keys(this.convertForm.controls).forEach(key => {
+      if (key !== 'conversionType') {
+        this.convertForm.get(key)?.clearValidators();
+        this.convertForm.get(key)?.updateValueAndValidity();
+      }
     });
     
-    caseFields.forEach(field => {
-      this.convertForm.get(field)?.clearValidators();
-      this.convertForm.get(field)?.updateValueAndValidity();
-    });
-    
-    // Add validators based on conversion type
-    if (type === 'CLIENT_ONLY' || type === 'CLIENT_AND_MATTER') {
-      clientFields.forEach(field => {
-        this.convertForm.get(field)?.setValidators([Validators.required]);
-        this.convertForm.get(field)?.updateValueAndValidity();
-      });
+    // Set validators based on conversion type and required fields
+    if (this.selectedConversionType === 'CLIENT_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+      // Client required fields
+      const clientRequiredFields = [
+        'clientFirstName', 'clientLastName', 'clientEmail', 'clientPhone', 'clientType'
+      ];
       
-      // Pre-populate with lead data
-      this.convertForm.patchValue({
-        clientFirstName: this.selectedLead?.firstName || '',
-        clientLastName: this.selectedLead?.lastName || '',
-        clientEmail: this.selectedLead?.email || '',
-        clientPhone: this.selectedLead?.phone || ''
+      clientRequiredFields.forEach(field => {
+        if (field === 'clientEmail') {
+          this.convertForm.get(field)?.setValidators([Validators.required, Validators.email]);
+        } else {
+          this.convertForm.get(field)?.setValidators([Validators.required]);
+        }
+        this.convertForm.get(field)?.updateValueAndValidity();
       });
     }
     
-    if (type === 'MATTER_ONLY' || type === 'CLIENT_AND_MATTER') {
-      caseFields.forEach(field => {
+    if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+      // Case required fields
+      const caseRequiredFields = [
+        'caseTitle', 'caseDescription', 'practiceArea'
+      ];
+      
+      caseRequiredFields.forEach(field => {
         this.convertForm.get(field)?.setValidators([Validators.required]);
         this.convertForm.get(field)?.updateValueAndValidity();
       });
-      
-      // Pre-populate with lead data
-      const practiceArea = this.selectedLead?.practiceArea?.replace('_', ' ') || '';
+    }
+  }
+
+  private setDefaultFieldValidators() {
+    // Fallback validation setup if API fails
+    this.setFieldValidators();
+  }
+
+  private prepopulateFormData() {
+    if (!this.selectedLead) return;
+    
+    // Pre-populate client data
+    if (this.selectedConversionType === 'CLIENT_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
       this.convertForm.patchValue({
-        caseTitle: `${practiceArea} Matter - ${this.selectedLead?.fullName || 'New Case'}`,
-        caseDescription: this.selectedLead?.initialInquiry || ''
+        clientFirstName: this.selectedLead.firstName || '',
+        clientLastName: this.selectedLead.lastName || '',
+        clientEmail: this.selectedLead.email || '',
+        clientPhone: this.selectedLead.phone || '',
+        clientAddress: '', // Not available in lead data
+        emergencyContact: '',
+        emergencyContactPhone: ''
       });
     }
+    
+    // Pre-populate case data
+    if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+      const practiceAreaFormatted = this.selectedLead.practiceArea?.replace('_', ' ') || '';
+      this.convertForm.patchValue({
+        caseTitle: `${practiceAreaFormatted} Matter - ${this.selectedLead.fullName || 'New Case'}`,
+        caseDescription: this.selectedLead.initialInquiry || '',
+        practiceArea: this.selectedLead.practiceArea || '',
+        retainerAmount: this.selectedLead.estimatedValue || '',
+        urgencyLevel: this.selectedLead.urgencyLevel || 'MEDIUM',
+        referralSource: this.selectedLead.source || '',
+        leadSource: this.selectedLead.source || ''
+      });
+    }
+    
+    // Common fields
+    this.convertForm.patchValue({
+      conversionNotes: `Converted from lead #${this.selectedLead.id} - ${this.selectedLead.fullName}`
+    });
+  }
+
+  private validateCurrentStepFields(): boolean {
+    this.validationErrors = [];
+    
+    if (this.conversionStep !== 2) return true;
+    
+    const relevantFields = this.getRelevantFieldsForValidation();
+    let isValid = true;
+    
+    relevantFields.forEach(field => {
+      const control = this.convertForm.get(field);
+      if (control && control.invalid) {
+        isValid = false;
+        if (control.errors?.['required']) {
+          this.validationErrors.push(`${this.getFieldDisplayName(field)} is required`);
+        }
+        if (control.errors?.['email']) {
+          this.validationErrors.push(`${this.getFieldDisplayName(field)} must be a valid email`);
+        }
+      }
+    });
+    
+    return isValid;
+  }
+
+  private getRelevantFieldsForValidation(): string[] {
+    const fields: string[] = [];
+    
+    if (this.selectedConversionType === 'CLIENT_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+      fields.push('clientFirstName', 'clientLastName', 'clientEmail', 'clientPhone', 'clientType');
+    }
+    
+    if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+      fields.push('caseTitle', 'caseDescription', 'practiceArea');
+    }
+    
+    return fields;
+  }
+
+  private getFieldDisplayName(fieldName: string): string {
+    const displayNames: { [key: string]: string } = {
+      clientFirstName: 'Client First Name',
+      clientLastName: 'Client Last Name',
+      clientEmail: 'Client Email',
+      clientPhone: 'Client Phone',
+      clientAddress: 'Client Address',
+      caseTitle: 'Case Title',
+      caseDescription: 'Case Description',
+      practiceArea: 'Practice Area',
+      retainerAmount: 'Retainer Amount',
+      hourlyRate: 'Hourly Rate'
+    };
+    return displayNames[fieldName] || fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+  }
+
+  private performConflictCheck() {
+    if (!this.selectedLead || !this.selectedConversionType) return;
+    
+    Swal.fire({
+      title: 'Checking for Conflicts...',
+      html: `
+        <div class="conflict-check-progress">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p>Scanning for potential conflicts...</p>
+          <div class="progress mt-3">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+          </div>
+        </div>
+      `,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        // Don't show default loading, we have custom progress
+      }
+    });
+    
+    // First check if lead can be converted (this calls the backend canConvert check)
+    this.crmService.canConvertLead(this.selectedLead.id, this.selectedConversionType).subscribe({
+      next: (canConvertResponse) => {
+        if (canConvertResponse.hasConflicts || !canConvertResponse.canConvert) {
+          // Backend found conflicts through the eligibility check
+          // Filter conflicts to only show those relevant to the selected conversion type
+          const allConflicts = canConvertResponse.conflicts || [
+            {
+              type: 'POTENTIAL_CONFLICT',
+              description: canConvertResponse.reason || 'Potential conflict detected during conversion check',
+              severity: 'WARNING'
+            }
+          ];
+          
+          const relevantConflicts = this.filterConflictsByConversionType(allConflicts, this.selectedConversionType);
+          const deduplicatedConflicts = this.deduplicateConflicts(relevantConflicts);
+          
+          this.conflictCheckResult = {
+            hasConflicts: deduplicatedConflicts.length > 0,
+            conflicts: deduplicatedConflicts,
+            reason: canConvertResponse.reason
+          };
+          Swal.close();
+          this.showConflictResults(this.conflictCheckResult);
+        } else {
+          // No conflicts found, proceed to step 3
+          this.conflictCheckResult = {
+            hasConflicts: false,
+            conflicts: [],
+            message: 'No conflicts detected. Safe to proceed.'
+          };
+          Swal.close();
+          this.showNoConflictsFound();
+        }
+      },
+      error: (error) => {
+        console.error('Conflict check failed:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error
+        });
+        
+        // Show more specific error message based on status
+        let errorMessage = 'Unable to complete conflict check. You may proceed with caution or cancel the conversion.';
+        
+        if (error.status === 404) {
+          errorMessage = 'Conflict check service not available. You may proceed with caution.';
+        } else if (error.status === 500) {
+          errorMessage = 'Server error during conflict check. You may proceed with caution.';
+        } else if (error.error?.message) {
+          errorMessage = `Conflict check error: ${error.error.message}`;
+        }
+        
+        Swal.fire({
+          title: 'Conflict Check Failed',
+          text: errorMessage,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Proceed Anyway',
+          cancelButtonText: 'Cancel Conversion'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.conflictCheckResult = { 
+              hasConflicts: false, 
+              conflicts: [], 
+              warning: 'Conflict check failed - proceeded with caution',
+              checkFailed: true
+            };
+            this.conversionStep = 3;
+          } else {
+            this.closeConvertModal();
+          }
+        });
+      }
+    });
+  }
+
+  private showConflictResults(conflictResult: any) {
+    const conflictsHtml = conflictResult.conflicts.map((conflict: any) => {
+      const formattedType = this.formatConflictTypeForDisplay(conflict.type);
+      const formattedDescription = this.formatConflictDescription(conflict.description);
+      return `<li class="text-danger"><i class="ri-error-warning-line me-2"></i><strong>${formattedType}:</strong> ${formattedDescription}</li>`;
+    }).join('');
+    
+    Swal.fire({
+      title: '⚠️ Conflicts Detected',
+      html: `
+        <div class="text-left">
+          <p class="mb-3">The following conflicts were found:</p>
+          <ul class="list-unstyled">
+            ${conflictsHtml}
+          </ul>
+          <p class="mt-3 text-muted small">
+            <i class="ri-information-line me-1"></i>
+            These conflicts must be resolved before proceeding with the conversion.
+          </p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Review Conflicts',
+      cancelButtonText: 'Cancel Conversion',
+      confirmButtonColor: '#ffc107',
+      cancelButtonColor: '#dc3545'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // For now, just show conflict details - in a real app, navigate to conflict resolution
+        this.showDetailedConflictView(conflictResult);
+      } else {
+        this.closeConvertModal();
+      }
+    });
+  }
+
+  private showDetailedConflictView(conflictResult: any) {
+    // This would typically navigate to a conflict resolution page
+    // For now, we'll just show details and allow override (dangerous in production)
+    
+    // Ensure conflicts are filtered by conversion type (in case they weren't filtered before)
+    const relevantConflicts = this.filterConflictsByConversionType(conflictResult.conflicts, this.selectedConversionType);
+    
+    const detailsHtml = relevantConflicts.map((conflict: any, index: number) => {
+      const formattedType = this.formatConflictTypeForDisplay(conflict.type);
+      const formattedDescription = this.formatConflictDescription(conflict.description);
+      const resolutionSuggestion = this.generateConflictResolutionSuggestion(conflict);
+      return `
+      <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning-subtle border-warning py-2">
+          <i class="ri-alert-line me-2"></i><strong>Conflict ${index + 1}: ${formattedType}</strong>
+        </div>
+        <div class="card-body py-2">
+          <p class="mb-2">${formattedDescription}</p>
+          ${resolutionSuggestion}
+        </div>
+      </div>
+      `;
+    }).join('');
+    
+    Swal.fire({
+      title: 'Conflict Details',
+      html: `
+        <div class="text-left" style="max-height: 400px; overflow-y: auto;">
+          ${detailsHtml}
+          <div class="alert alert-warning mt-3">
+            <i class="ri-alert-line me-1"></i>
+            <strong>Administrator Override:</strong> You can proceed anyway, but this is not recommended without resolving conflicts.
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '⚠️ Proceed Anyway',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      width: '600px'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.conflictCheckResult.proceedDespiteConflicts = true;
+        this.conversionStep = 3;
+      } else {
+        this.closeConvertModal();
+      }
+    });
+  }
+
+  private showNoConflictsFound() {
+    Swal.fire({
+      title: '✅ No Conflicts Found',
+      text: 'Great! No conflicts were detected. You can proceed with the conversion.',
+      icon: 'success',
+      confirmButtonText: 'Continue to Review',
+      timer: 3000,
+      showConfirmButton: true,
+      timerProgressBar: true
+    }).then(() => {
+      this.conversionStep = 3;
+    });
   }
 
   private loadRequiredConversionFields(conversionType: string) {
@@ -1078,80 +1731,202 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   }
 
   submitConversion() {
-    if (this.convertForm.valid && this.selectedLead && this.selectedConversionType) {
-      const formData = this.convertForm.value;
-      
-      // Enhanced confirmation with detailed information
-      const conversionTypeLabel = this.conversionTypes.find(t => t.value === this.selectedConversionType)?.label || this.selectedConversionType;
-      
-      let confirmationHTML = `
-        <div class="text-left">
-          <p><strong>Lead:</strong> ${this.selectedLead.fullName}</p>
-          <p><strong>Conversion Type:</strong> ${conversionTypeLabel}</p>
-      `;
-      
-      if (this.selectedConversionType === 'CLIENT_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
-        confirmationHTML += `<p><strong>Client Name:</strong> ${formData.clientFirstName} ${formData.clientLastName}</p>`;
-      }
-      
-      if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
-        confirmationHTML += `<p><strong>Case:</strong> ${formData.caseTitle}</p>`;
-      }
-      
-      confirmationHTML += `</div>`;
-      
+    if (this.conversionStep !== 3) {
+      console.error('Submit conversion called but not on review step');
+      return;
+    }
+
+    if (!this.selectedLead || !this.selectedConversionType) {
       Swal.fire({
-        title: 'Confirm Lead Conversion',
-        html: confirmationHTML,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#dc3545',
-        confirmButtonText: 'Yes, Convert Lead',
-        cancelButtonText: 'Cancel',
-        customClass: {
-          popup: 'conversion-confirmation-popup'
-        }
-      }).then((result) => {
-        if (result.isConfirmed && this.selectedLead) {
-          this.performConversionWithConflictCheck(formData);
-        }
-      });
-    } else {
-      // Enhanced validation error handling
-      Object.keys(this.convertForm.controls).forEach(key => {
-        this.convertForm.get(key)?.markAsTouched();
-      });
-      
-      let errorMessage = 'Please complete all required fields:';
-      const errors: string[] = [];
-      
-      if (!this.selectedConversionType) {
-        errors.push('- Select a conversion type');
-      }
-      
-      if (this.selectedConversionType === 'CLIENT_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
-        if (!this.convertForm.get('clientFirstName')?.value) errors.push('- Client first name');
-        if (!this.convertForm.get('clientLastName')?.value) errors.push('- Client last name');
-        if (!this.convertForm.get('clientEmail')?.value) errors.push('- Client email');
-      }
-      
-      if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
-        if (!this.convertForm.get('caseTitle')?.value) errors.push('- Case title');
-        if (!this.convertForm.get('caseDescription')?.value) errors.push('- Case description');
-      }
-      
-      if (errors.length > 0) {
-        errorMessage += '\n' + errors.join('\n');
-      }
-      
-      Swal.fire({
-        title: 'Form Validation Error',
-        text: errorMessage,
+        title: 'Validation Error',
+        text: 'Please complete all required fields before proceeding.',
         icon: 'warning',
         confirmButtonText: 'OK'
       });
+      return;
     }
+
+    // Remove redundant confirmation dialog and execute conversion directly
+    const formData = this.convertForm.value;
+    this.executeConversion(formData);
+  }
+
+
+  private executeConversion(formData: any) {
+    if (!this.selectedLead || !this.selectedConversionType) return;
+    
+    // Show progress
+    Swal.fire({
+      title: 'Converting Lead...',
+      html: `
+        <div class="conversion-progress">
+          <div class="spinner-border text-success mb-3" role="status"></div>
+          <p>Creating ${this.conversionTypes.find(t => t.value === this.selectedConversionType)?.label?.toLowerCase() || 'records'}...</p>
+          <div class="progress mt-3">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+          </div>
+        </div>
+      `,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false
+    });
+
+    let conversionCall;
+    
+    switch (this.selectedConversionType) {
+      case 'CLIENT_ONLY':
+        // Transform frontend form data to backend expected format
+        const clientData = {
+          name: `${formData.clientFirstName || ''} ${formData.clientLastName || ''}`.trim(),
+          email: formData.clientEmail,
+          phone: formData.clientPhone,
+          address: this.buildFullAddress(formData),
+          type: formData.clientType || 'INDIVIDUAL',
+          status: 'ACTIVE',
+          image_url: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+        };
+        conversionCall = this.crmService.convertToClientOnly(this.selectedLead.id, clientData);
+        break;
+      case 'MATTER_ONLY':
+        // Structure case data properly for backend
+        const matterData = {
+          title: formData.caseTitle,
+          description: formData.caseDescription,
+          type: formData.practiceArea,
+          urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+          courtName: formData.courtName,
+          hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
+        };
+        conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, matterData);
+        break;
+      case 'CLIENT_AND_MATTER':
+        // Structure data properly for backend with both clientData and caseData
+        const clientAndMatterData = {
+          clientData: {
+            name: `${formData.clientFirstName || ''} ${formData.clientLastName || ''}`.trim(),
+            email: formData.clientEmail,
+            phone: formData.clientPhone,
+            address: this.buildFullAddress(formData),
+            status: 'ACTIVE',
+            type: formData.clientType || 'INDIVIDUAL',
+            image_url: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+          },
+          caseData: {
+            title: formData.caseTitle,
+            description: formData.caseDescription,
+            type: formData.practiceArea,
+            urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+            courtName: formData.courtName,
+            hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+            status: 'ACTIVE'
+          }
+        };
+        conversionCall = this.crmService.convertToClientAndMatter(this.selectedLead.id, clientAndMatterData);
+        break;
+      default:
+        Swal.close();
+        return;
+    }
+    
+    conversionCall.subscribe({
+      next: (response) => {
+        this.handleConversionSuccess(response);
+      },
+      error: (error) => {
+        this.handleConversionError(error);
+      }
+    });
+  }
+
+  private handleConversionSuccess(response: any) {
+    const conversionTypeLabel = this.conversionTypes.find(t => t.value === this.selectedConversionType)?.label || 'records';
+    
+    let successMessage = `🎉 Lead successfully converted to ${conversionTypeLabel}!`;
+    let detailsHTML = '<div class="text-left">';
+    
+    if (response.clientId && response.caseId) {
+      detailsHTML += `
+        <div class="alert alert-success">
+          <h6>Created Records:</h6>
+          <p class="mb-1"><strong>Client ID:</strong> ${response.clientId}</p>
+          <p class="mb-0"><strong>Case ID:</strong> ${response.caseId}</p>
+        </div>
+      `;
+    } else if (response.clientId) {
+      detailsHTML += `
+        <div class="alert alert-success">
+          <h6>Created Record:</h6>
+          <p class="mb-0"><strong>Client ID:</strong> ${response.clientId}</p>
+        </div>
+      `;
+    } else if (response.caseId) {
+      detailsHTML += `
+        <div class="alert alert-success">
+          <h6>Created Record:</h6>
+          <p class="mb-0"><strong>Case ID:</strong> ${response.caseId}</p>
+        </div>
+      `;
+    }
+    
+    detailsHTML += '</div>';
+    
+    Swal.fire({
+      title: 'Conversion Successful! 🎉',
+      html: detailsHTML,
+      icon: 'success',
+      confirmButtonText: 'View Records',
+      cancelButtonText: 'Close',
+      showCancelButton: true,
+      timer: 8000,
+      timerProgressBar: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Navigate to view the created records
+        if (response.clientId && response.caseId) {
+          // For CLIENT_AND_MATTER, navigate to the client page which should show both client and case info
+          this.router.navigate(['/client', response.clientId]);
+        } else if (response.clientId) {
+          // For CLIENT_ONLY, navigate to the client detail page
+          this.router.navigate(['/client', response.clientId]);
+        } else if (response.caseId) {
+          // For MATTER_ONLY, navigate to the case detail page
+          this.router.navigate(['/case', response.caseId]);
+        }
+      }
+    });
+    
+    this.closeConvertModal();
+    this.loadLeads(); // Refresh the leads list
+  }
+
+  private handleConversionError(error: any) {
+    console.error('Conversion failed:', error);
+    
+    let errorMessage = 'Failed to convert lead. Please try again.';
+    if (error.status === 409) {
+      errorMessage = 'Conversion failed due to conflicts or duplicate records';
+    } else if (error.status === 400 && error.error?.message) {
+      errorMessage = error.error.message;
+    } else if (error.status === 422) {
+      errorMessage = 'Validation error: Please check all required fields';
+    }
+    
+    Swal.fire({
+      title: 'Conversion Failed',
+      text: errorMessage,
+      icon: 'error',
+      confirmButtonText: 'Try Again',
+      cancelButtonText: 'Cancel',
+      showCancelButton: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Stay in the modal to retry
+        this.conversionStep = 2; // Go back to data entry step
+      } else {
+        this.closeConvertModal();
+      }
+    });
   }
 
   private performConversionWithConflictCheck(formData: any) {
@@ -1253,10 +2028,40 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
         conversionCall = this.crmService.convertToClientOnly(this.selectedLead.id, formData);
         break;
       case 'MATTER_ONLY':
-        conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, formData);
+        // Structure case data properly for backend
+        const matterOnlyData = {
+          title: formData.caseTitle,
+          description: formData.caseDescription,
+          type: formData.practiceArea,
+          urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+          courtName: formData.courtName,
+          hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
+        };
+        conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, matterOnlyData);
         break;
       case 'CLIENT_AND_MATTER':
-        conversionCall = this.crmService.convertToClientAndMatter(this.selectedLead.id, formData);
+        // Structure data properly for backend with both clientData and caseData
+        const clientAndMatterFormData = {
+          clientData: {
+            name: `${formData.clientFirstName || ''} ${formData.clientLastName || ''}`.trim(),
+            email: formData.clientEmail,
+            phone: formData.clientPhone,
+            address: this.buildFullAddress(formData),
+            status: 'ACTIVE',
+            type: formData.clientType || 'INDIVIDUAL',
+            image_url: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+          },
+          caseData: {
+            title: formData.caseTitle,
+            description: formData.caseDescription,
+            type: formData.practiceArea,
+            urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+            courtName: formData.courtName,
+            hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+            status: 'ACTIVE'
+          }
+        };
+        conversionCall = this.crmService.convertToClientAndMatter(this.selectedLead.id, clientAndMatterFormData);
         break;
       default:
         return;

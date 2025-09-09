@@ -21,6 +21,10 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
     @Query("SELECT c FROM Client c WHERE c.email = :email")
     List<Client> findByEmail(@Param("email") String email);
     
+    // Find client by exact name (case insensitive)
+    @Query("SELECT c FROM Client c WHERE LOWER(c.name) = LOWER(:name)")
+    List<Client> findByNameIgnoreCase(@Param("name") String name);
+    
     // Get clients who have time entries
     @Query("SELECT DISTINCT c FROM Client c " +
            "JOIN LegalCase lc ON c.name = lc.clientName " +

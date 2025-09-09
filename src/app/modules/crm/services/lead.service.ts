@@ -24,7 +24,6 @@ export interface Lead {
   consultationDate?: Date;
   followUpDate?: Date;
   lostReason?: string;
-  caseType?: string;
   urgencyLevel: string;
   leadQuality: string;
   referralQualityScore: number;

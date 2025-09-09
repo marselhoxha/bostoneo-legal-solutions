@@ -217,6 +217,45 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     }
 
     @Override
+    public List<Map<String, Object>> getConflictDetails(Long leadId) {
+        log.info("Getting conflict details for lead ID: {}", leadId);
+        
+        List<ConflictCheck> conflicts = conflictCheckRepository.findUnresolvedByLeadId(leadId);
+        log.info("getConflictDetails found {} conflicts for lead ID: {}", conflicts.size(), leadId);
+        
+        List<Map<String, Object>> conflictDetails = new ArrayList<>();
+        for (ConflictCheck conflict : conflicts) {
+            Map<String, Object> conflictMap = new HashMap<>();
+            conflictMap.put("type", conflict.getCheckType() != null ? conflict.getCheckType() : "GENERAL_CONFLICT");
+            conflictMap.put("description", buildConflictDescription(conflict));
+            conflictMap.put("severity", "WARNING");
+            conflictMap.put("checkedAt", conflict.getCheckedAt());
+            conflictMap.put("status", conflict.getStatus());
+            conflictDetails.add(conflictMap);
+        }
+        
+        return conflictDetails;
+    }
+    
+    private String buildConflictDescription(ConflictCheck conflict) {
+        if (conflict.getResults() != null && !conflict.getResults().isEmpty()) {
+            return conflict.getResults();
+        }
+        
+        // Fallback description based on conflict type
+        String checkType = conflict.getCheckType();
+        if ("CLIENT_NAME".equals(checkType)) {
+            return "Potential client name conflict detected";
+        } else if ("MATTER_CONFLICT".equals(checkType)) {
+            return "Potential matter conflict detected";
+        } else if ("ADVERSE_INTEREST".equals(checkType)) {
+            return "Potential adverse interest conflict";
+        } else {
+            return "Conflict detected during conversion eligibility check";
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean validateClientData(Map<String, Object> clientData) {
         if (clientData == null || clientData.isEmpty()) {
@@ -264,7 +303,6 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean canConvertLead(Long leadId, String conversionType) {
         Lead lead = leadRepository.findById(leadId).orElse(null);
         if (lead == null) {
@@ -278,9 +316,15 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             return false;
         }
         
-        // Check for unresolved conflicts
+        // IMPORTANT: Clear any existing conflict records and perform fresh conflict detection
+        // This ensures we detect current conflicts based on modified lead data
+        log.info("Clearing existing conflicts and performing fresh conflict detection for lead ID: {}", leadId);
+        clearExistingConflicts(leadId);
+        performConflictCheck(leadId, conversionType, 1L); // Use system user ID 1
+        
+        // Check for unresolved conflicts (now that we've run detection)
         if (hasUnresolvedConflicts(leadId)) {
-            log.warn("Lead ID: {} has unresolved conflicts", leadId);
+            log.warn("Lead ID: {} has unresolved conflicts after running detection", leadId);
             return false;
         }
         
@@ -437,20 +481,63 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     private List<String> detectConflicts(Lead lead) {
         List<String> conflicts = new ArrayList<>();
         
-        // Check for existing clients with same email
-        List<Client> existingClients = clientRepository.findByEmail(lead.getEmail());
-        if (!existingClients.isEmpty()) {
-            conflicts.add("Client with email " + lead.getEmail() + " already exists");
-        }
-        
-        // Check for existing cases with same client name and similar details
-        // This is a simplified conflict detection - in reality would be more sophisticated
+        // Check for existing clients with same name (case insensitive)
         String fullName = lead.getFullName();
         if (fullName != null && !fullName.trim().isEmpty()) {
-            // Would implement more sophisticated name matching here
+            // Add specific logging for Emily Davis
+            if (fullName.contains("Emily") || fullName.contains("Davis")) {
+                log.info("EMILY DEBUG: Checking conflicts for lead: '{}' (ID: {}), email: '{}'", 
+                    fullName, lead.getId(), lead.getEmail());
+            }
+            
+            List<Client> existingClientsByName = clientRepository.findByNameIgnoreCase(fullName);
+            
+            // Add specific logging for Emily Davis
+            if (fullName.contains("Emily") || fullName.contains("Davis")) {
+                log.info("EMILY DEBUG: Found {} clients with matching name '{}'", 
+                    existingClientsByName.size(), fullName);
+                for (Client client : existingClientsByName) {
+                    log.info("EMILY DEBUG: - Client ID: {}, Name: '{}', Email: '{}'", 
+                        client.getId(), client.getName(), client.getEmail());
+                }
+            }
+            
+            for (Client existingClient : existingClientsByName) {
+                conflicts.add("A client named \"" + existingClient.getName() + "\" already exists in your system (Client ID: " + existingClient.getId() + "). This may be the same person or a different client with the same name.");
+            }
+        }
+        
+        // Check for existing clients with same email
+        if (lead.getEmail() != null && !lead.getEmail().trim().isEmpty()) {
+            List<Client> existingClientsByEmail = clientRepository.findByEmail(lead.getEmail());
+            
+            // Add specific logging for Emily Davis
+            if (lead.getEmail().contains("emily") || (fullName != null && fullName.contains("Emily"))) {
+                log.info("EMILY DEBUG: Found {} clients with matching email '{}'", 
+                    existingClientsByEmail.size(), lead.getEmail());
+                for (Client client : existingClientsByEmail) {
+                    log.info("EMILY DEBUG: - Client ID: {}, Name: '{}', Email: '{}'", 
+                        client.getId(), client.getName(), client.getEmail());
+                }
+            }
+            
+            if (!existingClientsByEmail.isEmpty()) {
+                for (Client existingClient : existingClientsByEmail) {
+                    conflicts.add("A client with email \"" + existingClient.getEmail() + "\" already exists in your system (Client ID: " + existingClient.getId() + ").");
+                }
+            }
         }
         
         return conflicts;
+    }
+
+    private void clearExistingConflicts(Long leadId) {
+        log.info("Clearing existing conflict records for lead ID: {}", leadId);
+        List<ConflictCheck> existingConflicts = conflictCheckRepository.findByLeadId(leadId);
+        if (!existingConflicts.isEmpty()) {
+            log.info("Deleting {} existing conflict records for lead ID: {}", existingConflicts.size(), leadId);
+            conflictCheckRepository.deleteAll(existingConflicts);
+        }
     }
 
     private String generateCaseNumber() {

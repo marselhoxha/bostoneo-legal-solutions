@@ -135,9 +135,9 @@
             </div>
           </div>
           <div class="flex-grow-1 ms-3">
-            <h5 class="mb-1 fw-bold">{{ getHighPriorityCount() }}</h5>
+            <h5 class="mb-1 fw-bold">{{ getHighUrgencyCount() }}</h5>
             <p class="text-muted mb-0 fs-13">
-              <strong>High Priority</strong><br>
+              <strong>High Urgency</strong><br>
               <span class="text-danger">Urgent attention needed</span>
             </p>
           </div>
@@ -181,22 +181,22 @@
             </select>
           </div>
 
-          <!-- Priority Filter -->
-          <div class="col-md-2">
-            <label class="form-label">Priority</label>
-            <select class="form-select" [(ngModel)]="selectedPriority" (change)="onFilterChange()">
-              <option *ngFor="let priority of priorityOptions" [value]="priority.value">
-                {{ priority.label }}
-              </option>
-            </select>
-          </div>
-
           <!-- Practice Area Filter -->
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label">Practice Area</label>
             <select class="form-select" [(ngModel)]="selectedPracticeArea" (change)="onFilterChange()">
               <option *ngFor="let area of practiceAreaOptions" [value]="area.value">
                 {{ area.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Urgency Filter -->
+          <div class="col-md-2">
+            <label class="form-label">Urgency</label>
+            <select class="form-select" [(ngModel)]="selectedUrgency" (change)="onFilterChange()">
+              <option *ngFor="let urgency of urgencyOptions" [value]="urgency.value">
+                {{ urgency.label }}
               </option>
             </select>
           </div>
@@ -297,7 +297,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let submission of paginatedSubmissions"
-                  [class.high-priority-row]="submission.priority === 'HIGH' || submission.priority === 'CRITICAL'">
+                  [class.high-priority-row]="submission.urgency === 'HIGH' || submission.urgency === 'URGENT'">
                 <td>
                   <input type="checkbox" class="form-check-input" 
                          [checked]="selectedSubmissions.has(submission.id)"
@@ -328,11 +328,11 @@
                   </span>
                 </td>
                 <td>
-                  <span [class]="getPriorityBadgeClass(submission.priority)" 
-                        [class.priority-critical]="submission.priority === 'CRITICAL'">
-                    <i class="ri-alert-line me-1" *ngIf="submission.priority === 'CRITICAL'"></i>
-                    {{ submission.priority }}
+                  <span [class]="getUrgencyBadgeClass(submission.urgency || '')" *ngIf="submission.urgency">
+                    <i class="ri-alert-line me-1" *ngIf="submission.urgency === 'URGENT'"></i>
+                    {{ submission.urgency }}
                   </span>
+                  <span class="text-muted" *ngIf="!submission.urgency">-</span>
                 </td>
                 <td>
                   <span [class]="getLeadScoreClass(submission.leadScore)">

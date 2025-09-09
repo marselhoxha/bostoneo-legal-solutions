@@ -82,6 +82,23 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     }
 
     @Override
+    public IntakeSubmission createGeneralSubmission(String submissionData, String ipAddress, String userAgent, String referrer) {
+        log.info("Creating new general intake submission");
+        
+        IntakeSubmission submission = IntakeSubmission.builder()
+            .formId(null) // No specific form ID for general submissions
+            .submissionData(submissionData)
+            .ipAddress(ipAddress)
+            .userAgent(userAgent)
+            .referrer(referrer)
+            .status("PENDING")
+            .priorityScore(calculatePriorityScore(submissionData, null))
+            .build();
+        
+        return save(submission);
+    }
+
+    @Override
     public IntakeSubmission updateSubmissionData(Long id, String submissionData, Long userId) {
         log.info("Updating submission data for ID: {} by user: {}", id, userId);
         
@@ -503,10 +520,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
                 .phone(getStringValue(data, "phone"))
                 .status("NEW")
                 .source("WEBSITE")
-                .priority("MEDIUM")
+                .practiceArea(getStringValue(data, "practiceArea") != null ? getStringValue(data, "practiceArea") : (submission.getIntakeForm() != null ? submission.getIntakeForm().getPracticeArea() : "GENERAL"))
                 .leadScore(submission.getPriorityScore())
                 .initialInquiry(getStringValue(data, "incident_description", "matter_description", "description"))
-                .urgencyLevel(getStringValue(data, "urgency", "MEDIUM"))
+                .urgencyLevel(getStringValue(data, "urgency") != null ? getStringValue(data, "urgency") : "MEDIUM")
                 .build();
                 
         } catch (Exception e) {

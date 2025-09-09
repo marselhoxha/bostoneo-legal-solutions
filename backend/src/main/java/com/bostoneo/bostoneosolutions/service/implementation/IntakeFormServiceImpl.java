@@ -279,6 +279,73 @@ public class IntakeFormServiceImpl implements IntakeFormService {
         return existing.isEmpty() || (excludeFormId != null && existing.get().getId().equals(excludeFormId));
     }
 
+    @Override
+    public IntakeForm findOrCreateGeneralForm() {
+        log.info("Finding or creating general intake form");
+        
+        // Try to find existing general form
+        List<IntakeForm> generalForms = intakeFormRepository.findByName("General Consultation Form");
+        if (!generalForms.isEmpty()) {
+            IntakeForm existingForm = generalForms.get(0);
+            log.info("Found existing general form with ID: {}", existingForm.getId());
+            return existingForm;
+        }
+        
+        // Create new general form if none exists
+        log.info("Creating new general intake form");
+        IntakeForm generalForm = IntakeForm.builder()
+            .name("General Consultation Form")
+            .description("General consultation intake form for all practice areas")
+            .practiceArea("Personal Injury") // Use a valid practice area instead of "General"
+            .formType("STANDARD")
+            .isPublic(true)
+            .status("PUBLISHED")
+            .publicUrl("general-consultation")
+            .successMessage("Thank you for your submission! We will contact you within 24 hours.")
+            .formConfig("{\"fields\":[{\"name\":\"firstName\",\"type\":\"text\",\"label\":\"First Name\",\"required\":true},{\"name\":\"lastName\",\"type\":\"text\",\"label\":\"Last Name\",\"required\":true},{\"name\":\"email\",\"type\":\"email\",\"label\":\"Email Address\",\"required\":true},{\"name\":\"phone\",\"type\":\"tel\",\"label\":\"Phone Number\",\"required\":true},{\"name\":\"practiceArea\",\"type\":\"select\",\"label\":\"Practice Area\",\"required\":true},{\"name\":\"urgency\",\"type\":\"select\",\"label\":\"Urgency\",\"required\":true,\"options\":[{\"value\":\"LOW\",\"label\":\"Low\"},{\"value\":\"MEDIUM\",\"label\":\"Medium\"},{\"value\":\"HIGH\",\"label\":\"High\"},{\"value\":\"URGENT\",\"label\":\"Urgent\"}]},{\"name\":\"message\",\"type\":\"textarea\",\"label\":\"Brief Description\",\"required\":true}]}")
+            .createdBy(1L) // System user
+            .build();
+        
+        IntakeForm savedForm = save(generalForm);
+        log.info("Created general form with ID: {}", savedForm.getId());
+        return savedForm;
+    }
+
+    @Override
+    public IntakeForm findOrCreateFormForPracticeArea(String practiceArea) {
+        log.info("Finding or creating intake form for practice area: {}", practiceArea);
+        
+        // Try to find existing form for this practice area
+        List<IntakeForm> existingForms = intakeFormRepository.findByPracticeArea(practiceArea);
+        if (!existingForms.isEmpty()) {
+            IntakeForm existingForm = existingForms.get(0);
+            log.info("Found existing form for {} with ID: {}", practiceArea, existingForm.getId());
+            return existingForm;
+        }
+        
+        // Create new form for this practice area if none exists
+        log.info("Creating new intake form for practice area: {}", practiceArea);
+        String formName = practiceArea + " Consultation Form";
+        String publicUrlBase = practiceArea.toLowerCase().replaceAll("[^a-z0-9]+", "-");
+        
+        IntakeForm practiceAreaForm = IntakeForm.builder()
+            .name(formName)
+            .description("Consultation intake form for " + practiceArea)
+            .practiceArea(practiceArea)
+            .formType("STANDARD")
+            .isPublic(true)
+            .status("PUBLISHED")
+            .publicUrl(generateUniquePublicUrl(publicUrlBase))
+            .successMessage("Thank you for your " + practiceArea + " consultation request! We will contact you within 24 hours.")
+            .formConfig("{\"fields\":[{\"name\":\"firstName\",\"type\":\"text\",\"label\":\"First Name\",\"required\":true},{\"name\":\"lastName\",\"type\":\"text\",\"label\":\"Last Name\",\"required\":true},{\"name\":\"email\",\"type\":\"email\",\"label\":\"Email Address\",\"required\":true},{\"name\":\"phone\",\"type\":\"tel\",\"label\":\"Phone Number\",\"required\":true},{\"name\":\"practiceArea\",\"type\":\"select\",\"label\":\"Practice Area\",\"required\":true},{\"name\":\"urgency\",\"type\":\"select\",\"label\":\"Urgency\",\"required\":true,\"options\":[{\"value\":\"LOW\",\"label\":\"Low\"},{\"value\":\"MEDIUM\",\"label\":\"Medium\"},{\"value\":\"HIGH\",\"label\":\"High\"},{\"value\":\"URGENT\",\"label\":\"Urgent\"}]},{\"name\":\"message\",\"type\":\"textarea\",\"label\":\"Brief Description\",\"required\":true}]}")
+            .createdBy(1L) // System user
+            .build();
+        
+        IntakeForm savedForm = save(practiceAreaForm);
+        log.info("Created {} form with ID: {}", practiceArea, savedForm.getId());
+        return savedForm;
+    }
+
     private String generateUniquePublicUrl(String formName) {
         String baseUrl = formName.toLowerCase()
             .replaceAll("[^a-z0-9]+", "-")

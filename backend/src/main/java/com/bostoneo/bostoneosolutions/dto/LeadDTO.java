@@ -67,7 +67,6 @@ public class LeadDTO {
 
     private Integer estimatedValue;
 
-    private String caseType;
 
     private String jurisdiction;
 

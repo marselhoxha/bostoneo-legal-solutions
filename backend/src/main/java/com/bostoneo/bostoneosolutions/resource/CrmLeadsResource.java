@@ -21,6 +21,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -247,7 +248,9 @@ public class CrmLeadsResource {
             @RequestBody Map<String, Object> clientData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Converting lead {} to Client Only by user: {}", id, userDetails.getUsername());
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Converting lead {} to Client Only by user: {}", id, username);
         
         Long convertedBy = 1L; // Extract from userDetails in real implementation
         
@@ -279,7 +282,9 @@ public class CrmLeadsResource {
             @RequestBody Map<String, Object> caseData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Converting lead {} to Matter Only by user: {}", id, userDetails.getUsername());
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Converting lead {} to Matter Only by user: {}", id, username);
         
         Long convertedBy = 1L; // Extract from userDetails in real implementation
         
@@ -311,7 +316,9 @@ public class CrmLeadsResource {
             @RequestBody Map<String, Object> conversionData,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        log.info("Converting lead {} to Client AND Matter by user: {}", id, userDetails.getUsername());
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Converting lead {} to Client AND Matter by user: {}", id, username);
         
         Long convertedBy = 1L; // Extract from userDetails in real implementation
         
@@ -355,12 +362,28 @@ public class CrmLeadsResource {
         boolean canConvert = leadConversionService.canConvertLead(id, conversionType);
         boolean hasConflicts = leadConversionService.hasUnresolvedConflicts(id);
         
-        return ResponseEntity.ok(Map.of(
-            "canConvert", canConvert,
-            "hasConflicts", hasConflicts,
-            "conversionType", conversionType,
-            "leadId", id
-        ));
+        log.info("Conflict check results for lead {}: canConvert={}, hasConflicts={}", id, canConvert, hasConflicts);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("canConvert", canConvert);
+        result.put("hasConflicts", hasConflicts);
+        result.put("conversionType", conversionType);
+        result.put("leadId", id);
+        
+        if (hasConflicts) {
+            // Get conflict details
+            List<Map<String, Object>> conflicts = leadConversionService.getConflictDetails(id);
+            result.put("conflicts", conflicts);
+            result.put("reason", "Lead has unresolved conflicts that must be addressed before conversion");
+        } else if (!canConvert) {
+            // Get reason why conversion is not allowed
+            Lead lead = leadService.findById(id).orElse(null);
+            String reason = lead == null ? "Lead not found" : 
+                "Lead status '" + lead.getStatus() + "' is not eligible for conversion. Must be QUALIFIED, CONSULTATION_SCHEDULED, PROPOSAL_SENT, or NEGOTIATION.";
+            result.put("reason", reason);
+        }
+        
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}/conversion/required-fields")

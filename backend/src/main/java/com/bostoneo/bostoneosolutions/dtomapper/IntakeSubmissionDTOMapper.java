@@ -57,11 +57,25 @@ public class IntakeSubmissionDTOMapper {
         IntakeForm intakeForm = submission.getIntakeForm();
         if (intakeForm != null) {
             dto.setFormTitle(intakeForm.getName());
-            dto.setPracticeArea(intakeForm.getPracticeArea());
+            dto.setPracticeArea(intakeForm.getPracticeArea()); // Default fallback
         }
 
-        // Extract client info from submission data
+        // Extract client info and practice area from submission data
         extractClientInfoFromSubmissionData(dto);
+        
+        // Override practice area with submission data if available
+        if (dto.getSubmissionData() != null) {
+            String submissionPracticeArea = getStringValue(dto.getSubmissionData(), "practiceArea");
+            if (submissionPracticeArea != null) {
+                dto.setPracticeArea(submissionPracticeArea);
+            }
+            
+            // Extract urgency from submission data
+            String submissionUrgency = getStringValue(dto.getSubmissionData(), "urgency");
+            if (submissionUrgency != null) {
+                dto.setUrgency(submissionUrgency);
+            }
+        }
 
         // Set reviewer name if user is loaded
         User reviewer = submission.getReviewer();

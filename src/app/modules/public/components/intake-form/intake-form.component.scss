@@ -43,3 +43,243 @@
 .alert-info {
   border-left: 4px solid var(--vz-info);
 }
+
+// Multi-step form styles - Velzon theme consistency
+.hero-section {
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+  }
+}
+
+.step-progress-bar {
+  .progress-bar {
+    transition: width 0.4s ease-in-out;
+  }
+  
+  .step-indicators {
+    position: relative;
+    
+    .step-item {
+      text-align: center;
+      flex: 1;
+      position: relative;
+      
+      &.accessible {
+        cursor: pointer;
+      }
+      
+      .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+        
+        i {
+          font-size: 16px;
+        }
+      }
+      
+      &.active .step-circle {
+        background-color: var(--vz-primary);
+        color: white;
+        border-color: var(--vz-primary);
+        box-shadow: 0 0 0 4px rgba(var(--vz-primary-rgb), 0.1);
+      }
+      
+      &.completed .step-circle {
+        background-color: var(--vz-success);
+        color: white;
+        border-color: var(--vz-success);
+      }
+      
+      &:hover.accessible .step-circle {
+        border-color: var(--vz-primary);
+        box-shadow: 0 2px 8px rgba(var(--vz-primary-rgb), 0.2);
+      }
+      
+      .step-label {
+        font-size: 12px;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Professional styling enhancements
+.avatar-xl {
+  width: 4.5rem;
+  height: 4.5rem;
+  
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    font-size: 2rem;
+  }
+}
+
+// Form field enhancements
+.form-control, .form-select {
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+  
+  &:focus {
+    border-color: var(--vz-primary);
+    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+  }
+  
+  &.is-invalid {
+    border-color: var(--vz-danger);
+    box-shadow: 0 0 0 3px rgba(var(--vz-danger-rgb), 0.1);
+  }
+}
+
+// Button enhancements
+.btn-animation {
+  transition: all 0.3s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+// Professional trust elements
+.trust-badges {
+  .badge {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 20px;
+  }
+}
+
+// Card enhancements - Velzon theme consistency
+.card {
+  border-radius: 8px; // Match Velzon theme rounded corners
+  border: 0; // Remove borders to match Velzon cards
+  
+  &.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); // Match Bootstrap shadow-sm
+  }
+  
+  &.shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175); // Match Bootstrap shadow-lg
+  }
+}
+
+// Responsive improvements
+@media (max-width: 768px) {
+  .hero-section {
+    .card-body {
+      padding: 3rem 2rem !important;
+    }
+    
+    h2 {
+      font-size: 1.75rem;
+    }
+  }
+  
+  .step-indicators {
+    .step-item {
+      .step-circle {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+      }
+      
+      .step-label {
+        font-size: 10px;
+      }
+    }
+  }
+  
+  .btn-lg {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}
+
+// Loading states
+.animate-spin {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// Professional color scheme - Velzon theme
+:root {
+  --primary-gradient: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+  --success-gradient: linear-gradient(135deg, var(--vz-success) 0%, #20c997 100%);
+}
+
+// Accessibility improvements
+.form-control:focus,
+.form-select:focus {
+  outline: 2px solid var(--vz-primary);
+  outline-offset: 2px;
+}
+
+// Improved contrast for accessibility
+.text-muted {
+  color: #6c757d !important; // Ensure sufficient contrast ratio
+}
+
+// Focus indicator for skip links and better keyboard navigation
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.375rem 0.75rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+// Enhanced button focus states
+.btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+}
+
+// Improved step indicators accessibility
+.step-item.accessible:focus {
+  outline: 2px solid var(--vz-primary);
+  outline-offset: 2px;
+}

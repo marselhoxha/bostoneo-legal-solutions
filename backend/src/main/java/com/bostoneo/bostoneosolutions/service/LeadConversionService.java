@@ -39,6 +39,8 @@ public interface LeadConversionService {
     
     boolean hasUnresolvedConflicts(Long leadId);
     
+    List<Map<String, Object>> getConflictDetails(Long leadId);
+    
     // Validation operations
     boolean validateClientData(Map<String, Object> clientData);
     

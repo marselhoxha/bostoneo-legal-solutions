@@ -18,17 +18,17 @@
     <div class="card shadow-sm">
       <div class="card-body text-center py-5">
         <div class="avatar-lg mx-auto mb-4">
-          <div class="avatar-title rounded-circle bg-soft-danger text-danger">
+          <div class="avatar-title rounded-circle bg-danger-subtle text-danger">
             <i class="ri-error-warning-line display-6"></i>
           </div>
         </div>
         <h5 class="mb-3 text-danger">Form Not Available</h5>
         <p class="text-muted mb-4">{{ error }}</p>
         <div class="d-flex gap-2 justify-content-center">
-          <a routerLink="/public/intake-forms" class="btn btn-primary">
+          <a routerLink="/public/intake-forms" class="btn btn-primary btn-animation waves-effect waves-light">
             <i class="ri-arrow-left-line me-1"></i>View All Forms
           </a>
-          <button class="btn btn-soft-primary" (click)="loadForm()">
+          <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="loadForm()">
             <i class="ri-refresh-line me-1"></i>Try Again
           </button>
         </div>
@@ -39,42 +39,110 @@
 
 <!-- Form Content -->
 <div class="row" *ngIf="!isLoading && intakeForm">
-  <div class="col-lg-8 mx-auto">
-    <!-- Form Header -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body p-4">
-        <div class="text-center">
-          <div class="avatar-lg mx-auto mb-3">
-            <div class="avatar-title rounded-circle bg-primary bg-opacity-10 text-primary">
-              <i class="ri-file-text-line display-6"></i>
+  <div class="col-lg-10 mx-auto">
+    <!-- Hero Section with Professional Header -->
+    <div class="hero-section mb-5">
+      <div class="card border-0 shadow-lg">
+        <div class="card-body bg-primary text-center py-5 rounded">
+          <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+              <div class="avatar-xl mx-auto mb-4">
+                <div class="avatar-title rounded-circle bg-white text-primary shadow-sm">
+                  <i class="ri-scales-3-line display-5"></i>
+                </div>
+              </div>
+              <h2 class="text-white fw-bold mb-3">Get Your Free Legal Consultation</h2>
+              <p class="text-white-50 fs-16 mb-2">
+                Connect with experienced attorneys who will fight for your rights. No fees unless we win your case.
+              </p>
+              <!-- Practice Area Specific Urgency -->
+              <div class="alert alert-warning bg-warning bg-opacity-20 border-warning text-white mb-4">
+                <div class="d-flex align-items-center">
+                  <i class="ri-alarm-warning-line me-2 fs-18"></i>
+                  <span class="fs-15">{{ getPracticeAreaSpecificMessage() }}</span>
+                </div>
+              </div>
+              <div class="d-flex justify-content-center gap-4 mb-4">
+                <div class="text-center">
+                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
+                    <i class="ri-shield-check-line me-2"></i>100% Confidential
+                  </div>
+                </div>
+                <div class="text-center">
+                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
+                    <i class="ri-time-line me-2"></i>24 Hour Response
+                  </div>
+                </div>
+                <div class="text-center">
+                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
+                    <i class="ri-award-line me-2"></i>No Win, No Fee
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <h4 class="mb-2 fw-bold">{{ intakeForm.name }}</h4>
-          <p class="text-muted mb-0 fs-15" *ngIf="intakeForm.description">
-            {{ intakeForm.description }}
-          </p>
-          <div class="mt-3">
-            <span class="badge bg-primary-subtle text-primary fs-13 me-2">
-              <i class="ri-shield-check-line me-1"></i>Secure & Confidential
-            </span>
-            <span class="badge bg-success-subtle text-success fs-13">
-              <i class="ri-time-line me-1"></i>Free Consultation
-            </span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Progress Bar -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body p-3">
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0">
-            <i class="ri-information-line text-info me-2 fs-18"></i>
-          </div>
-          <div class="flex-grow-1">
-            <h6 class="mb-1">Legal Intake Form - {{ intakeForm.practiceArea }}</h6>
-            <p class="text-muted mb-0 fs-14">Please fill out all required fields marked with *</p>
+    <!-- Multi-Step Progress Bar -->
+    <div class="card shadow-sm mb-4" role="progressbar" [attr.aria-valuenow]="currentStep" [attr.aria-valuemax]="totalSteps" aria-label="Form progress">
+      <div class="card-body p-4">
+        <div class="row">
+          <div class="col-12">
+            <div class="step-progress-bar mb-4">
+              <div class="progress-container">
+                <div class="progress bg-light" style="height: 8px;">
+                  <div class="progress-bar bg-gradient-primary" 
+                       role="progressbar" 
+                       [style.width.%]="getProgressPercentage()"
+                       [attr.aria-valuenow]="getProgressPercentage()" 
+                       aria-valuemin="0" 
+                       aria-valuemax="100">
+                  </div>
+                </div>
+                <div class="step-indicators mt-3">
+                  <div class="d-flex justify-content-between">
+                    <div class="step-item" 
+                         *ngFor="let step of [1,2,3]; let i = index"
+                         [class.active]="currentStep === step"
+                         [class.completed]="isStepCompleted(step)"
+                         [class.accessible]="isStepAccessible(step)"
+                         (click)="isStepAccessible(step) ? goToStep(step) : null"
+                         [style.cursor]="isStepAccessible(step) ? 'pointer' : 'not-allowed'">
+                      <div class="step-circle">
+                        <span *ngIf="!isStepCompleted(step)">{{ step }}</span>
+                        <i class="ri-check-line" *ngIf="isStepCompleted(step)"></i>
+                      </div>
+                      <div class="step-label mt-2">
+                        <small class="text-muted" *ngIf="step === 1">Basic Info</small>
+                        <small class="text-muted" *ngIf="step === 2">Case Details</small>
+                        <small class="text-muted" *ngIf="step === 3">Final Details</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Current Step Info -->
+            <div class="text-center">
+              <h5 class="text-primary fw-semibold mb-2">{{ getStepTitle() }}</h5>
+              <p class="text-muted fs-14">{{ getStepDescription() }}</p>
+              
+              <!-- Completion Status -->
+              <div class="mt-3">
+                <div class="d-flex justify-content-center align-items-center gap-3">
+                  <small class="text-muted">
+                    <i class="ri-checkbox-circle-line me-1 text-success"></i>
+                    {{ getCurrentStepCompletionPercentage() }}% Complete
+                  </small>
+                  <small class="text-success" style="opacity: 0.7;">
+                    <i class="ri-save-line me-1"></i>Auto-saved
+                  </small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -83,9 +151,14 @@
     <!-- Main Form -->
     <div class="card shadow-sm">
       <div class="card-header bg-light-subtle border-bottom-dashed py-4">
-        <h5 class="card-title mb-0">
-          <i class="ri-edit-line me-2 text-primary"></i>Client Information
-        </h5>
+        <div class="d-flex justify-content-between align-items-center">
+          <h1 class="card-title mb-0 h5" id="step-title">
+            <i class="ri-edit-line me-2 text-primary" aria-hidden="true"></i>{{ getStepTitle() }}
+          </h1>
+          <div class="step-counter">
+            <span class="badge bg-primary fs-13" role="status" aria-live="polite">Step {{ currentStep }} of {{ totalSteps }}</span>
+          </div>
+        </div>
       </div>
       <div class="card-body p-4">
         <!-- Error Alert -->
@@ -94,9 +167,10 @@
           {{ error }}
         </div>
 
-        <form [formGroup]="submissionForm" (ngSubmit)="onSubmit()">
-          <!-- Dynamic Form Fields -->
-          <div class="row g-4" *ngFor="let field of formFields; let i = index">
+        <form [formGroup]="submissionForm" (ngSubmit)="currentStep === totalSteps ? onSubmit() : nextStep()" 
+              role="form" [attr.aria-labelledby]="'step-title'">
+          <!-- Dynamic Form Fields for Current Step -->
+          <div class="row g-4" *ngFor="let field of getCurrentStepFields(); let i = index">
             <div [ngClass]="{
               'col-12': field.type === 'textarea' || field.fullWidth,
               'col-md-6': field.type !== 'textarea' && !field.fullWidth
@@ -185,47 +259,69 @@
             </div>
           </div>
 
-          <!-- Privacy Notice -->
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="alert alert-info border-0 bg-info-subtle">
-                <div class="d-flex align-items-start">
-                  <i class="ri-shield-check-line text-info me-2 mt-1 fs-18"></i>
-                  <div class="flex-grow-1">
-                    <h6 class="mb-2 fw-semibold">Privacy & Confidentiality</h6>
-                    <p class="mb-2 fs-14">
-                      All information you provide is protected by attorney-client privilege and will be kept strictly confidential. 
-                      We use secure encryption to protect your data during transmission.
-                    </p>
-                    <ul class="mb-0 fs-13 ps-3">
-                      <li>Your information will only be shared with assigned attorneys</li>
-                      <li>We comply with all applicable privacy laws and regulations</li>
-                      <li>You can request to update or delete your information at any time</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Submit Button -->
-          <div class="row mt-4">
+          <!-- Navigation Buttons -->
+          <div class="row mt-5">
             <div class="col-12">
               <div class="d-flex justify-content-between align-items-center">
-                <a routerLink="/public/intake-forms" class="btn btn-soft-secondary">
+                <!-- Previous Button -->
+                <button 
+                  type="button" 
+                  class="btn btn-soft-secondary btn-animation"
+                  [disabled]="currentStep === 1"
+                  (click)="previousStep()"
+                  *ngIf="currentStep > 1">
+                  <i class="ri-arrow-left-line me-1"></i>Previous
+                </button>
+                
+                <!-- Back to Forms Link (only on first step) -->
+                <a routerLink="/public/intake-forms" 
+                   class="btn btn-soft-secondary btn-animation waves-effect waves-light"
+                   *ngIf="currentStep === 1">
                   <i class="ri-arrow-left-line me-1"></i>Back to Forms
                 </a>
+
+                <!-- Next/Submit Button -->
                 <button 
                   type="submit" 
-                  class="btn btn-primary btn-animation waves-effect waves-light"
-                  [disabled]="!submissionForm.valid || isSubmitting">
-                  <span *ngIf="!isSubmitting">
-                    <i class="ri-send-plane-line me-1"></i>Submit Form
+                  class="btn btn-primary btn-animation waves-effect waves-light btn-lg"
+                  [disabled]="(currentStep === totalSteps && (!submissionForm.valid || isSubmitting))">
+                  
+                  <!-- Next Step Button -->
+                  <span *ngIf="currentStep < totalSteps">
+                    <i class="ri-arrow-right-line me-1"></i>{{ getCallToActionText() }}
                   </span>
-                  <span *ngIf="isSubmitting">
-                    <i class="ri-loader-line animate-spin me-1"></i>Submitting...
+                  
+                  <!-- Final Submit Button -->
+                  <span *ngIf="currentStep === totalSteps && !isSubmitting">
+                    <i class="ri-send-plane-line me-1"></i>{{ getCallToActionText() }}
+                  </span>
+                  
+                  <!-- Loading State -->
+                  <span *ngIf="currentStep === totalSteps && isSubmitting">
+                    <i class="ri-loader-line animate-spin me-1"></i>Submitting Your Request...
                   </span>
                 </button>
+              </div>
+              
+              <!-- Progress Text & Motivation -->
+              <div class="text-center mt-3">
+                <div class="mb-2" *ngIf="currentStep < totalSteps">
+                  <small class="text-muted">
+                    <i class="ri-time-line me-1"></i>This should take about {{ currentStep === 1 ? '2' : currentStep === 2 ? '3' : '2' }} minutes
+                  </small>
+                </div>
+                
+                <!-- Motivational Message -->
+                <div class="alert alert-success bg-success-subtle border-success py-2 mb-3" 
+                     *ngIf="getFormCompletionPercentage() > 20">
+                  <small class="text-success fw-semibold">{{ getMotivationalMessage() }}</small>
+                </div>
+
+                <!-- Time-based Urgency -->
+                <div class="alert alert-info bg-info-subtle border-info py-2 mb-0">
+                  <small class="text-info">{{ getTimeBasedUrgency() }}</small>
+                </div>
               </div>
             </div>
           </div>
@@ -233,34 +329,127 @@
       </div>
     </div>
 
-    <!-- Additional Information -->
+    <!-- Professional Trust Section -->
+    <div class="row mt-5">
+      <!-- Attorney Credentials -->
+      <div class="col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm bg-light-subtle h-100">
+          <div class="card-body text-center p-4">
+            <div class="avatar-md mx-auto mb-3">
+              <div class="avatar-title rounded-circle bg-primary text-white">
+                <i class="ri-award-line fs-20"></i>
+              </div>
+            </div>
+            <h6 class="fw-bold mb-2">Experienced Attorneys</h6>
+            <p class="text-muted mb-0 fs-13">Our team has over 50+ years combined experience in {{ intakeForm.practiceArea }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Rate -->
+      <div class="col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm bg-light-subtle h-100">
+          <div class="card-body text-center p-4">
+            <div class="avatar-md mx-auto mb-3">
+              <div class="avatar-title rounded-circle bg-success text-white">
+                <i class="ri-trophy-line fs-20"></i>
+              </div>
+            </div>
+            <h6 class="fw-bold mb-2">95% Success Rate</h6>
+            <p class="text-muted mb-0 fs-13">We have successfully resolved thousands of cases similar to yours</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Fee Guarantee -->
+      <div class="col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm bg-light-subtle h-100">
+          <div class="card-body text-center p-4">
+            <div class="avatar-md mx-auto mb-3">
+              <div class="avatar-title rounded-circle bg-info text-white">
+                <i class="ri-shield-check-line fs-20"></i>
+              </div>
+            </div>
+            <h6 class="fw-bold mb-2">No Win, No Fee</h6>
+            <p class="text-muted mb-0 fs-13">You don't pay attorney fees unless we win your case</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact & Support Information -->
     <div class="card shadow-sm mt-4">
       <div class="card-body p-4">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar-xs me-3">
-                <div class="avatar-title rounded-circle bg-success-subtle text-success">
-                  <i class="ri-phone-line fs-14"></i>
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <div class="row">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-xs me-3">
+                    <div class="avatar-title rounded-circle bg-success-subtle text-success">
+                      <i class="ri-phone-line fs-14"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <h6 class="mb-0">24/7 Support</h6>
+                    <p class="text-muted mb-0 fs-13">
+                      <a href="tel:+15551234567" class="text-decoration-none">(555) 123-4567</a>
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <h6 class="mb-0">Need Help?</h6>
-                <p class="text-muted mb-0 fs-13">Call us at (555) 123-4567</p>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-xs me-3">
+                    <div class="avatar-title rounded-circle bg-info-subtle text-info">
+                      <i class="ri-time-line fs-14"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <h6 class="mb-0">Fast Response</h6>
+                    <p class="text-muted mb-0 fs-13">We respond within 24 hours guaranteed</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="col-md-6">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar-xs me-3">
-                <div class="avatar-title rounded-circle bg-info-subtle text-info">
-                  <i class="ri-time-line fs-14"></i>
-                </div>
-              </div>
-              <div>
-                <h6 class="mb-0">Quick Response</h6>
-                <p class="text-muted mb-0 fs-13">We'll contact you within 24 hours</p>
-              </div>
+          <div class="col-lg-4 text-lg-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+              <span class="badge bg-primary-subtle text-primary fs-12 px-3 py-2">
+                <i class="ri-star-fill me-1"></i>5.0 Rating
+              </span>
+              <span class="badge bg-success-subtle text-success fs-12 px-3 py-2">
+                <i class="ri-user-line me-1"></i>10,000+ Clients
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Privacy Notice -->
+    <div class="card border-0 bg-primary-subtle mt-4">
+      <div class="card-body p-4">
+        <div class="row align-items-center">
+          <div class="col-lg-1 text-center">
+            <i class="ri-shield-check-line text-primary display-6"></i>
+          </div>
+          <div class="col-lg-11">
+            <h6 class="text-primary fw-bold mb-2">Your Information is Protected</h6>
+            <p class="text-muted mb-2 fs-14">
+              All communications are protected by attorney-client privilege. Your information is encrypted and secure.
+              We will never share your details with third parties.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <small class="text-muted">
+                <i class="ri-lock-line me-1 text-primary"></i>256-bit SSL Encryption
+              </small>
+              <small class="text-muted">
+                <i class="ri-shield-line me-1 text-primary"></i>HIPAA Compliant
+              </small>
+              <small class="text-muted">
+                <i class="ri-file-shield-line me-1 text-primary"></i>Attorney-Client Privilege
+              </small>
             </div>
           </div>
         </div>

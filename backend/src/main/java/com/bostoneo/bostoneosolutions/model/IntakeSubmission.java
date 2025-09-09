@@ -26,7 +26,7 @@ public class IntakeSubmission {
     @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
     private Long id;
 
-    @Column(name = "form_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "form_id", nullable = true, columnDefinition = "BIGINT UNSIGNED")
     private Long formId;
 
     @ManyToOne(fetch = FetchType.LAZY)

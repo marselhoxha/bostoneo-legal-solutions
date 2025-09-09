@@ -162,6 +162,53 @@ public class IntakeFormResource {
         return submitForm(form.getId(), submissionData, request);
     }
 
+    @PostMapping("/submit-general")
+    public ResponseEntity<Map<String, Object>> submitGeneralForm(
+            @RequestBody @Valid Map<String, Object> submissionData,
+            HttpServletRequest request) {
+        
+        log.info("Receiving general form submission");
+        
+        // Extract request information
+        String ipAddress = getClientIpAddress(request);
+        String userAgent = request.getHeader("User-Agent");
+        String referrer = request.getHeader("Referer");
+        
+        try {
+            // Extract practice area from submission data
+            String practiceArea = submissionData.get("practiceArea") != null ? 
+                submissionData.get("practiceArea").toString() : "Personal Injury"; // default fallback
+            
+            log.info("Processing submission for practice area: {}", practiceArea);
+            
+            // Find or create intake form for the specific practice area
+            IntakeForm practiceAreaForm = intakeFormService.findOrCreateFormForPracticeArea(practiceArea);
+            
+            // Create submission using the practice area form ID
+            IntakeSubmission submission = intakeSubmissionService.createSubmission(
+                practiceAreaForm.getId(),
+                objectMapperToJson(submissionData), 
+                ipAddress, 
+                userAgent, 
+                referrer
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Thank you for your submission! We will contact you within 24 hours.");
+            response.put("submissionId", submission.getId());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error creating general submission", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "There was an error processing your submission. Please try again."
+            ));
+        }
+    }
+
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {

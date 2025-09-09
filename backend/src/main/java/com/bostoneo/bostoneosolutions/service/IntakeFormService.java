@@ -68,4 +68,9 @@ public interface IntakeFormService {
     boolean validateFormConfiguration(String formConfig);
     
     boolean isPublicUrlAvailable(String publicUrl, Long excludeFormId);
+    
+    // General form operations
+    IntakeForm findOrCreateGeneralForm();
+    
+    IntakeForm findOrCreateFormForPracticeArea(String practiceArea);
 }

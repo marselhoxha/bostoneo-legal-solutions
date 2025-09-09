@@ -1,239 +1,244 @@
-<!-- Header Section -->
+<!-- Breadcrumb -->
 <div class="row">
   <div class="col-12">
     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-      <h4 class="mb-sm-0">
-        <i class="ri-file-list-3-line me-2 text-primary"></i>
-        {{ selectedPracticeArea ? selectedPracticeArea + ' Forms' : 'Legal Intake Forms' }}
-      </h4>
-      
+      <h4 class="mb-sm-0">Legal Intake Form</h4>
       <div class="page-title-right">
         <ol class="breadcrumb m-0">
-          <li class="breadcrumb-item"><a href="/">Home</a></li>
-          <li class="breadcrumb-item active">
-            {{ selectedPracticeArea || 'Intake Forms' }}
-          </li>
+          <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
+          <li class="breadcrumb-item active">Legal Consultation</li>
         </ol>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Welcome Banner -->
-<div class="row mb-4" *ngIf="!selectedPracticeArea">
-  <div class="col-12">
-    <div class="card shadow-sm border-0 bg-gradient-primary">
-      <div class="card-body p-4">
-        <div class="row align-items-center">
-          <div class="col-md-8">
-            <h3 class="text-white mb-2">
-              <i class="ri-scales-3-line me-2"></i>
-              Welcome to Our Legal Services
-            </h3>
-            <p class="text-white-50 mb-3 fs-15">
-              Get expert legal assistance by filling out our intake forms. Choose from our specialized practice areas below to get started with your consultation.
-            </p>
-            <div class="d-flex gap-2">
-              <span class="badge bg-white bg-opacity-20 text-white fs-13">
-                <i class="ri-shield-check-line me-1"></i>Confidential
-              </span>
-              <span class="badge bg-white bg-opacity-20 text-white fs-13">
-                <i class="ri-time-line me-1"></i>Fast Response
-              </span>
-              <span class="badge bg-white bg-opacity-20 text-white fs-13">
-                <i class="ri-user-star-line me-1"></i>Expert Attorneys
-              </span>
-            </div>
-          </div>
-          <div class="col-md-4 text-center">
-            <div class="avatar-xl mx-auto">
-              <div class="avatar-title rounded-circle bg-white bg-opacity-20 text-white">
-                <i class="ri-briefcase-4-line display-6"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Practice Area Filter -->
+<!-- Hero Section -->
 <div class="row mb-4">
   <div class="col-12">
+    <div class="text-center mb-4">
+      <h1 class="fw-semibold text-white-dark mb-3">Legal Consultation Request</h1>
+      <p class="text-muted fs-16 mb-0">Select your practice area below to get started with your free consultation</p>
+    </div>
+  </div>
+</div>
+
+<!-- Practice Area Selection -->
+<div class="row mb-4">
+  <div class="col-lg-10 mx-auto">
     <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-        <div class="d-flex align-items-center justify-content-between">
-          <h5 class="card-title mb-0">
-            <i class="ri-filter-3-line me-2 text-primary"></i>Practice Areas
-          </h5>
-          <button class="btn btn-soft-secondary btn-sm" 
-                  *ngIf="selectedPracticeArea"
-                  (click)="selectPracticeArea('')">
-            <i class="ri-close-line me-1"></i>Clear Filter
-          </button>
-        </div>
-      </div>
       <div class="card-body p-4">
         <div class="row g-3">
-          <div class="col-lg-2 col-md-4 col-sm-6" *ngFor="let area of practiceAreas">
-            <div class="card border h-100 cursor-pointer practice-area-card"
-                 [class.border-primary]="selectedPracticeArea === area"
-                 [class.bg-primary-subtle]="selectedPracticeArea === area"
-                 (click)="selectPracticeArea(area)">
-              <div class="card-body text-center p-3">
-                <div class="avatar-sm mx-auto mb-3">
-                  <div class="avatar-title rounded-circle"
-                       [ngClass]="'bg-' + getPracticeAreaConfig(area).color + '-subtle text-' + getPracticeAreaConfig(area).color">
-                    <i [ngClass]="getPracticeAreaConfig(area).icon" class="fs-18"></i>
-                  </div>
-                </div>
-                <h6 class="mb-2 fw-semibold">{{ area }}</h6>
-                <p class="text-muted mb-0 fs-12">{{ getPracticeAreaConfig(area).description }}</p>
-                <div class="mt-2">
-                  <span class="badge bg-light text-muted fs-11">
-                    {{ getFormsByPracticeArea(area).length }} forms
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Loading State -->
-<div class="row" *ngIf="isLoading">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading forms...</span>
-        </div>
-        <p class="mt-3 text-muted">Loading available forms...</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Error State -->
-<div class="row" *ngIf="error && !isLoading">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body py-5">
-        <div class="alert alert-danger mb-0">
-          <div class="d-flex align-items-center">
-            <i class="ri-error-warning-line me-3 fs-20"></i>
-            <div class="flex-grow-1">
-              <h6 class="mb-1">Error Loading Forms</h6>
-              <p class="mb-0">{{ error }}</p>
-            </div>
-            <button class="btn btn-soft-danger btn-sm" (click)="loadForms()">
-              <i class="ri-refresh-line me-1"></i>Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Forms List -->
-<div class="row" *ngIf="!isLoading && !error">
-  <!-- Grouped by Practice Area -->
-  <div *ngFor="let practiceArea of getGroupedForms() | keyvalue" class="col-12 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm me-3">
-            <div class="avatar-title rounded-circle"
-                 [ngClass]="'bg-' + getPracticeAreaConfig(practiceArea.key).color + '-subtle text-' + getPracticeAreaConfig(practiceArea.key).color">
-              <i [ngClass]="getPracticeAreaConfig(practiceArea.key).icon" class="fs-18"></i>
-            </div>
-          </div>
-          <div class="flex-grow-1">
-            <h5 class="card-title mb-0 fw-semibold">{{ practiceArea.key }}</h5>
-            <p class="text-muted mb-0 fs-13">{{ getPracticeAreaConfig(practiceArea.key).description }}</p>
-          </div>
-          <span class="badge bg-primary fs-12">
-            {{ practiceArea.value.length }} forms
-          </span>
-        </div>
-      </div>
-      <div class="card-body p-4">
-        <div class="row g-4">
-          <div class="col-lg-6" *ngFor="let form of practiceArea.value">
-            <div class="card border h-100 form-card cursor-pointer" (click)="openForm(form)">
-              <div class="card-body p-4">
-                <div class="d-flex align-items-start">
+          <div class="col-lg-4 col-md-6" *ngFor="let area of practiceAreas">
+            <div class="practice-area-option">
+              <input 
+                class="form-check-input d-none" 
+                type="radio" 
+                [id]="'practice-' + area.key"
+                name="practiceArea"
+                [value]="area.key"
+                [(ngModel)]="selectedPracticeArea"
+                (change)="onPracticeAreaChange()">
+              <label class="practice-area-label" [for]="'practice-' + area.key">
+                <div class="d-flex align-items-center p-3">
                   <div class="flex-shrink-0">
-                    <div class="avatar-md rounded-circle bg-primary bg-opacity-10 p-2">
-                      <div class="avatar-title text-primary rounded-circle bg-transparent">
-                        <i class="ri-file-text-line fs-2"></i>
+                    <div class="avatar-sm rounded">
+                      <div class="avatar-title bg-light text-muted">
+                        <i [ngClass]="area.icon" class="fs-18"></i>
                       </div>
                     </div>
                   </div>
                   <div class="flex-grow-1 ms-3">
-                    <h6 class="mb-2 fw-semibold">{{ form.name }}</h6>
-                    <p class="text-muted mb-3 fs-14" *ngIf="form.description">
-                      {{ form.description }}
-                    </p>
-                    
-                    <!-- Form Stats -->
-                    <div class="d-flex gap-3 mb-3">
-                      <div class="d-flex align-items-center text-muted fs-13">
-                        <i class="ri-user-line me-1"></i>
-                        <span>{{ form.submissionCount || 0 }} submissions</span>
-                      </div>
-                      <div class="d-flex align-items-center text-muted fs-13" *ngIf="form.conversionRate">
-                        <i class="ri-arrow-up-line me-1"></i>
-                        <span>{{ (form.conversionRate * 100).toFixed(1) }}% conversion</span>
-                      </div>
-                    </div>
-
-                    <!-- Action Button -->
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span class="badge bg-success-subtle text-success fs-12">
-                        <i class="ri-shield-check-line me-1"></i>Secure & Confidential
-                      </span>
-                      <button class="btn btn-primary btn-sm waves-effect waves-light">
-                        <i class="ri-arrow-right-line me-1"></i>Start Form
-                      </button>
+                    <h6 class="mb-1 fw-semibold text-white-dark">{{ area.key }}</h6>
+                    <p class="text-muted mb-0 fs-13">{{ area.description }}</p>
+                  </div>
+                  <div class="flex-shrink-0">
+                    <div class="form-check-indicator">
+                      <i class="ri-check-line"></i>
                     </div>
                   </div>
                 </div>
-              </div>
+              </label>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Empty State -->
-  <div class="col-12" *ngIf="forms.length === 0 && !isLoading && !error">
+<!-- Dynamic Form -->
+<div class="row" *ngIf="selectedPracticeArea">
+  <div class="col-lg-8 mx-auto">
     <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="avatar-xl mx-auto mb-4">
-          <div class="avatar-title rounded-circle bg-soft-secondary text-secondary">
-            <i class="ri-file-list-3-line display-6"></i>
+      <div class="card-header border-bottom-dashed bg-light-subtle py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 text-white-dark fw-semibold">
+            <i class="ri-file-text-line align-middle me-2 text-primary"></i>{{ selectedPracticeArea }} Information
+          </h5>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary fs-11">
+              <i class="ri-save-line me-1"></i>Auto-saved
+            </span>
           </div>
         </div>
-        <h5 class="mb-3">No Forms Available</h5>
-        <p class="text-muted mb-4 mx-auto" style="max-width: 400px;">
-          {{ selectedPracticeArea 
-            ? 'No intake forms are currently available for ' + selectedPracticeArea + '. Please check other practice areas or contact us directly.'
-            : 'No intake forms are currently available. Please contact our office for assistance.' }}
-        </p>
-        <div class="d-flex gap-2 justify-content-center">
-          <button class="btn btn-soft-primary" (click)="selectPracticeArea('')" *ngIf="selectedPracticeArea">
-            <i class="ri-arrow-left-line me-1"></i>View All Areas
-          </button>
-          <a href="tel:+1-555-0123" class="btn btn-primary">
-            <i class="ri-phone-line me-1"></i>Call Us
-          </a>
+      </div>
+      <div class="card-body p-4">
+        <!-- Form Fields -->
+        <form [formGroup]="intakeForm" (ngSubmit)="onSubmit()" *ngIf="intakeForm">
+          <div class="row g-4">
+            <div 
+              *ngFor="let field of getCurrentFields()" 
+              [ngClass]="{
+                'col-12': field.type === 'textarea' || field.fullWidth,
+                'col-md-6': field.type !== 'textarea' && !field.fullWidth
+              }">
+              
+              <!-- Text Input -->
+              <div class="mb-3" *ngIf="field.type === 'text' || field.type === 'email' || field.type === 'tel' || field.type === 'date'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <input 
+                  [type]="field.type" 
+                  class="form-control"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Textarea -->
+              <div class="mb-3" *ngIf="field.type === 'textarea'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <textarea 
+                  class="form-control"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [rows]="field.rows || 3"
+                  [placeholder]="field.placeholder || 'Describe your ' + field.label.toLowerCase()">
+                </textarea>
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Select Dropdown -->
+              <div class="mb-3" *ngIf="field.type === 'select'">
+                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <select 
+                  class="form-select"
+                  [class.is-invalid]="hasFieldError(field.name)"
+                  [id]="field.name"
+                  [formControlName]="field.name">
+                  <option value="">Select {{ field.label.toLowerCase() }}</option>
+                  <option *ngFor="let option of field.options" [value]="option">
+                    {{ option }}
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+
+              <!-- Radio Buttons -->
+              <div class="mb-3" *ngIf="field.type === 'radio'">
+                <label class="form-label fw-semibold text-white-dark">
+                  {{ field.label }}
+                  <span class="text-danger" *ngIf="field.required">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="form-check" *ngFor="let option of field.options">
+                    <input 
+                      class="form-check-input" 
+                      type="radio" 
+                      [id]="field.name + '_' + option.value"
+                      [formControlName]="field.name"
+                      [value]="option.value">
+                    <label class="form-check-label" [for]="field.name + '_' + option.value">
+                      {{ option.label }}
+                    </label>
+                  </div>
+                </div>
+                <div class="text-danger fs-12 mt-1" *ngIf="hasFieldError(field.name)">
+                  {{ getFieldError(field.name) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="text-center">
+                <button 
+                  type="submit" 
+                  class="btn btn-primary btn-lg"
+                  [disabled]="!intakeForm.valid || isSubmitting">
+                  <span *ngIf="!isSubmitting">
+                    <i class="ri-send-plane-line me-2"></i>Get My Free Consultation
+                  </span>
+                  <span *ngIf="isSubmitting">
+                    <i class="ri-loader-line animate-spin me-2"></i>Submitting...
+                  </span>
+                </button>
+                
+                <div class="mt-3">
+                  <small class="text-muted">
+                    <i class="ri-time-line me-1"></i>Takes less than 3 minutes • 100% Free & Confidential
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trust Elements -->
+<div class="row mt-5" *ngIf="selectedPracticeArea">
+  <div class="col-12">
+    <div class="card shadow-sm bg-light-subtle">
+      <div class="card-body p-4">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <div class="d-flex align-items-start">
+              <div class="avatar-sm rounded-circle bg-success bg-opacity-10 me-3">
+                <div class="avatar-title rounded-circle bg-transparent text-success">
+                  <i class="ri-shield-check-line fs-18"></i>
+                </div>
+              </div>
+              <div>
+                <h6 class="mb-2 fw-semibold text-white-dark">Your Information is Protected</h6>
+                <p class="text-muted mb-0 fs-14">
+                  All communications are protected by attorney-client privilege and encrypted for your security.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            <div class="d-flex justify-content-lg-end gap-2">
+              <span class="badge bg-success-subtle text-success fs-11">
+                <i class="ri-lock-line me-1"></i>SSL Secured
+              </span>
+              <span class="badge bg-primary-subtle text-primary fs-11">
+                <i class="ri-shield-star-line me-1"></i>HIPAA Compliant
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -70,4 +70,9 @@ export class IntakeFormService {
   getPracticeAreas(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/practice-areas`);
   }
+
+  // Submit general intake form
+  submitIntakeForm(submissionData: any): Observable<SubmissionResponse> {
+    return this.http.post<SubmissionResponse>(`${this.apiUrl}/submit-general`, submissionData);
+  }
 }

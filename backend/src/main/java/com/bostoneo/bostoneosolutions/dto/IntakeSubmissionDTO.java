@@ -38,6 +38,8 @@ public class IntakeSubmissionDTO {
 
     private String priority;
 
+    private String urgency;
+
     private String source;
 
     private String notes;

@@ -130,19 +130,19 @@
 
         <!-- Action Buttons -->
         <div class="d-flex gap-3 justify-content-center mt-4">
-          <a routerLink="/public/intake-forms" class="btn btn-soft-primary">
+          <a routerLink="/public/intake-forms" class="btn btn-soft-primary btn-animation waves-effect waves-light">
             <i class="ri-arrow-left-line me-1"></i>
             Submit Another Form
           </a>
           
-          <button class="btn btn-primary" 
+          <button class="btn btn-primary btn-animation waves-effect waves-light" 
                   *ngIf="redirectUrl" 
                   (click)="navigateToRedirectUrl()">
             <i class="ri-external-link-line me-1"></i>
             Continue
           </button>
           
-          <a href="tel:+15551234567" class="btn btn-success" *ngIf="!redirectUrl">
+          <a href="tel:+15551234567" class="btn btn-success btn-animation waves-effect waves-light" *ngIf="!redirectUrl">
             <i class="ri-phone-line me-1"></i>
             Call Now
           </a>

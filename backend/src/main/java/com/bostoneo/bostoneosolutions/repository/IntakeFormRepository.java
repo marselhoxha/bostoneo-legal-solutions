@@ -26,6 +26,8 @@ public interface IntakeFormRepository extends JpaRepository<IntakeForm, Long> {
     
     Optional<IntakeForm> findByPublicUrl(String publicUrl);
     
+    List<IntakeForm> findByName(String name);
+    
     @Query("SELECT i FROM IntakeForm i WHERE i.practiceArea IN :practiceAreas")
     List<IntakeForm> findByPracticeAreas(@Param("practiceAreas") List<String> practiceAreas);
     

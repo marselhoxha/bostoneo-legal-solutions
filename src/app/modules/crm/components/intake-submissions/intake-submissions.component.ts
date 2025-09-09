@@ -11,7 +11,7 @@ export interface IntakeSubmissionDTO {
   phone: string;
   practiceArea: string;
   status: string;
-  priority: string;
+  urgency?: string;
   leadScore: number;
   submittedAt: string;
   updatedAt: string;
@@ -36,8 +36,8 @@ export class IntakeSubmissionsComponent implements OnInit {
   
   // Filter properties
   selectedStatus = '';
-  selectedPriority = '';
   selectedPracticeArea = '';
+  selectedUrgency = '';
   searchTerm = '';
   
   // Status options
@@ -50,15 +50,6 @@ export class IntakeSubmissionsComponent implements OnInit {
     { value: 'SPAM', label: 'Spam' }
   ];
   
-  // Priority options
-  priorityOptions = [
-    { value: '', label: 'All Priorities' },
-    { value: 'LOW', label: 'Low' },
-    { value: 'MEDIUM', label: 'Medium' },
-    { value: 'HIGH', label: 'High' },
-    { value: 'CRITICAL', label: 'Critical' }
-  ];
-  
   // Practice area options
   practiceAreaOptions = [
     { value: '', label: 'All Practice Areas' },
@@ -68,6 +59,15 @@ export class IntakeSubmissionsComponent implements OnInit {
     { value: 'Business Law', label: 'Business Law' },
     { value: 'Real Estate Law', label: 'Real Estate Law' },
     { value: 'Immigration Law', label: 'Immigration Law' }
+  ];
+  
+  // Urgency options
+  urgencyOptions = [
+    { value: '', label: 'All Urgency Levels' },
+    { value: 'LOW', label: 'Low' },
+    { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'URGENT', label: 'Urgent' }
   ];
   
   // Pagination
@@ -208,7 +208,7 @@ export class IntakeSubmissionsComponent implements OnInit {
         phone: submission.clientPhone || parsedSubmissionData?.phone || '',
         practiceArea: submission.practiceArea || submission.formTitle?.replace(' Intake Form', '') || 'General',
         status: submission.status || 'PENDING',
-        priority: submission.priority || 'MEDIUM',
+        urgency: submission.urgency || '',
         leadScore: submission.priorityScore || 50,
         submittedAt: submission.createdAt || submission.submittedAt,
         updatedAt: submission.updatedAt,
@@ -232,12 +232,12 @@ export class IntakeSubmissionsComponent implements OnInit {
       filtered = filtered.filter(s => s.status === this.selectedStatus);
     }
     
-    if (this.selectedPriority) {
-      filtered = filtered.filter(s => s.priority === this.selectedPriority);
-    }
-    
     if (this.selectedPracticeArea) {
       filtered = filtered.filter(s => s.practiceArea === this.selectedPracticeArea);
+    }
+    
+    if (this.selectedUrgency) {
+      filtered = filtered.filter(s => s.urgency === this.selectedUrgency);
     }
     
     if (this.searchTerm && this.searchTerm.trim()) {
@@ -269,8 +269,8 @@ export class IntakeSubmissionsComponent implements OnInit {
 
   clearFilters(): void {
     this.selectedStatus = '';
-    this.selectedPriority = '';
     this.selectedPracticeArea = '';
+    this.selectedUrgency = '';
     this.searchTerm = '';
     this.applyFilters();
     this.cdr.detectChanges();
@@ -287,12 +287,14 @@ export class IntakeSubmissionsComponent implements OnInit {
     }
   }
 
-  getPriorityBadgeClass(priority: string): string {
-    switch (priority) {
+  getUrgencyBadgeClass(urgency?: string): string {
+    if (!urgency) return 'badge bg-light text-dark';
+    
+    switch (urgency) {
       case 'LOW': return 'badge bg-success-subtle text-success';
       case 'MEDIUM': return 'badge bg-warning-subtle text-warning';
       case 'HIGH': return 'badge bg-danger-subtle text-danger';
-      case 'CRITICAL': return 'badge bg-danger';
+      case 'URGENT': return 'badge bg-danger text-white';
       default: return 'badge bg-light text-dark';
     }
   }
@@ -680,8 +682,8 @@ export class IntakeSubmissionsComponent implements OnInit {
     return this.submissions.filter(s => s.status === 'CONVERTED_TO_LEAD').length;
   }
 
-  getHighPriorityCount(): number {
-    return this.submissions.filter(s => s.priority === 'HIGH' || s.priority === 'CRITICAL').length;
+  getHighUrgencyCount(): number {
+    return this.submissions.filter(s => s.urgency === 'HIGH' || s.urgency === 'URGENT').length;
   }
 
   getConversionRate(): number {
@@ -772,7 +774,7 @@ export class IntakeSubmissionsComponent implements OnInit {
       <p><strong>Phone:</strong> ${submission.phone}</p>
       <p><strong>Practice Area:</strong> ${submission.practiceArea}</p>
       <p><strong>Status:</strong> <span class="badge ${this.getStatusBadgeClass(submission.status)}">${submission.status.replace('_', ' ')}</span></p>
-      <p><strong>Priority:</strong> <span class="badge ${this.getPriorityBadgeClass(submission.priority)}">${submission.priority}</span></p>
+      <p><strong>Urgency:</strong> <span class="badge ${this.getUrgencyBadgeClass(submission.urgency)}">${submission.urgency || 'Not specified'}</span></p>
       <p><strong>Lead Score:</strong> ${submission.leadScore}%</p>
       <p><strong>Source:</strong> ${submission.source}</p>
       <p><strong>Description:</strong> ${submission.description || 'N/A'}</p>

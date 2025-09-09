@@ -26,6 +26,8 @@ public interface IntakeSubmissionService {
     // Submission creation and processing
     IntakeSubmission createSubmission(Long formId, String submissionData, String ipAddress, String userAgent, String referrer);
     
+    IntakeSubmission createGeneralSubmission(String submissionData, String ipAddress, String userAgent, String referrer);
+    
     IntakeSubmission updateSubmissionData(Long id, String submissionData, Long userId);
     
     // Status transition operations (core workflow)

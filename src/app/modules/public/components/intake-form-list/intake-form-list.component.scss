@@ -1,36 +1,84 @@
-.practice-area-card {
-  transition: all 0.2s ease-in-out;
+// Clean Professional Practice Area Selection
+.practice-area-option {
+  position: relative;
   
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-  }
-  
-  &.border-primary {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-  }
-}
-
-.form-card {
-  transition: all 0.2s ease-in-out;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-    border-color: var(--vz-primary) !important;
+  .practice-area-label {
+    display: block;
+    cursor: pointer;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    background: white;
     
-    .btn-primary {
-      background-color: var(--vz-primary-darker);
-      border-color: var(--vz-primary-darker);
+    &:hover {
+      border-color: var(--vz-primary);
+      background-color: rgba(var(--vz-primary-rgb), 0.02);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      
+      .avatar-title {
+        background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+        color: var(--vz-primary) !important;
+      }
+    }
+  }
+  
+  .form-check-indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #dee2e6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    
+    i {
+      font-size: 12px;
+      color: white;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+  }
+  
+  // Selected state
+  .form-check-input:checked + .practice-area-label {
+    border-color: var(--vz-primary);
+    background-color: rgba(var(--vz-primary-rgb), 0.05);
+    box-shadow: 0 2px 12px rgba(var(--vz-primary-rgb), 0.15);
+    
+    .avatar-title {
+      background-color: var(--vz-primary) !important;
+      color: white !important;
+    }
+    
+    h6 {
+      color: var(--vz-primary) !important;
+    }
+    
+    .form-check-indicator {
+      background-color: var(--vz-primary);
+      border-color: var(--vz-primary);
+      
+      i {
+        opacity: 1;
+      }
     }
   }
 }
 
-.cursor-pointer {
-  cursor: pointer;
+// Dynamic Form Enhancements
+.card {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+  }
 }
 
-.bg-gradient-primary {
-  background: linear-gradient(45deg, var(--vz-primary), var(--vz-primary-rgb)) !important;
+// Responsive design
+@media (max-width: 768px) {
+  .practice-area-label:hover {
+    transform: none;
+  }
 }

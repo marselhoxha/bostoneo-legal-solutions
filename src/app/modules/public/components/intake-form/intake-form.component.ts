@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IntakeFormService, IntakeForm, SubmissionResponse } from '../../services/intake-form.service';
@@ -8,13 +8,28 @@ import { IntakeFormService, IntakeForm, SubmissionResponse } from '../../service
   templateUrl: './intake-form.component.html',
   styleUrls: ['./intake-form.component.scss']
 })
-export class IntakeFormComponent implements OnInit {
+export class IntakeFormComponent implements OnInit, OnDestroy {
   intakeForm: IntakeForm | null = null;
   submissionForm: FormGroup;
   isLoading = true;
   isSubmitting = false;
   error: string = '';
   formUrl: string = '';
+
+  // Multi-step form properties
+  currentStep = 1;
+  totalSteps = 3;
+  stepFields: { [key: number]: any[] } = {};
+  completedSteps: Set<number> = new Set();
+  
+  // Auto-save functionality
+  private autoSaveKey = 'intake_form_draft';
+  autoSaveInterval: any;
+  
+  // Urgency and conversion optimization
+  showUrgencyMessage = false;
+  timeSpentOnForm = 0;
+  formStartTime = new Date();
 
   // Dynamic form fields based on form configuration
   formFields: any[] = [];
@@ -181,6 +196,13 @@ export class IntakeFormComponent implements OnInit {
     });
 
     this.submissionForm = this.fb.group(formControls);
+    
+    // Organize fields into steps after building the form
+    this.organizeFieldsIntoSteps();
+    
+    // Load saved draft and setup auto-save
+    this.loadFormDraft();
+    this.setupAutoSave();
   }
 
   getDefaultFields(practiceArea: string): any[] {
@@ -202,6 +224,9 @@ export class IntakeFormComponent implements OnInit {
         next: (response: SubmissionResponse) => {
           this.isSubmitting = false;
           if (response.success) {
+            // Clear the saved draft on successful submission
+            this.clearFormDraft();
+            
             // Navigate to success page
             this.router.navigate(['/public/success'], {
               queryParams: {
@@ -249,5 +274,357 @@ export class IntakeFormComponent implements OnInit {
   hasFieldError(fieldName: string): boolean {
     const control = this.submissionForm.get(fieldName);
     return !!(control?.errors && control.touched);
+  }
+
+  // Multi-step form navigation methods
+  nextStep(): void {
+    if (this.validateCurrentStep()) {
+      this.completedSteps.add(this.currentStep);
+      if (this.currentStep < this.totalSteps) {
+        this.currentStep++;
+      }
+    } else {
+      this.markCurrentStepFieldsTouched();
+    }
+  }
+
+  previousStep(): void {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
+  }
+
+  goToStep(step: number): void {
+    if (step >= 1 && step <= this.totalSteps) {
+      // Only allow going to previous steps or next step if current is valid
+      if (step < this.currentStep || this.validateCurrentStep()) {
+        if (step > this.currentStep) {
+          this.completedSteps.add(this.currentStep);
+        }
+        this.currentStep = step;
+      }
+    }
+  }
+
+  validateCurrentStep(): boolean {
+    const currentStepFields = this.getCurrentStepFields();
+    for (const field of currentStepFields) {
+      const control = this.submissionForm.get(field.name);
+      if (control?.invalid) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  markCurrentStepFieldsTouched(): void {
+    const currentStepFields = this.getCurrentStepFields();
+    currentStepFields.forEach(field => {
+      const control = this.submissionForm.get(field.name);
+      control?.markAsTouched();
+    });
+  }
+
+  getCurrentStepFields(): any[] {
+    const stepFields = this.stepFields[this.currentStep] || [];
+    return stepFields.filter(field => this.shouldShowField(field));
+  }
+
+  shouldShowField(field: any): boolean {
+    // Implement conditional logic based on previous field values
+    const formValue = this.submissionForm.value;
+
+    // Hide children ages if no children
+    if (field.name === 'childrenAges' && formValue.hasChildren === 'no') {
+      return false;
+    }
+
+    // Show court date only if in custody or has charges
+    if (field.name === 'courtDate' && formValue.isIncarcerated === 'no') {
+      return false;
+    }
+
+    // Show timeline fields only for specific transaction types
+    if (field.name === 'timeline' && !['Purchase', 'Sale', 'Refinancing'].includes(formValue.transactionType)) {
+      return false;
+    }
+
+    // Show business size only if company name is provided
+    if (field.name === 'businessSize' && !formValue.company) {
+      return false;
+    }
+
+    // Show family related questions only if family is in US
+    if (field.name.includes('family') && formValue.familyInUS === 'no') {
+      return false;
+    }
+
+    return true;
+  }
+
+  getProgressPercentage(): number {
+    return (this.currentStep / this.totalSteps) * 100;
+  }
+
+  isStepCompleted(step: number): boolean {
+    return this.completedSteps.has(step);
+  }
+
+  isStepAccessible(step: number): boolean {
+    // First step is always accessible
+    if (step === 1) return true;
+    // Other steps are accessible if previous steps are completed
+    for (let i = 1; i < step; i++) {
+      if (!this.completedSteps.has(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  getStepTitle(): string {
+    switch (this.currentStep) {
+      case 1: return 'Basic Information';
+      case 2: return 'Case Details';
+      case 3: return 'Additional Information';
+      default: return 'Step ' + this.currentStep;
+    }
+  }
+
+  getStepDescription(): string {
+    switch (this.currentStep) {
+      case 1: return 'Let us know how to contact you and what type of legal matter you need help with.';
+      case 2: return 'Please provide details about your specific legal situation.';
+      case 3: return 'Help us better understand your needs and priorities.';
+      default: return '';
+    }
+  }
+
+  organizeFieldsIntoSteps(): void {
+    if (!this.formFields.length) return;
+
+    // Step 1: Basic contact info and case type selection
+    const basicFields = ['firstName', 'lastName', 'email', 'phone'];
+    const caseTypeFields = this.formFields.filter(f => 
+      f.type === 'select' && (f.name.includes('Type') || f.name.includes('caseType') || f.name.includes('businessType') || f.name.includes('chargeType') || f.name.includes('propertyType') || f.name.includes('transactionType'))
+    );
+    
+    this.stepFields[1] = [
+      ...this.formFields.filter(f => basicFields.includes(f.name)),
+      ...caseTypeFields
+    ];
+
+    // Step 2: Detailed case information
+    const detailFields = this.formFields.filter(f => 
+      f.type === 'textarea' || 
+      f.name.includes('Date') || 
+      f.name.includes('Location') || 
+      f.name.includes('Address') || 
+      f.name.includes('Treatment') || 
+      f.name.includes('Status') || 
+      f.name.includes('Children') || 
+      f.name.includes('Incarcerated') || 
+      f.name.includes('Family') || 
+      f.name.includes('Deadline')
+    );
+    
+    this.stepFields[2] = detailFields;
+
+    // Step 3: Additional information and priority
+    const remainingFields = this.formFields.filter(f => 
+      !this.stepFields[1].some(sf => sf.name === f.name) &&
+      !this.stepFields[2].some(sf => sf.name === f.name)
+    );
+    
+    this.stepFields[3] = remainingFields;
+
+    // Ensure all fields are assigned to a step
+    this.formFields.forEach(field => {
+      let assigned = false;
+      for (let step = 1; step <= 3; step++) {
+        if (this.stepFields[step].some(sf => sf.name === field.name)) {
+          assigned = true;
+          break;
+        }
+      }
+      if (!assigned) {
+        this.stepFields[3].push(field);
+      }
+    });
+  }
+
+  // Auto-save functionality
+  setupAutoSave(): void {
+    // Auto-save every 30 seconds
+    this.autoSaveInterval = setInterval(() => {
+      this.saveFormDraft();
+    }, 30000);
+
+    // Also save when form value changes (debounced)
+    this.submissionForm.valueChanges.subscribe(() => {
+      this.debouncedSave();
+    });
+  }
+
+  private saveTimeout: any;
+  debouncedSave(): void {
+    clearTimeout(this.saveTimeout);
+    this.saveTimeout = setTimeout(() => {
+      this.saveFormDraft();
+    }, 2000);
+  }
+
+  saveFormDraft(): void {
+    if (this.submissionForm.dirty && this.formUrl) {
+      const draftData = {
+        formUrl: this.formUrl,
+        currentStep: this.currentStep,
+        formValue: this.submissionForm.value,
+        completedSteps: Array.from(this.completedSteps),
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(this.autoSaveKey, JSON.stringify(draftData));
+    }
+  }
+
+  loadFormDraft(): void {
+    try {
+      const savedDraft = localStorage.getItem(this.autoSaveKey);
+      if (savedDraft && this.formUrl) {
+        const draftData = JSON.parse(savedDraft);
+        
+        // Only load draft if it's for the same form and not too old (7 days)
+        const draftAge = new Date().getTime() - new Date(draftData.timestamp).getTime();
+        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+        
+        if (draftData.formUrl === this.formUrl && draftAge < maxAge) {
+          this.currentStep = draftData.currentStep || 1;
+          this.completedSteps = new Set(draftData.completedSteps || []);
+          
+          // Patch form values
+          Object.keys(draftData.formValue).forEach(key => {
+            if (this.submissionForm.get(key)) {
+              this.submissionForm.get(key)?.setValue(draftData.formValue[key]);
+            }
+          });
+          
+          // Show draft loaded notification
+          console.log('Draft loaded successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading form draft:', error);
+    }
+  }
+
+  clearFormDraft(): void {
+    localStorage.removeItem(this.autoSaveKey);
+  }
+
+  ngOnDestroy(): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+    }
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    
+    // Save final draft before component is destroyed
+    this.saveFormDraft();
+  }
+
+  // Enhanced form completion tracking
+  getFormCompletionPercentage(): number {
+    const totalFields = this.formFields.length;
+    let completedFields = 0;
+    
+    this.formFields.forEach(field => {
+      const control = this.submissionForm.get(field.name);
+      if (control?.value && control.value.toString().trim() !== '') {
+        completedFields++;
+      }
+    });
+    
+    return Math.round((completedFields / totalFields) * 100);
+  }
+
+  getCurrentStepCompletionPercentage(): number {
+    const currentFields = this.getCurrentStepFields();
+    let completedFields = 0;
+    
+    currentFields.forEach(field => {
+      const control = this.submissionForm.get(field.name);
+      if (control?.value && control.value.toString().trim() !== '') {
+        completedFields++;
+      }
+    });
+    
+    return currentFields.length ? Math.round((completedFields / currentFields.length) * 100) : 0;
+  }
+
+  // Urgency and conversion optimization methods
+  getUrgencyMessage(): string {
+    const messages = [
+      "⚡ Free consultations are filling up fast - secure your spot today!",
+      "🔥 Don't wait - statute of limitations may be running out on your case!",
+      "⏰ Our attorneys are reviewing cases now - submit yours while spots are available!",
+      "💪 Join thousands who got justice - your case review is FREE and takes 2 minutes!",
+      "🎯 Time-sensitive cases require immediate action - get expert legal help now!"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+
+  getCallToActionText(): string {
+    const timeSpent = Math.floor((new Date().getTime() - this.formStartTime.getTime()) / 1000);
+    
+    if (this.currentStep === this.totalSteps) {
+      if (timeSpent > 300) { // More than 5 minutes
+        return "Complete Your Free Case Review Now!";
+      }
+      return "Get My Free Legal Consultation";
+    } else if (this.currentStep === 1) {
+      return `Continue to Case Details (${this.getCurrentStepCompletionPercentage()}% done)`;
+    } else {
+      return `Continue to Final Details (${this.getFormCompletionPercentage()}% complete)`;
+    }
+  }
+
+  getMotivationalMessage(): string {
+    const completion = this.getFormCompletionPercentage();
+    
+    if (completion >= 80) {
+      return "🏁 You're almost done! Complete your consultation request now.";
+    } else if (completion >= 50) {
+      return "💪 Great progress! You're halfway to getting legal help.";
+    } else if (completion >= 25) {
+      return "✨ You're doing great! Keep going to get your free consultation.";
+    } else {
+      return "🎯 Take the first step towards justice - complete your consultation request.";
+    }
+  }
+
+  getPracticeAreaSpecificMessage(): string {
+    if (!this.intakeForm?.practiceArea) return '';
+    
+    const messages: { [key: string]: string } = {
+      'Personal Injury': '🏥 Medical bills piling up? You may be entitled to compensation!',
+      'Family Law': '👨‍👩‍👧‍👦 Protect your family\'s future with experienced legal representation.',
+      'Criminal Defense': '⚖️ Your freedom is at stake - every minute counts in criminal cases.',
+      'Business Law': '💼 Protect your business interests with expert legal guidance.',
+      'Real Estate Law': '🏠 Real estate transactions require careful legal review - don\'t risk costly mistakes.',
+      'Immigration Law': '🌟 Achieve your American dream with experienced immigration attorneys.'
+    };
+    
+    return messages[this.intakeForm.practiceArea] || '⚖️ Get the legal help you deserve - consultation is FREE!';
+  }
+
+  getTimeBasedUrgency(): string {
+    const hour = new Date().getHours();
+    
+    if (hour >= 9 && hour <= 17) {
+      return "📞 Our legal team is online NOW - submit your case for immediate review!";
+    } else {
+      return "🌙 Submit tonight and we'll review your case first thing tomorrow morning!";
+    }
   }
 }
