@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseReminderDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateReminderRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateReminderRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseReminderService;
+import com.bostoneo.bostoneosolutions.dto.CaseReminderDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateReminderRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateReminderRequest;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.service.CaseReminderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

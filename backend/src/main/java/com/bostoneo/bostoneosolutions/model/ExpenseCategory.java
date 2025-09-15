@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;

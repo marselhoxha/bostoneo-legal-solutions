@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;

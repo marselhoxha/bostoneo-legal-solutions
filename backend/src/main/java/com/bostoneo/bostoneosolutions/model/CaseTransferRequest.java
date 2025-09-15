@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TransferStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TransferUrgency;
+import com.bostoneo.bostoneosolutions.enumeration.TransferStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TransferUrgency;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;

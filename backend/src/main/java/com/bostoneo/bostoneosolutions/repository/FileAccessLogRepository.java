@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.model.FileAccessLog;
+import com.bostoneo.bostoneosolutions.model.FileAccessLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.IntakeFormDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeForm;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.IntakeFormDTO;
+import com.bostoneo.bostoneosolutions.model.IntakeForm;
+import com.bostoneo.bostoneosolutions.model.User;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

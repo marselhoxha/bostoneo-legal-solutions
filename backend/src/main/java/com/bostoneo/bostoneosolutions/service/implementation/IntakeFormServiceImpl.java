@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeForm;
-import com.***REMOVED***.***REMOVED***solutions.repository.IntakeFormRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeFormService;
+import com.bostoneo.bostoneosolutions.model.IntakeForm;
+import com.bostoneo.bostoneosolutions.repository.IntakeFormRepository;
+import com.bostoneo.bostoneosolutions.service.IntakeFormService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

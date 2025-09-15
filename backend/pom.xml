@@ -8,10 +8,10 @@
 		<version>3.3.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.***REMOVED***</groupId>
-	<artifactId>***REMOVED***solutions</artifactId>
+	<groupId>com.bostoneo</groupId>
+	<artifactId>bostoneosolutions</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>***REMOVED***solutions</name>
+	<name>bostoneosolutions</name>
 	<description>WebApp to manage customers and invoices</description>
 
 	<dependencies>

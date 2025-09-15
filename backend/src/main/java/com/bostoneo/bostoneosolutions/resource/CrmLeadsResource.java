@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.LeadDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LeadConversionResponseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.LeadDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.PipelineStage;
-import com.***REMOVED***.***REMOVED***solutions.service.LeadConversionService;
-import com.***REMOVED***.***REMOVED***solutions.service.LeadService;
+import com.bostoneo.bostoneosolutions.dto.LeadDTO;
+import com.bostoneo.bostoneosolutions.dto.LeadConversionResponseDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.LeadDTOMapper;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.PipelineStage;
+import com.bostoneo.bostoneosolutions.service.LeadConversionService;
+import com.bostoneo.bostoneosolutions.service.LeadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.PermissionAuditLog;
-import com.***REMOVED***.***REMOVED***solutions.repository.PermissionAuditLogRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.PermissionAuditService;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.PermissionAuditLog;
+import com.bostoneo.bostoneosolutions.repository.PermissionAuditLogRepository;
+import com.bostoneo.bostoneosolutions.service.PermissionAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;

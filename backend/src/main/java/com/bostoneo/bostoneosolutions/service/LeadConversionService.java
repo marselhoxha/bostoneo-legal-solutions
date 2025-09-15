@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.ConflictCheck;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.ConflictCheck;
+import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 
 import java.util.List;
 import java.util.Map;

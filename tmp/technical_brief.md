@@ -48,7 +48,7 @@ database "MySQL Database" {
 ### Package Structure
 
 ```
-com.***REMOVED***.***REMOVED***solutions
+com.bostoneo.bostoneosolutions
 ├── configuration - Security and application config
 ├── constant - Application constants
 ├── dto - Data Transfer Objects
@@ -98,7 +98,7 @@ com.***REMOVED***.***REMOVED***solutions
 - **Role-Based Access Control**:
   - Permission-based security with fine-grained access controls
   - Method-level security annotations (@PreAuthorize)
-- **CORS Configuration**: Configured for specific origins (localhost, ***REMOVED***solutions.org)
+- **CORS Configuration**: Configured for specific origins (localhost, bostoneosolutions.org)
 
 ### Exception Handling Strategy
 

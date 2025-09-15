@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.model.TaskComment;
+import com.bostoneo.bostoneosolutions.model.TaskComment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

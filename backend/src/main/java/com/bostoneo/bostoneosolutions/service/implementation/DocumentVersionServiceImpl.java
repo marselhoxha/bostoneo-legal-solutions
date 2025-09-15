@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.exception.DocumentNotFoundException;
-import com.***REMOVED***.***REMOVED***solutions.model.DocumentVersion;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
-import com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.DocumentVersionService;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.exception.DocumentNotFoundException;
+import com.bostoneo.bostoneosolutions.model.DocumentVersion;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
+import com.bostoneo.bostoneosolutions.repository.DocumentVersionRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalDocumentRepository;
+import com.bostoneo.bostoneosolutions.service.DocumentVersionService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,7 +40,7 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     
     // Base directory for document storage
-    private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/***REMOVED***solutions/documents/";
+    private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/bostoneosolutions/documents/";
 
     @Override
     public CustomHttpResponse<DocumentVersion> getVersionById(Long id) {

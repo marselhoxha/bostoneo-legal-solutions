@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CalendarEventDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateCalendarEventRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CalendarEventStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CalendarEventType;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCalendarEventRequest;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.enumeration.CalendarEventStatus;
+import com.bostoneo.bostoneosolutions.enumeration.CalendarEventType;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
+import com.bostoneo.bostoneosolutions.service.LegalCaseService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

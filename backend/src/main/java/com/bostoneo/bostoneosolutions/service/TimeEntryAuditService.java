@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
 
 public interface TimeEntryAuditService {
     

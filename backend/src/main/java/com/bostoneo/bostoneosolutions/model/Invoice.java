@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;

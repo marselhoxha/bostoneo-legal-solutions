@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
+import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

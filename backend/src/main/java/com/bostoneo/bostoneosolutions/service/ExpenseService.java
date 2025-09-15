@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Expense;
-import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
-import com.***REMOVED***.***REMOVED***solutions.repository.ExpenseRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.mapper.ExpenseMapper;
+import com.bostoneo.bostoneosolutions.dto.ExpenseDTO;
+import com.bostoneo.bostoneosolutions.model.Expense;
+import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.repository.ExpenseRepository;
+import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.mapper.ExpenseMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 
 @Service
 @RequiredArgsConstructor

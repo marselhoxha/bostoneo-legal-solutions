@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enums.ResourceType;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
+import com.bostoneo.bostoneosolutions.enums.ResourceType;
+import com.bostoneo.bostoneosolutions.model.Permission;
 
 import java.util.Collection;
 import java.util.Optional;

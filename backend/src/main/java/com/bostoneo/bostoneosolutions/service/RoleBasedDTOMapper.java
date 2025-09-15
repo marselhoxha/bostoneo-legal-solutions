@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.*;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.impl;
+package com.bostoneo.bostoneosolutions.service.impl;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ValidationResult;
-import com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.TimeEntryValidationService;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.model.ValidationResult;
+import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
+import com.bostoneo.bostoneosolutions.service.TimeEntryValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.LeadDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.LeadDTO;
+import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

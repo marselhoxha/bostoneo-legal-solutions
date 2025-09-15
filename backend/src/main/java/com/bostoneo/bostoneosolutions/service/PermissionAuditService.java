@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.PermissionAuditLog;
+import com.bostoneo.bostoneosolutions.model.PermissionAuditLog;
 
 import java.util.List;
 

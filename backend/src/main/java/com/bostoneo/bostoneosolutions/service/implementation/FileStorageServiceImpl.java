@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.configuration.FileStorageConfiguration;
-import com.***REMOVED***.***REMOVED***solutions.service.FileStorageService;
+import com.bostoneo.bostoneosolutions.configuration.FileStorageConfiguration;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;

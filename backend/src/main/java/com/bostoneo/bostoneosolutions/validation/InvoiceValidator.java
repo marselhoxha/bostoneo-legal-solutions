@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.validation;
+package com.bostoneo.bostoneosolutions.validation;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.exception.InvoiceValidationException;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.exception.InvoiceValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

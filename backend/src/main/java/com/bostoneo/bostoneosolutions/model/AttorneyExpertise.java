@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.ExpertiseArea;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.ProficiencyLevel;
+import com.bostoneo.bostoneosolutions.enumeration.ExpertiseArea;
+import com.bostoneo.bostoneosolutions.enumeration.ProficiencyLevel;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;

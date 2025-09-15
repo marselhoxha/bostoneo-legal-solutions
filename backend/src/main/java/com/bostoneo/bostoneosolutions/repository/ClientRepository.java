@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Client;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

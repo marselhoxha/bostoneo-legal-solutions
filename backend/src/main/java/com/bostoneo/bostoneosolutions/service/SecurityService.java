@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
 public interface SecurityService {
     boolean isCurrentUser(Long userId);

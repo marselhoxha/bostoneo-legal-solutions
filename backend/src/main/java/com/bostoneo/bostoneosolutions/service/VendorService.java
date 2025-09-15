@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.VendorDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.VendorDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.Vendor;
-import com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository;
+import com.bostoneo.bostoneosolutions.dto.VendorDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.VendorDTOMapper;
+import com.bostoneo.bostoneosolutions.model.Vendor;
+import com.bostoneo.bostoneosolutions.repository.VendorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

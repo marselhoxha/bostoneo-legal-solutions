@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ConflictCheckDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.ConflictCheckDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.ConflictCheck;
-import com.***REMOVED***.***REMOVED***solutions.service.ConflictCheckService;
+import com.bostoneo.bostoneosolutions.dto.ConflictCheckDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.ConflictCheckDTOMapper;
+import com.bostoneo.bostoneosolutions.model.ConflictCheck;
+import com.bostoneo.bostoneosolutions.service.ConflictCheckService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

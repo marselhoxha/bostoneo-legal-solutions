@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.Stats;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.rowmapper.StatsRowMapper;
-import com.***REMOVED***.***REMOVED***solutions.service.ClientService;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.Stats;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.rowmapper.StatsRowMapper;
+import com.bostoneo.bostoneosolutions.service.ClientService;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.***REMOVED***.***REMOVED***solutions.query.ClientQuery.STATS_QUERY;
+import static com.bostoneo.bostoneosolutions.query.ClientQuery.STATS_QUERY;
 
 @Service
 @Transactional

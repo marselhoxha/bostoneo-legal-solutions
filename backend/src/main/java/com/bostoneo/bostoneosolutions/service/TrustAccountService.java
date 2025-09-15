@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TrustAccountDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.TrustAccountTransactionDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.TrustAccount;
-import com.***REMOVED***.***REMOVED***solutions.model.TrustAccountTransaction;
+import com.bostoneo.bostoneosolutions.dto.TrustAccountDTO;
+import com.bostoneo.bostoneosolutions.dto.TrustAccountTransactionDTO;
+import com.bostoneo.bostoneosolutions.model.TrustAccount;
+import com.bostoneo.bostoneosolutions.model.TrustAccountTransaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

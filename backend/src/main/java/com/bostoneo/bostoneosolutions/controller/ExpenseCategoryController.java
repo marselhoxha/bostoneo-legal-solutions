@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseCategoryDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.ExpenseCategoryService;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.ExpenseCategoryDTO;
+import com.bostoneo.bostoneosolutions.service.ExpenseCategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

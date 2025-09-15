@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.VerificationType;
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.enumeration.VerificationType;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.model.Invoice;
 import org.springframework.core.io.Resource;
 
 import java.util.Map;

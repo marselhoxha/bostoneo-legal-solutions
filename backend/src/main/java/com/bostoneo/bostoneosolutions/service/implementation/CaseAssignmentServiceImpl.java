@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.algorithm.SmartAssignmentAlgorithm;
-import com.***REMOVED***.***REMOVED***solutions.dto.*;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.*;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.*;
-import com.***REMOVED***.***REMOVED***solutions.repository.*;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-// import com.***REMOVED***.***REMOVED***solutions.service.UserService; // Temporarily commented
+import com.bostoneo.bostoneosolutions.algorithm.SmartAssignmentAlgorithm;
+import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.enumeration.*;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.repository.*;
+import com.bostoneo.bostoneosolutions.service.CaseAssignmentService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+// import com.bostoneo.bostoneosolutions.service.UserService; // Temporarily commented
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -171,7 +171,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     }
     
     @Override
-    public CaseAssignmentDTO transferCase(com.***REMOVED***.***REMOVED***solutions.dto.CaseTransferRequest request) {
+    public CaseAssignmentDTO transferCase(com.bostoneo.bostoneosolutions.dto.CaseTransferRequest request) {
         log.info("Transferring case {} from user {} to user {}", 
             request.getCaseId(), request.getFromUserId(), request.getToUserId());
         
@@ -193,7 +193,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Transfer request already pending for this case");
         }
         
-        com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest transferReq = com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest.builder()
+        com.bostoneo.bostoneosolutions.model.CaseTransferRequest transferReq = com.bostoneo.bostoneosolutions.model.CaseTransferRequest.builder()
             .legalCase(legalCase)
             .fromUser(fromUser)
             .toUser(toUser)
@@ -489,14 +489,14 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public Page<CaseTransferRequestDTO> getPendingTransferRequests(Pageable pageable) {
-        Page<com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest> requests = transferRequestRepository
+        Page<com.bostoneo.bostoneosolutions.model.CaseTransferRequest> requests = transferRequestRepository
             .findByStatus(TransferStatus.PENDING, pageable);
         return requests.map(this::mapTransferToDTO);
     }
     
     @Override
     public CaseTransferRequestDTO approveTransfer(Long requestId, String notes) {
-        com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
+        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
             .orElseThrow(() -> new ApiException("Transfer request not found"));
         
         if (request.getStatus() != TransferStatus.PENDING) {
@@ -511,7 +511,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public CaseTransferRequestDTO rejectTransfer(Long requestId, String notes) {
-        com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
+        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
             .orElseThrow(() -> new ApiException("Transfer request not found"));
         
         if (request.getStatus() != TransferStatus.PENDING) {
@@ -566,7 +566,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                              role.getName().contains("PARTNER"));
     }
     
-    private CaseAssignmentDTO processTransfer(com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest request, User approver, String notes) {
+    private CaseAssignmentDTO processTransfer(com.bostoneo.bostoneosolutions.model.CaseTransferRequest request, User approver, String notes) {
         // Find current assignment
         CaseAssignment currentAssignment = assignmentRepository
             .findByCaseIdAndUserIdAndActive(
@@ -761,7 +761,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .build();
     }
     
-    private CaseTransferRequestDTO mapTransferToDTO(com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest request) {
+    private CaseTransferRequestDTO mapTransferToDTO(com.bostoneo.bostoneosolutions.model.CaseTransferRequest request) {
         return CaseTransferRequestDTO.builder()
             .id(request.getId())
             .caseId(request.getLegalCase().getId())
@@ -783,7 +783,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .build();
     }
     
-    private CaseAssignmentDTO mapTransferToAssignmentDTO(com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest request) {
+    private CaseAssignmentDTO mapTransferToAssignmentDTO(com.bostoneo.bostoneosolutions.model.CaseTransferRequest request) {
         // Return a simplified DTO for pending transfer
         return CaseAssignmentDTO.builder()
             .caseId(request.getLegalCase().getId())
@@ -812,7 +812,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Return system user (usually ID 1 or a specific system user)
         User systemUser = userRepository.get(1L);
         if (systemUser == null) {
-            systemUser = userRepository.findByEmail("system@***REMOVED***.com");
+            systemUser = userRepository.findByEmail("system@bostoneo.com");
             if (systemUser == null) {
                 throw new ApiException("System user not found");
             }

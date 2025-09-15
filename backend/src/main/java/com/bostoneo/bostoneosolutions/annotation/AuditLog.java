@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.annotation;
+package com.bostoneo.bostoneosolutions.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

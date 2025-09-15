@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ReceiptDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
-import com.***REMOVED***.***REMOVED***solutions.service.ReceiptService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.ReceiptDTO;
+import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.service.ReceiptService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;

@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.security;
+package com.bostoneo.bostoneosolutions.security;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseRoleAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.CaseRoleAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.PermissionEvaluator;

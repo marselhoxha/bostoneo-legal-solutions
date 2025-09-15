@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.VerificationType;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.enumeration.VerificationType;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.service.EmailService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -35,7 +35,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("info@***REMOVED***.com", "Bostoneo Legal Solutions");
+            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -55,7 +55,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("info@***REMOVED***.com", "Bostoneo Legal Solutions");
+            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -105,7 +105,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendVerificationEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {
         try{
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("info@***REMOVED***.com");
+            message.setFrom("info@bostoneo.com");
             message.setTo(email);
             message.setText(getEmailMessage(firstName, verificationUrl, verificationType));
             message.setSubject(String.format("Bostoneo Solutions - %s Verification Email", StringUtils.capitalize(verificationType.getType())));
@@ -120,7 +120,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendDeadlineReminderEmail(String email, String firstName, CalendarEvent event, int minutesBefore) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("info@***REMOVED***.com");
+            message.setFrom("info@bostoneo.com");
             message.setTo(email);
             message.setText(getDeadlineReminderMessage(firstName, event, minutesBefore));
             
@@ -242,7 +242,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             
-            helper.setFrom("info@***REMOVED***.com", "Bostoneo Legal Solutions");
+            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
             helper.setTo(to);
             helper.setSubject("Bostoneo Solutions - " + title);
             

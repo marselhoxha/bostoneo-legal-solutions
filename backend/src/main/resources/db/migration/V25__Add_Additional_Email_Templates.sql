@@ -110,7 +110,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Client Meeting Reminder</h1>
         </div>
@@ -153,7 +153,7 @@ VALUES
             
             <p>Please ensure you have all necessary documents and information prepared for this client meeting.</p>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Meeting Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Meeting Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -279,7 +279,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Consultation Reminder</h1>
         </div>
@@ -319,7 +319,7 @@ VALUES
                 </ul>
             </div>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Consultation Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Consultation Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -461,7 +461,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Team Meeting Reminder</h1>
         </div>
@@ -513,7 +513,7 @@ VALUES
             {{#if meetingLink}}
             <a href="{{meetingLink}}" class="action-button">Join Meeting</a>
             {{else}}
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Meeting Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Meeting Details</a>
             {{/if}}
         </div>
         <div class="email-footer">
@@ -624,7 +624,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Reminder</h1>
         </div>
@@ -664,7 +664,7 @@ VALUES
             <p>{{description}}</p>
             {{/if}}
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -789,7 +789,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Deposition Reminder</h1>
         </div>
@@ -838,7 +838,7 @@ VALUES
                 </ul>
             </div>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Deposition Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Deposition Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -963,7 +963,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Mediation Reminder</h1>
         </div>
@@ -1024,7 +1024,7 @@ VALUES
                 </ul>
             </div>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Mediation Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Mediation Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>

@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.validation;
+package com.bostoneo.bostoneosolutions.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

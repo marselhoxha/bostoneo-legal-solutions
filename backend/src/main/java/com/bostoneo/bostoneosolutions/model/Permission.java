@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enums.ActionType;
-import com.***REMOVED***.***REMOVED***solutions.enums.ResourceType;
-import com.***REMOVED***.***REMOVED***solutions.enums.PermissionCategory;
+import com.bostoneo.bostoneosolutions.enums.ActionType;
+import com.bostoneo.bostoneosolutions.enums.ResourceType;
+import com.bostoneo.bostoneosolutions.enums.PermissionCategory;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;

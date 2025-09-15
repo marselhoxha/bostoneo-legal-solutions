@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CalendarEventDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;

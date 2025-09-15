@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.enums.ActionType;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.enums.ActionType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper.fromUser;
+import static com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper.fromUser;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
 
@@ -70,7 +70,7 @@ public class UserPrincipal implements UserDetails {
             if (assignment.getLegalCase().getId().equals(caseId) && assignment.isActive()) {
                 // Check if the role has the necessary permission
                 for (Permission permission : assignment.getRole().getPermissions()) {
-                    if (permission.getResourceType() == com.***REMOVED***.***REMOVED***solutions.enums.ResourceType.CASE && 
+                    if (permission.getResourceType() == com.bostoneo.bostoneosolutions.enums.ResourceType.CASE && 
                         permission.getActionType() == actionType) {
                         return true;
                     }

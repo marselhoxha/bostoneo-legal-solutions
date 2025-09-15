@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enums;
+package com.bostoneo.bostoneosolutions.enums;
 
 /**
  * Categories for different types of permissions to control access levels

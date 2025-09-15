@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service.impl;
+package com.bostoneo.bostoneosolutions.service.impl;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentIntentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentMethodDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoicePaymentRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.PaymentGatewayService;
+import com.bostoneo.bostoneosolutions.dto.PaymentIntentDTO;
+import com.bostoneo.bostoneosolutions.dto.PaymentMethodDTO;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoicePaymentRepository;
+import com.bostoneo.bostoneosolutions.service.PaymentGatewayService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;

@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ReceiptService {

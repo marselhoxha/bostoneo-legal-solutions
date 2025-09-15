@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.hypersistence.utils.hibernate.type.json.JsonType;

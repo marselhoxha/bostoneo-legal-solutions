@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.filter;
+package com.bostoneo.bostoneosolutions.filter;
 
-import com.***REMOVED***.***REMOVED***solutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,8 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.*;
-import static com.***REMOVED***.***REMOVED***solutions.utils.ExceptionUtils.processError;
+import static com.bostoneo.bostoneosolutions.constant.Constants.*;
+import static com.bostoneo.bostoneosolutions.utils.ExceptionUtils.processError;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.EMPTY;

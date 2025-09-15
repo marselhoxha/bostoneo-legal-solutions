@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditActivityResponseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditLogDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateAuditLogRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.AuditActivityResponseDTO;
+import com.bostoneo.bostoneosolutions.dto.AuditLogDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
+import com.bostoneo.bostoneosolutions.model.AuditLog;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;

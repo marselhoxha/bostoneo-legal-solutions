@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
-import com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.ReceiptService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
+import com.bostoneo.bostoneosolutions.service.ReceiptService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.util;
+package com.bostoneo.bostoneosolutions.util;
 
 import java.util.Collection;
 import java.util.Set;

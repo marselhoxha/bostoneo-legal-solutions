@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateActivityRequest;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateActivityRequest;
 
 import java.util.List;
 

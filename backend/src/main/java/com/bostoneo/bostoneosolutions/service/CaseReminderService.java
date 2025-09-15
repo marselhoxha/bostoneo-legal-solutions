@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseReminderDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateReminderRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateReminderRequest;
+import com.bostoneo.bostoneosolutions.dto.CaseReminderDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateReminderRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateReminderRequest;
 
 import java.util.List;
 

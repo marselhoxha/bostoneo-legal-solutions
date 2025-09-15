@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.exception;
+package com.bostoneo.bostoneosolutions.exception;
 
 import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.dao.DataAccessException;

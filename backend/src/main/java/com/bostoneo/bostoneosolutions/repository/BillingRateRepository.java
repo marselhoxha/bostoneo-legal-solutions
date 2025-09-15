@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.RateType;
-import com.***REMOVED***.***REMOVED***solutions.model.BillingRate;
+import com.bostoneo.bostoneosolutions.enumeration.RateType;
+import com.bostoneo.bostoneosolutions.model.BillingRate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;

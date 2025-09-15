@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.report;
+package com.bostoneo.bostoneosolutions.report;
 
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.Client;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;

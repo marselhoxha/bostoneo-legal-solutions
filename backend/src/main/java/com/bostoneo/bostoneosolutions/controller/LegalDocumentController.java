@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.DocumentVersion;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
-import com.***REMOVED***.***REMOVED***solutions.service.DocumentVersionService;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.DocumentVersionDTO;
+import com.bostoneo.bostoneosolutions.dto.LegalDocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.DocumentVersion;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
+import com.bostoneo.bostoneosolutions.service.DocumentVersionService;
+import com.bostoneo.bostoneosolutions.service.LegalDocumentService;
+import com.bostoneo.bostoneosolutions.service.UserService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

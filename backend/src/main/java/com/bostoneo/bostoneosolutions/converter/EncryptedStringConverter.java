@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.converter;
+package com.bostoneo.bostoneosolutions.converter;
 
-import com.***REMOVED***.***REMOVED***solutions.util.EncryptionUtil;
+import com.bostoneo.bostoneosolutions.util.EncryptionUtil;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import org.springframework.beans.factory.annotation.Autowired;

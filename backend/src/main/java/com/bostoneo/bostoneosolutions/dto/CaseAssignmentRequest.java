@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseRoleType;
+import com.bostoneo.bostoneosolutions.enumeration.CaseRoleType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

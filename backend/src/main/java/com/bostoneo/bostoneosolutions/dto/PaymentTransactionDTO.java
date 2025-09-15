@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
 import lombok.Data;
 import lombok.Builder;

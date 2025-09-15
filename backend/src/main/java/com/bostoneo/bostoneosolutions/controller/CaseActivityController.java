@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateActivityRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateActivityRequest;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

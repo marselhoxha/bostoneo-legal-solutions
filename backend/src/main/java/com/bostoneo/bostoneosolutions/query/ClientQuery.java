@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.query;
+package com.bostoneo.bostoneosolutions.query;
 
 public class ClientQuery {
 

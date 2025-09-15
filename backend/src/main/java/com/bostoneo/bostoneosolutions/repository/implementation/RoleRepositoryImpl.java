@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.repository.implementation;
+package com.bostoneo.bostoneosolutions.repository.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
-import com.***REMOVED***.***REMOVED***solutions.rowmapper.PermissionRowMapper;
-import com.***REMOVED***.***REMOVED***solutions.rowmapper.RoleRowMapper;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.rowmapper.PermissionRowMapper;
+import com.bostoneo.bostoneosolutions.rowmapper.RoleRowMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.***REMOVED***.***REMOVED***solutions.enumeration.RoleType.ROLE_USER;
-import static com.***REMOVED***.***REMOVED***solutions.query.RoleQuery.*;
+import static com.bostoneo.bostoneosolutions.enumeration.RoleType.ROLE_USER;
+import static com.bostoneo.bostoneosolutions.query.RoleQuery.*;
 import static java.util.Map.of;
 import static java.util.Objects.requireNonNull;
 
@@ -296,10 +296,10 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     }
     
     // Add missing method for getting users by role ID
-    public List<com.***REMOVED***.***REMOVED***solutions.model.User> getUsersByRoleId(Long roleId) {
+    public List<com.bostoneo.bostoneosolutions.model.User> getUsersByRoleId(Long roleId) {
         log.info("Fetching users for role id: {}", roleId);
         try {
-            return jdbc.query(SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new com.***REMOVED***.***REMOVED***solutions.rowmapper.UserRowMapper());
+            return jdbc.query(SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper());
         } catch (Exception exception) {
             log.error("Error getting users by role: {}", exception.getMessage());
             throw new ApiException("An error occurred while fetching users by role");

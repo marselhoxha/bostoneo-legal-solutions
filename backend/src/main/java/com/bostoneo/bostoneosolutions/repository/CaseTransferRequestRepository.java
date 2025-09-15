@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TransferStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TransferUrgency;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseTransferRequest;
+import com.bostoneo.bostoneosolutions.enumeration.TransferStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TransferUrgency;
+import com.bostoneo.bostoneosolutions.model.CaseTransferRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

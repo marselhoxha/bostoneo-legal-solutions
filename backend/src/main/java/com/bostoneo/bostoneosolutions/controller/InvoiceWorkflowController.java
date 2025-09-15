@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceReminder;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowExecution;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository;
+import com.bostoneo.bostoneosolutions.dto.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.InvoiceReminder;
+import com.bostoneo.bostoneosolutions.model.InvoiceWorkflowExecution;
+import com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceReminderRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowExecutionRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowRuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.filemanager.*;
-import com.***REMOVED***.***REMOVED***solutions.service.FileManagerService;
-import com.***REMOVED***.***REMOVED***solutions.service.FileStorageService;
+import com.bostoneo.bostoneosolutions.dto.filemanager.*;
+import com.bostoneo.bostoneosolutions.service.FileManagerService;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

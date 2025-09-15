@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.handler;
+package com.bostoneo.bostoneosolutions.handler;
 
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

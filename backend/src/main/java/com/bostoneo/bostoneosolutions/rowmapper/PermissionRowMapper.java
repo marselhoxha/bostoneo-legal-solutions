@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.rowmapper;
+package com.bostoneo.bostoneosolutions.rowmapper;
 
-import com.***REMOVED***.***REMOVED***solutions.enums.ActionType;
-import com.***REMOVED***.***REMOVED***solutions.enums.ResourceType;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
+import com.bostoneo.bostoneosolutions.enums.ActionType;
+import com.bostoneo.bostoneosolutions.enums.ResourceType;
+import com.bostoneo.bostoneosolutions.model.Permission;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.RowMapper;
 

@@ -1,19 +1,19 @@
-package com.***REMOVED***.***REMOVED***solutions.mapper;
+package com.bostoneo.bostoneosolutions.mapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Expense;
-import com.***REMOVED***.***REMOVED***solutions.model.ExpenseCategory;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.Vendor;
-import com.***REMOVED***.***REMOVED***solutions.model.Receipt;
-import com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.VendorRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ReceiptRepository;
+import com.bostoneo.bostoneosolutions.dto.ExpenseDTO;
+import com.bostoneo.bostoneosolutions.model.Expense;
+import com.bostoneo.bostoneosolutions.model.ExpenseCategory;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.Vendor;
+import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.repository.ExpenseCategoryRepository;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.repository.VendorRepository;
+import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 

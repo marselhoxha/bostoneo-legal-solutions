@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseCategoryDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ExpenseCategory;
-import com.***REMOVED***.***REMOVED***solutions.repository.ExpenseCategoryRepository;
+import com.bostoneo.bostoneosolutions.dto.ExpenseCategoryDTO;
+import com.bostoneo.bostoneosolutions.model.ExpenseCategory;
+import com.bostoneo.bostoneosolutions.repository.ExpenseCategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.TimeEntry;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.model.TimeEntry;
+import com.bostoneo.bostoneosolutions.model.Invoice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;

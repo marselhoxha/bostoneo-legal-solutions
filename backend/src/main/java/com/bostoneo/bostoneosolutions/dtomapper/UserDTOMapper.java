@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import org.springframework.beans.BeanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

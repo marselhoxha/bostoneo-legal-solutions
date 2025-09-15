@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.model.ReminderQueueItem;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.model.ReminderQueueItem;
 
 import java.util.List;
 

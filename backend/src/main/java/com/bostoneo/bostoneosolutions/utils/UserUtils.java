@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.utils;
+package com.bostoneo.bostoneosolutions.utils;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import org.springframework.security.core.Authentication;
 
 public class UserUtils {

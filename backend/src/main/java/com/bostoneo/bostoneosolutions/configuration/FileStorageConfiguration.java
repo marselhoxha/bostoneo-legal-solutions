@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.configuration;
+package com.bostoneo.bostoneosolutions.configuration;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

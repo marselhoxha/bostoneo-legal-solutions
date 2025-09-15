@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentIntentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentMethodDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.PaymentGatewayService;
+import com.bostoneo.bostoneosolutions.dto.PaymentIntentDTO;
+import com.bostoneo.bostoneosolutions.dto.PaymentMethodDTO;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.service.PaymentGatewayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

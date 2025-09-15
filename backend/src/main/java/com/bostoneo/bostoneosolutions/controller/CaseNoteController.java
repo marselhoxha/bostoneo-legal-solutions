@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseNoteDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateCaseNoteRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateCaseNoteRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseNoteService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.CaseNoteDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.service.CaseNoteService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

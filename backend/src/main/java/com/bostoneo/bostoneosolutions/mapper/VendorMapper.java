@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.mapper;
+package com.bostoneo.bostoneosolutions.mapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.VendorDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Vendor;
+import com.bostoneo.bostoneosolutions.dto.VendorDTO;
+import com.bostoneo.bostoneosolutions.model.Vendor;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

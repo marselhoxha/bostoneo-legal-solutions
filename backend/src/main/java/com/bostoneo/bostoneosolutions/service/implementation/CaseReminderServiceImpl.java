@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseReminderDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateReminderRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateReminderRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.exception.ResourceNotFoundException;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseReminderService;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.CaseReminderDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateReminderRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateReminderRequest;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.service.CaseReminderService;
+import com.bostoneo.bostoneosolutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

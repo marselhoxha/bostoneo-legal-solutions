@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.testbuilder;
+package com.bostoneo.bostoneosolutions.testbuilder;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.Role;
 
 public class RoleTestBuilder {
     private Long id = 1L;

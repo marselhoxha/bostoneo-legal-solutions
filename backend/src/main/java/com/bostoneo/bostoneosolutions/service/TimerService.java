@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ActiveTimerDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.StartTimerRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.dto.ActiveTimerDTO;
+import com.bostoneo.bostoneosolutions.dto.StartTimerRequest;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
 
 import java.util.List;
 

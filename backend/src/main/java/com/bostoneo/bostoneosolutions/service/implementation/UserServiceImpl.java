@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.form.UpdateForm;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

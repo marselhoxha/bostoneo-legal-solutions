@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.ConflictCheck;
+import com.bostoneo.bostoneosolutions.model.ConflictCheck;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

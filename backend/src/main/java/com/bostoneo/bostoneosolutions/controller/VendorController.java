@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.VendorDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.VendorService;
+import com.bostoneo.bostoneosolutions.dto.VendorDTO;
+import com.bostoneo.bostoneosolutions.service.VendorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

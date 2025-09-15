@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.model.ReminderQueueItem;
-import com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ReminderQueueRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.ReminderQueueService;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.model.ReminderQueueItem;
+import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
+import com.bostoneo.bostoneosolutions.repository.ReminderQueueRepository;
+import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

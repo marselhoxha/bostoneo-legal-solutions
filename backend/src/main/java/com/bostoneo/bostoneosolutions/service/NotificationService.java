@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.NotificationTokenDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.model.UserNotification;
+import com.bostoneo.bostoneosolutions.dto.NotificationTokenDTO;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.model.UserNotification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

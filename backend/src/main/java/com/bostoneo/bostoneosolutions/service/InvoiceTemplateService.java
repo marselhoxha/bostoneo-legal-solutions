@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoiceTemplateDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoiceTemplateItemDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceTemplate;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceTemplateItem;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceTemplateRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.dto.InvoiceTemplateDTO;
+import com.bostoneo.bostoneosolutions.dto.InvoiceTemplateItemDTO;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.InvoiceTemplate;
+import com.bostoneo.bostoneosolutions.model.InvoiceTemplateItem;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.InvoiceTemplateRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -174,7 +174,7 @@ public class InvoiceTemplateService {
         if (invoice.getLineItems().isEmpty() && !template.getTemplateItems().isEmpty()) {
             for (InvoiceTemplateItem templateItem : template.getTemplateItems()) {
                 if (!Boolean.TRUE.equals(templateItem.getIsOptional())) {
-                    var lineItem = new com.***REMOVED***.***REMOVED***solutions.model.InvoiceLineItem();
+                    var lineItem = new com.bostoneo.bostoneosolutions.model.InvoiceLineItem();
                     lineItem.setDescription(templateItem.getDescription());
                     lineItem.setQuantity(templateItem.getDefaultQuantity());
                     lineItem.setUnitPrice(templateItem.getDefaultUnitPrice());

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.repository.implementation;
+package com.bostoneo.bostoneosolutions.repository.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoicePaymentDTO;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoicePaymentRepository;
+import com.bostoneo.bostoneosolutions.dto.InvoicePaymentDTO;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.repository.InvoicePaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.***REMOVED***.***REMOVED***solutions.query.InvoicePaymentQuery.*;
+import static com.bostoneo.bostoneosolutions.query.InvoicePaymentQuery.*;
 
 @Repository
 @RequiredArgsConstructor

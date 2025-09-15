@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.repository.implementation;
+package com.bostoneo.bostoneosolutions.repository.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseRoleAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
-import com.***REMOVED***.***REMOVED***solutions.rowmapper.CaseRoleAssignmentRowMapper;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.CaseRoleAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.rowmapper.CaseRoleAssignmentRowMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;

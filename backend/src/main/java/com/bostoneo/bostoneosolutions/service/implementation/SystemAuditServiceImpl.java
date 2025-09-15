@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditActivityResponseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditLogDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateAuditLogRequest;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.AuditLogDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
+import com.bostoneo.bostoneosolutions.dto.AuditActivityResponseDTO;
+import com.bostoneo.bostoneosolutions.dto.AuditLogDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
+import com.bostoneo.bostoneosolutions.dtomapper.AuditLogDTOMapper;
+import com.bostoneo.bostoneosolutions.model.AuditLog;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.AuditLogRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.SystemAuditService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

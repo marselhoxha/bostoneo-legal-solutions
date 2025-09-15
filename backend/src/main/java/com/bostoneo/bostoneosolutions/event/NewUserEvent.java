@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.event;
+package com.bostoneo.bostoneosolutions.event;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.EventType;
+import com.bostoneo.bostoneosolutions.enumeration.EventType;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;

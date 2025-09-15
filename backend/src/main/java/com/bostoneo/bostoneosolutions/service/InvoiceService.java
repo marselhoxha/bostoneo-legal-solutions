@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoiceAnalyticsDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AgingReportDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.dto.InvoiceAnalyticsDTO;
+import com.bostoneo.bostoneosolutions.dto.AgingReportDTO;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

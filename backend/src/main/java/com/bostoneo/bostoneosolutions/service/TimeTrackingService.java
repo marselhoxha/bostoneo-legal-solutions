@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryFilterRequest;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryFilterRequest;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;

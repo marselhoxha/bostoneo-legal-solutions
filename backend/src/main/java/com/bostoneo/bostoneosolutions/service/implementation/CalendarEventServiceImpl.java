@@ -1,21 +1,21 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CalendarEventDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.CalendarEventDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CalendarEventStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
-import com.***REMOVED***.***REMOVED***solutions.service.EmailService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-import com.***REMOVED***.***REMOVED***solutions.service.ReminderQueueService;
-import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.CalendarEventDTOMapper;
+import com.bostoneo.bostoneosolutions.enumeration.CalendarEventStatus;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
+import com.bostoneo.bostoneosolutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
+import com.bostoneo.bostoneosolutions.service.RoleService;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -668,7 +668,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         
         for (CalendarEventDTO event : events) {
             iCalBuilder.append("BEGIN:VEVENT\n");
-            iCalBuilder.append("UID:").append(event.getId()).append("@***REMOVED***solutions.com\n");
+            iCalBuilder.append("UID:").append(event.getId()).append("@bostoneosolutions.com\n");
             iCalBuilder.append("SUMMARY:").append(event.getTitle()).append("\n");
             if (event.getDescription() != null) {
                 iCalBuilder.append("DESCRIPTION:").append(event.getDescription()).append("\n");

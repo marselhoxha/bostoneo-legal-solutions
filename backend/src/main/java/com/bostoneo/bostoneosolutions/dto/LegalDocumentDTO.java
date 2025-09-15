@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentCategory;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentType;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentCategory;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;

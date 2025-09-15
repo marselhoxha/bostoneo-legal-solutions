@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseTask;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.SecurityService;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.CaseTask;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.CaseTaskRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;

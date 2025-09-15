@@ -16,4 +16,4 @@ VALUES ('ROLE_USER', 'READ:USER,READ:CUSTOMER'),
 INSERT INTO UserRoles (user_id, role_id)
 SELECT u.id, r.id
 FROM Users u, Roles r
-WHERE u.email = 'admin@***REMOVED***.com' AND r.name = 'ROLE_SYSADMIN'; 
+WHERE u.email = 'admin@bostoneo.com' AND r.name = 'ROLE_SYSADMIN'; 

@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enumeration;
+package com.bostoneo.bostoneosolutions.enumeration;
 
 public enum CalendarEventType {
     COURT_DATE,      // Court hearings, trials, etc.

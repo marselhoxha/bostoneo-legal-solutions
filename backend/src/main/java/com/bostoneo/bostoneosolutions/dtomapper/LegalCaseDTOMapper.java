@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.PaymentStatus;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 

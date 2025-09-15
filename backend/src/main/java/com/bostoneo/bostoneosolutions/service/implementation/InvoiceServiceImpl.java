@@ -1,21 +1,21 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.TimeEntry;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository;
-import com.***REMOVED***.***REMOVED***solutions.validation.InvoiceValidator;
-import com.***REMOVED***.***REMOVED***solutions.exception.InvoiceValidationException;
-import com.***REMOVED***.***REMOVED***solutions.service.InvoiceWorkflowService;
-import com.***REMOVED***.***REMOVED***solutions.service.EmailService;
-import com.***REMOVED***.***REMOVED***solutions.service.IInvoiceService;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoiceLineItem;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.TimeEntry;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
+import com.bostoneo.bostoneosolutions.validation.InvoiceValidator;
+import com.bostoneo.bostoneosolutions.exception.InvoiceValidationException;
+import com.bostoneo.bostoneosolutions.service.InvoiceWorkflowService;
+import com.bostoneo.bostoneosolutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.service.IInvoiceService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.InvoiceLineItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -150,7 +150,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         // Trigger workflows for invoice creation (non-transactional)
         triggerWorkflowsAsync(savedInvoice, 
-                com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule.TriggerEvent.CREATED, null);
+                com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule.TriggerEvent.CREATED, null);
         
         return savedInvoice;
     }
@@ -286,7 +286,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         // Trigger workflows for invoice creation (non-transactional)
         triggerWorkflowsAsync(savedInvoice, 
-                com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule.TriggerEvent.CREATED, null);
+                com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule.TriggerEvent.CREATED, null);
         
         return savedInvoice;
     }
@@ -406,7 +406,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         // Trigger workflows if status changed (non-transactional)
         if (!oldStatus.equals(updatedInvoice.getStatus())) {
             triggerWorkflowsAsync(updatedInvoice, 
-                    com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule.TriggerEvent.STATUS_CHANGED, 
+                    com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule.TriggerEvent.STATUS_CHANGED, 
                     oldStatus.toString());
         }
         
@@ -438,7 +438,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         // Trigger workflows for status change (non-transactional)
         triggerWorkflowsAsync(updatedInvoice, 
-                com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule.TriggerEvent.STATUS_CHANGED, 
+                com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule.TriggerEvent.STATUS_CHANGED, 
                 oldStatus.toString());
         
         return updatedInvoice;
@@ -584,7 +584,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
             companyCell.add(new Paragraph("Bostoneo Solutions LLC").setFont(regularFont).setFontSize(10));
             companyCell.add(new Paragraph("68 Harrison Ave, Boston MA").setFont(regularFont).setFontSize(10));
             companyCell.add(new Paragraph("Phone: (123) 456-7890").setFont(regularFont).setFontSize(10));
-            companyCell.add(new Paragraph("Email: info@***REMOVED***.com").setFont(regularFont).setFontSize(10));
+            companyCell.add(new Paragraph("Email: info@bostoneo.com").setFont(regularFont).setFontSize(10));
             headerTable.addCell(companyCell);
             
             // Right side - Invoice Info
@@ -951,7 +951,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         // Call to Action
         emailContent.append("<div class='cta-button'>")
                    .append("<p>Need to discuss this invoice or have questions about your account?</p>")
-                   .append("<a href='mailto:info@***REMOVED***.com'>Contact Us</a>")
+                   .append("<a href='mailto:info@bostoneo.com'>Contact Us</a>")
                    .append("</div>");
         
         // Closing
@@ -966,7 +966,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         emailContent.append("<div class='footer'>")
                    .append("<p><strong>Bostoneo Solutions LLC</strong></p>")
                    .append("<p>68 Harrison Ave, Boston MA | Phone: (123) 456-7890</p>")
-                   .append("<p>Email: info@***REMOVED***.com | Website: www.***REMOVED***.com</p>")
+                   .append("<p>Email: info@bostoneo.com | Website: www.bostoneo.com</p>")
                    .append("<p style='font-size: 12px; margin-top: 15px;'>")
                    .append("This is an automated message. Please do not reply directly to this email.")
                    .append("</p>")
@@ -991,7 +991,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
      * Trigger workflows asynchronously to avoid affecting the main transaction
      */
     private void triggerWorkflowsAsync(Invoice invoice, 
-                                      com.***REMOVED***.***REMOVED***solutions.model.InvoiceWorkflowRule.TriggerEvent event, 
+                                      com.bostoneo.bostoneosolutions.model.InvoiceWorkflowRule.TriggerEvent event, 
                                       String oldStatus) {
         try {
             workflowService.triggerWorkflows(invoice, event, oldStatus);

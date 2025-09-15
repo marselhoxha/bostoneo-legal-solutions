@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.RateType;
-import com.***REMOVED***.***REMOVED***solutions.validation.ValidEnum;
+import com.bostoneo.bostoneosolutions.enumeration.RateType;
+import com.bostoneo.bostoneosolutions.validation.ValidEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

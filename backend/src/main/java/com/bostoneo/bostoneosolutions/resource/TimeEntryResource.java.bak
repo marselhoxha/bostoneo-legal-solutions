@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryFilterRequest;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.TimeTrackingService;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryFilterRequest;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.TimeTrackingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

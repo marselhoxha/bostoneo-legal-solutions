@@ -30,8 +30,8 @@
         <appender-ref ref="Console" />
     </root>
 
-    <!-- LOG "com.***REMOVED****" at DEBUG level -->
-    <logger name="com.***REMOVED***" level="debug" additivity="false">
+    <!-- LOG "com.bostoneo*" at DEBUG level -->
+    <logger name="com.bostoneo" level="debug" additivity="false">
         <appender-ref ref="RollingFile" />
         <appender-ref ref="Console" />
     </logger>

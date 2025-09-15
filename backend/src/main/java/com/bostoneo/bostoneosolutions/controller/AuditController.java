@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditActivityResponseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditLogDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateAuditLogRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
+import com.bostoneo.bostoneosolutions.dto.AuditActivityResponseDTO;
+import com.bostoneo.bostoneosolutions.dto.AuditLogDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
+import com.bostoneo.bostoneosolutions.model.AuditLog;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.service.SystemAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -235,7 +235,7 @@ public class AuditController {
      * Test audit functionality - creates a test audit log entry
      */
     @PostMapping("/test")
-    @com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog(action = "CREATE", entityType = "SYSTEM", description = "Test audit log entry created")
+    @com.bostoneo.bostoneosolutions.annotation.AuditLog(action = "CREATE", entityType = "SYSTEM", description = "Test audit log entry created")
     public ResponseEntity<HttpResponse> testAuditLog(Authentication authentication) {
         try {
             String username = authentication != null ? authentication.getName() : "system";

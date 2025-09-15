@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.config;
+package com.bostoneo.bostoneosolutions.config;
 
-import com.***REMOVED***.***REMOVED***solutions.handler.AuthenticatedWebSocketHandler;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;

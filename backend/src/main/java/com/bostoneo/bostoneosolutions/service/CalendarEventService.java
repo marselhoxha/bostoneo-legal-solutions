@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;

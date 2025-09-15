@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.UserNotificationPreference;
+import com.bostoneo.bostoneosolutions.model.UserNotificationPreference;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

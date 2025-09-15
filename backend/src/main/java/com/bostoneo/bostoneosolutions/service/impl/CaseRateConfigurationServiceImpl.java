@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.impl;
+package com.bostoneo.bostoneosolutions.service.impl;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseRateConfigurationDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRateConfiguration;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseRateConfigurationRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseRateConfigurationService;
+import com.bostoneo.bostoneosolutions.dto.CaseRateConfigurationDTO;
+import com.bostoneo.bostoneosolutions.model.CaseRateConfiguration;
+import com.bostoneo.bostoneosolutions.repository.CaseRateConfigurationRepository;
+import com.bostoneo.bostoneosolutions.service.CaseRateConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.AuditLogDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateAuditLogRequest;
-import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.AuditLogDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
+import com.bostoneo.bostoneosolutions.model.AuditLog;
+import com.bostoneo.bostoneosolutions.model.User;
 import org.springframework.beans.BeanUtils;
 
 import java.time.format.DateTimeFormatter;

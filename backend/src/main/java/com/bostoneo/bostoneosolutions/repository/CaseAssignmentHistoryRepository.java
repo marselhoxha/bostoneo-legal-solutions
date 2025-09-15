@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.AssignmentAction;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignmentHistory;
+import com.bostoneo.bostoneosolutions.enumeration.AssignmentAction;
+import com.bostoneo.bostoneosolutions.model.CaseAssignmentHistory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

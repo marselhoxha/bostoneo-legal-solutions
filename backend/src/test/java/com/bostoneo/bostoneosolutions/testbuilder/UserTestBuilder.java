@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.testbuilder;
+package com.bostoneo.bostoneosolutions.testbuilder;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;

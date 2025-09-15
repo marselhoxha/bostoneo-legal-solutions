@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
-import com.***REMOVED***.***REMOVED***solutions.enums.PermissionCategory;
-import com.***REMOVED***.***REMOVED***solutions.enums.RoleCategory;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
+import com.bostoneo.bostoneosolutions.enums.PermissionCategory;
+import com.bostoneo.bostoneosolutions.enums.RoleCategory;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

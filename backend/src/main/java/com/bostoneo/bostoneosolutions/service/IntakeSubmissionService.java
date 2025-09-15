@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeSubmission;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
+import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.model.Lead;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

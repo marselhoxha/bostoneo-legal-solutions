@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.testbuilder;
+package com.bostoneo.bostoneosolutions.testbuilder;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.PaymentStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 
 import java.util.Date;
 

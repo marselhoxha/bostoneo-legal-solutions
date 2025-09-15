@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.EventType;
-import com.***REMOVED***.***REMOVED***solutions.model.UserEvent;
-import com.***REMOVED***.***REMOVED***solutions.repository.EventRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.EventService;
+import com.bostoneo.bostoneosolutions.enumeration.EventType;
+import com.bostoneo.bostoneosolutions.model.UserEvent;
+import com.bostoneo.bostoneosolutions.repository.EventRepository;
+import com.bostoneo.bostoneosolutions.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.UserNotificationPreference;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserNotificationPreferenceRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.UserNotificationPreferenceService;
+import com.bostoneo.bostoneosolutions.model.UserNotificationPreference;
+import com.bostoneo.bostoneosolutions.repository.UserNotificationPreferenceRepository;
+import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentIntentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentMethodDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.dto.PaymentIntentDTO;
+import com.bostoneo.bostoneosolutions.dto.PaymentMethodDTO;
+import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
 
 import java.util.List;
 

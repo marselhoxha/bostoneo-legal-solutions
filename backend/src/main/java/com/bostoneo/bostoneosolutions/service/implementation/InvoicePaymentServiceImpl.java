@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoicePaymentDTO;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoicePaymentRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.InvoicePaymentService;
+import com.bostoneo.bostoneosolutions.dto.InvoicePaymentDTO;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.repository.InvoicePaymentRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.service.InvoicePaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;

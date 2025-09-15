@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.form.UpdateForm;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.form.UpdateForm;
+import com.bostoneo.bostoneosolutions.model.User;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collection;

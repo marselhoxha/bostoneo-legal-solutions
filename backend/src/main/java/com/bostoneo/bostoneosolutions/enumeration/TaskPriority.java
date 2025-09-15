@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enumeration;
+package com.bostoneo.bostoneosolutions.enumeration;
 
 public enum TaskPriority {
     LOW("Low", 1),

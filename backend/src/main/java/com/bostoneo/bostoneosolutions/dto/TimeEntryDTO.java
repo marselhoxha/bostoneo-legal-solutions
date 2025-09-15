@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TimeEntryStatus;
-import com.***REMOVED***.***REMOVED***solutions.validation.ValidEnum;
+import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.validation.ValidEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

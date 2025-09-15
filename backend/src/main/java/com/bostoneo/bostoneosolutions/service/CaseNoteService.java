@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseNoteDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateCaseNoteRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.CaseNoteDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateCaseNoteRequest;
 
 import java.util.List;
 

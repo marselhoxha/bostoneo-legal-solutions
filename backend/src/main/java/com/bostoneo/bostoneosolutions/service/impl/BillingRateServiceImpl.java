@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.service.impl;
+package com.bostoneo.bostoneosolutions.service.impl;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.BillingRateDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.RateType;
-import com.***REMOVED***.***REMOVED***solutions.model.BillingRate;
-import com.***REMOVED***.***REMOVED***solutions.repository.BillingRateRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.BillingRateService;
+import com.bostoneo.bostoneosolutions.dto.BillingRateDTO;
+import com.bostoneo.bostoneosolutions.enumeration.RateType;
+import com.bostoneo.bostoneosolutions.model.BillingRate;
+import com.bostoneo.bostoneosolutions.repository.BillingRateRepository;
+import com.bostoneo.bostoneosolutions.service.BillingRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
-import com.***REMOVED***.***REMOVED***solutions.repository.TimeEntryRepository;
+import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
 
 @Service
 @RequiredArgsConstructor

@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseNoteDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateCaseNoteRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UpdateCaseNoteRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.exception.ResourceNotFoundException;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseNote;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseNoteRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseNoteService;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.CaseNoteDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.UpdateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
+import com.bostoneo.bostoneosolutions.model.CaseNote;
+import com.bostoneo.bostoneosolutions.repository.CaseNoteRepository;
+import com.bostoneo.bostoneosolutions.service.CaseNoteService;
+import com.bostoneo.bostoneosolutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;

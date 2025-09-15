@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
 
 import java.time.LocalDateTime;
 import java.util.Collection;

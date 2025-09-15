@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentCategory;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentType;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentCategory;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

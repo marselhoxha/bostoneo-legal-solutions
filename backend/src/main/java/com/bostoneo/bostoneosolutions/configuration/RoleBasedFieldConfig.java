@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.configuration;
+package com.bostoneo.bostoneosolutions.configuration;
 
-import com.***REMOVED***.***REMOVED***solutions.security.RoleBasedFieldFilter;
+import com.bostoneo.bostoneosolutions.security.RoleBasedFieldFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

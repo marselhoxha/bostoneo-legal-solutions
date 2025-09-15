@@ -1,17 +1,17 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentType;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.LegalDocumentDTO;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentType;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.LegalDocumentRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.LegalDocumentService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +47,7 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     private final ObjectMapper objectMapper;
     
     // Base directory for document storage
-    private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/***REMOVED***solutions/documents/";
+    private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/bostoneosolutions/documents/";
 
     @Override
     public CustomHttpResponse<List<LegalDocument>> getAllDocuments() {

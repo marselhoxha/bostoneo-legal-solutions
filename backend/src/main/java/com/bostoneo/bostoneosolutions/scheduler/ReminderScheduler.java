@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.scheduler;
+package com.bostoneo.bostoneosolutions.scheduler;
 
-import com.***REMOVED***.***REMOVED***solutions.service.ReminderQueueService;
-import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
+import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

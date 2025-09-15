@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.utils;
+package com.bostoneo.bostoneosolutions.utils;
 
 import com.twilio.Twilio;
 import com.twilio.type.PhoneNumber;

@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.listener;
+package com.bostoneo.bostoneosolutions.listener;
 
-import com.***REMOVED***.***REMOVED***solutions.service.EventService;
-import com.***REMOVED***.***REMOVED***solutions.event.NewUserEvent;
+import com.bostoneo.bostoneosolutions.service.EventService;
+import com.bostoneo.bostoneosolutions.event.NewUserEvent;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import static com.***REMOVED***.***REMOVED***solutions.utils.RequestUtils.getDevice;
-import static com.***REMOVED***.***REMOVED***solutions.utils.RequestUtils.getIpAddress;
+import static com.bostoneo.bostoneosolutions.utils.RequestUtils.getDevice;
+import static com.bostoneo.bostoneosolutions.utils.RequestUtils.getIpAddress;
 
 @Component
 @RequiredArgsConstructor

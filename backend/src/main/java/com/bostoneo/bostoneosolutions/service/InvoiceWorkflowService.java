@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.*;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceReminderRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowExecutionRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceWorkflowRuleRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.repository.InvoiceReminderRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowExecutionRepository;
+import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowRuleRepository;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -174,7 +174,7 @@ public class InvoiceWorkflowService {
         String clientEmail = clientEmailHolder[0];
         if (clientEmail == null || clientEmail.isEmpty()) {
             log.warn("No client email found for invoice {}, using fallback email", invoice.getInvoiceNumber());
-            clientEmail = "admin@***REMOVED***.com"; // Fallback for testing
+            clientEmail = "admin@bostoneo.com"; // Fallback for testing
         }
         
         // Generate email content
@@ -417,7 +417,7 @@ public class InvoiceWorkflowService {
         html.append("<div class='footer'>");
         html.append("<p>Bostoneo Solutions LLC<br>");
         html.append("68 Harrison Ave, Boston MA<br>");
-        html.append("Phone: (123) 456-7890 | Email: info@***REMOVED***.com</p>");
+        html.append("Phone: (123) 456-7890 | Email: info@bostoneo.com</p>");
         html.append("</div>");
         
         html.append("</div></body></html>");

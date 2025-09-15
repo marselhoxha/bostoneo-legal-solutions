@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentTransactionDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.PaymentTransaction;
-import com.***REMOVED***.***REMOVED***solutions.service.PaymentTransactionService;
+import com.bostoneo.bostoneosolutions.dto.PaymentTransactionDTO;
+import com.bostoneo.bostoneosolutions.model.PaymentTransaction;
+import com.bostoneo.bostoneosolutions.service.PaymentTransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

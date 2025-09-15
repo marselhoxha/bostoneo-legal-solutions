@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CrmDashboardDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeSubmissionService;
+import com.bostoneo.bostoneosolutions.dto.CrmDashboardDTO;
+import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

@@ -1,14 +1,14 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseDocumentDTO;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.rowmapper;
+package com.bostoneo.bostoneosolutions.rowmapper;
 
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.model.User;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;

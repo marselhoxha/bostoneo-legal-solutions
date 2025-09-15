@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.LegalDocumentDTO;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 

@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.mapper;
+package com.bostoneo.bostoneosolutions.mapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseCategoryDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ExpenseCategory;
+import com.bostoneo.bostoneosolutions.dto.ExpenseCategoryDTO;
+import com.bostoneo.bostoneosolutions.model.ExpenseCategory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

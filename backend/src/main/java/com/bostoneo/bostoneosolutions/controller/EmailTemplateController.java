@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.model.EmailTemplate;
-import com.***REMOVED***.***REMOVED***solutions.repository.EmailTemplateRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.model.EmailTemplate;
+import com.bostoneo.bostoneosolutions.repository.EmailTemplateRepository;
+import com.bostoneo.bostoneosolutions.service.EmailService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

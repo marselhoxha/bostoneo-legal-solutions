@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskPriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskType;
+import com.bostoneo.bostoneosolutions.enumeration.TaskPriority;
+import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TaskType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.hypersistence.utils.hibernate.type.json.JsonType;

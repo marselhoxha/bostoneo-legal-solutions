@@ -1,35 +1,35 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateActivityRequest;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentType;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentCategory;
-import com.***REMOVED***.***REMOVED***solutions.exception.LegalCaseException;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.LegalCaseDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.model.DocumentVersion;
-import com.***REMOVED***.***REMOVED***solutions.model.Client;
-import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
-import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
-import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.util.RoleUtils;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseDocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.DocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.DocumentVersionDTO;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.dto.LegalDocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateActivityRequest;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentType;
+import com.bostoneo.bostoneosolutions.enumeration.DocumentCategory;
+import com.bostoneo.bostoneosolutions.exception.LegalCaseException;
+import com.bostoneo.bostoneosolutions.dtomapper.LegalCaseDTOMapper;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.DocumentVersion;
+import com.bostoneo.bostoneosolutions.model.Client;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.repository.DocumentVersionRepository;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.service.LegalDocumentService;
+import com.bostoneo.bostoneosolutions.service.UserService;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.service.RoleService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.util.RoleUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -153,7 +153,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // PARALEGAL: See assigned cases + cases where attorney granted access
         if ("ROLE_PARALEGAL".equals(userRole)) {
             // Get case IDs from case role assignments
-            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
+            Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
             
             if (caseRoleAssignments.isEmpty()) {
                 return Page.empty(PageRequest.of(page, size));
@@ -179,7 +179,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // Note: Client users have ROLE_USER role in this system
         if ("ROLE_CLIENT".equals(userRole) || "ROLE_USER".equals(userRole)) {
             // Get case IDs from case role assignments
-            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
+            Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(userId);
             
             if (caseRoleAssignments.isEmpty()) {
                 log.info("No case role assignments found for user ID: {}", userId);
@@ -819,7 +819,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private String createDocumentVersionStoragePath(Long caseId, Long documentId) throws IOException {
         // Create a structured path: BASE_DIR/cases/{caseId}/documents/{documentId}/versions/
         Path path = Paths.get(
-            System.getProperty("user.home") + "/***REMOVED***solutions/documents/",
+            System.getProperty("user.home") + "/bostoneosolutions/documents/",
             "cases", 
             caseId.toString(), 
             "documents",
@@ -936,7 +936,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // PARALEGAL: Edit access to assigned cases
         if (isParalegal) {
             // Check if paralegal is assigned to this case
-            Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
+            Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
             boolean hasAccess = assignments.stream()
                 .anyMatch(a -> a.getLegalCase().getId().equals(id) && a.isActive());
                 
@@ -1010,7 +1010,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if ("ROLE_PARALEGAL".equals(userRole) || "ROLE_MANAGER".equals(userRole)) {
             // Check if paralegal is assigned to this case
             if ("ROLE_PARALEGAL".equals(userRole)) {
-                Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
+                Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> assignments = roleService.getCaseRoleAssignments(userId);
                 boolean hasAccess = assignments.stream()
                     .anyMatch(a -> a.getLegalCase().getId().equals(caseId) && a.isActive());
                     

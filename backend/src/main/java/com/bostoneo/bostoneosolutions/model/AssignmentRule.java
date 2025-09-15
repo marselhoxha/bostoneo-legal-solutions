@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.RuleType;
+import com.bostoneo.bostoneosolutions.enumeration.RuleType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;

@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.IntakeSubmissionDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LeadConversionRequestDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.IntakeSubmissionDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeSubmission;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeSubmissionService;
+import com.bostoneo.bostoneosolutions.dto.IntakeSubmissionDTO;
+import com.bostoneo.bostoneosolutions.dto.LeadConversionRequestDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.IntakeSubmissionDTOMapper;
+import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.form;
+package com.bostoneo.bostoneosolutions.form;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

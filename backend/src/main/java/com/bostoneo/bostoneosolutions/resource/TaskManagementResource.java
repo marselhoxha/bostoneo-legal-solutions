@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.*;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.TaskManagementService;
+import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.TaskManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

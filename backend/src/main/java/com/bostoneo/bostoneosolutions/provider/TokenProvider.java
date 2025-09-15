@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.provider;
+package com.bostoneo.bostoneosolutions.provider;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -6,8 +6,8 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.InvalidClaimException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
-import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import static com.auth0.jwt.algorithms.Algorithm.HMAC512;
-import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.*;
+import static com.bostoneo.bostoneosolutions.constant.Constants.*;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;

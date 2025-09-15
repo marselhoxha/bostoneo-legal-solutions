@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.filter;
+package com.bostoneo.bostoneosolutions.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

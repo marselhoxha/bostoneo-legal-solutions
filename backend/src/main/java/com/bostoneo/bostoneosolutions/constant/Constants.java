@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.constant;
+package com.bostoneo.bostoneosolutions.constant;
 
 public class Constants {
 

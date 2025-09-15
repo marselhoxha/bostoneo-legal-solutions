@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.security;
+package com.bostoneo.bostoneosolutions.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;

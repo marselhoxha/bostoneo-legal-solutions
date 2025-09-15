@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ConflictMatchDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ConflictCheck;
-import com.***REMOVED***.***REMOVED***solutions.repository.ConflictCheckRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.ConflictCheckService;
+import com.bostoneo.bostoneosolutions.dto.ConflictMatchDTO;
+import com.bostoneo.bostoneosolutions.model.ConflictCheck;
+import com.bostoneo.bostoneosolutions.repository.ConflictCheckRepository;
+import com.bostoneo.bostoneosolutions.service.ConflictCheckService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

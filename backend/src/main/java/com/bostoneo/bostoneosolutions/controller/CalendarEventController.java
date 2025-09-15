@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CalendarEventDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateCalendarEventRequest;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CalendarEventType;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.CalendarEventService;
-import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCalendarEventRequest;
+import com.bostoneo.bostoneosolutions.enumeration.CalendarEventType;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
+import com.bostoneo.bostoneosolutions.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +20,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.CalendarEvent;
-import com.***REMOVED***.***REMOVED***solutions.repository.CalendarEventRepository;
+import com.bostoneo.bostoneosolutions.model.CalendarEvent;
+import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;

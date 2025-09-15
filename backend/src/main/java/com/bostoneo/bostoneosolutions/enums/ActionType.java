@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enums;
+package com.bostoneo.bostoneosolutions.enums;
 
 /**
  * Represents the different action types that can be performed on resources

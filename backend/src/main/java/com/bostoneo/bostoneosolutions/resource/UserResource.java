@@ -1,20 +1,20 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.EventType;
-import com.***REMOVED***.***REMOVED***solutions.event.NewUserEvent;
-import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
-import com.***REMOVED***.***REMOVED***solutions.form.*;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.model.UserPrincipal;
-import com.***REMOVED***.***REMOVED***solutions.provider.TokenProvider;
-import com.***REMOVED***.***REMOVED***solutions.service.EventService;
-import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.enumeration.EventType;
+import com.bostoneo.bostoneosolutions.event.NewUserEvent;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.form.*;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.service.EventService;
+import com.bostoneo.bostoneosolutions.service.RoleService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -40,12 +40,12 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.TOKEN_PREFIX;
-import static com.***REMOVED***.***REMOVED***solutions.dtomapper.UserDTOMapper.toUser;
-import static com.***REMOVED***.***REMOVED***solutions.enumeration.EventType.*;
-import static com.***REMOVED***.***REMOVED***solutions.utils.ExceptionUtils.processError;
-import static com.***REMOVED***.***REMOVED***solutions.utils.UserUtils.getAuthenticatedUser;
-import static com.***REMOVED***.***REMOVED***solutions.utils.UserUtils.getLoggedInUser;
+import static com.bostoneo.bostoneosolutions.constant.Constants.TOKEN_PREFIX;
+import static com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper.toUser;
+import static com.bostoneo.bostoneosolutions.enumeration.EventType.*;
+import static com.bostoneo.bostoneosolutions.utils.ExceptionUtils.processError;
+import static com.bostoneo.bostoneosolutions.utils.UserUtils.getAuthenticatedUser;
+import static com.bostoneo.bostoneosolutions.utils.UserUtils.getLoggedInUser;
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -449,7 +449,7 @@ public class UserResource {
         }
         
         // Get case role assignments for the user
-        Set<com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(user.getId());
+        Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(user.getId());
         
         return new UserPrincipal(userEntity, roles, permissions, caseRoleAssignments);
     }

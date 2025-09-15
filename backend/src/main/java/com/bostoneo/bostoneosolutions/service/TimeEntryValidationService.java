@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.TimeEntryDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ValidationResult;
+import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
+import com.bostoneo.bostoneosolutions.model.ValidationResult;
 
 public interface TimeEntryValidationService {
     

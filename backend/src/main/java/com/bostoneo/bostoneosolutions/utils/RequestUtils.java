@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.utils;
+package com.bostoneo.bostoneosolutions.utils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nl.basjes.parse.useragent.UserAgent;

@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.*;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.HttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.service.TaskManagementService;
+import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
+import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.service.TaskManagementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

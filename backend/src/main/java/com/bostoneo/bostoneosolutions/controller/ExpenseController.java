@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.ExpenseDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Expense;
-import com.***REMOVED***.***REMOVED***solutions.service.ExpenseService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.ExpenseDTO;
+import com.bostoneo.bostoneosolutions.model.Expense;
+import com.bostoneo.bostoneosolutions.service.ExpenseService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;

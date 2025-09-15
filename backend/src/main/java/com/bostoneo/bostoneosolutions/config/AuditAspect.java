@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.config;
+package com.bostoneo.bostoneosolutions.config;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.AuditLogRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.repository.AuditLogRepository;
+import com.bostoneo.bostoneosolutions.service.SystemAuditService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,22 +99,22 @@ public class AuditAspect {
             String description = determineDescription(auditLog, ((MethodSignature) joinPoint.getSignature()).getMethod(), joinPoint, result);
             String metadata = generateMetadata(joinPoint, result);
             
-            com.***REMOVED***.***REMOVED***solutions.model.AuditLog.AuditAction auditAction;
-            com.***REMOVED***.***REMOVED***solutions.model.AuditLog.EntityType auditEntityType;
+            com.bostoneo.bostoneosolutions.model.AuditLog.AuditAction auditAction;
+            com.bostoneo.bostoneosolutions.model.AuditLog.EntityType auditEntityType;
             
             try {
-                auditAction = com.***REMOVED***.***REMOVED***solutions.model.AuditLog.AuditAction.valueOf(action.toUpperCase());
+                auditAction = com.bostoneo.bostoneosolutions.model.AuditLog.AuditAction.valueOf(action.toUpperCase());
             } catch (IllegalArgumentException e) {
-                auditAction = com.***REMOVED***.***REMOVED***solutions.model.AuditLog.AuditAction.CREATE;
+                auditAction = com.bostoneo.bostoneosolutions.model.AuditLog.AuditAction.CREATE;
             }
             
             try {
-                auditEntityType = com.***REMOVED***.***REMOVED***solutions.model.AuditLog.EntityType.valueOf(entityType.toUpperCase());
+                auditEntityType = com.bostoneo.bostoneosolutions.model.AuditLog.EntityType.valueOf(entityType.toUpperCase());
             } catch (IllegalArgumentException e) {
-                auditEntityType = com.***REMOVED***.***REMOVED***solutions.model.AuditLog.EntityType.USER;
+                auditEntityType = com.bostoneo.bostoneosolutions.model.AuditLog.EntityType.USER;
             }
             
-            com.***REMOVED***.***REMOVED***solutions.model.AuditLog auditLogEntry = com.***REMOVED***.***REMOVED***solutions.model.AuditLog.builder()
+            com.bostoneo.bostoneosolutions.model.AuditLog auditLogEntry = com.bostoneo.bostoneosolutions.model.AuditLog.builder()
                     .userId(user.getId())
                     .action(auditAction)
                     .entityType(auditEntityType)

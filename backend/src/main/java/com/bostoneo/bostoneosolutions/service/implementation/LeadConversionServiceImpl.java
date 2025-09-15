@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.*;
-import com.***REMOVED***.***REMOVED***solutions.repository.*;
-import com.***REMOVED***.***REMOVED***solutions.service.LeadConversionService;
-import com.***REMOVED***.***REMOVED***solutions.service.LeadService;
+import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.repository.*;
+import com.bostoneo.bostoneosolutions.service.LeadConversionService;
+import com.bostoneo.bostoneosolutions.service.LeadService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -451,13 +451,13 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             .clientName(lead.getFullName())
             .clientEmail(lead.getEmail())
             .clientPhone(lead.getPhone())
-            .status(com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus.ACTIVE)
-            .priority(com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority.valueOf(getStringValue(caseData, "priority", "MEDIUM")))
+            .status(com.bostoneo.bostoneosolutions.enumeration.CaseStatus.ACTIVE)
+            .priority(com.bostoneo.bostoneosolutions.enumeration.CasePriority.valueOf(getStringValue(caseData, "priority", "MEDIUM")))
             .type(getStringValue(caseData, "type"))
             .description(getStringValue(caseData, "description"))
             .courtName(getStringValue(caseData, "courtName"))
             .hourlyRate(getDoubleValue(caseData, "hourlyRate", 0.0))
-            .paymentStatus(com.***REMOVED***.***REMOVED***solutions.enumeration.PaymentStatus.PENDING)
+            .paymentStatus(com.bostoneo.bostoneosolutions.enumeration.PaymentStatus.PENDING)
             .build();
         
         return legalCase;

@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.annotation.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.dto.BillingRateDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.RateType;
-import com.***REMOVED***.***REMOVED***solutions.service.BillingRateService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.BillingRateDTO;
+import com.bostoneo.bostoneosolutions.enumeration.RateType;
+import com.bostoneo.bostoneosolutions.service.BillingRateService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -96,7 +96,7 @@ SET subject = 'Hearing Reminder: {{eventTitle}}',
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Court Hearing Reminder</h1>
         </div>
@@ -129,7 +129,7 @@ SET subject = 'Hearing Reminder: {{eventTitle}}',
             
             <p>Please ensure you have all necessary documents and arrive early to allow time for security checks and locating the correct courtroom.</p>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View in Calendar</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View in Calendar</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -263,7 +263,7 @@ SET subject = 'Deadline Alert: {{eventTitle}}',
     <div class="email-container {{highPriorityClass}}">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Deadline Reminder</h1>
         </div>
@@ -298,7 +298,7 @@ SET subject = 'Deadline Alert: {{eventTitle}}',
             
             <p>Please ensure all required actions are completed before the deadline. {{#if highPriority}}This is marked as high priority and requires immediate attention.{{/if}}</p>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Deadline Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Deadline Details</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>
@@ -420,7 +420,7 @@ SET subject = 'Meeting Reminder: {{eventTitle}}',
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Meeting Reminder</h1>
         </div>
@@ -466,10 +466,10 @@ SET subject = 'Meeting Reminder: {{eventTitle}}',
             {{#if meetingLink}}
             <div class="meeting-actions">
                 <a href="{{meetingLink}}" class="action-button">Join Meeting</a>
-                <a href="https://app.***REMOVED***.com/calendar" style="color: #3577f1; text-decoration: none;">View in Calendar</a>
+                <a href="https://app.bostoneo.com/calendar" style="color: #3577f1; text-decoration: none;">View in Calendar</a>
             </div>
             {{else}}
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View Meeting Details</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View Meeting Details</a>
             {{/if}}
         </div>
         <div class="email-footer">
@@ -592,7 +592,7 @@ VALUES
     <div class="email-container">
         <div class="email-header">
             <div class="logo">
-                <img src="https://***REMOVED***.com/logo.png" alt="Bostoneo Solutions" height="40">
+                <img src="https://bostoneo.com/logo.png" alt="Bostoneo Solutions" height="40">
             </div>
             <h1>Court Date Reminder</h1>
         </div>
@@ -640,7 +640,7 @@ VALUES
                 </ul>
             </div>
             
-            <a href="https://app.***REMOVED***.com/calendar" class="action-button">View in Calendar</a>
+            <a href="https://app.bostoneo.com/calendar" class="action-button">View in Calendar</a>
         </div>
         <div class="email-footer">
             <p>This is an automated reminder from the Bostoneo Solutions Case Management System.</p>

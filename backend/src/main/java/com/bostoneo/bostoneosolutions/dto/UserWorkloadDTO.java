@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.model.UserWorkload.WorkloadStatus;
+import com.bostoneo.bostoneosolutions.model.UserWorkload.WorkloadStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

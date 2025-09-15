@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
 /**
  * Service for auditing permission and role changes

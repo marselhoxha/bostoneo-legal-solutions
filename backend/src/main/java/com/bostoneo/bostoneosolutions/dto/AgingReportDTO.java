@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.model.Invoice;
 import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;

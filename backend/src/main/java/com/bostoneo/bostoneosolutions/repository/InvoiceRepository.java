@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.InvoiceStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
+import com.bostoneo.bostoneosolutions.model.Invoice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

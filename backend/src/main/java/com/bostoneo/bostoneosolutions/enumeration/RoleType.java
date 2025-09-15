@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enumeration;
+package com.bostoneo.bostoneosolutions.enumeration;
 
 public enum RoleType {
     ROLE_USER, ROLE_MANAGER, ROLE_ADMIN, ROLE_SYSADMIN;

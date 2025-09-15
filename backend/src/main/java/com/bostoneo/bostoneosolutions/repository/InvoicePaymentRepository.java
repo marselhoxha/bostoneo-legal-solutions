@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoicePaymentDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.InvoicePayment;
+import com.bostoneo.bostoneosolutions.dto.InvoicePaymentDTO;
+import com.bostoneo.bostoneosolutions.model.InvoicePayment;
 
 import java.math.BigDecimal;
 import java.util.List;

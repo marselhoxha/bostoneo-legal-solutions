@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.NotificationTokenDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.NotificationToken;
+import com.bostoneo.bostoneosolutions.dto.NotificationTokenDTO;
+import com.bostoneo.bostoneosolutions.model.NotificationToken;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

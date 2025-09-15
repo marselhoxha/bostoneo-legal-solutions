@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.PaymentStatus;
-import com.***REMOVED***.***REMOVED***solutions.validation.ValidEnum;
+import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.bostoneo.bostoneosolutions.validation.ValidEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

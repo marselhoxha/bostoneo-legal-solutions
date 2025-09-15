@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.model.UserNotificationPreference;
-import com.***REMOVED***.***REMOVED***solutions.service.UserNotificationPreferenceService;
+import com.bostoneo.bostoneosolutions.model.UserNotificationPreference;
+import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

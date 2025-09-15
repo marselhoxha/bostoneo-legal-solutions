@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskPriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskStatus;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TaskType;
+import com.bostoneo.bostoneosolutions.enumeration.TaskPriority;
+import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TaskType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeSubmission;
-import com.***REMOVED***.***REMOVED***solutions.model.Lead;
-import com.***REMOVED***.***REMOVED***solutions.repository.IntakeSubmissionRepository;
-import com.***REMOVED***.***REMOVED***solutions.repository.LeadRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeSubmissionService;
-import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
-import com.***REMOVED***.***REMOVED***solutions.handler.AuthenticatedWebSocketHandler;
+import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.repository.IntakeSubmissionRepository;
+import com.bostoneo.bostoneosolutions.repository.LeadRepository;
+import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.PaymentTransactionDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.PaymentTransaction;
+import com.bostoneo.bostoneosolutions.dto.PaymentTransactionDTO;
+import com.bostoneo.bostoneosolutions.model.PaymentTransaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

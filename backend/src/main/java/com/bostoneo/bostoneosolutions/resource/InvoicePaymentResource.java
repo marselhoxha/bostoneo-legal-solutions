@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoicePaymentDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.InvoicePaymentService;
+import com.bostoneo.bostoneosolutions.dto.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.InvoicePaymentDTO;
+import com.bostoneo.bostoneosolutions.service.InvoicePaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

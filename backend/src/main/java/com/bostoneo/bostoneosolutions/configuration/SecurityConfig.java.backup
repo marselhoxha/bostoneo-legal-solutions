@@ -1,9 +1,9 @@
-package com.***REMOVED***.***REMOVED***solutions.configuration;
+package com.bostoneo.bostoneosolutions.configuration;
 
-import com.***REMOVED***.***REMOVED***solutions.filter.CustomAuthorizationFilter;
-import com.***REMOVED***.***REMOVED***solutions.handler.CustomAccessDeniedHandler;
-import com.***REMOVED***.***REMOVED***solutions.handler.CustomAuthenticationEntryPoint;
-import com.***REMOVED***.***REMOVED***solutions.security.CustomPermissionEvaluator;
+import com.bostoneo.bostoneosolutions.filter.CustomAuthorizationFilter;
+import com.bostoneo.bostoneosolutions.handler.CustomAccessDeniedHandler;
+import com.bostoneo.bostoneosolutions.handler.CustomAuthenticationEntryPoint;
+import com.bostoneo.bostoneosolutions.security.CustomPermissionEvaluator;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -42,7 +42,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.***REMOVED***.***REMOVED***solutions.constant.Constants.PUBLIC_URLS;
+import static com.bostoneo.bostoneosolutions.constant.Constants.PUBLIC_URLS;
 import static org.springframework.http.HttpMethod.DELETE;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.OPTIONS;

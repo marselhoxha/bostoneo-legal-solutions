@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.model;
+package com.bostoneo.bostoneosolutions.model;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.AssignmentType;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseRoleType;
+import com.bostoneo.bostoneosolutions.enumeration.AssignmentType;
+import com.bostoneo.bostoneosolutions.enumeration.CaseRoleType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;

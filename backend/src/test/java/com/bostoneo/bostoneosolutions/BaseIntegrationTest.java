@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions;
+package com.bostoneo.bostoneosolutions;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

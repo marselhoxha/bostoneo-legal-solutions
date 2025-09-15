@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.handler;
+package com.bostoneo.bostoneosolutions.handler;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

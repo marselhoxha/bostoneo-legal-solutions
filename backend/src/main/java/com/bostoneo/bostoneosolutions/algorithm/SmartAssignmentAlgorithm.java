@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.algorithm;
+package com.bostoneo.bostoneosolutions.algorithm;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentRecommendation;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.bostoneo.bostoneosolutions.dto.AssignmentRecommendation;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.User;
 
 import java.util.List;
 

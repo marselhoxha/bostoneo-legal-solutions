@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.model.FileItem;
-import com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.FileStorageService;
+import com.bostoneo.bostoneosolutions.model.FileItem;
+import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

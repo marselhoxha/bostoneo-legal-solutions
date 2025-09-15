@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.config;
+package com.bostoneo.bostoneosolutions.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;

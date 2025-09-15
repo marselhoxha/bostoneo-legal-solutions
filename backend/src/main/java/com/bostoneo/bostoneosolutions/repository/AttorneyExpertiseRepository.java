@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.ExpertiseArea;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.ProficiencyLevel;
-import com.***REMOVED***.***REMOVED***solutions.model.AttorneyExpertise;
+import com.bostoneo.bostoneosolutions.enumeration.ExpertiseArea;
+import com.bostoneo.bostoneosolutions.enumeration.ProficiencyLevel;
+import com.bostoneo.bostoneosolutions.model.AttorneyExpertise;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

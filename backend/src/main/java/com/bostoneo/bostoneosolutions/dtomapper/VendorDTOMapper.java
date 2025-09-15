@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.VendorDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.Vendor;
+import com.bostoneo.bostoneosolutions.dto.VendorDTO;
+import com.bostoneo.bostoneosolutions.model.Vendor;
 import org.springframework.beans.BeanUtils;
 
 public class VendorDTOMapper {

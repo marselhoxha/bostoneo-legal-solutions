@@ -1,10 +1,10 @@
-package com.***REMOVED***.***REMOVED***solutions.rowmapper;
+package com.bostoneo.bostoneosolutions.rowmapper;
 
-import com.***REMOVED***.***REMOVED***solutions.model.CaseRoleAssignment;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
-import com.***REMOVED***.***REMOVED***solutions.model.User;
-import com.***REMOVED***.***REMOVED***solutions.repository.RoleRepository;
+import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 

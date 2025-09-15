@@ -1,11 +1,11 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.IntakeFormDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.IntakeFormDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeForm;
-import com.***REMOVED***.***REMOVED***solutions.model.IntakeSubmission;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeFormService;
-import com.***REMOVED***.***REMOVED***solutions.service.IntakeSubmissionService;
+import com.bostoneo.bostoneosolutions.dto.IntakeFormDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.IntakeFormDTOMapper;
+import com.bostoneo.bostoneosolutions.model.IntakeForm;
+import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.service.IntakeFormService;
+import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

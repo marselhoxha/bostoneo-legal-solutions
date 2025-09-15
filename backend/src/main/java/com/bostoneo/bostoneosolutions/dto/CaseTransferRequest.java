@@ -1,6 +1,6 @@
-package com.***REMOVED***.***REMOVED***solutions.dto;
+package com.bostoneo.bostoneosolutions.dto;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.TransferUrgency;
+import com.bostoneo.bostoneosolutions.enumeration.TransferUrgency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

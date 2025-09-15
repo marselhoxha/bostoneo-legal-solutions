@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.handler;
+package com.bostoneo.bostoneosolutions.handler;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.***REMOVED***.***REMOVED***solutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

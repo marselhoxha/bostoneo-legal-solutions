@@ -1,12 +1,12 @@
-package com.***REMOVED***.***REMOVED***solutions.algorithm.implementation;
+package com.bostoneo.bostoneosolutions.algorithm.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.algorithm.SmartAssignmentAlgorithm;
-import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentRecommendation;
-import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentRecommendation.RecommendedUser;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CasePriority;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.ExpertiseArea;
-import com.***REMOVED***.***REMOVED***solutions.model.*;
-import com.***REMOVED***.***REMOVED***solutions.repository.*;
+import com.bostoneo.bostoneosolutions.algorithm.SmartAssignmentAlgorithm;
+import com.bostoneo.bostoneosolutions.dto.AssignmentRecommendation;
+import com.bostoneo.bostoneosolutions.dto.AssignmentRecommendation.RecommendedUser;
+import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.ExpertiseArea;
+import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

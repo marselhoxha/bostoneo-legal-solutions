@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.util;
+package com.bostoneo.bostoneosolutions.util;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

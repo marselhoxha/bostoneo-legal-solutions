@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.dtomapper;
+package com.bostoneo.bostoneosolutions.dtomapper;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.ConflictCheckDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.ConflictMatchDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.ConflictCheck;
+import com.bostoneo.bostoneosolutions.dto.ConflictCheckDTO;
+import com.bostoneo.bostoneosolutions.dto.ConflictMatchDTO;
+import com.bostoneo.bostoneosolutions.model.ConflictCheck;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

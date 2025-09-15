@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
-import com.***REMOVED***.***REMOVED***solutions.model.DocumentVersion;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.DocumentVersionDTO;
+import com.bostoneo.bostoneosolutions.model.DocumentVersion;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

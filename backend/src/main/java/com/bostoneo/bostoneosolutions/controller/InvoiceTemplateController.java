@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.controller;
+package com.bostoneo.bostoneosolutions.controller;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CustomHttpResponse;
-import com.***REMOVED***.***REMOVED***solutions.dto.InvoiceTemplateDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.InvoiceTemplateService;
+import com.bostoneo.bostoneosolutions.dto.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.InvoiceTemplateDTO;
+import com.bostoneo.bostoneosolutions.service.InvoiceTemplateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

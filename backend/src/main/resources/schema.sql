@@ -1,8 +1,8 @@
-CREATE SCHEMA IF NOT EXISTS ***REMOVED***solutions;
+CREATE SCHEMA IF NOT EXISTS bostoneosolutions;
 
 SET NAMES 'UTF8MB4';
 
-USE ***REMOVED***solutions;
+USE bostoneosolutions;
 
 DROP TABLE IF EXISTS TwoFactorVerifications;
 DROP TABLE IF EXISTS ResetPasswordVerifications;

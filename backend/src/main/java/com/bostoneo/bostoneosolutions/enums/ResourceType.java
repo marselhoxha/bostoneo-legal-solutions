@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.enums;
+package com.bostoneo.bostoneosolutions.enums;
 
 /**
  * Represents the different resource types in the system

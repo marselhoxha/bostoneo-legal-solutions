@@ -1,8 +1,8 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.model.PermissionAuditLog;
-import com.***REMOVED***.***REMOVED***solutions.repository.PermissionAuditRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.AuditService;
+import com.bostoneo.bostoneosolutions.model.PermissionAuditLog;
+import com.bostoneo.bostoneosolutions.repository.PermissionAuditRepository;
+import com.bostoneo.bostoneosolutions.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -25,9 +25,9 @@ public class AuditServiceImpl implements AuditService {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             Long performedBy = 1L; // Default to system user if can't determine
             
-            if (auth != null && auth.getPrincipal() instanceof com.***REMOVED***.***REMOVED***solutions.dto.UserDTO) {
-                com.***REMOVED***.***REMOVED***solutions.dto.UserDTO user = 
-                    (com.***REMOVED***.***REMOVED***solutions.dto.UserDTO) auth.getPrincipal();
+            if (auth != null && auth.getPrincipal() instanceof com.bostoneo.bostoneosolutions.dto.UserDTO) {
+                com.bostoneo.bostoneosolutions.dto.UserDTO user = 
+                    (com.bostoneo.bostoneosolutions.dto.UserDTO) auth.getPrincipal();
                 performedBy = user.getId();
             }
             

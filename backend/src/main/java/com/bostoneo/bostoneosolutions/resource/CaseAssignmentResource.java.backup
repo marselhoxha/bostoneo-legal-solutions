@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.resource;
+package com.bostoneo.bostoneosolutions.resource;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseAssignmentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseAssignmentRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseTransferRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseTransferRequestDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserWorkloadDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.WorkloadAnalyticsDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentRuleDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.AssignmentHistoryDTO;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
-import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.dto.CaseAssignmentDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseAssignmentRequest;
+import com.bostoneo.bostoneosolutions.dto.CaseTransferRequest;
+import com.bostoneo.bostoneosolutions.dto.CaseTransferRequestDTO;
+import com.bostoneo.bostoneosolutions.dto.UserWorkloadDTO;
+import com.bostoneo.bostoneosolutions.dto.WorkloadAnalyticsDTO;
+import com.bostoneo.bostoneosolutions.dto.AssignmentRuleDTO;
+import com.bostoneo.bostoneosolutions.dto.AssignmentHistoryDTO;
+import com.bostoneo.bostoneosolutions.service.CaseAssignmentService;
+import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

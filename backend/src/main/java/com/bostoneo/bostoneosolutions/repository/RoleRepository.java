@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.model.Permission;
-import com.***REMOVED***.***REMOVED***solutions.model.Role;
+import com.bostoneo.bostoneosolutions.model.Permission;
+import com.bostoneo.bostoneosolutions.model.Role;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -36,7 +36,7 @@ public interface RoleRepository <T extends Role> {
     void setRoleExpiration(Long userId, Long roleId, LocalDateTime expiresAt);
     
     /* Get users by role */
-    java.util.List<com.***REMOVED***.***REMOVED***solutions.model.User> getUsersByRoleId(Long roleId);
+    java.util.List<com.bostoneo.bostoneosolutions.model.User> getUsersByRoleId(Long roleId);
     
     /* Permission Access Controls */
     Set<String> getUserPermissions(Long userId);

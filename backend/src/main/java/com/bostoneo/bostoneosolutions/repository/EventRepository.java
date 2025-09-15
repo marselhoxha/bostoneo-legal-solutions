@@ -1,7 +1,7 @@
-package com.***REMOVED***.***REMOVED***solutions.repository;
+package com.bostoneo.bostoneosolutions.repository;
 
-import com.***REMOVED***.***REMOVED***solutions.enumeration.EventType;
-import com.***REMOVED***.***REMOVED***solutions.model.UserEvent;
+import com.bostoneo.bostoneosolutions.enumeration.EventType;
+import com.bostoneo.bostoneosolutions.model.UserEvent;
 
 import java.util.Collection;
 

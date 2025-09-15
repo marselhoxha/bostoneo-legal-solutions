@@ -1,13 +1,13 @@
-package com.***REMOVED***.***REMOVED***solutions.service;
+package com.bostoneo.bostoneosolutions.service;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseDocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.DocumentVersionDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.LegalCaseDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
-import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseDocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.DocumentDTO;
+import com.bostoneo.bostoneosolutions.dto.DocumentVersionDTO;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;

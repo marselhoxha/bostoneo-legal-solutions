@@ -1,15 +1,15 @@
-package com.***REMOVED***.***REMOVED***solutions.service.implementation;
+package com.bostoneo.bostoneosolutions.service.implementation;
 
-import com.***REMOVED***.***REMOVED***solutions.dto.CaseActivityDTO;
-import com.***REMOVED***.***REMOVED***solutions.dto.CreateActivityRequest;
-import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
-import com.***REMOVED***.***REMOVED***solutions.dtomapper.CaseActivityDTOMapper;
-import com.***REMOVED***.***REMOVED***solutions.model.AuditLog;
-import com.***REMOVED***.***REMOVED***solutions.model.CaseActivity;
-import com.***REMOVED***.***REMOVED***solutions.repository.CaseActivityRepository;
-import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
-import com.***REMOVED***.***REMOVED***solutions.service.SystemAuditService;
-import com.***REMOVED***.***REMOVED***solutions.service.UserService;
+import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateActivityRequest;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.CaseActivityDTOMapper;
+import com.bostoneo.bostoneosolutions.model.AuditLog;
+import com.bostoneo.bostoneosolutions.model.CaseActivity;
+import com.bostoneo.bostoneosolutions.repository.CaseActivityRepository;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.service.SystemAuditService;
+import com.bostoneo.bostoneosolutions.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

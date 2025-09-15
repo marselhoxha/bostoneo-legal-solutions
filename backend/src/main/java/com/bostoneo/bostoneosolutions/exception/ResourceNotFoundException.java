@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.exception;
+package com.bostoneo.bostoneosolutions.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

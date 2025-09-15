@@ -1,4 +1,4 @@
-package com.***REMOVED***.***REMOVED***solutions.dto.filemanager;
+package com.bostoneo.bostoneosolutions.dto.filemanager;
 
 import lombok.Data;
 import lombok.Builder;
