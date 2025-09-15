@@ -1,7 +1,7 @@
 export interface UserNotification {
   id: string;
   userId: number;
-  type: 'ASSIGNMENT' | 'TASK' | 'DEADLINE' | 'WORKLOAD' | 'SYSTEM' | 'CASE_UPDATE';
+  type: 'ASSIGNMENT' | 'TASK' | 'DEADLINE' | 'WORKLOAD' | 'SYSTEM' | 'CASE_UPDATE' | 'SUBMISSION' | 'STATUS_CHANGE' | 'CONVERSION';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   title: string;
   message: string;

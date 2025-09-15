@@ -28,4 +28,6 @@ public interface EmailService {
     default void sendReminderEmail(String to, String subject, String body) {
         sendEmail(to, subject, body);
     }
+    
+    void sendNotificationEmail(String to, String firstName, String title, String message, String notificationType);
 }

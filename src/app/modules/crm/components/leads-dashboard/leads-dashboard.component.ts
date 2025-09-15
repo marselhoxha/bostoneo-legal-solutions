@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { CrmService } from '../../services/crm.service';
 import { UserService } from '../../../../service/user.service';
 import { User } from '../../../../interface/user';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
+import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
 
@@ -160,7 +162,9 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     private userService: UserService,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private notificationManager: NotificationManagerService,
+    private notificationTrigger: NotificationTriggerService
   ) {
     this.initializeForms();
   }
@@ -255,6 +259,54 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   getFormattedNextStatuses(currentStatus: string): string {
     const nextStatuses = this.getValidNextStatuses(currentStatus);
     return nextStatuses.map(status => this.getStatusDisplayName(status)).join(' • ');
+  }
+
+  /**
+   * Send CRM notification using push notification service (same as task assignments)
+   */
+  private sendCrmNotification(title: string, message: string, type: 'success' | 'error' | 'info' = 'info', crmInfo?: any): void {
+    console.log('🔔 CRM NOTIFICATION:', { title, message, type, crmInfo });
+    
+    // Determine notification type and icon
+    let notificationType = 'crm';
+    let iconClass = 'bx bx-bell';
+    
+    switch (type) {
+      case 'success':
+        iconClass = 'bx bx-check-circle';
+        break;
+      case 'error':
+        iconClass = 'bx bx-error-circle';
+        break;
+      case 'info':
+        iconClass = 'bx bx-info-circle';
+        break;
+    }
+    
+    const notificationPayload = {
+      notification: {
+        title: title,
+        body: message
+      },
+      data: {
+        type: notificationType,
+        url: crmInfo?.leadId ? `/crm/leads` : window.location.pathname,
+        leadId: crmInfo?.leadId || null,
+        priority: type === 'error' ? 'high' : 'normal',
+        timestamp: new Date().toISOString(),
+        crmDetails: crmInfo ? {
+          leadId: crmInfo.leadId,
+          leadName: crmInfo.leadName,
+          assignedTo: crmInfo.assignedTo,
+          assignedToId: crmInfo.assignedToId,
+          action: crmInfo.action || 'CRM_EVENT',
+          status: crmInfo.status,
+          previousStatus: crmInfo.previousStatus
+        } : null
+      }
+    };
+    
+    console.log('🔔 Sending CRM notification via NotificationManager:', notificationPayload);
   }
 
   initializeForms() {
@@ -1135,6 +1187,9 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       
       this.crmService.updateLead(this.selectedLead.id, updateData).subscribe({
         next: (response) => {
+          // Lead status change notifications are handled by the backend
+          // Backend LeadServiceImpl will send proper notifications with correct type
+          
           Swal.fire({
             title: 'Success!',
             text: 'Lead updated successfully',
@@ -1213,6 +1268,20 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
           
           this.crmService.assignLead(this.selectedLead.id, assignedTo, notes).subscribe({
             next: (response) => {
+              // Send push notification for lead assignment
+              this.sendCrmNotification(
+                'Lead Assigned',
+                `Lead "${this.selectedLead.firstName} ${this.selectedLead.lastName}" assigned to ${selectedAttorney?.firstName} ${selectedAttorney?.lastName}`,
+                'success',
+                {
+                  leadId: this.selectedLead.id,
+                  leadName: `${this.selectedLead.firstName} ${this.selectedLead.lastName}`,
+                  assignedTo: `${selectedAttorney?.firstName} ${selectedAttorney?.lastName}`,
+                  assignedToId: assignedTo,
+                  action: 'LEAD_ASSIGNED'
+                }
+              );
+              
               Swal.fire({
                 title: 'Success!',
                 text: `Lead assigned to ${selectedAttorney?.firstName} ${selectedAttorney?.lastName} successfully`,

@@ -13,7 +13,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Controller for handling notification tokens and sending push notifications
@@ -127,19 +131,58 @@ public class NotificationController {
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         log.info("Getting notifications for user: {}", userId);
         
-        // For now, return empty list - will be implemented with proper UserNotification entity
-        List<Object> notifications = new ArrayList<>();
-        
-        return ResponseEntity.ok(
-            HttpResponse.builder()
-                .timeStamp(LocalDateTime.now().toString())
-                .statusCode(HttpStatus.OK.value())
-                .status(HttpStatus.OK)
-                .reason("Notifications retrieved successfully")
-                .message("Retrieved " + notifications.size() + " notifications")
-                .data(Map.of("notifications", notifications, "totalElements", 0, "totalPages", 0))
-                .build()
-        );
+        try {
+            // Create pageable request
+            Pageable pageable = PageRequest.of(page, size);
+            
+            // Get notifications from service
+            Page<Object> notificationPage = notificationService.getUserNotifications(userId, pageable)
+                .map(notification -> {
+                    Map<String, Object> notificationMap = new HashMap<>();
+                    notificationMap.put("id", notification.getId());
+                    notificationMap.put("title", notification.getTitle());
+                    notificationMap.put("message", notification.getMessage());
+                    notificationMap.put("type", notification.getType());
+                    notificationMap.put("priority", notification.getPriority());
+                    notificationMap.put("read", notification.getRead());
+                    notificationMap.put("createdAt", notification.getCreatedAt());
+                    notificationMap.put("readAt", notification.getReadAt());
+                    notificationMap.put("triggeredByUserId", notification.getTriggeredByUserId());
+                    notificationMap.put("triggeredByName", notification.getTriggeredByName());
+                    notificationMap.put("entityId", notification.getEntityId());
+                    notificationMap.put("entityType", notification.getEntityType());
+                    notificationMap.put("url", notification.getUrl());
+                    return notificationMap;
+                });
+            
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("Notifications retrieved successfully")
+                    .message("Retrieved " + notificationPage.getContent().size() + " notifications")
+                    .data(Map.of(
+                        "notifications", notificationPage.getContent(), 
+                        "totalElements", notificationPage.getTotalElements(), 
+                        "totalPages", notificationPage.getTotalPages(),
+                        "currentPage", page,
+                        "pageSize", size
+                    ))
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error getting notifications for user {}", userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .reason("Error retrieving notifications")
+                    .message("Error: " + e.getMessage())
+                    .build()
+            );
+        }
     }
     
     /**
@@ -212,28 +255,33 @@ public class NotificationController {
     public ResponseEntity<HttpResponse> sendNotification(@RequestBody Map<String, Object> notificationData) {
         log.info("Sending notification: {}", notificationData);
         
-        // Create mock notification response - will be implemented with proper UserNotification entity
-        Map<String, Object> notification = Map.of(
-            "id", "notification-" + System.currentTimeMillis(),
-            "userId", notificationData.get("userId"),
-            "type", notificationData.getOrDefault("type", "SYSTEM"),
-            "priority", notificationData.getOrDefault("priority", "MEDIUM"),
-            "title", notificationData.get("title"),
-            "message", notificationData.get("message"),
-            "read", false,
-            "createdAt", LocalDateTime.now()
-        );
-        
-        return ResponseEntity.ok(
-            HttpResponse.builder()
-                .timeStamp(LocalDateTime.now().toString())
-                .statusCode(HttpStatus.OK.value())
-                .status(HttpStatus.OK)
-                .reason("Notification sent successfully")
-                .message("Notification has been sent")
-                .data(Map.of("notification", notification))
-                .build()
-        );
+        try {
+            // Create and persist the in-app notification ONLY
+            // Email notifications should be triggered by backend services, not frontend
+            var savedNotification = notificationService.createUserNotification(notificationData);
+            
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("Notification sent successfully")
+                    .message("Notification has been sent and persisted")
+                    .data(Map.of("notification", savedNotification))
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error sending notification", e);
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.BAD_REQUEST.value())
+                    .status(HttpStatus.BAD_REQUEST)
+                    .reason("Failed to send notification")
+                    .message("Error: " + e.getMessage())
+                    .build()
+            );
+        }
     }
     
     /**
@@ -264,18 +312,33 @@ public class NotificationController {
      */
     @PutMapping("/{notificationId}/read")
     @PreAuthorize("hasRole('ROLE_USER')")
-    public ResponseEntity<HttpResponse> markAsRead(@PathVariable String notificationId) {
+    public ResponseEntity<HttpResponse> markAsRead(@PathVariable Long notificationId) {
         log.info("Marking notification as read: {}", notificationId);
         
-        return ResponseEntity.ok(
-            HttpResponse.builder()
-                .timeStamp(LocalDateTime.now().toString())
-                .statusCode(HttpStatus.OK.value())
-                .status(HttpStatus.OK)
-                .reason("Notification marked as read")
-                .message("Notification status updated")
-                .build()
-        );
+        try {
+            notificationService.markNotificationAsRead(notificationId);
+            
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("Notification marked as read")
+                    .message("Notification status updated")
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error marking notification {} as read", notificationId, e);
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.BAD_REQUEST.value())
+                    .status(HttpStatus.BAD_REQUEST)
+                    .reason("Failed to mark notification as read")
+                    .message("Error: " + e.getMessage())
+                    .build()
+            );
+        }
     }
     
     /**

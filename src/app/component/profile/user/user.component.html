@@ -385,6 +385,21 @@
                         </ng-template>
                         
                      </li>
+
+                     <!-- Notification Preferences -->
+                     <li [ngbNavItem]="6" class="nav-item">
+                        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                           <i class="ri-notification-3-line"></i> Notification Preferences
+                        </a>
+                        <ng-template ngbNavContent>
+                           <div class="notification-preferences-container">
+                              <app-notification-preferences
+                                 [userId]="state?.appData?.data?.user?.id"
+                                 [userRole]="state?.appData?.data?.user?.roleName">
+                              </app-notification-preferences>
+                           </div>
+                        </ng-template>
+                     </li>
                   </ul>
                </div>
                <div class="card-body p-4">

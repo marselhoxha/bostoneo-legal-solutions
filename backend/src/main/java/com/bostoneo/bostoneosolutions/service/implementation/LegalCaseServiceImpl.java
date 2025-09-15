@@ -23,11 +23,14 @@ import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.ClientRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
 import com.***REMOVED***.***REMOVED***solutions.service.LegalCaseService;
 import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
 import com.***REMOVED***.***REMOVED***solutions.service.UserService;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseActivityService;
 import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
 import com.***REMOVED***.***REMOVED***solutions.util.RoleUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +70,8 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final CaseActivityService caseActivityService;
     private final RoleService roleService;
     private final ClientRepository clientRepository;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
 
     @Override
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
@@ -79,6 +84,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     public LegalCaseDTO updateCase(Long id, LegalCaseDTO caseDTO) {
         LegalCase existingCase = legalCaseRepository.findById(id)
             .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
+        
+        // Capture old values for notification comparison
+        String oldStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
+        String oldPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
         
         // Update fields from DTO
         existingCase.setTitle(caseDTO.getTitle());
@@ -108,6 +117,87 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         existingCase.setPaymentStatus(caseDTO.getPaymentStatus());
         
         existingCase = legalCaseRepository.save(existingCase);
+        
+        // Check for status changes and trigger notifications
+        String newStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
+        String newPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
+        
+        // Trigger notifications for case status changes
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            try {
+                String title = "Case Status Changed";
+                String message = String.format("Case \"%s\" status changed from %s to %s", 
+                    existingCase.getTitle(), oldStatus, newStatus);
+                
+                // Get all users assigned to this case
+                Set<Long> notificationUserIds = new HashSet<>();
+                try {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(existingCase.getId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                            log.info("📧 Adding case assignee to status change notification: {} {} ({})", 
+                                assignment.getAssignedTo().getFirstName(), 
+                                assignment.getAssignedTo().getLastName(),
+                                assignment.getRoleType());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to get case assignments for notifications: {}", e.getMessage());
+                }
+                
+                // Send notification to each assigned user
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, "CASE_STATUS_CHANGED", 
+                        Map.of("caseId", existingCase.getId(), "oldStatus", oldStatus, "newStatus", newStatus));
+                }
+                
+                log.info("Case status change notifications sent to {} users for case ID: {}, status: {} -> {}", 
+                    notificationUserIds.size(), 
+                    existingCase.getId(), oldStatus, newStatus);
+            } catch (Exception e) {
+                log.error("Failed to send case status change notification for case ID: {}", existingCase.getId(), e);
+            }
+        }
+        
+        // Trigger notifications for case priority changes
+        if (oldPriority != null && newPriority != null && !oldPriority.equals(newPriority)) {
+            try {
+                String title = "Case Priority Changed";
+                String message = String.format("Case \"%s\" priority changed from %s to %s", 
+                    existingCase.getTitle(), oldPriority, newPriority);
+                
+                // Get all users assigned to this case
+                Set<Long> notificationUserIds = new HashSet<>();
+                try {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(existingCase.getId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                            log.info("📧 Adding case assignee to priority change notification: {} {} ({})", 
+                                assignment.getAssignedTo().getFirstName(), 
+                                assignment.getAssignedTo().getLastName(),
+                                assignment.getRoleType());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to get case assignments for notifications: {}", e.getMessage());
+                }
+                
+                // Send notification to each assigned user
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, "CASE_PRIORITY_CHANGED", 
+                        Map.of("caseId", existingCase.getId(), "oldPriority", oldPriority, "newPriority", newPriority));
+                }
+                
+                log.info("Case priority change notifications sent to {} users for case ID: {}, priority: {} -> {}", 
+                    notificationUserIds.size(), 
+                    existingCase.getId(), oldPriority, newPriority);
+            } catch (Exception e) {
+                log.error("Failed to send case priority change notification for case ID: {}", existingCase.getId(), e);
+            }
+        }
+        
         return legalCaseDTOMapper.toDTO(existingCase);
     }
 
@@ -636,7 +726,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public DocumentVersionDTO uploadNewDocumentVersion(Long caseId, Long documentId, 
-                                                    MultipartFile file, String notes) {
+                                                    MultipartFile file, String notes, Long uploadedBy) {
         // Check if case exists
         legalCaseRepository.findById(caseId)
             .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
@@ -689,11 +779,52 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             version.setFileType(file.getContentType());
             version.setFileSize(file.getSize());
             
-            // If user context is available
-            // version.setUploadedBy(userId);
+            // Set uploaded by user
+            version.setUploadedBy(uploadedBy);
             
             // Save version metadata
             DocumentVersion savedVersion = documentVersionRepository.save(version);
+            
+            // Send notifications using DocumentVersionService logic (but manually here to avoid circular call)
+            // This is a simplified version - we should call documentVersionService instead but avoiding complexity for now
+            try {
+                String title = "Document Version Updated";
+                String message = String.format("New version (v%d) of document \"%s\" has been uploaded", 
+                    nextVersion, document.getTitle() != null ? document.getTitle() : document.getFileName());
+                
+                Set<Long> notificationUserIds = new HashSet<>();
+                
+                // Get users assigned to the case if this document is related to a case
+                if (document.getCaseId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(document.getCaseId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                            log.info("📧 Adding case assignee to document version notification: {}", assignment.getAssignedTo().getId());
+                        }
+                    }
+                }
+                
+                // Always add the user who uploaded the new version
+                if (uploadedBy != null) {
+                    notificationUserIds.add(uploadedBy);
+                    log.info("📧 Adding user who uploaded version to document version notification: {}", uploadedBy);
+                }
+                
+                // Send notifications to all collected users
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, 
+                        "DOCUMENT_VERSION_UPDATED", Map.of("documentId", documentId,
+                                                           "versionId", savedVersion.getId(),
+                                                           "versionNumber", nextVersion,
+                                                           "fileName", savedVersion.getFileName(),
+                                                           "caseId", document.getCaseId() != null ? document.getCaseId() : 0));
+                }
+                
+                log.info("📧 Document version update notifications sent to {} users", notificationUserIds.size());
+            } catch (Exception e) {
+                log.error("Failed to send document version update notifications: {}", e.getMessage());
+            }
             log.info("Document version metadata saved: {}", savedVersion);
             
             // Convert to DTO

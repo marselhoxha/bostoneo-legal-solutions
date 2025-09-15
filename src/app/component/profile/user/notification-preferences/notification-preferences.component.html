@@ -1,0 +1,229 @@
+<div class="notification-preferences">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading notification preferences...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!isLoading" class="notification-preferences-content">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h5 class="mb-1">Notification Preferences</h5>
+        <p class="text-muted mb-0">Customize which notifications you receive and how you receive them</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button 
+          type="button" 
+          class="btn btn-outline-secondary btn-sm"
+          (click)="resetToDefaults()"
+          [disabled]="isSaving">
+          <i class="ri-restart-line me-1"></i>
+          Reset to Defaults
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary btn-sm"
+          (click)="savePreferences()"
+          [disabled]="isSaving">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+          <i *ngIf="!isSaving" class="ri-save-line me-1"></i>
+          {{ isSaving ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Master Controls -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="ri-settings-3-line me-2"></i>
+          Quick Controls
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-sm-6 col-lg-4">
+            <div class="form-check form-switch">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="allNotifications"
+                [checked]="allNotificationsEnabled"
+                (change)="toggleAllNotifications()">
+              <label class="form-check-label" for="allNotifications">
+                <strong>All Notifications</strong>
+                <small class="d-block text-muted">Enable/disable all notifications</small>
+              </label>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <div class="form-check form-switch">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="allEmail"
+                [checked]="allEmailEnabled"
+                [disabled]="!allNotificationsEnabled"
+                (change)="toggleAllEmail()">
+              <label class="form-check-label" for="allEmail">
+                <strong>Email Notifications</strong>
+                <small class="d-block text-muted">Receive via email</small>
+              </label>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <div class="form-check form-switch">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="allInApp"
+                [checked]="allInAppEnabled"
+                [disabled]="!allNotificationsEnabled"
+                (change)="toggleAllInApp()">
+              <label class="form-check-label" for="allInApp">
+                <strong>In-App Notifications</strong>
+                <small class="d-block text-muted">Show in notification center</small>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Categories -->
+    <div class="notification-categories">
+      <div 
+        *ngFor="let category of categories; trackBy: trackByCategory" 
+        class="card mb-3">
+        
+        <!-- Category Header -->
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i [class]="category.icon + ' me-2 text-primary'"></i>
+              <div>
+                <h6 class="mb-0">{{ category.name }}</h6>
+                <small class="text-muted">{{ category.description }}</small>
+              </div>
+            </div>
+            <div class="form-check form-switch">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                [id]="'category-' + category.name"
+                [checked]="areAllCategoryEventsEnabled(category)"
+                [indeterminate]="isCategoryEnabled(category) && !areAllCategoryEventsEnabled(category)"
+                (change)="toggleCategoryEnabled(category)">
+              <label class="form-check-label" [for]="'category-' + category.name">
+                Enable All
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Events -->
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 40%">Notification Type</th>
+                  <th style="width: 20%" class="text-center">Priority</th>
+                  <th style="width: 13.33%" class="text-center">
+                    <i class="ri-notification-line" title="Enabled"></i>
+                  </th>
+                  <th style="width: 13.33%" class="text-center">
+                    <i class="ri-mail-line" title="Email"></i>
+                  </th>
+                  <th style="width: 13.33%" class="text-center">
+                    <i class="ri-apps-line" title="In-App"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let event of category.events; trackBy: trackByEvent">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div>
+                        <div class="fw-medium">{{ getEventDisplayName(event.eventType) }}</div>
+                        <small class="text-muted">{{ event.eventType }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <select 
+                      class="form-select form-select-sm"
+                      [value]="event.priority"
+                      (change)="updatePreference(event, 'priority', $event.target.value)"
+                      [disabled]="!event.enabled">
+                      <option value="LOW">Low</option>
+                      <option value="NORMAL">Normal</option>
+                      <option value="HIGH">High</option>
+                      <option value="CRITICAL">Critical</option>
+                    </select>
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                      <input 
+                        class="form-check-input" 
+                        type="checkbox"
+                        [id]="'enabled-' + event.eventType"
+                        [checked]="event.enabled"
+                        (change)="updatePreference(event, 'enabled', $event.target.checked)">
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                      <input 
+                        class="form-check-input" 
+                        type="checkbox"
+                        [id]="'email-' + event.eventType"
+                        [checked]="event.emailEnabled"
+                        [disabled]="!event.enabled"
+                        (change)="updatePreference(event, 'emailEnabled', $event.target.checked)">
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                      <input 
+                        class="form-check-input" 
+                        type="checkbox"
+                        [id]="'inapp-' + event.eventType"
+                        [checked]="event.inAppEnabled"
+                        [disabled]="!event.enabled"
+                        (change)="updatePreference(event, 'inAppEnabled', $event.target.checked)">
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Text -->
+    <div class="alert alert-info mt-4">
+      <div class="d-flex">
+        <div class="flex-shrink-0">
+          <i class="ri-information-line fs-16"></i>
+        </div>
+        <div class="flex-grow-1 ms-2">
+          <h6 class="alert-heading">About Notification Preferences</h6>
+          <p class="mb-0">
+            <strong>Enabled:</strong> Whether you receive this type of notification at all.<br>
+            <strong>Email:</strong> Receive notifications via email to your registered address.<br>
+            <strong>In-App:</strong> Show notifications in the application notification center.<br>
+            <strong>Priority:</strong> Determines urgency and delivery method for the notification.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

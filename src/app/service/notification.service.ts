@@ -353,6 +353,172 @@ export class NotificationService {
         });
     }
 
+    // ==================== CRM Notification Methods ====================
+    
+    /**
+     * Notify user about new intake form submission
+     */
+    notifyNewSubmission(userId: number, submissionId: number, practiceArea: string, urgency: string): Observable<UserNotification> {
+        const priority = urgency === 'URGENT' ? 'URGENT' : urgency === 'HIGH' ? 'HIGH' : 'MEDIUM';
+        
+        return this.sendToUser({
+            userId,
+            type: 'SUBMISSION',
+            priority,
+            title: 'New Intake Submission',
+            message: `New ${practiceArea} intake submission received${urgency === 'URGENT' || urgency === 'HIGH' ? ' - ' + urgency + ' priority' : ''}`,
+            data: { submissionId, practiceArea, urgency },
+            actions: [
+                {
+                    label: 'Review Submission',
+                    action: 'NAVIGATE',
+                    target: `/crm/intake-submissions`,
+                    style: priority === 'URGENT' ? 'danger' : 'primary'
+                },
+                {
+                    label: 'Dismiss',
+                    action: 'DISMISS',
+                    style: 'secondary'
+                }
+            ],
+            relatedEntityId: submissionId,
+            relatedEntityType: 'submission'
+        });
+    }
+
+    /**
+     * Notify user about intake submission assignment
+     */
+    notifySubmissionAssignment(userId: number, submissionId: number, practiceArea: string, urgency: string): Observable<UserNotification> {
+        const priority = urgency === 'URGENT' ? 'URGENT' : urgency === 'HIGH' ? 'HIGH' : 'MEDIUM';
+        
+        return this.sendToUser({
+            userId,
+            type: 'ASSIGNMENT',
+            priority,
+            title: 'Submission Assigned',
+            message: `${practiceArea} intake submission assigned to you${urgency === 'URGENT' || urgency === 'HIGH' ? ' - ' + urgency + ' priority' : ''}`,
+            data: { submissionId, practiceArea, urgency },
+            actions: [
+                {
+                    label: 'Review Submission',
+                    action: 'NAVIGATE',
+                    target: `/crm/intake-submissions`,
+                    style: priority === 'URGENT' ? 'danger' : 'primary'
+                }
+            ],
+            relatedEntityId: submissionId,
+            relatedEntityType: 'submission'
+        });
+    }
+
+    /**
+     * Notify user about submission status change
+     */
+    notifySubmissionStatusChange(userId: number, submissionId: number, oldStatus: string, newStatus: string, practiceArea: string): Observable<UserNotification> {
+        return this.sendToUser({
+            userId,
+            type: 'STATUS_CHANGE',
+            priority: 'MEDIUM',
+            title: 'Submission Status Updated',
+            message: `${practiceArea} submission status changed from ${oldStatus} to ${newStatus}`,
+            data: { submissionId, oldStatus, newStatus, practiceArea },
+            actions: [
+                {
+                    label: 'View Submission',
+                    action: 'NAVIGATE',
+                    target: `/crm/intake-submissions`,
+                    style: 'primary'
+                }
+            ],
+            relatedEntityId: submissionId,
+            relatedEntityType: 'submission'
+        });
+    }
+
+    /**
+     * Notify user about submission to lead conversion
+     */
+    notifyLeadConversion(userId: number, submissionId: number, leadId: number, practiceArea: string): Observable<UserNotification> {
+        return this.sendToUser({
+            userId,
+            type: 'CONVERSION',
+            priority: 'HIGH',
+            title: 'Submission Converted to Lead',
+            message: `${practiceArea} submission successfully converted to lead`,
+            data: { submissionId, leadId, practiceArea },
+            actions: [
+                {
+                    label: 'View Lead',
+                    action: 'NAVIGATE',
+                    target: `/crm/leads-dashboard`,
+                    style: 'success'
+                },
+                {
+                    label: 'View Submission',
+                    action: 'NAVIGATE', 
+                    target: `/crm/intake-submissions`,
+                    style: 'primary'
+                }
+            ],
+            relatedEntityId: leadId,
+            relatedEntityType: 'lead'
+        });
+    }
+
+    /**
+     * Notify user about lead assignment
+     */
+    notifyLeadAssignment(userId: number, leadId: number, leadName: string, practiceArea: string): Observable<UserNotification> {
+        return this.sendToUser({
+            userId,
+            type: 'ASSIGNMENT',
+            priority: 'HIGH',
+            title: 'New Lead Assigned',
+            message: `${practiceArea} lead "${leadName}" has been assigned to you`,
+            data: { leadId, leadName, practiceArea },
+            actions: [
+                {
+                    label: 'View Lead',
+                    action: 'NAVIGATE',
+                    target: `/crm/leads-dashboard`,
+                    style: 'primary'
+                },
+                {
+                    label: 'Dismiss',
+                    action: 'DISMISS',
+                    style: 'secondary'
+                }
+            ],
+            relatedEntityId: leadId,
+            relatedEntityType: 'lead'
+        });
+    }
+
+    /**
+     * Notify user about lead status change
+     */
+    notifyLeadStatusChange(userId: number, leadId: number, oldStatus: string, newStatus: string, leadName: string): Observable<UserNotification> {
+        return this.sendToUser({
+            userId,
+            type: 'STATUS_CHANGE',
+            priority: 'MEDIUM',
+            title: 'Lead Status Updated',
+            message: `Lead "${leadName}" status changed from ${oldStatus} to ${newStatus}`,
+            data: { leadId, oldStatus, newStatus, leadName },
+            actions: [
+                {
+                    label: 'View Lead',
+                    action: 'NAVIGATE',
+                    target: `/crm/leads-dashboard`,
+                    style: 'primary'
+                }
+            ],
+            relatedEntityId: leadId,
+            relatedEntityType: 'lead'
+        });
+    }
+
     // ==================== Private Helper Methods ====================
     
     private loadUserNotifications(): void {
@@ -451,7 +617,10 @@ export class NotificationService {
                 DEADLINE: { enabled: true, channels: ['inApp', 'email'], threshold: 'HIGH' },
                 WORKLOAD: { enabled: true, channels: ['inApp'], threshold: 'HIGH' },
                 SYSTEM: { enabled: true, channels: ['inApp'], threshold: 'LOW' },
-                CASE_UPDATE: { enabled: true, channels: ['inApp'], threshold: 'MEDIUM' }
+                CASE_UPDATE: { enabled: true, channels: ['inApp'], threshold: 'MEDIUM' },
+                SUBMISSION: { enabled: true, channels: ['inApp', 'email'], threshold: 'HIGH' },
+                STATUS_CHANGE: { enabled: true, channels: ['inApp'], threshold: 'MEDIUM' },
+                CONVERSION: { enabled: true, channels: ['inApp', 'email'], threshold: 'HIGH' }
             }
         };
     }

@@ -40,6 +40,43 @@ export class UserService {
     this.userDataSubject.next(null);
   }
 
+  /**
+   * Get current user synchronously (for notification context)
+   */
+  getCurrentUser(): User | null {
+    return this.currentUser;
+  }
+
+  /**
+   * Get current user ID synchronously
+   */
+  getCurrentUserId(): number | null {
+    return this.currentUser?.id || null;
+  }
+
+  /**
+   * Get current user's full name
+   */
+  getCurrentUserName(): string | null {
+    if (!this.currentUser) return null;
+    return `${this.currentUser.firstName} ${this.currentUser.lastName}`;
+  }
+
+  /**
+   * Check if current user has specific role
+   */
+  hasRole(role: string): boolean {
+    if (!this.currentUser || !this.currentUser.roleName) return false;
+    return this.currentUser.roleName.toUpperCase() === role.toUpperCase();
+  }
+
+  /**
+   * Check if current user is admin
+   */
+  isAdmin(): boolean {
+    return this.hasRole('ADMIN') || this.hasRole('SUPER_ADMIN');
+  }
+
   login$ = (email: string, password: string) => <Observable<CustomHttpResponse<Profile>>>
     this.http.post<CustomHttpResponse<Profile>>(
       `${this.server}/user/login`,
@@ -339,10 +376,6 @@ export class UserService {
     this.router.navigate([route]).then(() => {
       this.refreshUserData();
     });
-  }
-
-  getCurrentUser(): User | null {
-    return this.currentUser;
   }
 
   preloadUserData(): void {

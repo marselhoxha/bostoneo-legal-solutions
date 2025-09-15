@@ -7,6 +7,7 @@ import com.***REMOVED***.***REMOVED***solutions.exception.ApiException;
 import com.***REMOVED***.***REMOVED***solutions.model.*;
 import com.***REMOVED***.***REMOVED***solutions.repository.*;
 import com.***REMOVED***.***REMOVED***solutions.service.CaseAssignmentService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 // import com.***REMOVED***.***REMOVED***solutions.service.UserService; // Temporarily commented
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     private final CaseTaskRepository taskRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
     // private final UserService userService; // Temporarily commented to avoid circular dependency
     private final SmartAssignmentAlgorithm smartAssignmentAlgorithm;
     
@@ -92,6 +94,20 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Record history
         recordAssignmentHistory(assignment, AssignmentAction.CREATED, null, currentUser);
         
+        // Send notification to assigned user
+        try {
+            String title = "Case Assignment";
+            String message = String.format("You have been assigned to case \"%s\" as %s", 
+                legalCase.getTitle(), request.getRoleType().toString());
+            
+            notificationService.sendCrmNotification(title, message, request.getUserId(), 
+                "CASE_ASSIGNMENT_ADDED", Map.of("caseId", request.getCaseId(), "assignmentId", assignment.getId()));
+            
+            log.info("Case assignment notification sent to user: {}", request.getUserId());
+        } catch (Exception e) {
+            log.error("Failed to send case assignment notification: {}", e.getMessage());
+        }
+        
         return mapToDTO(assignment);
     }
     
@@ -136,6 +152,20 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Record history
         recordAssignmentHistory(assignment, AssignmentAction.CREATED, 
             "Auto-assigned by system", systemUser);
+        
+        // Send notification to assigned user
+        try {
+            String title = "Case Auto-Assignment";
+            String message = String.format("You have been auto-assigned to case \"%s\" as %s", 
+                legalCase.getTitle(), CaseRoleType.LEAD_ATTORNEY.toString());
+            
+            notificationService.sendCrmNotification(title, message, recommendedUser.getId(), 
+                "CASE_ASSIGNMENT_ADDED", Map.of("caseId", caseId, "assignmentId", assignment.getId()));
+            
+            log.info("Case auto-assignment notification sent to user: {}", recommendedUser.getId());
+        } catch (Exception e) {
+            log.error("Failed to send case auto-assignment notification: {}", e.getMessage());
+        }
         
         return mapToDTO(assignment);
     }

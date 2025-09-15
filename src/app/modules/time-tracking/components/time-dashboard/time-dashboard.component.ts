@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TimeTrackingService, TimeEntry } from '../../services/time-tracking.service';
 import { TimerService, ActiveTimer } from '../../services/timer.service';
 import { UserService } from '../../../../service/user.service';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
 import { LegalCaseService } from '../../../legal/services/legal-case.service';
 import { interval, Subscription } from 'rxjs';
 import { timeout, catchError, of, finalize } from 'rxjs';
@@ -133,11 +134,93 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private userService: UserService,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
-    private legalCaseService: LegalCaseService
+    private legalCaseService: LegalCaseService,
+    private notificationManager: NotificationManagerService
   ) {}
 
   ngOnInit(): void {
     this.initializeDashboard();
+  }
+
+  /**
+   * Send notification when time entry is submitted for approval
+   */
+  private async notifyTimeEntrySubmission(entry: TimeEntry): Promise<void> {
+    try {
+      const currentUser = this.userService.getCurrentUser();
+      if (!currentUser) return;
+
+      // Get approvers (supervisors and time managers)
+      const supervisors = await this.notificationManager.getSupervisors(currentUser.id);
+      const timeManagers = await this.notificationManager.getUsersByRole('TIME_MANAGER');
+
+      await this.notificationManager.sendNotification(
+        NotificationCategory.TIME_TRACKING,
+        'Time Entry Submitted',
+        `${currentUser.firstName} ${currentUser.lastName} submitted a time entry for approval`,
+        NotificationPriority.NORMAL,
+        {
+          primaryUsers: supervisors,
+          secondaryUsers: timeManagers
+        },
+        `/time-tracking`,
+        {
+          entityId: entry.id,
+          entityType: 'time_entry',
+          additionalData: {
+            submitterName: `${currentUser.firstName} ${currentUser.lastName}`,
+            hours: entry.hours,
+            date: entry.date,
+            description: entry.description,
+            caseName: entry.caseName
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send time entry submission notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when time entry is approved/rejected
+   */
+  private async notifyTimeEntryDecision(entry: TimeEntry, decision: 'approved' | 'rejected', reason?: string): Promise<void> {
+    try {
+      if (!entry.userId) return;
+
+      const submitter = await this.notificationManager.getUsersByRole('USER').then(users => 
+        users.find(u => u.id === entry.userId)
+      );
+      
+      if (!submitter) return;
+
+      const title = decision === 'approved' ? 'Time Entry Approved' : 'Time Entry Rejected';
+      const message = `Your time entry for ${entry.hours} hours has been ${decision}${reason ? `: ${reason}` : ''}`;
+
+      await this.notificationManager.sendNotification(
+        NotificationCategory.TIME_TRACKING,
+        title,
+        message,
+        decision === 'rejected' ? NotificationPriority.HIGH : NotificationPriority.NORMAL,
+        {
+          primaryUsers: [submitter]
+        },
+        `/time-tracking`,
+        {
+          entityId: entry.id,
+          entityType: 'time_entry',
+          additionalData: {
+            decision,
+            reason,
+            hours: entry.hours,
+            date: entry.date,
+            caseName: entry.caseName
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send time entry decision notification:', error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -1841,6 +1924,9 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             if (entry) {
               entry.status = 'SUBMITTED';
               entry.updatedAt = new Date();
+              
+              // Send notification to approvers
+              this.notifyTimeEntrySubmission(entry);
             }
             this.showSuccessMessage('Time entry submitted for approval');
             this.changeDetectorRef.detectChanges();

@@ -1,6 +1,10 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { FileManagerService } from '../../services/file-manager.service';
 import { Subject, takeUntil } from 'rxjs';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
+import { UserService } from '../../../../service/user.service';
+import { CaseService } from '../../../legal/services/case.service';
+import { NotificationTemplatesService, NotificationContext } from '../../../../core/services/notification-templates.service';
 
 @Component({
   selector: 'app-file-upload',
@@ -29,10 +33,144 @@ export class FileUploadComponent implements OnInit, OnDestroy {
   uploadedFiles: any[] = [];
   errors: string[] = [];
 
-  constructor(private fileManagerService: FileManagerService) { }
+  constructor(
+    private fileManagerService: FileManagerService,
+    private notificationManager: NotificationManagerService,
+    private userService: UserService,
+    private caseService: CaseService,
+    private notificationTemplates: NotificationTemplatesService
+  ) { }
 
   ngOnInit(): void {
     // Component initialization
+  }
+
+  /**
+   * Send notification when file is uploaded using enhanced templates
+   */
+  private async notifyFileUploaded(fileName: string, uploadType: 'single' | 'multiple'): Promise<void> {
+    try {
+      // Get current user information
+      const currentUser = this.userService.getCurrentUser();
+      const userName = currentUser?.firstName && currentUser?.lastName 
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : currentUser?.email || 'A user';
+
+      // If case-related, notify case team members
+      let recipients = { primaryUsers: [] as any[], secondaryUsers: [] as any[] };
+      let caseDetails: any = null;
+      
+      if (this.caseId) {
+        const caseTeamMembers = await this.notificationManager.getCaseTeamMembers(this.caseId);
+        recipients.primaryUsers = caseTeamMembers;
+        
+        // Try to get case details for more descriptive notifications
+        try {
+          const caseResponse = await this.caseService.getCaseById(this.caseId.toString()).toPromise();
+          caseDetails = caseResponse?.data?.case;
+        } catch (error) {
+          console.warn('Could not fetch case details for notification:', error);
+        }
+      } else {
+        // FOR TESTING: Send to ALL users in the database
+        console.log('🧪 TESTING MODE: Sending file upload notification to ALL users');
+        
+        // Get all users by getting all different role types and combining them
+        const roleAdmins = await this.notificationManager.getUsersByRole('ROLE_ADMIN');
+        const roleManagers = await this.notificationManager.getUsersByRole('ROLE_MANAGER');  
+        const roleAttorneys = await this.notificationManager.getUsersByRole('ROLE_ATTORNEY');
+        const roleUsers = await this.notificationManager.getUsersByRole('ROLE_USER');
+        const roleParalegals = await this.notificationManager.getUsersByRole('ROLE_PARALEGAL');
+        const roleSecretaries = await this.notificationManager.getUsersByRole('ROLE_SECRETARY');
+        
+        // Combine all users from different roles
+        const allUsers = [
+          ...roleAdmins,
+          ...roleManagers, 
+          ...roleAttorneys,
+          ...roleUsers,
+          ...roleParalegals,
+          ...roleSecretaries
+        ];
+        
+        // Deduplicate users by ID (in case someone has multiple roles)
+        const uniqueUsers = allUsers.filter((user, index, arr) => 
+          arr.findIndex(u => u.id === user.id) === index
+        );
+        
+        console.log(`📊 Found ${uniqueUsers.length} total unique users in database (from ${allUsers.length} role assignments)`);
+        
+        recipients = {
+          primaryUsers: uniqueUsers, // Send to everyone for testing
+          secondaryUsers: [] // No secondary users needed
+        };
+      }
+
+      // Create notification context for the template
+      const notificationContext: NotificationContext = {
+        userName,
+        fileName: uploadType === 'single' ? fileName : undefined,
+        fileCount: uploadType === 'multiple' ? parseInt(fileName.split(' ')[0]) : undefined,
+        caseName: caseDetails?.title,
+        caseNumber: caseDetails?.caseNumber,
+        caseId: this.caseId,
+        section: this.caseId ? 'Legal Cases' : 'Document Management',
+        area: this.caseId ? 'Case Management' : 'File Manager',
+        timestamp: new Date().toISOString(),
+        additionalInfo: {
+          documentCategory: this.documentCategory,
+          folderId: this.folderId,
+          uploadedBy: {
+            id: currentUser?.id,
+            name: userName,
+            email: currentUser?.email
+          }
+        }
+      };
+
+      // Generate professional notification using template
+      const notification = this.notificationTemplates.generateFileUploadNotification(notificationContext);
+      
+      // DISABLED: Frontend should NOT send notifications - backend handles this properly
+      // The backend FileManagerServiceImpl determines the correct recipients based on case assignments
+      // await this.notificationManager.sendNotification(
+      //   NotificationCategory.FILES,
+      //   notification.title,
+      //   notification.message,
+      //   NotificationPriority.NORMAL, // Use normal priority as per template
+      //   recipients,
+      //   this.caseId ? `/legal/cases/details/${this.caseId}` : `/file-manager`,
+      //   {
+      //     entityId: this.caseId || this.folderId || null,
+      //     entityType: this.caseId ? 'case_document' : 'file',
+      //     additionalData: {
+      //       fileName: uploadType === 'single' ? fileName : `${notificationContext.fileCount} files`,
+      //       uploadType,
+      //       documentCategory: this.documentCategory,
+      //       caseId: this.caseId,
+      //       folderId: this.folderId,
+      //       uploadedBy: notificationContext.additionalInfo?.uploadedBy,
+      //       context: {
+      //         area: notificationContext.area,
+      //         section: notificationContext.section,
+      //         caseName: notificationContext.caseName,
+      //         caseNumber: notificationContext.caseNumber,
+      //         caseId: this.caseId,
+      //         folderId: this.folderId,
+      //         documentCategory: this.documentCategory,
+      //         timestamp: notificationContext.timestamp
+      //       },
+      //       template: {
+      //         icon: notification.icon,
+      //         priority: notification.priority,
+      //         category: 'files'
+      //       }
+      //     }
+      //   }
+      // );
+    } catch (error) {
+      console.error('Failed to send file upload notification:', error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -175,6 +313,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (response.success) {
           this.uploadedFiles.push(response);
           this.uploadComplete.emit(response);
+          
+          // DISABLED: Backend handles notifications properly
+          // this.notifyFileUploaded(file.name, 'single');
+          
           this.isUploading = false;
           this.selectedFiles = [];
         }
@@ -204,6 +346,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (response.success) {
           this.uploadedFiles.push(response);
           this.uploadComplete.emit(response);
+          
+          // DISABLED: Backend handles notifications properly
+          // this.notifyFileUploaded(`${this.selectedFiles.length} files`, 'multiple');
+          
           this.isUploading = false;
           this.selectedFiles = [];
         }

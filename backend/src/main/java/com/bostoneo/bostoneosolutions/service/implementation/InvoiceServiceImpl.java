@@ -12,6 +12,9 @@ import com.***REMOVED***.***REMOVED***solutions.exception.InvoiceValidationExcep
 import com.***REMOVED***.***REMOVED***solutions.service.InvoiceWorkflowService;
 import com.***REMOVED***.***REMOVED***solutions.service.EmailService;
 import com.***REMOVED***.***REMOVED***solutions.service.IInvoiceService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
 import com.***REMOVED***.***REMOVED***solutions.model.InvoiceLineItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +64,8 @@ public class InvoiceServiceImpl implements IInvoiceService {
     private final InvoiceValidator invoiceValidator;
     private final InvoiceWorkflowService workflowService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
     
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice", includeResult = true)
     public Invoice createInvoice(Invoice invoice) {
@@ -107,6 +114,39 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         log.info("Invoice created successfully with ID: {} and number: {}", 
                 savedInvoice.getId(), savedInvoice.getInvoiceNumber());
+        
+        // Send invoice creation notifications
+        try {
+            String title = "New Invoice Created";
+            String message = String.format("Invoice %s has been created with total amount $%.2f", 
+                savedInvoice.getInvoiceNumber(), savedInvoice.getTotalAmount());
+            
+            Set<Long> notificationUserIds = new HashSet<>();
+            
+            // Get users assigned to the case if this invoice is related to a case
+            if (savedInvoice.getLegalCaseId() != null) {
+                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedInvoice.getLegalCaseId());
+                for (CaseAssignment assignment : caseAssignments) {
+                    if (assignment.getAssignedTo() != null) {
+                        notificationUserIds.add(assignment.getAssignedTo().getId());
+                    }
+                }
+            }
+            
+            // Add client owner/admin users - this should be customized based on business logic
+            // For now, notify all case assignees if available, otherwise handle separately
+            
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, 
+                    "INVOICE_CREATED", Map.of("invoiceId", savedInvoice.getId(), 
+                                             "invoiceNumber", savedInvoice.getInvoiceNumber(),
+                                             "caseId", savedInvoice.getLegalCaseId() != null ? savedInvoice.getLegalCaseId() : 0));
+            }
+            
+            log.info("Invoice creation notifications sent to {} users", notificationUserIds.size());
+        } catch (Exception e) {
+            log.error("Failed to send invoice creation notifications: {}", e.getMessage());
+        }
         
         // Trigger workflows for invoice creation (non-transactional)
         triggerWorkflowsAsync(savedInvoice, 

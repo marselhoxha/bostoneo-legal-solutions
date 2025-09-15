@@ -13,6 +13,7 @@ import Swal from 'sweetalert2';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Observable } from 'rxjs';
 import { Modal, Dropdown } from 'bootstrap'; // Import Bootstrap modules properly
+import { NotificationTriggerService } from '../../../../../core/services/notification-trigger.service';
 
 @Component({
   selector: 'app-document-list',
@@ -99,7 +100,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
     private toastr: ToastrService,
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
-    private renderer: Renderer2
+    private renderer: Renderer2,
+    private notificationTrigger: NotificationTriggerService
   ) {
     this.uploadForm = this.fb.group({
       title: [''],
@@ -1142,6 +1144,18 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.uploadVersionProgress = 100;
                 this.snackBar.open('New version uploaded successfully', 'Close', { duration: 3000 });
                 
+                // Trigger document version notification
+                if (this.documentForNewVersion) {
+                  const caseName = this.getCaseName(this.documentForNewVersion.caseId || this.caseId || '');
+                  this.notificationTrigger.triggerDocumentVersionUpdated(
+                    this.documentForNewVersion.id,
+                    this.documentForNewVersion.title,
+                    comment || 'No changes specified',
+                    this.documentForNewVersion.caseId || this.caseId || 0,
+                    caseName
+                  ).catch(error => console.error('Error triggering document version notification:', error));
+                }
+                
                 // Close modal and reload documents
                 setTimeout(() => {
                   this.uploadVersionModalInstance?.hide();
@@ -1173,6 +1187,18 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
                 // Upload complete
                 this.uploadVersionProgress = 100;
                 this.snackBar.open('New version uploaded successfully', 'Close', { duration: 3000 });
+                
+                // Trigger document version notification
+                if (this.documentForNewVersion) {
+                  const caseName = this.getCaseName(this.documentForNewVersion.caseId || '');
+                  this.notificationTrigger.triggerDocumentVersionUpdated(
+                    this.documentForNewVersion.id,
+                    this.documentForNewVersion.title,
+                    comment || 'No changes specified',
+                    this.documentForNewVersion.caseId || 0,
+                    caseName
+                  ).catch(error => console.error('Error triggering document version notification:', error));
+                }
                 
                 // Close modal and reload documents
                 setTimeout(() => {

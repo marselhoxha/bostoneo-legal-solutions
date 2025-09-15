@@ -6,6 +6,11 @@ import com.***REMOVED***.***REMOVED***solutions.model.PaymentTransaction;
 import com.***REMOVED***.***REMOVED***solutions.repository.InvoicePaymentRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.PaymentTransactionRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.PaymentTransactionService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.InvoiceRepository;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
+import com.***REMOVED***.***REMOVED***solutions.model.Invoice;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +32,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
 
     private final PaymentTransactionRepository transactionRepository;
     private final InvoicePaymentRepository<InvoicePayment> paymentRepository;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
+    private final InvoiceRepository invoiceRepository;
 
     @Override
     @Transactional
@@ -100,7 +111,46 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         
         paymentRepository.create(payment);
         
-        return transactionRepository.save(transaction);
+        PaymentTransaction savedTransaction = transactionRepository.save(transaction);
+        
+        // Send payment received notifications
+        try {
+            // Get invoice details for notification
+            Optional<Invoice> invoiceOpt = invoiceRepository.findById(transaction.getInvoiceId());
+            if (invoiceOpt.isPresent()) {
+                Invoice invoice = invoiceOpt.get();
+                String title = "Payment Received";
+                String message = String.format("Payment of $%.2f received for invoice %s", 
+                    transaction.getAmount(), invoice.getInvoiceNumber());
+                
+                Set<Long> notificationUserIds = new HashSet<>();
+                
+                // Get users assigned to the case if this invoice is related to a case
+                if (invoice.getLegalCaseId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(invoice.getLegalCaseId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                        }
+                    }
+                }
+                
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, 
+                        "PAYMENT_RECEIVED", Map.of("paymentId", savedTransaction.getId(),
+                                                  "invoiceId", invoice.getId(),
+                                                  "invoiceNumber", invoice.getInvoiceNumber(),
+                                                  "amount", transaction.getAmount(),
+                                                  "caseId", invoice.getLegalCaseId() != null ? invoice.getLegalCaseId() : 0));
+                }
+                
+                log.info("Payment received notifications sent to {} users", notificationUserIds.size());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send payment received notifications: {}", e.getMessage());
+        }
+        
+        return savedTransaction;
     }
 
     @Override

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   Router,
   ActivatedRoute,
@@ -11,21 +11,26 @@ import {
   PRIMARY_OUTLET,
 } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { PreloaderService } from './service/preloader.service';
 import { UrlSerializer } from '@angular/router';
 import { UserService } from './service/user.service';
 import { RbacService } from './core/services/rbac.service';
 import { ReminderService } from './modules/legal/services/reminder.service';
 import { PushNotificationService } from './core/services/push-notification.service';
+import { WebSocketService } from './core/services/websocket.service';
+import { DeadlineAlertService } from './core/services/deadline-alert.service';
+import { EnhancedNotificationManagerService } from './core/services/enhanced-notification-manager.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   showPreloader = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
@@ -36,7 +41,10 @@ export class AppComponent implements OnInit {
     private userService: UserService,
     private rbacService: RbacService,
     private reminderService: ReminderService,
-    private pushNotificationService: PushNotificationService
+    private pushNotificationService: PushNotificationService,
+    private webSocketService: WebSocketService,
+    private deadlineAlertService: DeadlineAlertService,
+    private enhancedNotificationManager: EnhancedNotificationManagerService
   ) {
     this.preloaderService.showPreloader$.subscribe((show) => {
       this.showPreloader = show;
@@ -105,6 +113,17 @@ export class AppComponent implements OnInit {
       // Start deadline reminder service for authenticated users
       this.reminderService.startReminders();
       console.log('Reminder service started with improved error handling');
+      
+      // Start deadline alert monitoring
+      this.deadlineAlertService.startDeadlineMonitoring();
+      console.log('Deadline alert monitoring started');
+      
+      // Initialize Enhanced Notification Manager with EventBus
+      this.enhancedNotificationManager.initialize();
+      console.log('Enhanced Notification Manager with EventBus initialized');
+      
+      // Initialize WebSocket connection
+      this.initializeWebSocketNotifications();
     }
 
     console.log('App component initialized');
@@ -122,16 +141,35 @@ export class AppComponent implements OnInit {
   }
 
   private initializePushNotifications(): void {
-    if ('Notification' in window) {
-      // Only request permission if the browser supports notifications
-      // and the permission hasn't been denied
-      if (Notification.permission !== 'denied') {
+    if ('Notification' in window && this.userService.isAuthenticated()) {
+      // Register the Firebase service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(registration => {
+            console.log('🔔 Firebase Service Worker registered:', registration);
+          })
+          .catch(error => {
+            console.error('❌ Service Worker registration failed:', error);
+          });
+      }
+      
+      // Auto-request permission if not denied and not already granted
+      if (Notification.permission === 'default') {
         this.pushNotificationService.requestPermission()
           .then(token => {
-            console.log('Notification permission granted. Token:', token);
+            console.log('🔔 FCM Token registered automatically:', token);
           })
           .catch(err => {
-            console.warn('Notification permission denied:', err);
+            console.log('🔔 Push notification permission not granted:', err);
+          });
+      } else if (Notification.permission === 'granted') {
+        // If permission already granted, just get the token
+        this.pushNotificationService.requestPermission()
+          .then(token => {
+            console.log('🔔 FCM Token refreshed:', token);
+          })
+          .catch(err => {
+            console.log('🔔 Error refreshing FCM token:', err);
           });
       }
       
@@ -143,5 +181,75 @@ export class AppComponent implements OnInit {
         }
       });
     }
+  }
+
+  private initializeWebSocketNotifications(): void {
+    console.log('🔌 Initializing WebSocket notifications');
+    
+    // Enable WebSocket and establish connection
+    this.webSocketService.enableWebSocket();
+    
+    // Subscribe to WebSocket connection status
+    this.webSocketService.getConnectionStatus()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(status => {
+        console.log('🔌 WebSocket connection status:', status);
+        if (status.connected) {
+          console.log('✅ WebSocket connected successfully');
+        } else if (status.error) {
+          console.error('❌ WebSocket connection error:', status.error);
+        }
+      });
+    
+    // Subscribe to all notification messages
+    this.webSocketService.getNotificationMessages()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(message => {
+        console.log('📨 Received WebSocket notification:', message);
+        this.handleWebSocketNotification(message);
+      });
+      
+    // Keep connection alive by subscribing to all messages
+    this.webSocketService.getMessages()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(message => {
+        console.log('📨 WebSocket message received:', message.type, message);
+      });
+  }
+
+  private handleWebSocketNotification(message: any): void {
+    console.log('🎯 Processing notification:', message);
+    
+    try {
+      const data = message.data || message;
+      const title = data.title || message.title || 'Notification';
+      const messageText = data.message || message.message || 'You have a new notification';
+      
+      // Create push notification payload
+      const notificationPayload = {
+        notification: {
+          title: title,
+          body: messageText
+        },
+        data: {
+          type: message.type || data.type,
+          ...data
+        }
+      };
+      
+      // Send push notification using the same service as task assignments
+      this.pushNotificationService.sendCustomNotification(notificationPayload);
+      
+    } catch (error) {
+      console.error('❌ Error handling WebSocket notification:', error);
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Stop deadline monitoring
+    this.deadlineAlertService.stopDeadlineMonitoring();
+    
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

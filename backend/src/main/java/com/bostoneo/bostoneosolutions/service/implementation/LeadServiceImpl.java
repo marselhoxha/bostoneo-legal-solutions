@@ -9,6 +9,8 @@ import com.***REMOVED***.***REMOVED***solutions.repository.LeadActivityRepositor
 import com.***REMOVED***.***REMOVED***solutions.repository.LeadPipelineHistoryRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.PipelineStageRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.LeadService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,8 @@ public class LeadServiceImpl implements LeadService {
     private final LeadActivityRepository leadActivityRepository;
     private final LeadPipelineHistoryRepository leadPipelineHistoryRepository;
     private final PipelineStageRepository pipelineStageRepository;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
+    private final NotificationService notificationService;
 
     // Valid pipeline status transitions
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
@@ -145,6 +149,9 @@ public class LeadServiceImpl implements LeadService {
             "Lead assigned to attorney" : "Lead reassigned to new attorney";
         addActivity(id, "ASSIGNMENT", "Lead Assignment", description, assignedBy);
         
+        // Send notification about lead assignment
+        sendLeadAssignmentNotification(savedLead, assignedTo, assignedBy, previousAssignee == null);
+        
         return savedLead;
     }
 
@@ -188,6 +195,9 @@ public class LeadServiceImpl implements LeadService {
         addActivity(id, "STATUS_CHANGE", "Status Updated", 
             "Status changed from " + oldStatus + " to " + newStatus + 
             (notes != null ? ". Notes: " + notes : ""), userId);
+        
+        // Send notification about status change
+        sendLeadStatusChangeNotification(savedLead, oldStatus, newStatus, userId, notes);
         
         return savedLead;
     }
@@ -841,6 +851,115 @@ public class LeadServiceImpl implements LeadService {
             .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
             .limit(limit)
             .toList();
+    }
+
+    // ==================== Notification Helper Methods ====================
+    
+    /**
+     * Send notification about lead assignment
+     */
+    private void sendLeadAssignmentNotification(Lead lead, Long assignedTo, Long assignedBy, boolean isNewAssignment) {
+        try {
+            String leadName = String.format("%s %s", 
+                lead.getFirstName() != null ? lead.getFirstName() : "",
+                lead.getLastName() != null ? lead.getLastName() : "").trim();
+            
+            if (leadName.isEmpty()) {
+                leadName = "Lead #" + lead.getId();
+            }
+            
+            String practiceArea = lead.getPracticeArea() != null ? lead.getPracticeArea() : "General";
+            String notificationType = isNewAssignment ? "LEAD_ASSIGNED" : "LEAD_REASSIGNED";
+            String title = isNewAssignment ? "Lead Assigned" : "Lead Reassigned";
+            String message = String.format("%s: %s lead '%s' %s", 
+                title, practiceArea, leadName, isNewAssignment ? "assigned" : "reassigned");
+            
+            // Create notification data
+            Map<String, Object> notificationData = Map.of(
+                "type", notificationType,
+                "leadId", lead.getId(),
+                "leadName", leadName,
+                "practiceArea", practiceArea,
+                "assignedTo", assignedTo,
+                "assignedBy", assignedBy,
+                "title", title,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            // Send via WebSocket for real-time updates
+            webSocketHandler.broadcastMessage(notificationData);
+            
+            // ALSO send via FCM - specifically to the assigned user for offline notifications
+            notificationService.sendCrmNotification(title, message, assignedTo, notificationType, notificationData);
+            
+            log.info("Sent lead assignment notification (WebSocket + FCM) for lead ID: {} to user: {}", lead.getId(), assignedTo);
+            
+        } catch (Exception e) {
+            log.error("Failed to send lead assignment notification for lead ID: {}", lead.getId(), e);
+        }
+    }
+    
+    /**
+     * Send notification about lead status changes
+     */
+    private void sendLeadStatusChangeNotification(Lead lead, String oldStatus, String newStatus, Long userId, String notes) {
+        try {
+            String leadName = String.format("%s %s", 
+                lead.getFirstName() != null ? lead.getFirstName() : "",
+                lead.getLastName() != null ? lead.getLastName() : "").trim();
+            
+            if (leadName.isEmpty()) {
+                leadName = "Lead #" + lead.getId();
+            }
+            
+            String practiceArea = lead.getPracticeArea() != null ? lead.getPracticeArea() : "General";
+            String title = "Lead Status Changed";
+            String message = String.format("Lead '%s' status changed from %s to %s", leadName, oldStatus, newStatus);
+            
+            // Create notification data
+            Map<String, Object> notificationData = Map.of(
+                "type", "LEAD_STATUS_CHANGE",
+                "leadId", lead.getId(),
+                "leadName", leadName,
+                "practiceArea", practiceArea,
+                "oldStatus", oldStatus,
+                "newStatus", newStatus,
+                "changedBy", userId,
+                "title", title,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            // Send via WebSocket for real-time updates
+            webSocketHandler.broadcastMessage(notificationData);
+            
+            // Collect users to notify (like case status change pattern)
+            Set<Long> notificationUserIds = new HashSet<>();
+            
+            // Add assigned user if exists
+            if (lead.getAssignedTo() != null) {
+                notificationUserIds.add(lead.getAssignedTo());
+                log.info("📧 Adding assigned user to lead status change notification: {}", lead.getAssignedTo());
+            }
+            
+            // Also add the user who made the change (in case lead is unassigned)
+            notificationUserIds.add(userId);
+            log.info("📧 Adding user who made change to lead status change notification: {}", userId);
+            
+            // Send notification to each user
+            for (Long notificationUserId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, notificationUserId, 
+                    "LEAD_STATUS_CHANGED", Map.of("leadId", lead.getId(), "oldStatus", oldStatus, "newStatus", newStatus));
+            }
+            
+            log.info("📧 Lead status change notifications sent to {} users", notificationUserIds.size());
+            
+            log.info("Sent lead status change notification (WebSocket + FCM) for lead ID: {} - {} to {}", lead.getId(), oldStatus, newStatus);
+            
+        } catch (Exception e) {
+            log.error("Failed to send lead status change notification for lead ID: {}", lead.getId(), e);
+        }
     }
 
     private String mapStageToStatus(String stageName) {

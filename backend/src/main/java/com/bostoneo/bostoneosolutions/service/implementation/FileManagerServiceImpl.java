@@ -4,8 +4,28 @@ import com.***REMOVED***.***REMOVED***solutions.dto.filemanager.*;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.CaseStatus;
 import com.***REMOVED***.***REMOVED***solutions.model.*;
 import com.***REMOVED***.***REMOVED***solutions.repository.*;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
+import com.***REMOVED***.***REMOVED***solutions.model.Role;
+import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.***REMOVED***.***REMOVED***solutions.model.FileItem;
+import com.***REMOVED***.***REMOVED***solutions.model.Folder;
+import com.***REMOVED***.***REMOVED***solutions.model.FileVersion;
+import com.***REMOVED***.***REMOVED***solutions.model.FileAccessLog;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileItemRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FolderRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileVersionRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileCommentRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileTagRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileShareRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.FileAccessLogRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.FileManagerService;
 import com.***REMOVED***.***REMOVED***solutions.service.FileStorageService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -26,7 +46,10 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,6 +81,9 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final LegalCaseRepository legalCaseRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository<User> userRepository;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
+    private final RoleService roleService;
 
     @Override
     @Transactional(readOnly = true)
@@ -171,6 +197,91 @@ public class FileManagerServiceImpl implements FileManagerService {
                     log.warn("Failed to clean up uploaded file after database error: {}", cleanupException.getMessage());
                 }
                 throw dbException;
+            }
+            
+            // Send notification for file upload
+            try {
+                log.info("📄 FILE MANAGER: Starting notification process for file upload...");
+                log.info("📄 File details - ID: {}, Name: '{}', Case ID: {}", 
+                    fileItem.getId(), fileItem.getOriginalName(), caseId);
+                
+                if (caseId != null) {
+                    log.info("🔔 Looking up case with ID: {}", caseId);
+                    Optional<LegalCase> legalCaseOpt = legalCaseRepository.findById(caseId);
+                    if (legalCaseOpt.isPresent()) {
+                        LegalCase legalCase = legalCaseOpt.get();
+                        log.info("🔔 Found case: {}", legalCase.getTitle());
+                        
+                        String title = "Document Uploaded";
+                        String message = String.format("New document \"%s\" has been uploaded to case \"%s\"", 
+                            fileItem.getOriginalName(), legalCase.getTitle());
+                        
+                        // Only send notifications to users DIRECTLY involved with the case
+                        // NOT to all admins/managers in the system
+                        Set<Long> notificationUserIds = new HashSet<>();
+                        
+                        // Get users assigned to the case
+                        try {
+                            log.info("🔍 Looking for active case assignments for case ID: {}", caseId);
+                            List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+                            log.info("🔍 Found {} active case assignments", caseAssignments.size());
+                            
+                            for (CaseAssignment assignment : caseAssignments) {
+                                if (assignment.getAssignedTo() != null) {
+                                    notificationUserIds.add(assignment.getAssignedTo().getId());
+                                    log.info("📧 Adding case assignee to notification list: {} {} (ID: {}, Role: {})", 
+                                        assignment.getAssignedTo().getFirstName(), 
+                                        assignment.getAssignedTo().getLastName(),
+                                        assignment.getAssignedTo().getId(),
+                                        assignment.getRoleType());
+                                } else {
+                                    log.warn("⚠️ Case assignment {} has null assignedTo user", assignment.getId());
+                                }
+                            }
+                            
+                            if (caseAssignments.isEmpty()) {
+                                log.warn("⚠️ No active case assignments found for case ID: {}", caseId);
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ Failed to get case assignments: {}", e.getMessage(), e);
+                        }
+                        
+                        // Add the uploader to get notifications (optional, can be removed if not needed)
+                        Long currentUserId = getCurrentUserId();
+                        if (currentUserId != null) {
+                            notificationUserIds.add(currentUserId);
+                            log.info("📧 Adding uploader to notification list: user ID {}", currentUserId);
+                        }
+                        
+                        // Send notification ONLY to users involved with the case
+                        // The sendCrmNotification method will check each user's preferences
+                        // and only send email if they have DOCUMENT_UPLOADED email notifications enabled
+                        log.info("🔔 Processing notifications for {} case-related users", notificationUserIds.size());
+                        int notificationsSent = 0;
+                        for (Long userId : notificationUserIds) {
+                            try {
+                                log.info("🔔 Processing notification for user ID: {}", userId);
+                                
+                                // sendCrmNotification will check user preferences internally
+                                // It will only send email if the user has enabled email for DOCUMENT_UPLOADED
+                                notificationService.sendCrmNotification(title, message, userId, 
+                                    "DOCUMENT_UPLOADED", Map.of("documentId", fileItem.getId(), "caseId", legalCase.getId()));
+                                
+                                notificationsSent++;
+                            } catch (Exception e) {
+                                log.error("❌ Failed to send notification to user ID {}: {}", userId, e.getMessage());
+                            }
+                        }
+                        
+                        log.info("✅ Document upload notifications sent to {} case-related users", notificationsSent);
+                    } else {
+                        log.warn("⚠️ Could not find case with ID: {}, notification will not be sent", caseId);
+                    }
+                } else {
+                    log.info("📄 File has no case ID, notification will not be sent");
+                }
+            } catch (Exception e) {
+                log.error("❌ Failed to send file upload notification for file ID: {}", fileItem.getId(), e);
             }
             
             return FileUploadResponseDTO.builder()
@@ -814,6 +925,47 @@ public class FileManagerServiceImpl implements FileManagerService {
             log.info("Successfully uploaded version {} for file ID: {}", newVersionNumber, fileId);
             
             logFileAccess(fileId, FileAccessLog.ActionType.VERSION_CREATE, true, null);
+            
+            // Send document version update notifications
+            try {
+                String title = "Document Version Updated";
+                String message = String.format("New version (v%d) of document \"%s\" has been uploaded", 
+                    newVersionNumber, fileName != null ? fileName : fileItem.getName());
+                
+                Set<Long> notificationUserIds = new HashSet<>();
+                
+                // Get users assigned to the case if this file is related to a case
+                if (fileItem.getCaseId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(fileItem.getCaseId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                            log.info("📧 Adding case assignee to document version notification: {}", assignment.getAssignedTo().getId());
+                        }
+                    }
+                }
+                
+                // Always add the user who uploaded the new version
+                Long uploadedBy = getCurrentUserId();
+                if (uploadedBy != null) {
+                    notificationUserIds.add(uploadedBy);
+                    log.info("📧 Adding user who uploaded version to document version notification: {}", uploadedBy);
+                }
+                
+                // Send notifications to all collected users
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, 
+                        "DOCUMENT_VERSION_UPDATED", Map.of("fileId", fileId,
+                                                           "versionId", newVersion.getId(),
+                                                           "versionNumber", newVersionNumber,
+                                                           "fileName", fileName != null ? fileName : fileItem.getName(),
+                                                           "caseId", fileItem.getCaseId() != null ? fileItem.getCaseId() : 0));
+                }
+                
+                log.info("📧 Document version update notifications sent to {} users", notificationUserIds.size());
+            } catch (Exception e) {
+                log.error("Failed to send document version update notifications: {}", e.getMessage());
+            }
             
             return convertToFileVersionDTO(newVersion);
             

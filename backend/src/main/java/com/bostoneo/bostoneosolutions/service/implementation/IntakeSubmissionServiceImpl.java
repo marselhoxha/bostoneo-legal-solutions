@@ -5,6 +5,8 @@ import com.***REMOVED***.***REMOVED***solutions.model.Lead;
 import com.***REMOVED***.***REMOVED***solutions.repository.IntakeSubmissionRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.LeadRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.IntakeSubmissionService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.handler.AuthenticatedWebSocketHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,8 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     private final IntakeSubmissionRepository intakeSubmissionRepository;
     private final LeadRepository leadRepository;
     private final ObjectMapper objectMapper;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
+    private final NotificationService notificationService;
 
     // Valid status transitions
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
@@ -78,7 +82,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
             .priorityScore(calculatePriorityScore(submissionData, null))
             .build();
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notifications about new submission
+        sendNewSubmissionNotification(savedSubmission);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -95,7 +104,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
             .priorityScore(calculatePriorityScore(submissionData, null))
             .build();
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notifications about new submission
+        sendNewSubmissionNotification(savedSubmission);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -128,7 +142,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
         submission.setReviewedAt(new Timestamp(System.currentTimeMillis()));
         submission.setNotes(notes);
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notification about review completion
+        sendStatusChangeNotification(savedSubmission, "REVIEWED", notes);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -153,7 +172,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
         submission.setReviewedAt(new Timestamp(System.currentTimeMillis()));
         submission.setNotes(notes);
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notification about successful conversion
+        sendLeadConversionNotification(savedSubmission, lead);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -172,7 +196,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
         submission.setReviewedAt(new Timestamp(System.currentTimeMillis()));
         submission.setNotes(reason);
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notification about rejection
+        sendStatusChangeNotification(savedSubmission, "REJECTED", reason);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -191,7 +220,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
         submission.setReviewedAt(new Timestamp(System.currentTimeMillis()));
         submission.setNotes(reason);
         
-        return save(submission);
+        IntakeSubmission savedSubmission = save(submission);
+        
+        // Send notification about spam marking
+        sendStatusChangeNotification(savedSubmission, "SPAM", reason);
+        
+        return savedSubmission;
     }
 
     @Override
@@ -529,6 +563,151 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
         } catch (Exception e) {
             log.error("Error creating lead from submission", e);
             throw new RuntimeException("Failed to create lead from submission data");
+        }
+    }
+
+    // ==================== Notification Helper Methods ====================
+    
+    /**
+     * Send notification about new submission to relevant users
+     */
+    private void sendNewSubmissionNotification(IntakeSubmission submission) {
+        try {
+            // Extract submission data to get practice area and urgency
+            JsonNode data = objectMapper.readTree(submission.getSubmissionData());
+            String practiceArea = getStringValue(data, "practiceArea", "practice_area");
+            String urgency = getStringValue(data, "urgency", "urgency_level", "priority");
+            
+            // Default values if not found
+            if (practiceArea == null) practiceArea = "General";
+            if (urgency == null) urgency = "MEDIUM";
+            
+            // Create notification data
+            Map<String, Object> notificationData = Map.of(
+                "type", "NEW_SUBMISSION",
+                "submissionId", submission.getId(),
+                "practiceArea", practiceArea,
+                "urgency", urgency,
+                "title", "New Intake Submission",
+                "message", String.format("New %s intake submission received%s", 
+                    practiceArea, 
+                    urgency.equals("URGENT") || urgency.equals("HIGH") ? " - " + urgency + " priority" : ""),
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            // Send via WebSocket for real-time updates
+            webSocketHandler.broadcastMessage(notificationData);
+            
+            // ALSO send via FCM for offline/background notifications to user 1 (you)
+            String title = (String) notificationData.get("title");
+            String message = (String) notificationData.get("message");
+            notificationService.sendCrmNotification(title, message, 1L, "NEW_SUBMISSION", notificationData);
+            
+            log.info("Sent new submission notification (WebSocket + FCM) for submission ID: {}", submission.getId());
+            
+        } catch (Exception e) {
+            log.error("Failed to send new submission notification for submission ID: {}", submission.getId(), e);
+        }
+    }
+
+    /**
+     * Send notification about successful lead conversion
+     */
+    private void sendLeadConversionNotification(IntakeSubmission submission, Lead lead) {
+        try {
+            // Extract submission data to get practice area
+            JsonNode data = objectMapper.readTree(submission.getSubmissionData());
+            String practiceArea = getStringValue(data, "practiceArea", "practice_area");
+            if (practiceArea == null) practiceArea = lead.getPracticeArea();
+            if (practiceArea == null) practiceArea = "General";
+            
+            // Create notification data
+            Map<String, Object> notificationData = Map.of(
+                "type", "LEAD_CONVERSION",
+                "submissionId", submission.getId(),
+                "leadId", lead.getId(),
+                "practiceArea", practiceArea,
+                "title", "Submission Converted to Lead",
+                "message", String.format("Intake submission successfully converted to %s lead: %s %s", 
+                    practiceArea,
+                    lead.getFirstName() != null ? lead.getFirstName() : "",
+                    lead.getLastName() != null ? lead.getLastName() : "").trim(),
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            // Send via WebSocket for real-time updates
+            webSocketHandler.broadcastMessage(notificationData);
+            
+            // ALSO send via FCM for offline/background notifications
+            String title = (String) notificationData.get("title");
+            String message = (String) notificationData.get("message");
+            notificationService.sendBroadcastNotification(title, message, "LEAD_CONVERSION", notificationData);
+            
+            log.info("Sent lead conversion notification (WebSocket + FCM) for submission ID: {} to lead ID: {}", submission.getId(), lead.getId());
+            
+        } catch (Exception e) {
+            log.error("Failed to send lead conversion notification for submission ID: {}", submission.getId(), e);
+        }
+    }
+
+    /**
+     * Send notification about submission status changes
+     */
+    private void sendStatusChangeNotification(IntakeSubmission submission, String newStatus, String notes) {
+        try {
+            // Extract submission data to get practice area
+            JsonNode data = objectMapper.readTree(submission.getSubmissionData());
+            String practiceArea = getStringValue(data, "practiceArea", "practice_area");
+            if (practiceArea == null) practiceArea = "General";
+            
+            // Create appropriate message based on status
+            String title;
+            String message;
+            String notificationType;
+            
+            switch (newStatus) {
+                case "REVIEWED":
+                    title = "Submission Reviewed";
+                    message = String.format("Intake submission for %s has been reviewed", practiceArea);
+                    notificationType = "SUBMISSION_REVIEWED";
+                    break;
+                case "REJECTED":
+                    title = "Submission Rejected";
+                    message = String.format("Intake submission for %s has been rejected", practiceArea);
+                    notificationType = "SUBMISSION_REJECTED";
+                    break;
+                case "SPAM":
+                    title = "Submission Marked as Spam";
+                    message = String.format("Intake submission for %s has been marked as spam", practiceArea);
+                    notificationType = "SUBMISSION_SPAM";
+                    break;
+                default:
+                    title = "Submission Status Changed";
+                    message = String.format("Intake submission for %s status changed to %s", practiceArea, newStatus);
+                    notificationType = "SUBMISSION_STATUS_CHANGE";
+            }
+            
+            // Create notification data
+            Map<String, Object> notificationData = Map.of(
+                "type", notificationType,
+                "submissionId", submission.getId(),
+                "practiceArea", practiceArea,
+                "newStatus", newStatus,
+                "title", title,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            // Send via WebSocket for real-time updates
+            webSocketHandler.broadcastMessage(notificationData);
+            
+            // ALSO send via FCM for offline/background notifications
+            notificationService.sendBroadcastNotification(title, message, notificationType, notificationData);
+            
+            log.info("Sent status change notification (WebSocket + FCM) for submission ID: {} - status: {}", submission.getId(), newStatus);
+            
+        } catch (Exception e) {
+            log.error("Failed to send status change notification for submission ID: {}", submission.getId(), e);
         }
     }
 

@@ -90,9 +90,8 @@ public class CrmLeadsResource {
         
         Long userId = 1L; // Extract from userDetails in real implementation
         Lead lead = leadDTOMapper.toEntity(leadDTO);
-        lead.setId(id);
         
-        Lead updatedLead = leadService.save(lead);
+        Lead updatedLead = leadService.updateLead(id, lead, userId);
         LeadDTO updatedLeadDTO = leadDTOMapper.toDTO(updatedLead);
         
         return ResponseEntity.ok(updatedLeadDTO);

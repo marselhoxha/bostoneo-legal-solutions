@@ -1,6 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrmService } from '../../services/crm.service';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
+import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 
 export interface IntakeSubmissionDTO {
@@ -83,10 +85,69 @@ export class IntakeSubmissionsComponent implements OnInit {
   // Make Math available in template
   Math = Math;
 
+  /**
+   * Send CRM notification using NotificationManager (with proper user context and routing)
+   */
+  private async sendCrmNotification(title: string, message: string, type: 'success' | 'error' | 'info' = 'info', crmInfo?: any): Promise<void> {
+    console.log('🔔 CRM NOTIFICATION:', { title, message, type, crmInfo });
+    
+    const priority = type === 'error' ? NotificationPriority.HIGH : NotificationPriority.NORMAL;
+    
+    try {
+      // For intake conversions, notify intake team and relevant department
+      if (crmInfo?.action === 'INTAKE_CONVERTED_TO_LEAD') {
+        const intakeTeam = await this.notificationManager.getUsersByRole('INTAKE_COORDINATOR');
+        const salesTeam = await this.notificationManager.getUsersByRole('SALES_REP');
+        
+        await this.notificationManager.sendNotification(
+          NotificationCategory.CRM,
+          title,
+          message,
+          priority,
+          {
+            primaryUsers: intakeTeam,
+            secondaryUsers: salesTeam
+          },
+          `/crm/intake-submissions`,
+          {
+            entityId: crmInfo.submissionId,
+            entityType: 'intake_submission',
+            additionalData: crmInfo
+          }
+        );
+      } else {
+        // Default: notify intake team
+        const intakeTeam = await this.notificationManager.getUsersByRole('INTAKE_COORDINATOR');
+        
+        await this.notificationManager.sendNotification(
+          NotificationCategory.CRM,
+          title,
+          message,
+          priority,
+          {
+            primaryUsers: intakeTeam
+          },
+          `/crm/intake-submissions`,
+          {
+            entityId: crmInfo?.submissionId,
+            entityType: 'intake_submission',
+            additionalData: crmInfo
+          }
+        );
+      }
+      
+      console.log('✅ CRM notification sent successfully');
+    } catch (error) {
+      console.error('❌ Failed to send CRM notification:', error);
+    }
+  }
+
   constructor(
     private crmService: CrmService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationManager: NotificationManagerService,
+    private notificationTrigger: NotificationTriggerService
   ) {}
 
   ngOnInit(): void {
@@ -822,6 +883,27 @@ export class IntakeSubmissionsComponent implements OnInit {
         submission.status = 'CONVERTED_TO_LEAD';
         submission.updatedAt = new Date().toISOString();
         this.cdr.detectChanges();
+        
+        // Send push notification for conversion using NotificationManager
+        this.sendCrmNotification(
+          'Intake Converted to Lead',
+          `Intake submission from ${submission.firstName} ${submission.lastName} has been converted to a lead`,
+          'success',
+          {
+            submissionId: submission.id,
+            submissionName: `${submission.firstName} ${submission.lastName}`,
+            action: 'INTAKE_CONVERTED_TO_LEAD',
+            practiceArea: submission.practiceArea
+          }
+        );
+        
+        // Send notification via new system
+        this.notificationTrigger.triggerIntakeFormSubmitted(
+          submission.id,
+          `${submission.firstName} ${submission.lastName}`,
+          submission.email,
+          submission.practiceArea
+        ).catch(error => console.error('Error triggering intake form notification:', error));
         
         Swal.fire({
           title: 'Converted!',

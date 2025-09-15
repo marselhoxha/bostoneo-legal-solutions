@@ -4,8 +4,13 @@ import com.***REMOVED***.***REMOVED***solutions.dto.LegalDocumentDTO;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentStatus;
 import com.***REMOVED***.***REMOVED***solutions.enumeration.DocumentType;
 import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
+import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
+import com.***REMOVED***.***REMOVED***solutions.model.User;
 import com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.LegalDocumentService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,6 +31,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -35,6 +41,9 @@ import java.util.UUID;
 public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     private final LegalDocumentRepository documentRepository;
+    private final LegalCaseRepository legalCaseRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
     
     // Base directory for document storage
@@ -150,8 +159,12 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     @Override
     public CustomHttpResponse<LegalDocument> uploadDocument(MultipartFile file, String documentData) {
         try {
+            log.info("📄 DOCUMENT UPLOAD STARTED - File: {}, Size: {} bytes", file.getOriginalFilename(), file.getSize());
+            log.info("📄 Document data received: {}", documentData);
+            
             // Parse document data
             LegalDocumentDTO documentDTO = objectMapper.readValue(documentData, LegalDocumentDTO.class);
+            log.info("📄 Parsed document DTO - Case ID: {}, Uploaded by: {}", documentDTO.getCaseId(), documentDTO.getUploadedBy());
             
             // Create document storage structure
             String documentPath = createDocumentStoragePath(documentDTO.getCaseId());
@@ -190,7 +203,37 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
             }
             
             LegalDocument savedDocument = documentRepository.save(document);
-            log.info("Document metadata saved: {}", savedDocument);
+            log.info("📄 Document metadata saved: ID={}, CaseID={}, FileName={}", savedDocument.getId(), savedDocument.getCaseId(), savedDocument.getFileName());
+            
+            // Send notification for document upload
+            try {
+                log.info("🔔 Starting notification process for document upload...");
+                if (savedDocument.getCaseId() != null) {
+                    log.info("🔔 Looking up case with ID: {}", savedDocument.getCaseId());
+                    LegalCase legalCase = legalCaseRepository.findById(savedDocument.getCaseId()).orElse(null);
+                    if (legalCase != null) {
+                        log.info("🔔 Found case: {}", legalCase.getTitle());
+                        String title = "Document Uploaded";
+                        String message = String.format("New document \"%s\" has been uploaded to case \"%s\"", 
+                            savedDocument.getFileName(), legalCase.getTitle());
+                        
+                        // Send notification to users (using hardcoded user ID for now, can be enhanced later)
+                        Long notificationUserId = 1L; // Replace with actual logic to determine recipients
+                        log.info("🔔 Sending notification to user ID: {} with title: '{}' and message: '{}'", notificationUserId, title, message);
+                        
+                        notificationService.sendCrmNotification(title, message, notificationUserId, 
+                            "DOCUMENT_UPLOAD", Map.of("documentId", savedDocument.getId(), "caseId", legalCase.getId()));
+                        
+                        log.info("✅ Document upload notification sent successfully for document ID: {}", savedDocument.getId());
+                    } else {
+                        log.warn("⚠️ Could not find case with ID: {}, notification will not be sent", savedDocument.getCaseId());
+                    }
+                } else {
+                    log.warn("⚠️ Document has no case ID, notification will not be sent");
+                }
+            } catch (Exception e) {
+                log.error("❌ Failed to send document upload notification for document ID: {}", savedDocument.getId(), e);
+            }
             
             return new CustomHttpResponse<>(200, "Document uploaded successfully", savedDocument);
         } catch (Exception e) {

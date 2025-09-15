@@ -398,11 +398,12 @@ public class LegalCaseResource {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "notes", required = false) String notes) {
         
+        UserDTO fullUser = userService.getUserByEmail(user.getEmail());
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("user", userService.getUserByEmail(user.getEmail()),
-                                "version", legalCaseService.uploadNewDocumentVersion(caseId, documentId, file, notes)))
+                        .data(of("user", fullUser,
+                                "version", legalCaseService.uploadNewDocumentVersion(caseId, documentId, file, notes, fullUser.getId())))
                         .message("New document version uploaded successfully")
                         .status(OK)
                         .statusCode(OK.value())

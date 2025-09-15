@@ -11,6 +11,8 @@ import { InvoiceService } from 'src/app/service/invoice.service';
 import { LegalCase } from 'src/app/modules/legal/interfaces/case.interface';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
 import { InvoiceTemplateService } from 'src/app/service/invoice-template.service';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from 'src/app/core/services/notification-manager.service';
+import { NotificationTriggerService } from 'src/app/core/services/notification-trigger.service';
 import { InvoiceTemplate } from 'src/app/interface/invoice-template';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
@@ -48,7 +50,9 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     private legalCaseService: LegalCaseService,
     private templateService: InvoiceTemplateService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationManager: NotificationManagerService,
+    private notificationTrigger: NotificationTriggerService
   ) {
     this.initializeForm();
   }
@@ -76,6 +80,109 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => {
       this.initializeDatePickers();
     }, 100);
+  }
+
+  /**
+   * Send notification when invoice is created
+   */
+  private async notifyInvoiceCreated(invoice: Invoice): Promise<void> {
+    try {
+      // Get billing team and finance team
+      const billingTeam = await this.notificationManager.getUsersByRole('BILLING_MANAGER');
+      const financeTeam = await this.notificationManager.getUsersByRole('FINANCE_MANAGER');
+
+      await this.notificationManager.sendNotification(
+        NotificationCategory.BILLING,
+        'New Invoice Created',
+        `Invoice #${invoice.invoiceNumber} has been created for ${invoice.clientName}`,
+        NotificationPriority.NORMAL,
+        {
+          primaryUsers: billingTeam,
+          secondaryUsers: financeTeam
+        },
+        `/invoices/${invoice.id}/${invoice.invoiceNumber}`,
+        {
+          entityId: invoice.id,
+          entityType: 'invoice',
+          additionalData: {
+            invoiceNumber: invoice.invoiceNumber,
+            clientName: invoice.clientName,
+            totalAmount: invoice.totalAmount,
+            dueDate: invoice.dueDate
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send invoice creation notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when invoice is sent to client
+   */
+  private async notifyInvoiceSent(invoice: Invoice): Promise<void> {
+    try {
+      const accountManagers = await this.notificationManager.getUsersByRole('ACCOUNT_MANAGER');
+      const billingTeam = await this.notificationManager.getUsersByRole('BILLING_MANAGER');
+
+      await this.notificationManager.sendNotification(
+        NotificationCategory.BILLING,
+        'Invoice Sent to Client',
+        `Invoice #${invoice.invoiceNumber} has been sent to ${invoice.clientName}`,
+        NotificationPriority.NORMAL,
+        {
+          primaryUsers: accountManagers,
+          secondaryUsers: billingTeam
+        },
+        `/invoices/${invoice.id}/${invoice.invoiceNumber}`,
+        {
+          entityId: invoice.id,
+          entityType: 'invoice',
+          additionalData: {
+            invoiceNumber: invoice.invoiceNumber,
+            clientName: invoice.clientName,
+            totalAmount: invoice.totalAmount,
+            sentDate: new Date().toISOString()
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send invoice sent notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when payment is received
+   */
+  private async notifyPaymentReceived(invoice: Invoice, paymentAmount: number): Promise<void> {
+    try {
+      const financeTeam = await this.notificationManager.getUsersByRole('FINANCE_MANAGER');
+      const accountManagers = await this.notificationManager.getUsersByRole('ACCOUNT_MANAGER');
+
+      await this.notificationManager.sendNotification(
+        NotificationCategory.BILLING,
+        'Payment Received',
+        `Payment of $${paymentAmount} received for Invoice #${invoice.invoiceNumber}`,
+        NotificationPriority.NORMAL,
+        {
+          primaryUsers: financeTeam,
+          secondaryUsers: accountManagers
+        },
+        `/invoices/${invoice.id}/${invoice.invoiceNumber}`,
+        {
+          entityId: invoice.id,
+          entityType: 'invoice',
+          additionalData: {
+            invoiceNumber: invoice.invoiceNumber,
+            clientName: invoice.clientName,
+            paymentAmount,
+            paymentDate: new Date().toISOString()
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send payment received notification:', error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -411,8 +518,24 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     this.invoiceService.createInvoice(invoice).subscribe({
-      next: (response) => {
+      next: async (response) => {
         this.isLoadingSubject.next(false);
+        
+        // Send invoice creation notification (existing)
+        this.notifyInvoiceCreated(response.data);
+        
+        // Send invoice creation notification (new system)
+        try {
+          await this.notificationTrigger.triggerInvoiceCreated(
+            response.data.id,
+            response.data.invoiceNumber,
+            response.data.totalAmount.toString(),
+            client?.name || 'Unknown Client'
+          );
+        } catch (error) {
+          console.error('Error triggering invoice creation notification:', error);
+        }
+        
         Swal.fire({
           title: 'Success!',
           text: 'Invoice created successfully',

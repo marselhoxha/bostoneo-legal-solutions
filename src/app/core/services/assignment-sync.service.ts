@@ -528,15 +528,11 @@ export class AssignmentSyncService implements OnDestroy {
   }
 
   private sendTaskAssignmentNotifications(change: AssignmentChange, task: CaseTask): Observable<void> {
-    return this.notificationService.notifyTaskAssignment(
-      change.userId,
-      change.entityId,
-      task.title,
-      change.assignmentData?.caseId || task.caseId
-    ).pipe(
-      map(() => void 0),
-      catchError(() => of())
-    );
+    // Notifications are now handled by the personalized notification system
+    // in the calling components (task-management.component.ts, case-detail.component.ts)
+    // to avoid duplicate and generic notifications
+    console.log('📝 Task assignment notification skipped - handled by personalized system');
+    return of();
   }
 
   private sendReassignmentNotifications(change: AssignmentChange, assignment: CaseAssignment): Observable<void> {
@@ -571,31 +567,10 @@ export class AssignmentSyncService implements OnDestroy {
   }
 
   private sendTaskReassignmentNotifications(change: AssignmentChange, task: CaseTask): Observable<void> {
-    // Notify new assignee
-    const newAssigneeNotification = this.notificationService.notifyTaskAssignment(
-      change.userId,
-      change.entityId,
-      task.title,
-      task.caseId
-    );
-
-    // Notify previous assignee if exists
-    const previousAssigneeNotification = change.previousUserId ? 
-      this.notificationService.sendToUser({
-        userId: change.previousUserId,
-        type: 'TASK',
-        priority: 'MEDIUM',
-        title: 'Task Reassigned',
-        message: `Task "${task.title}" has been reassigned to another team member`,
-        data: { taskId: change.entityId, caseId: task.caseId, reason: change.metadata.reason },
-        relatedEntityId: change.entityId,
-        relatedEntityType: 'task'
-      }) : of(null);
-
-    return forkJoin([newAssigneeNotification, previousAssigneeNotification]).pipe(
-      map(() => void 0),
-      catchError(() => of())
-    );
+    // Task reassignment notifications are now handled by the personalized notification system
+    // in the calling components to avoid duplicate and generic notifications
+    console.log('📝 Task reassignment notification skipped - handled by personalized system');
+    return of();
   }
 
   private sendUnassignmentNotification(change: AssignmentChange): void {

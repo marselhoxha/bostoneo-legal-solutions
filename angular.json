@@ -36,7 +36,8 @@
                 "glob": "**/*",
                 "input": "src/assets/root",
                 "output": "/"
-              }
+              },
+              "src/firebase-messaging-sw.js"
             ],
             "styles": [
               "node_modules/shepherd.js/dist/css/shepherd.css",

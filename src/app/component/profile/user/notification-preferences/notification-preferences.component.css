@@ -1,0 +1,244 @@
+.notification-preferences {
+  padding: 0;
+}
+
+.notification-preferences-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card styling */
+.card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Table styling */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.75rem 0.5rem;
+}
+
+.table td {
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Form switch styling */
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.form-check-input:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-check-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Priority select styling */
+.form-select-sm {
+  min-width: 100px;
+  font-size: 0.8rem;
+}
+
+.form-select:disabled {
+  background-color: #e9ecef;
+  opacity: 0.65;
+}
+
+/* Button styling */
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+  color: #fff;
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Master controls styling */
+.form-check-label strong {
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-check-label small {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Category header styling */
+.card-header .form-check {
+  margin-bottom: 0;
+}
+
+.card-header .form-check-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+/* Icon styling */
+.ri-notification-line,
+.ri-mail-line,
+.ri-smartphone-line,
+.ri-apps-line {
+  font-size: 1.1rem;
+  color: #6c757d;
+}
+
+/* Alert styling */
+.alert-info {
+  background-color: #e7f3ff;
+  border-color: #b8daff;
+  color: #004085;
+}
+
+.alert-heading {
+  color: #003d7a;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Loading state */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+  
+  .btn-sm {
+    width: 100%;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .form-select-sm {
+    min-width: 80px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Custom indeterminate checkbox styling */
+.form-check-input:indeterminate {
+  background-color: #fd7e14;
+  border-color: #fd7e14;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
+}
+
+/* Priority badge styling */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+}
+
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+/* Animation for form changes */
+.form-check-input {
+  transition: all 0.15s ease-in-out;
+}
+
+.form-select {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Focus and hover states */
+.form-check-input:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.card-header:hover {
+  background-color: #f1f3f4;
+}
+
+/* Text styling */
+.fw-medium {
+  font-weight: 500;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Spacing utilities */
+.gap-2 {
+  gap: 0.5rem !important;
+}

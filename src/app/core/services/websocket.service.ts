@@ -313,6 +313,12 @@ export class WebSocketService implements OnDestroy {
       case 'NOTIFICATION':
       case 'ALERT':
       case 'SYSTEM_MESSAGE':
+      case 'NEW_SUBMISSION':
+      case 'SUBMISSION_ASSIGNED':
+      case 'SUBMISSION_STATUS_CHANGE':
+      case 'LEAD_CONVERSION':
+      case 'LEAD_ASSIGNMENT':
+      case 'LEAD_STATUS_CHANGE':
         this.notificationMessages$.next(message);
         break;
         
@@ -479,14 +485,6 @@ export class WebSocketService implements OnDestroy {
    */
   private scheduleReconnection(): void {
     const currentStatus = this.connectionStatus$.value;
-    
-    // Disable auto-reconnection - WebSocket server not available
-    console.log('🔄 WebSocket - Auto-reconnection disabled (server not available)');
-    this.updateConnectionStatus({
-      reconnecting: false,
-      error: { message: 'WebSocket server not available' }
-    });
-    return;
     
     if (currentStatus.retryCount >= this.maxReconnectAttempts) {
       console.error('❌ WebSocket - Max reconnection attempts reached');

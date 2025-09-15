@@ -7,11 +7,14 @@ import com.***REMOVED***.***REMOVED***solutions.model.CaseTask;
 import com.***REMOVED***.***REMOVED***solutions.model.LegalCase;
 import com.***REMOVED***.***REMOVED***solutions.model.TaskComment;
 import com.***REMOVED***.***REMOVED***solutions.model.User;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
 import com.***REMOVED***.***REMOVED***solutions.repository.CaseTaskRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.LegalCaseRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.TaskCommentRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.UserRepository;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.TaskManagementService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,9 +28,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +45,8 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     private final LegalCaseRepository legalCaseRepository;
     private final UserRepository userRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final CaseAssignmentRepository caseAssignmentRepository;
+    private final NotificationService notificationService;
 
     @Override
     public CaseTaskDTO createTask(CreateTaskRequest request) {
@@ -92,6 +99,37 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the task
         CaseTask savedTask = caseTaskRepository.save(task);
         
+        // Send notifications to case assignees
+        try {
+            String title = "New Task Created";
+            String message = String.format("New task \"%s\" has been created for case \"%s\"", 
+                savedTask.getTitle(), legalCase.getTitle());
+            
+            Set<Long> notificationUserIds = new HashSet<>();
+            
+            // Get users assigned to the case
+            List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedTask.getLegalCase().getId());
+            for (CaseAssignment assignment : caseAssignments) {
+                if (assignment.getAssignedTo() != null) {
+                    notificationUserIds.add(assignment.getAssignedTo().getId());
+                }
+            }
+            
+            // Also notify the assigned user if different from case assignees
+            if (savedTask.getAssignedTo() != null) {
+                notificationUserIds.add(savedTask.getAssignedTo().getId());
+            }
+            
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, 
+                    "TASK_CREATED", Map.of("taskId", savedTask.getId(), "caseId", legalCase.getId()));
+            }
+            
+            log.info("Task creation notifications sent to {} users", notificationUserIds.size());
+        } catch (Exception e) {
+            log.error("Failed to send task creation notifications: {}", e.getMessage());
+        }
+        
         log.info("Created task with ID: {}", savedTask.getId());
         return convertToDTO(savedTask);
     }
@@ -103,6 +141,14 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + taskId));
+        
+        // Track status change for notifications
+        TaskStatus oldStatus = task.getStatus();
+        TaskStatus newStatus = request.getStatus();
+        
+        // Track assignment change for notifications
+        User oldAssignedTo = task.getAssignedTo();
+        Long newAssignedToId = request.getAssignedToId();
         
         // Update fields if provided
         if (request.getTitle() != null) {
@@ -164,6 +210,78 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
+        
+        // Send task reassignment notifications if assignee changed
+        if (newAssignedToId != null && oldAssignedTo != null && 
+            !oldAssignedTo.getId().equals(newAssignedToId) && newAssignedToId != 0) {
+            // Task was reassigned to a different user
+            try {
+                String title = "Task Assigned";
+                String message = String.format("You have been assigned to task \"%s\"", 
+                    updatedTask.getTitle());
+                
+                // Send notification to the newly assigned user
+                notificationService.sendCrmNotification(title, message, newAssignedToId, 
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
+                                           "caseId", updatedTask.getLegalCase().getId(),
+                                           "taskTitle", updatedTask.getTitle()));
+                                           
+                log.info("📧 Task reassignment notification sent to user: {}", newAssignedToId);
+            } catch (Exception e) {
+                log.error("Failed to send task reassignment notification: {}", e.getMessage());
+            }
+        } else if (newAssignedToId != null && oldAssignedTo == null && newAssignedToId != 0) {
+            // Task was assigned for the first time
+            try {
+                String title = "Task Assigned";
+                String message = String.format("You have been assigned to task \"%s\"", 
+                    updatedTask.getTitle());
+                
+                // Send notification to the newly assigned user
+                notificationService.sendCrmNotification(title, message, newAssignedToId, 
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
+                                           "caseId", updatedTask.getLegalCase().getId(),
+                                           "taskTitle", updatedTask.getTitle()));
+                                           
+                log.info("📧 Task assignment notification sent to user: {}", newAssignedToId);
+            } catch (Exception e) {
+                log.error("Failed to send task assignment notification: {}", e.getMessage());
+            }
+        }
+        
+        // Send status change notifications
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            try {
+                String title = "Task Status Changed";
+                String message = String.format("Task \"%s\" status changed from %s to %s", 
+                    updatedTask.getTitle(), oldStatus, newStatus);
+                
+                Set<Long> notificationUserIds = new HashSet<>();
+                
+                // Get users assigned to the case
+                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(updatedTask.getLegalCase().getId());
+                for (CaseAssignment assignment : caseAssignments) {
+                    if (assignment.getAssignedTo() != null) {
+                        notificationUserIds.add(assignment.getAssignedTo().getId());
+                    }
+                }
+                
+                // Also notify the assigned user if different from case assignees
+                if (updatedTask.getAssignedTo() != null) {
+                    notificationUserIds.add(updatedTask.getAssignedTo().getId());
+                }
+                
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, 
+                        "TASK_STATUS_CHANGED", Map.of("taskId", updatedTask.getId(), "caseId", updatedTask.getLegalCase().getId(), 
+                                                     "oldStatus", oldStatus.toString(), "newStatus", newStatus.toString()));
+                }
+                
+                log.info("Task status change notifications sent to {} users", notificationUserIds.size());
+            } catch (Exception e) {
+                log.error("Failed to send task status change notifications: {}", e.getMessage());
+            }
+        }
         
         log.info("Successfully updated task {}", taskId);
         return convertToDTO(updatedTask);
@@ -305,6 +423,23 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
         
+        // Send task assignment notification
+        try {
+            String title = "Task Assigned";
+            String message = String.format("You have been assigned to task \"%s\"", 
+                updatedTask.getTitle());
+            
+            // Send notification to the assigned user
+            notificationService.sendCrmNotification(title, message, userId, 
+                "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
+                                       "caseId", updatedTask.getLegalCase().getId(),
+                                       "taskTitle", updatedTask.getTitle()));
+                                       
+            log.info("📧 Task assignment notification sent to user: {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to send task assignment notification: {}", e.getMessage());
+        }
+        
         log.info("Successfully assigned task {} to user {}", taskId, userId);
         return convertToDTO(updatedTask);
     }
@@ -333,6 +468,38 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
+        
+        // Send status change notifications
+        try {
+            String title = "Task Status Changed";
+            String message = String.format("Task \"%s\" status changed to %s", 
+                updatedTask.getTitle(), status);
+            
+            Set<Long> notificationUserIds = new HashSet<>();
+            
+            // Get users assigned to the case
+            List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(updatedTask.getLegalCase().getId());
+            for (CaseAssignment assignment : caseAssignments) {
+                if (assignment.getAssignedTo() != null) {
+                    notificationUserIds.add(assignment.getAssignedTo().getId());
+                }
+            }
+            
+            // Also notify the assigned user if different from case assignees
+            if (updatedTask.getAssignedTo() != null) {
+                notificationUserIds.add(updatedTask.getAssignedTo().getId());
+            }
+            
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, 
+                    "TASK_STATUS_CHANGED", Map.of("taskId", updatedTask.getId(), "caseId", updatedTask.getLegalCase().getId(), 
+                                                 "newStatus", status.toString()));
+            }
+            
+            log.info("Task status change notifications sent to {} users", notificationUserIds.size());
+        } catch (Exception e) {
+            log.error("Failed to send task status change notifications: {}", e.getMessage());
+        }
         
         log.info("Successfully updated task {} status to {}", taskId, status);
         return convertToDTO(updatedTask);

@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { initializeApp } from 'firebase/app';
+import { UserService } from '../../service/user.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,9 +17,31 @@ export class PushNotificationService {
   public notification$: Observable<any> = this.notificationSubject.asObservable();
   
   private isFirebaseEnabled = false;
+  private broadcastChannel: BroadcastChannel | null = null;
 
-  constructor(private http: HttpClient) {
+  /**
+   * Initialize BroadcastChannel for cross-tab communication
+   */
+  private initializeBroadcastChannel(): void {
+    if ('BroadcastChannel' in window) {
+      this.broadcastChannel = new BroadcastChannel('notifications');
+      
+      // Listen for notifications from other tabs
+      this.broadcastChannel.onmessage = (event) => {
+        console.log('📻 Received notification from another tab:', event.data);
+        this.notificationSubject.next(event.data);
+        this.showNotification(event.data);
+      };
+      
+      console.log('✅ Broadcast channel initialized for cross-tab notifications');
+    } else {
+      console.warn('⚠️ BroadcastChannel not supported - cross-tab notifications disabled');
+    }
+  }
+
+  constructor(private http: HttpClient, private userService: UserService) {
     this.initializeFirebase();
+    this.initializeBroadcastChannel();
   }
 
   /**
@@ -88,52 +111,82 @@ export class PushNotificationService {
     if (!this.isFirebaseEnabled) return;
     
     onMessage(this.messaging, (payload) => {
-      console.log('Received foreground message:', payload);
+      console.log('🔔 Received foreground FCM message:', payload);
+      console.log('🔔 Notification data:', payload.notification);
+      console.log('🔔 Data payload:', payload.data);
+      
       this.notificationSubject.next(payload);
       
-      // Optionally display a notification manually for foreground messages
+      // Always display a notification for foreground messages
       this.showNotification(payload);
     });
   }
 
   /**
    * Display a notification when the app is in the foreground
+   * MODIFIED: Only log the notification - DO NOT show browser notifications
+   * The topbar component will handle in-app notifications via this.notificationSubject
    */
   private showNotification(payload: any): void {
-    // Check if the browser supports notifications
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const title = payload.notification?.title || 'BostonEO Solutions';
-      const options = {
-        body: payload.notification?.body || '',
-        icon: '/assets/images/logo-sm.png',
-        badge: '/assets/images/badge.png',
-        data: payload.data
-      };
-      
-      new Notification(title, options);
-    }
+    console.log('🔔 showNotification called with payload:', payload);
+    console.log('🔔 IN-APP NOTIFICATION ONLY - Browser notifications disabled');
+    
+    // Simply log the notification payload for debugging
+    const title = payload.notification?.title || payload.data?.title || 'BostonEO Solutions';
+    const body = payload.notification?.body || payload.data?.body || '';
+    
+    console.log('📱 IN-APP notification:', { title, body, payload });
+    console.log('✅ Notification sent to topbar component via notificationSubject');
+    
+    // DO NOT show browser notifications - they are handled by the topbar component
+    // The notification has already been sent via this.notificationSubject.next(payload) in listenForMessages()
   }
 
   /**
-   * Save the token to your backend database (currently disabled to prevent 401 errors)
+   * Save the token to your backend database
    */
   private saveTokenToDatabase(token: string): void {
-    // TODO: Enable when backend notification endpoint is implemented
-    console.log('🔔 FCM Token generated (not saved to backend yet):', token.substring(0, 20) + '...');
+    // Try multiple ways to get user ID
+    let userId: string | null = null;
     
-    // Uncomment when backend endpoint is ready:
-    /*
-    const userId = localStorage.getItem('user_id') || '1';
+    // Method 1: From UserService
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser?.id) {
+      userId = currentUser.id.toString();
+    }
+    
+    // Method 2: From localStorage
+    if (!userId) {
+      userId = localStorage.getItem('user_id') || localStorage.getItem('userId') || localStorage.getItem('currentUserId');
+    }
+    
+    // Method 3: From sessionStorage
+    if (!userId) {
+      userId = sessionStorage.getItem('user_id') || sessionStorage.getItem('userId') || sessionStorage.getItem('currentUserId');
+    }
+    
+    if (!userId) {
+      console.warn('🔔 FCM Token generated but no user ID found for saving:', token.substring(0, 20) + '...');
+      console.warn('🔔 Checked UserService, localStorage, and sessionStorage');
+      return;
+    }
+    
+    console.log('🔔 Saving FCM Token to backend for user:', userId);
+    console.log('🔔 Token:', token.substring(0, 20) + '...');
     
     this.http.post(`${environment.apiUrl}/api/v1/notifications/token`, {
       token,
-      userId,
+      userId: parseInt(userId),
       platform: 'web'
     }).subscribe({
-      next: (response) => console.log('Token saved to database:', response),
-      error: (error) => console.error('Error saving token:', error)
+      next: (response) => {
+        console.log('✅ FCM Token saved to database:', response);
+      },
+      error: (error) => {
+        console.error('❌ Error saving FCM token:', error);
+        // Don't throw error - token generation was successful even if backend save fails
+      }
     });
-    */
   }
 
   /**
@@ -165,8 +218,15 @@ export class PushNotificationService {
    * Send a custom notification with specific payload
    */
   public sendCustomNotification(payload: any): void {
+    // Send notification to current tab
     this.notificationSubject.next(payload);
     this.showNotification(payload);
+    
+    // Broadcast to other tabs
+    if (this.broadcastChannel) {
+      console.log('📻 Broadcasting notification to other tabs');
+      this.broadcastChannel.postMessage(payload);
+    }
   }
   
   /**
@@ -174,6 +234,16 @@ export class PushNotificationService {
    */
   public isAvailable(): boolean {
     return this.isFirebaseEnabled && 'Notification' in window;
+  }
+
+  /**
+   * Cleanup resources
+   */
+  public destroy(): void {
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+      this.broadcastChannel = null;
+    }
   }
 } 
  

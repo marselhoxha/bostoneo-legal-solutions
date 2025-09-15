@@ -28,6 +28,7 @@ import { CaseTask } from '../../../../../interface/case-task';
 import { Subject, forkJoin, of } from 'rxjs';
 import { takeUntil, switchMap, tap, catchError } from 'rxjs/operators';
 import { TaskAssignmentModalComponent, TaskAssignmentData } from '../../../../../component/case-task/task-management/components/task-assignment-modal/task-assignment-modal.component';
+import { NotificationTriggerService } from '../../../../../core/services/notification-trigger.service';
 import { QuickTaskModalComponent, QuickTaskData } from '../../../../../component/case-task/task-management/components/quick-task-modal/quick-task-modal.component';
 import { TeamAssignmentModalComponent, TeamAssignmentData } from '../../../../../component/case-task/task-management/components/team-assignment-modal/team-assignment-modal.component';
 import { WorkloadBalancingModalComponent, WorkloadBalancingData } from '../../../../../component/case-task/task-management/components/workload-balancing-modal/workload-balancing-modal.component';
@@ -36,6 +37,7 @@ import { AssignmentSyncService } from '../../../../../core/services/assignment-s
 import { NotificationService } from '../../../../../service/notification.service';
 import { AuditLogService } from '../../../../../core/services/audit-log.service';
 import { PushNotificationService } from '../../../../../core/services/push-notification.service';
+import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
 
 @Component({
   selector: 'app-case-detail',
@@ -120,7 +122,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private assignmentSyncService: AssignmentSyncService,
     private notificationService: NotificationService,
     private auditLogService: AuditLogService,
-    private pushNotificationService: PushNotificationService
+    private pushNotificationService: PushNotificationService,
+    private notificationManager: NotificationManagerService,
+    private notificationTrigger: NotificationTriggerService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -1228,10 +1232,45 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         
         console.log('Updating case with data:', updateData);
         
+        // Store original values for change detection
+        const originalStatus = this.case.status;
+        const originalPriority = this.case.priority;
+        const caseName = this.case.title;
+        const caseNumber = this.case.caseNumber;
+        
         // Call the API to update the case
         this.caseService.updateCase(this.case.id, updateData).subscribe({
-          next: (response) => {
+          next: async (response) => {
             console.log('Case updated successfully:', response);
+            
+            // Detect and trigger notifications for changes
+            const newStatus = formValues.status;
+            const newPriority = formValues.priority;
+            
+            // Trigger status change notification
+            if (originalStatus !== newStatus) {
+              console.log('🔔 Case status changed:', originalStatus, '→', newStatus);
+              await this.notificationTrigger.triggerCaseStatusChanged(
+                Number(this.case.id), 
+                originalStatus, 
+                newStatus, 
+                caseName, 
+                caseNumber
+              );
+            }
+            
+            // Trigger priority change notification
+            if (originalPriority !== newPriority) {
+              console.log('🔔 Case priority changed:', originalPriority, '→', newPriority);
+              await this.notificationTrigger.triggerCasePriorityChanged(
+                Number(this.case.id), 
+                originalPriority, 
+                newPriority, 
+                caseName, 
+                caseNumber
+              );
+            }
+            
             // Reload the case data after update
             this.loadCase(this.case!.id);
             this.isEditing = false;
@@ -1660,21 +1699,42 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   removeAssignment(member: any): void {
+    const memberName = member.firstName && member.lastName 
+      ? `${member.firstName} ${member.lastName}` 
+      : (member.name || 'team member');
+    
     Swal.fire({
       title: 'Remove Team Member?',
-      text: `Are you sure you want to remove ${member.name} from this case?`,
+      text: `Are you sure you want to remove ${memberName} from this case?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
       confirmButtonText: 'Yes, remove',
       cancelButtonText: 'Cancel'
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
         const reason = 'Removed from case team';
         const userId = member.userId || member.id;
+        
         this.caseAssignmentService.unassignCase(Number(this.caseId), userId, reason).subscribe({
-          next: () => {
+          next: async () => {
+            // Send personalized notifications using the new system
+            try {
+              await this.notificationTrigger.triggerCaseUnassignmentWithPersonalizedMessages(
+                Number(this.caseId),
+                userId,
+                memberName,
+                this.case?.title,
+                this.case?.caseNumber,
+                reason
+              );
+              
+              console.log('✅ Personalized unassignment notifications sent successfully');
+            } catch (error) {
+              console.error('❌ Failed to send personalized unassignment notifications:', error);
+            }
+            
             this.snackBar.open('Team member removed successfully', 'Close', { duration: 3000 });
             this.loadCaseTeam(this.caseId!);
           },
@@ -1968,8 +2028,41 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     Promise.all(assignmentPromises)
-      .then((responses) => {
+      .then(async (responses) => {
         console.log('✅ All tasks assigned successfully:', responses);
+        
+        // Send notification for each assigned task
+        console.log('🔔 Sending task assignment notifications for bulk assignment...');
+        for (let i = 0; i < validTaskIds.length; i++) {
+          const taskId = validTaskIds[i];
+          const response = responses[i];
+          
+          // Get task details from response or find in recentTasks
+          let taskTitle = `Task ${taskId}`;
+          const existingTask = this.recentTasks.find(t => t.id === taskId);
+          if (existingTask) {
+            taskTitle = existingTask.title;
+          } else if (response && response.data && response.data.title) {
+            taskTitle = response.data.title;
+          }
+          
+          try {
+            console.log(`🎯 Triggering assignment notification for task ${taskId}: ${taskTitle}`);
+            await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+              taskId,
+              taskTitle,
+              userId,
+              memberName,
+              Number(this.caseId),
+              this.case?.title,
+              undefined, // dueDate
+              undefined  // priority
+            );
+            console.log(`✅ Assignment notification sent for task ${taskId}`);
+          } catch (error) {
+            console.error(`❌ Failed to send assignment notification for task ${taskId}:`, error);
+          }
+        }
         
         Swal.fire({
           title: 'Tasks Assigned!',
@@ -2300,7 +2393,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         user.id,
         Number(this.caseId)
       ).subscribe({
-        next: (syncResult) => {
+        next: async (syncResult) => {
           if (syncResult.success) {
             // Success message through enhanced topbar notification
             this.showNotification(
@@ -2315,6 +2408,22 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 taskTitle: task.title
               }
             );
+            
+            // Send personalized task assignment notification
+            try {
+              await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+                task.id,
+                task.title,
+                user.id,
+                `${user.firstName} ${user.lastName}`,
+                Number(this.caseId),
+                this.case?.title,
+                task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+                task.priority
+              );
+            } catch (error) {
+              console.error('Failed to send personalized task assignment notification:', error);
+            }
             
             // Log the assignment change (safe method)
             this.safeAuditLog(() => {
@@ -2345,7 +2454,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Handle task creation result - Enhanced with sync service
    */
-  private handleTaskCreated(result: any): void {
+  private async handleTaskCreated(result: any): Promise<void> {
     console.log('🔧 handleTaskCreated - full result object:', result);
     if (result.action === 'created' && result.task) {
       const task = result.task;
@@ -2358,10 +2467,50 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       const taskTitle = task.title || task.name || 'New Task';
       let message = `Task "${taskTitle}" created successfully`;
       
+      console.log('🔔 Task created in case-detail, sending notifications...', task);
+      
+      // ALWAYS trigger task creation notification to notify team members about new tasks
+      if (task.id) {
+        const assigneeName = task.assignedToId && task.assignedToName ? task.assignedToName : 'Unassigned';
+        
+        try {
+          console.log('🚀 Triggering task creation notification from case-detail...');
+          await this.notificationTrigger.triggerTaskCreated(
+            task.id,
+            taskTitle,
+            assigneeName,
+            Number(this.caseId),
+            this.case?.title,
+            task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined
+          );
+          console.log('✅ Task creation notification sent successfully from case-detail');
+        } catch (error) {
+          console.error('❌ Failed to send task creation notification from case-detail:', error);
+        }
+      }
+      
       // Check if task was assigned during creation - use task data instead of modal data
       if (task.assignedToId && task.assignedToName) {
         message += ` and assigned to ${task.assignedToName}`;
         console.log('✅ Task already assigned in backend to:', task.assignedToName);
+        
+        // Additionally, send specific assignment notification
+        try {
+          console.log('🎯 Triggering task assignment notification from case-detail (pre-assigned)...');
+          await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+            task.id,
+            taskTitle,
+            task.assignedToId,
+            task.assignedToName,
+            Number(this.caseId),
+            this.case?.title,
+            task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+            task.priority
+          );
+          console.log('✅ Task assignment notification sent successfully from case-detail (pre-assigned)');
+        } catch (error) {
+          console.error('❌ Failed to send task assignment notification from case-detail (pre-assigned):', error);
+        }
         
         // Show notification for task with assignment
         this.showNotification(message, 'success', {
@@ -2395,8 +2544,26 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           user.id,
           Number(this.caseId)
         ).subscribe({
-          next: (syncResult) => {
+          next: async (syncResult) => {
             if (syncResult.success) {
+              // Send task assignment notification
+              try {
+                console.log('🎯 Triggering task assignment notification from case-detail (post-creation)...');
+                await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+                  task.id,
+                  taskTitle,
+                  user.id,
+                  `${user.firstName} ${user.lastName}`,
+                  Number(this.caseId),
+                  this.case?.title,
+                  task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+                  task.priority
+                );
+                console.log('✅ Task assignment notification sent successfully from case-detail (post-creation)');
+              } catch (error) {
+                console.error('❌ Failed to send task assignment notification from case-detail (post-creation):', error);
+              }
+              
               // Show enhanced notification for task creation + assignment
               this.showNotification(message, 'success', {
                 caseId: this.caseId,

@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { InvoicePayment } from '../../../interface/invoice-payment';
 import { InvoicePaymentService } from '../../../service/invoice-payment.service';
+import { NotificationTriggerService } from '../../../core/services/notification-trigger.service';
 import { NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
 
@@ -39,7 +40,10 @@ export class InvoicePaymentsComponent implements OnInit {
     { value: 'OTHER', label: 'Other' }
   ];
 
-  constructor(private paymentService: InvoicePaymentService) { }
+  constructor(
+    private paymentService: InvoicePaymentService,
+    private notificationTrigger: NotificationTriggerService
+  ) { }
 
   ngOnInit(): void {
     this.loadPayments();
@@ -80,7 +84,22 @@ export class InvoicePaymentsComponent implements OnInit {
 
     this.isLoading = true;
     this.paymentService.createPayment(this.invoiceId, this.newPayment).subscribe({
-      next: (response) => {
+      next: async (response) => {
+        // Trigger payment received notification
+        try {
+          const paymentMethod = this.paymentMethods.find(p => p.value === this.newPayment.paymentMethod)?.label || 'Payment';
+          
+          await this.notificationTrigger.triggerPaymentReceived(
+            response.data?.id || (response as any).id || 1, // Payment ID
+            this.newPayment.amount.toString(),
+            this.invoiceId.toString(),
+            'Unknown Client', // Client name could be passed as @Input() or fetched
+            paymentMethod
+          );
+        } catch (error) {
+          console.error('Error triggering payment received notification:', error);
+        }
+        
         Swal.fire({
           icon: 'success',
           title: 'Success',

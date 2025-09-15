@@ -82,7 +82,7 @@ public class EnhancedSecurityConfig {
         // CORS Configuration
         http.cors(cors -> cors.configurationSource(request -> {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-            corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:4200", "http://localhost:8080"));
+            corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:4200", "http://localhost:8085"));
             corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
             corsConfig.setAllowedHeaders(java.util.List.of("*"));
             corsConfig.setAllowCredentials(true);

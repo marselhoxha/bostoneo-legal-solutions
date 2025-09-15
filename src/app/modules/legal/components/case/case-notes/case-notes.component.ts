@@ -12,6 +12,7 @@ import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../../..
 import { finalize, catchError, of } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../../../../services/auth.service';
+import { NotificationTriggerService } from '../../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 import { NoSanitizePipe } from '../../../../../shared/pipes/no-sanitize.pipe';
 
@@ -65,7 +66,8 @@ export class CaseNotesComponent implements OnInit, OnChanges {
     private toastr: ToastrService,
     private authService: AuthService,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationTrigger: NotificationTriggerService
   ) {}
 
   ngOnInit(): void {
@@ -189,8 +191,24 @@ export class CaseNotesComponent implements OnInit, OnChanges {
         this.cdr.detectChanges();
       }))
       .subscribe({
-        next: (createdNote) => {
+        next: async (createdNote) => {
           console.log('Note created successfully:', createdNote);
+          
+          // Trigger case note notification
+          try {
+            const noteTitleForNotification = this.newNote.title.trim();
+            const notePreview = this.newNote.content.substring(0, 100) + (this.newNote.content.length > 100 ? '...' : '');
+            
+            await this.notificationTrigger.triggerCaseNoteAdded(
+              Number(createdNote.id || createdNote.data?.id),
+              noteTitleForNotification,
+              notePreview,
+              this.caseId,
+              'Case Note Added' // Case name can be enhanced later
+            );
+          } catch (error) {
+            console.error('Error triggering case note notification:', error);
+          }
           
           // Reset the form
           this.newNote = {

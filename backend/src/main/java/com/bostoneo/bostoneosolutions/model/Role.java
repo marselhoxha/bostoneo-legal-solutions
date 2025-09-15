@@ -54,6 +54,14 @@ public class Role {
     // Collection of permissions associated with this role - handled by custom repository
     @Transient
     private Set<Permission> permissions = new HashSet<>();
+    
+    // Getter with null safety
+    public Set<Permission> getPermissions() {
+        if (permissions == null) {
+            permissions = new HashSet<>();
+        }
+        return permissions;
+    }
 
     // Count of users who have this role - calculated dynamically
     @Transient

@@ -14,6 +14,8 @@ import com.***REMOVED***.***REMOVED***solutions.dto.UserDTO;
 import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
 import com.***REMOVED***.***REMOVED***solutions.service.ReminderQueueService;
 import com.***REMOVED***.***REMOVED***solutions.service.RoleService;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +30,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,6 +49,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     private final NotificationService notificationService;
     private final ReminderQueueService reminderQueueService;
     private final RoleService roleService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
 
     @Override
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
@@ -101,6 +106,41 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                     reminderQueueService.enqueueReminder(savedEvent, minutes, "ADDITIONAL");
                 }
             }
+        }
+        
+        // Send calendar event creation notifications
+        try {
+            String title = "New Calendar Event Created";
+            String message = String.format("Calendar event \"%s\" has been created for %s", 
+                savedEvent.getTitle(), savedEvent.getStartTime());
+            
+            Set<Long> notificationUserIds = new HashSet<>();
+            
+            // Notify the event creator
+            if (savedEvent.getUserId() != null) {
+                notificationUserIds.add(savedEvent.getUserId());
+            }
+            
+            // Get users assigned to the case if this event is related to a case
+            if (savedEvent.getCaseId() != null) {
+                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedEvent.getCaseId());
+                for (CaseAssignment assignment : caseAssignments) {
+                    if (assignment.getAssignedTo() != null) {
+                        notificationUserIds.add(assignment.getAssignedTo().getId());
+                    }
+                }
+            }
+            
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, 
+                    "CALENDAR_EVENT_CREATED", Map.of("eventId", savedEvent.getId(),
+                                                     "eventTitle", savedEvent.getTitle(),
+                                                     "caseId", savedEvent.getCaseId() != null ? savedEvent.getCaseId() : 0));
+            }
+            
+            log.info("Calendar event creation notifications sent to {} users", notificationUserIds.size());
+        } catch (Exception e) {
+            log.error("Failed to send calendar event creation notifications: {}", e.getMessage());
         }
         
         return CalendarEventDTOMapper.fromCalendarEvent(savedEvent);

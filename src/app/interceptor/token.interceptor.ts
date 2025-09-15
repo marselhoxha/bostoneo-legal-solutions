@@ -23,31 +23,23 @@ export class TokenInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     // Skip token injection for public endpoints
     if (this.isPublicEndpoint(request.url)) {
-      console.log('Public endpoint, skipping token injection:', request.url);
       return next.handle(request);
     }
 
     const token = localStorage.getItem(Key.TOKEN);
-    console.log('TokenInterceptor - URL:', request.url);
-    console.log('TokenInterceptor - Token Key:', Key.TOKEN);
-    console.log('TokenInterceptor - Token exists:', !!token);
-    console.log('TokenInterceptor - Token length:', token?.length || 0);
     
     // If no token exists, don't add Authorization header (let the request fail naturally)
     if (!token || token.trim() === '') {
-      console.warn('TokenInterceptor - No JWT token found for authenticated request:', request.url);
       return next.handle(request);
     }
 
     const modifiedRequest = this.addAuthorizationTokenHeader(request, token);
-    console.log('TokenInterceptor - Authorization header added:', modifiedRequest.headers.get('Authorization'));
     
     return next.handle(modifiedRequest)
       .pipe(
         catchError((err) => {
           if (err instanceof HttpErrorResponse) {
             if (err.status === 401 || err.status === 403) {
-              console.log('Unauthorized request, attempting token refresh for:', request.url);
               return this.handleRefreshToken(request, next);
             } else {
               return throwError(() => err);
@@ -60,12 +52,10 @@ export class TokenInterceptor implements HttpInterceptor {
 
   private handleRefreshToken(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if(!this.isTokenRefreshing) {
-      console.log('Refreshing Token...');
       this.isTokenRefreshing = true;
       this.refreshTokenSubject.next(null);
       return this.userService.refreshToken$().pipe(
         switchMap((response) => {
-          console.log('Token Refresh Response:', response);
           this.isTokenRefreshing = false;
           
           // Check if refresh was successful
@@ -79,8 +69,6 @@ export class TokenInterceptor implements HttpInterceptor {
           }
           
           this.refreshTokenSubject.next(response);
-          console.log('New Token:', response.data.access_token);
-          console.log('Sending original request:', request);
           return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
         }),
         catchError((error) => {
@@ -110,7 +98,6 @@ export class TokenInterceptor implements HttpInterceptor {
   private addAuthorizationTokenHeader(request: HttpRequest<unknown>, token: string): HttpRequest<any> {
     // Validate token format before adding to header
     if (!token || token.trim() === '') {
-      console.warn('Attempted to add empty token to request header');
       return request;
     }
     
@@ -121,11 +108,9 @@ export class TokenInterceptor implements HttpInterceptor {
     const tokenParts = token.split('.');
     if (tokenParts.length !== 3) {
       console.error('Invalid JWT token format - expected 3 parts, got:', tokenParts.length);
-      console.error('Token value:', token);
       return request;
     }
     
-    console.log('TokenInterceptor - Adding Authorization header with token');
     return request.clone({ setHeaders: { Authorization: `Bearer ${token}` }});
   }
 

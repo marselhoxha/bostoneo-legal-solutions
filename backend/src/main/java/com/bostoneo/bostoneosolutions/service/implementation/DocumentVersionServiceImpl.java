@@ -6,6 +6,9 @@ import com.***REMOVED***.***REMOVED***solutions.model.LegalDocument;
 import com.***REMOVED***.***REMOVED***solutions.repository.DocumentVersionRepository;
 import com.***REMOVED***.***REMOVED***solutions.repository.LegalDocumentRepository;
 import com.***REMOVED***.***REMOVED***solutions.service.DocumentVersionService;
+import com.***REMOVED***.***REMOVED***solutions.service.NotificationService;
+import com.***REMOVED***.***REMOVED***solutions.repository.CaseAssignmentRepository;
+import com.***REMOVED***.***REMOVED***solutions.model.CaseAssignment;
 import com.***REMOVED***.***REMOVED***solutions.util.CustomHttpResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +23,10 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -30,6 +36,8 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
 
     private final DocumentVersionRepository versionRepository;
     private final LegalDocumentRepository documentRepository;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
     
     // Base directory for document storage
     private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/***REMOVED***solutions/documents/";
@@ -128,6 +136,46 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
             document.setFileType(fileType);
             document.setUpdatedAt(LocalDateTime.now());
             documentRepository.save(document);
+            
+            // Send document version update notifications
+            try {
+                String title = "Document Version Updated";
+                String message = String.format("New version (v%d) of document \"%s\" has been uploaded", 
+                    nextVersionNumber, document.getTitle() != null ? document.getTitle() : document.getFileName());
+                
+                Set<Long> notificationUserIds = new HashSet<>();
+                
+                // Get users assigned to the case if this document is related to a case
+                if (document.getCaseId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(document.getCaseId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                            log.info("📧 Adding case assignee to document version notification: {}", assignment.getAssignedTo().getId());
+                        }
+                    }
+                }
+                
+                // Always add the user who uploaded the new version (like DOCUMENT_UPLOADED pattern)
+                if (uploadedBy != null) {
+                    notificationUserIds.add(uploadedBy);
+                    log.info("📧 Adding user who uploaded version to document version notification: {}", uploadedBy);
+                }
+                
+                // Send notifications to all collected users
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId, 
+                        "DOCUMENT_VERSION_UPDATED", Map.of("documentId", documentId,
+                                                           "versionId", savedVersion.getId(),
+                                                           "versionNumber", nextVersionNumber,
+                                                           "fileName", fileName,
+                                                           "caseId", document.getCaseId() != null ? document.getCaseId() : 0));
+                }
+                
+                log.info("📧 Document version update notifications sent to {} users", notificationUserIds.size());
+            } catch (Exception e) {
+                log.error("Failed to send document version update notifications: {}", e.getMessage());
+            }
             
             return new CustomHttpResponse<>(
                 HttpStatus.CREATED.value(),

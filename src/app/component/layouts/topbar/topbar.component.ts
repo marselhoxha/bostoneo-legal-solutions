@@ -19,6 +19,7 @@ import { Observable, BehaviorSubject, map, Subject, takeUntil } from 'rxjs';
 import { CustomHttpResponse, Profile } from 'src/app/interface/appstates';
 import { NavigationEnd } from '@angular/router';
 import { PushNotificationService } from 'src/app/core/services/push-notification.service';
+import { NotificationManagerService } from 'src/app/core/services/notification-manager.service';
 import { CaseAssignmentService } from 'src/app/service/case-assignment.service';
 import { CaseTaskService } from 'src/app/service/case-task.service';
 import { CaseAssignment } from 'src/app/interface/case-assignment';
@@ -59,6 +60,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
   firebaseToken: string | null = null;
   unreadNotificationCount = 0;
   activeNotification: any = null;
+  private notificationsLoaded = false;
+  notificationPermissionStatus: NotificationPermission = 'default';
   @ViewChild('notificationDropdown') notificationDropdown!: NgbDropdown;
   
   // Case Management Properties
@@ -71,6 +74,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   constructor(@Inject(DOCUMENT) private document: any,   private modalService: NgbModal,
     public _cookiesService: CookieService, private userService: UserService, private notificationService: NotificationService,
     private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
+    private notificationManagerService: NotificationManagerService,
     private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService) {
       
      }
@@ -83,6 +87,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
     if (this.userService.isAuthenticated()) {
       this.loadUserData();
     }
+    
+    // Check notification permission status
+    this.checkNotificationPermission();
     
     // Load theme from localStorage
     const savedTheme = localStorage.getItem('theme');
@@ -104,15 +111,20 @@ export class TopbarComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Subscribe to router events to refresh user data
+    // Subscribe to router events to refresh user data (but avoid reloading notifications on every route change)
     this.router.events.pipe(takeUntil(this.destroy$)).subscribe((event) => {
       if (event instanceof NavigationEnd) {
+        // Only refresh user data but don't trigger notification reload on every route change
+        // The notification loading should only happen on initial login or when explicitly needed
         this.userService.refreshUserData();
       }
     });
     
     // Initialize push notifications
     this.initializePushNotifications();
+    
+    // Initialize backend notifications
+    this.initializeBackendNotifications();
     
     // Initialize unread notification count
     this.updateUnreadCount();
@@ -301,6 +313,123 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
   
   /**
+   * Initialize backend notifications - load missed notifications from database
+   */
+  private initializeBackendNotifications(): void {
+    // Skip if user not authenticated
+    if (!this.userService.isAuthenticated()) {
+      return;
+    }
+    
+    // Subscribe to user data changes to fetch notifications when user logs in
+    let previousUserId: number | null = null;
+    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      if (user && user.id) {
+        // If user changed, reset notifications loaded flag
+        if (previousUserId && previousUserId !== user.id) {
+          console.log('🔄 User changed, resetting notifications state');
+          this.notificationsLoaded = false;
+          this.pushNotifications = [];
+          this.unreadNotificationCount = 0;
+        }
+        
+        // Load notifications only if not already loaded for this user
+        if (!this.notificationsLoaded) {
+          console.log('🔔 Loading backend notifications for user (first time):', user.id);
+          this.loadBackendNotifications(user.id);
+          this.notificationsLoaded = true;
+        }
+        
+        previousUserId = user.id;
+      } else {
+        // User logged out, reset everything
+        console.log('🔄 User logged out, resetting notifications state');
+        this.notificationsLoaded = false;
+        this.pushNotifications = [];
+        this.unreadNotificationCount = 0;
+        previousUserId = null;
+      }
+    });
+  }
+  
+  /**
+   * Load notifications from backend database
+   */
+  private async loadBackendNotifications(userId: number): Promise<void> {
+    try {
+      console.log('📡 Fetching backend notifications for user:', userId);
+      
+      // Use the NotificationManagerService to check for missed notifications
+      // This will use the proper authentication and API setup
+      await this.notificationManagerService.checkMissedNotifications(userId);
+      
+      console.log('✅ Requested backend notifications via NotificationManagerService');
+      
+    } catch (error) {
+      console.error('❌ Error loading backend notifications:', error);
+      
+      // Fallback: Try direct API call as a backup
+      try {
+        console.log('🔄 Trying direct API call as fallback...');
+        
+        const response = await fetch(`http://localhost:8085/api/v1/notifications/user/${userId}?page=0&size=10`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📬 Backend notifications response (fallback):', data);
+          
+          if (data?.data?.notifications && data.data.notifications.length > 0) {
+            // Process each individual notification and add it to the UI
+            data.data.notifications.forEach((backendNotification: any) => {
+              // Convert backend notification to frontend format
+              const frontendNotification = {
+                notification: {
+                  title: backendNotification.title,
+                  body: backendNotification.message
+                },
+                data: {
+                  type: backendNotification.type?.toLowerCase() || 'default',
+                  url: backendNotification.url || '/dashboard',
+                  priority: backendNotification.priority?.toLowerCase() || 'normal',
+                  backendId: backendNotification.id,
+                  isFromBackend: true,
+                  createdAt: backendNotification.createdAt
+                }
+              };
+              
+              // Add the notification to the UI
+              this.addNotification(frontendNotification);
+            });
+            
+            console.log(`✅ Loaded ${data.data.notifications.length} backend notifications (fallback)`);
+          } else {
+            console.log('📭 No backend notifications found (fallback)');
+          }
+        } else {
+          console.error('❌ Fallback API call also failed:', response.status);
+        }
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback API call error:', fallbackError);
+      }
+    }
+  }
+  
+  /**
+   * Check current notification permission status
+   */
+  checkNotificationPermission(): void {
+    if ('Notification' in window) {
+      this.notificationPermissionStatus = Notification.permission;
+    }
+  }
+  
+  /**
    * Request permission for push notifications
    */
   requestNotificationPermission(): void {
@@ -308,9 +437,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
       .then(token => {
         console.log('Notification permission granted. Token:', token);
         this.firebaseToken = token;
+        this.notificationPermissionStatus = 'granted';
       })
       .catch(error => {
         console.error('Error requesting notification permission:', error);
+        this.notificationPermissionStatus = Notification.permission;
       });
   }
   
@@ -318,31 +449,59 @@ export class TopbarComponent implements OnInit, OnDestroy {
    * Add a notification to the list
    */
   private addNotification(notification: any): void {
+    // Handle timestamp - use backend timestamp if available, otherwise current time
+    let timestamp = new Date();
+    if (notification.data?.createdAt) {
+      timestamp = new Date(notification.data.createdAt);
+    }
+    
+    // Create a unique ID - use backend ID if available
+    let notificationId = Date.now().toString();
+    if (notification.data?.backendId) {
+      notificationId = `backend_${notification.data.backendId}`;
+    }
+    
+    // Check for duplicates based on ID
+    const existingNotification = this.pushNotifications.find(n => n.id === notificationId);
+    if (existingNotification) {
+      console.log('📝 Notification already exists, skipping:', notificationId);
+      return;
+    }
+    
     // Create a notification object
     const notificationObj = {
-      id: Date.now().toString(),
+      id: notificationId,
       title: notification.notification?.title || 'New Notification',
       body: notification.notification?.body || '',
-      timestamp: new Date(),
-      read: false,
+      timestamp: timestamp,
+      read: notification.data?.read || false,
       data: notification.data || {},
-      type: notification.data?.type || 'default'
+      type: notification.data?.type || 'default',
+      isFromBackend: notification.data?.isFromBackend || false
     };
     
-    // Add to the beginning of the list
-    this.pushNotifications = [notificationObj, ...this.pushNotifications.slice(0, 19)];
+    // Add to the beginning of the list, or sort by timestamp if from backend
+    if (notification.data?.isFromBackend) {
+      // For backend notifications, insert in chronological order
+      this.pushNotifications = [notificationObj, ...this.pushNotifications];
+      this.pushNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      this.pushNotifications = this.pushNotifications.slice(0, 50); // Keep only latest 50
+    } else {
+      // For real-time notifications, add to beginning
+      this.pushNotifications = [notificationObj, ...this.pushNotifications.slice(0, 19)];
+      
+      // Trigger bell animation and sound only for new real-time notifications
+      this.triggerBellAnimation();
+      this.playNotificationSound();
+    }
     
     // Update unread count
     this.updateUnreadCount();
     
-    // Trigger bell animation
-    this.triggerBellAnimation();
-    
     // Force UI update
     this.cdr.detectChanges();
     
-    // Try to play notification sound
-    this.playNotificationSound();
+    console.log('📝 Added notification:', notificationObj.title);
   }
   
   /**
@@ -460,14 +619,35 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Stop event propagation to prevent dropdown close
     event?.stopPropagation();
     
-    // Mark notification as read
-    notification.read = true;
-    
-    // Update unread count
-    this.updateUnreadCount();
-    
-    // Force update UI
-    this.cdr.detectChanges();
+    // Mark notification as read both locally and in backend
+    if (!notification.read && notification.id) {
+      // Update local state immediately for UI responsiveness
+      notification.read = true;
+      this.updateUnreadCount();
+      this.cdr.detectChanges();
+      
+      // Extract the actual backend ID (remove 'backend_' prefix if present)
+      let backendId = notification.id;
+      if (notification.id.startsWith('backend_')) {
+        backendId = notification.id.replace('backend_', '');
+      }
+      
+      console.log('🔄 Marking notification as read - UI ID:', notification.id, 'Backend ID:', backendId);
+      
+      // Persist to backend using the correct ID format
+      this.notificationService.markAsRead(backendId).subscribe({
+        next: () => {
+          console.log('✅ Notification marked as read in backend:', backendId);
+        },
+        error: (error) => {
+          console.error('❌ Failed to mark notification as read in backend:', error);
+          // Revert local state if backend call fails
+          notification.read = false;
+          this.updateUnreadCount();
+          this.cdr.detectChanges();
+        }
+      });
+    }
     
     // Show notification details in modal - with small delay to prevent interaction issues
     setTimeout(() => {
@@ -517,6 +697,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
   markAllAsRead(): void {
     if (this.pushNotifications.length === 0) return;
     
+    // Update local state immediately for UI responsiveness
+    const unreadNotifications = this.pushNotifications.filter(n => !n.read);
     this.pushNotifications = this.pushNotifications.map(notification => ({
       ...notification,
       read: true
@@ -525,6 +707,27 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.hasNewNotifications = false;
     this.unreadNotificationCount = 0;
     this.cdr.markForCheck();
+    
+    // Persist to backend if there are actually unread notifications
+    if (unreadNotifications.length > 0) {
+      this.notificationService.markAllAsRead().subscribe({
+        next: () => {
+          console.log('✅ All notifications marked as read in backend');
+        },
+        error: (error) => {
+          console.error('❌ Failed to mark all notifications as read in backend:', error);
+          // Revert local state if backend call fails
+          unreadNotifications.forEach(notification => {
+            const localNotification = this.pushNotifications.find(n => n.id === notification.id);
+            if (localNotification) {
+              localNotification.read = false;
+            }
+          });
+          this.updateUnreadCount();
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
   
   /**

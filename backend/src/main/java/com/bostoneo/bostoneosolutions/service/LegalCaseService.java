@@ -51,7 +51,7 @@ public interface LegalCaseService {
     DocumentDTO getDocument(Long caseId, Long documentId);
     void deleteDocument(Long caseId, Long documentId);
     Resource downloadDocument(Long caseId, Long documentId);
-    DocumentVersionDTO uploadNewDocumentVersion(Long caseId, Long documentId, MultipartFile file, String notes);
+    DocumentVersionDTO uploadNewDocumentVersion(Long caseId, Long documentId, MultipartFile file, String notes, Long uploadedBy);
     List<DocumentVersionDTO> getDocumentVersions(Long caseId, Long documentId);
     Resource downloadDocumentVersion(Long caseId, Long documentId, Long versionId);
     
