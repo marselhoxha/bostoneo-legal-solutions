@@ -181,6 +181,12 @@
 			<version>9.2.0</version>
 		</dependency>
 
+		<!-- AI Integration Dependencies -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
 		<!-- H2 Database for testing -->
 		<dependency>
 			<groupId>com.h2database</groupId>

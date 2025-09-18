@@ -77,6 +77,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers("/api/time-entries/**", "/api/**")
             .ignoringRequestMatchers("/user/delete/**")  // Ignore CSRF for user deletion
             .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
+            .ignoringRequestMatchers("/api/ai/**")  // Ignore CSRF for AI endpoints
         );
         
         // CORS Configuration
@@ -105,6 +106,7 @@ public class EnhancedSecurityConfig {
             .requestMatchers(PUBLIC_URLS).permitAll()
             .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
             .requestMatchers("/api/crm/**").permitAll()  // Temporarily allow public access to CRM for debugging
+            .requestMatchers("/api/ai/**").permitAll()  // Allow public access to AI for testing
             .anyRequest().authenticated()
         );
         

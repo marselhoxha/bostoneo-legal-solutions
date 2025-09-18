@@ -63,6 +63,30 @@ export const MENU: MenuItem[] = [
         link: '/legal/calendar',
         parentId: 5,
         requiredPermission: { resource: 'CALENDAR', action: 'VIEW' }
+      },
+      {
+        id: 'ai-assistant',
+        label: '🤖 AI Assistant',
+        link: '/legal/ai-assistant',
+        parentId: 5
+      },
+      {
+        id: 'contract-risk-scanner',
+        label: '🛡️ Contract Risk Scanner',
+        link: '/legal/contract-risk-scanner',
+        parentId: 5
+      },
+      {
+        id: 'document-analyzer',
+        label: '📄 Document Analyzer',
+        link: '/legal/document-analyzer',
+        parentId: 5
+      },
+      {
+        id: 'legal-research-assistant',
+        label: '🔍 Legal Research Assistant',
+        link: '/legal/legal-research-assistant',
+        parentId: 5
       }
     ]
   },

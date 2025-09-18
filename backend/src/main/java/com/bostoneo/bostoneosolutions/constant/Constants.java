@@ -9,7 +9,7 @@ public class Constants {
             "/api/v1/case-assignments/**", "/api/v1/tasks/**", "/legal-case/**", "/api/public/intake-forms/**"};
 
     public static final String TOKEN_PREFIX = "Bearer ";
-    public static final String[] PUBLIC_ROUTES = {"/user/new/password","/user/login/", "/user/register", "/user/verify/code", "/user/refresh/token", "/user/image"};
+    public static final String[] PUBLIC_ROUTES = {"/user/new/password","/user/login/", "/user/register", "/user/verify/code", "/user/refresh/token", "/user/image", "/api/ai/legal-memo", "/api/ai/search-case-law", "/api/ai/interpret-statute", "/api/ai/find-precedents"};
     public static final String HTTP_OPTIONS_METHOD = "OPTIONS";
 
     public static final String AUTHORITIES = "authorities";

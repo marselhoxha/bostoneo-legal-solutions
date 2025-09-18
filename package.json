@@ -80,6 +80,7 @@
     "leaflet": "^1.9.4",
     "lord-icon-element": "^4.1.2",
     "lottie-web": "^5.12.2",
+    "marked": "^16.3.0",
     "masonry-layout": "^4.2.2",
     "metismenujs": "^1.4.0",
     "moment": "^2.30.1",

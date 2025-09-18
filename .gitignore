@@ -29,6 +29,7 @@ backend/src/main/resources/application.yml
 backend/src/main/resources/application.yml
 backend/src/main/resources/application-*.yml
 backend/src/main/resources/*.properties
+backend/src/main/resources/application-local.properties
 
 # Firebase Configuration
 firebase.json
@@ -48,6 +49,16 @@ src/environments/environment.prod.ts
 
 # Markdown Files
 *.md
+
+# Environment Variables and API Keys
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+backend/.env
+*.key
+**/secrets.json
 
 # Shell Scripts
 *.sh
