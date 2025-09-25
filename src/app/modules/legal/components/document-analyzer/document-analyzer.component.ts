@@ -1,347 +1,388 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
-import { AiAssistantService } from '../../../../service/ai-assistant.service';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
+import { DocumentAnalyzerService, DocumentAnalysisResult, AnalysisHistory } from '../../services/document-analyzer.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-document-analyzer',
-  template: `
-    <div class="container-fluid" style="margin-top: 120px;">
-      <!-- Breadcrumb -->
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="/legal">Legal</a></li>
-          <li class="breadcrumb-item active">Document Analyzer</li>
-        </ol>
-      </nav>
-
-      <div class="row" style="margin-bottom:60px;">
-        <div class="col-12">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-light-subtle border-bottom-dashed">
-              <h5 class="card-title mb-0 text-primary">
-                <i class="ri-file-text-line me-2"></i>AI Document Analyzer
-              </h5>
-            </div>
-            <div class="card-body">
-              <div class="row g-4">
-                <!-- Input Section -->
-                <div class="col-lg-5">
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold text-muted">
-                      Document Text <span class="text-danger">*</span>
-                    </label>
-                    <textarea 
-                      class="form-control" 
-                      rows="10" 
-                      [(ngModel)]="documentText"
-                      placeholder="Paste document content here for AI analysis..."
-                      [disabled]="loading">
-                    </textarea>
-                  </div>
-                  
-                  <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                      <label class="form-label fw-semibold text-muted">Document Type</label>
-                      <select class="form-select" [(ngModel)]="documentType" [disabled]="loading">
-                        <option value="contract">Contract</option>
-                        <option value="lease">Lease Agreement</option>
-                        <option value="employment">Employment Agreement</option>
-                        <option value="legal_brief">Legal Brief</option>
-                        <option value="court_filing">Court Filing</option>
-                        <option value="settlement">Settlement Agreement</option>
-                        <option value="general">General Document</option>
-                      </select>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label fw-semibold text-muted">Analysis Mode</label>
-                      <select class="form-select" [(ngModel)]="analysisMode" [disabled]="loading">
-                        <option value="instant">⚡ Instant (2-3 sec)</option>
-                        <option value="deep">🧠 Deep Thinking (30-60 sec)</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div class="d-flex gap-2 flex-wrap">
-                    <button 
-                      class="btn btn-soft-primary btn-animation waves-effect waves-light"
-                      (click)="quickSummary()" 
-                      [disabled]="loading || !documentText.trim()">
-                      <span *ngIf="loading && currentAction === 'summary'" class="spinner-border spinner-border-sm me-1"></span>
-                      <i class="ri-file-list-line me-1" *ngIf="!loading || currentAction !== 'summary'"></i>
-                      {{ loading && currentAction === 'summary' ? 'Summarizing...' : 'Quick Summary' }}
-                    </button>
-                    
-                    <button 
-                      class="btn btn-soft-success btn-animation waves-effect waves-light"
-                      (click)="extractKeyTerms()" 
-                      [disabled]="loading || !documentText.trim()">
-                      <span *ngIf="loading && currentAction === 'terms'" class="spinner-border spinner-border-sm me-1"></span>
-                      <i class="ri-key-line me-1" *ngIf="!loading || currentAction !== 'terms'"></i>
-                      {{ loading && currentAction === 'terms' ? 'Extracting...' : 'Key Terms' }}
-                    </button>
-                    
-                    <button 
-                      class="btn btn-soft-warning btn-animation waves-effect waves-light"
-                      (click)="riskAssessment()" 
-                      [disabled]="loading || !documentText.trim()">
-                      <span *ngIf="loading && currentAction === 'risk'" class="spinner-border spinner-border-sm me-1"></span>
-                      <i class="ri-alert-line me-1" *ngIf="!loading || currentAction !== 'risk'"></i>
-                      {{ loading && currentAction === 'risk' ? 'Analyzing...' : 'Risk Analysis' }}
-                    </button>
-                    
-                    <button 
-                      class="btn btn-soft-secondary"
-                      (click)="loadSampleDocument()" 
-                      [disabled]="loading">
-                      <i class="ri-file-copy-line me-1"></i>Load Sample
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Results Section -->
-                <div class="col-lg-7">
-                  <div class="card border shadow-none h-100">
-                    <div class="card-header bg-light">
-                      <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">Analysis Results</h6>
-                        <span class="badge bg-info-subtle text-info" *ngIf="analysisMode === 'deep'">
-                          Deep Thinking Mode
-                        </span>
-                      </div>
-                    </div>
-                    <div class="card-body">
-                      <!-- Loading State -->
-                      <div class="text-center py-5" *ngIf="loading">
-                        <div class="spinner-border text-primary mb-3"></div>
-                        <p class="text-muted mb-2">
-                          <strong>Claude Sonnet 4</strong> is analyzing your document...
-                        </p>
-                        <small class="text-muted">
-                          {{ analysisMode === 'deep' ? 'Deep thinking in progress (30-60 seconds)' : 'Processing...' }}
-                        </small>
-                      </div>
-
-                      <!-- Error State -->
-                      <div class="alert alert-danger" *ngIf="error && !loading">
-                        <i class="ri-error-warning-line me-2"></i>
-                        {{ error }}
-                      </div>
-
-                      <!-- Results -->
-                      <div *ngIf="result && !loading && !error" class="result-container">
-                        <!-- Action Type Badge -->
-                        <div class="mb-3">
-                          <span class="badge"
-                            [ngClass]="{
-                              'bg-primary-subtle text-primary': currentAction === 'summary',
-                              'bg-success-subtle text-success': currentAction === 'terms',
-                              'bg-warning-subtle text-warning': currentAction === 'risk'
-                            }">
-                            {{ getActionLabel() }}
-                          </span>
-                          <span class="badge bg-light-subtle text-muted ms-2">{{ documentType | titlecase }}</span>
-                        </div>
-
-                        <!-- Analysis Content -->
-                        <div class="analysis-content">
-                          <pre class="analysis-text">{{ result }}</pre>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="mt-4 d-flex gap-2">
-                          <button class="btn btn-sm btn-soft-secondary" (click)="copyToClipboard()">
-                            <i class="ri-file-copy-line me-1"></i>Copy
-                          </button>
-                          <button class="btn btn-sm btn-soft-info" (click)="downloadResult()">
-                            <i class="ri-download-line me-1"></i>Download
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Empty State -->
-                      <div class="text-center py-5" *ngIf="!result && !loading && !error">
-                        <div class="avatar-lg mx-auto mb-3">
-                          <div class="avatar-title rounded-circle bg-soft-primary text-primary">
-                            <i class="ri-file-text-line display-6"></i>
-                          </div>
-                        </div>
-                        <h6 class="mb-2">Ready to Analyze</h6>
-                        <p class="text-muted small">Upload or paste document content and select an analysis type</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .analysis-text {
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.6;
-      background: none;
-      border: none;
-      padding: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .result-container {
-      border-left: 3px solid #6691e7;
-      padding-left: 1rem;
-    }
-    .analysis-content {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 1rem;
-      border: 1px solid #e3e6e9;
-    }
-  `]
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './document-analyzer.component.html',
+  styleUrls: ['./document-analyzer.component.scss']
 })
-export class DocumentAnalyzerComponent {
-  documentText = '';
-  documentType = 'contract';
-  analysisMode = 'instant';
-  result = '';
-  error = '';
-  loading = false;
-  currentAction: 'summary' | 'terms' | 'risk' = 'summary';
+export class DocumentAnalyzerComponent implements OnInit, OnDestroy {
+  @ViewChild('fileInput') fileInput!: ElementRef;
+
+  private destroy$ = new Subject<void>();
+
+  // UI State
+  isAnalyzing = false;
+  isDragging = false;
+  activeTab = 'upload'; // 'upload' | 'history' | 'results'
+
+  // Selected options
+  selectedAnalysisType = 'general';
+  selectedFile: File | null = null;
+
+  // Progress tracking
+  uploadProgress = 0;
+  analysisStatus = 'idle'; // idle, uploading, analyzing, completed, failed
+
+  // Analysis results
+  currentAnalysis: DocumentAnalysisResult | null = null;
+  analysisHistory: AnalysisHistory[] = [];
+
+  // Statistics
+  stats = {
+    totalAnalyzed: 0,
+    timeSaved: 0,
+    accuracy: 95,
+    riskIssues: 0,
+    todayAnalyses: 0,
+    weeklyTrend: '+12%'
+  };
+
+  // Analysis types
+  analysisTypes = [
+    {
+      value: 'contract',
+      label: 'Contract Analysis',
+      icon: 'ri-file-text-line',
+      description: 'Review contracts and agreements for risks and obligations',
+      color: 'primary'
+    },
+    {
+      value: 'legal-brief',
+      label: 'Legal Brief Review',
+      icon: 'ri-file-paper-line',
+      description: 'Analyze legal briefs and court filings',
+      color: 'info'
+    },
+    {
+      value: 'compliance',
+      label: 'Compliance Check',
+      icon: 'ri-shield-check-line',
+      description: 'Ensure regulatory and legal compliance',
+      color: 'success'
+    },
+    {
+      value: 'due-diligence',
+      label: 'Due Diligence',
+      icon: 'ri-search-eye-line',
+      description: 'Comprehensive examination for transactions',
+      color: 'warning'
+    },
+    {
+      value: 'risk-assessment',
+      label: 'Risk Assessment',
+      icon: 'ri-alert-line',
+      description: 'Identify and evaluate potential risks',
+      color: 'danger'
+    },
+    {
+      value: 'general',
+      label: 'General Analysis',
+      icon: 'ri-file-search-line',
+      description: 'Comprehensive document review',
+      color: 'secondary'
+    }
+  ];
+
+  // Sample documents
+  sampleDocuments = [
+    {
+      name: 'Service Agreement Template',
+      type: 'contract',
+      size: '24 KB'
+    },
+    {
+      name: 'Motion to Dismiss',
+      type: 'legal-brief',
+      size: '18 KB'
+    },
+    {
+      name: 'GDPR Compliance Checklist',
+      type: 'compliance',
+      size: '15 KB'
+    }
+  ];
 
   constructor(
-    private aiService: AiAssistantService,
-    private cdr: ChangeDetectorRef
+    private documentAnalyzerService: DocumentAnalyzerService
   ) {}
 
-  quickSummary() {
-    if (!this.documentText.trim()) return;
-    
-    this.loading = true;
-    this.currentAction = 'summary';
-    this.error = '';
-    this.result = '';
-    this.cdr.detectChanges();
-    
-    const useDeepThinking = this.analysisMode === 'deep';
-    
-    this.aiService.analyzeDocument(this.documentText, this.documentType, 'summary')
+  ngOnInit(): void {
+    this.loadAnalysisHistory();
+    this.loadStatistics();
+    this.subscribeToAnalysisStatus();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private subscribeToAnalysisStatus(): void {
+    this.documentAnalyzerService.analysisStatus$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(status => {
+        this.analysisStatus = status;
+        this.isAnalyzing = status === 'uploading' || status === 'analyzing';
+      });
+
+    this.documentAnalyzerService.uploadProgress$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(progress => {
+        this.uploadProgress = progress.percentage;
+      });
+  }
+
+  private loadAnalysisHistory(): void {
+    this.documentAnalyzerService.getAnalysisHistory()
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.result = response.analysis;
-          this.loading = false;
-          this.cdr.detectChanges();
+        next: (history) => {
+          this.analysisHistory = history;
+          this.stats.totalAnalyzed = history.length;
         },
-        error: (err) => {
-          this.error = err.error?.error || 'Summary generation failed';
-          this.loading = false;
-          this.cdr.detectChanges();
+        error: (error) => {
+          console.error('Failed to load analysis history:', error);
         }
       });
   }
 
-  extractKeyTerms() {
-    if (!this.documentText.trim()) return;
-    
-    this.loading = true;
-    this.currentAction = 'terms';
-    this.error = '';
-    this.result = '';
-    this.cdr.detectChanges();
-    
-    this.aiService.extractKeyTerms(this.documentText)
-      .subscribe({
-        next: (response) => {
-          this.result = response.keyTerms;
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          this.error = err.error?.error || 'Key terms extraction failed';
-          this.loading = false;
-          this.cdr.detectChanges();
-        }
-      });
+  private loadStatistics(): void {
+    // TODO: Load real statistics from backend
+    this.stats = {
+      totalAnalyzed: this.analysisHistory.length,
+      timeSaved: Math.round(this.analysisHistory.length * 2.5),
+      accuracy: 95,
+      riskIssues: this.analysisHistory.filter(a => a.riskLevel === 'High').length,
+      todayAnalyses: 5,
+      weeklyTrend: '+12%'
+    };
   }
 
-  riskAssessment() {
-    if (!this.documentText.trim()) return;
-    
-    this.loading = true;
-    this.currentAction = 'risk';
-    this.error = '';
-    this.result = '';
-    this.cdr.detectChanges();
-    
-    this.aiService.riskAssessment(this.documentText)
-      .subscribe({
-        next: (response) => {
-          this.result = response.riskAssessment;
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          this.error = err.error?.error || 'Risk assessment failed';
-          this.loading = false;
-          this.cdr.detectChanges();
-        }
-      });
-  }
-
-  loadSampleDocument() {
-    this.documentText = `NON-DISCLOSURE AGREEMENT
-
-This Non-Disclosure Agreement ("Agreement") is entered into on March 15, 2024, between DataTech Innovations LLC ("Disclosing Party") and Alex Morgan ("Receiving Party").
-
-CONFIDENTIAL INFORMATION:
-The Disclosing Party may share proprietary technology specifications, business strategies, customer lists, financial data, and product development plans with the Receiving Party.
-
-OBLIGATIONS:
-1. The Receiving Party agrees to maintain strict confidentiality of all disclosed information
-2. Information shall not be used for any purpose other than evaluating potential business collaboration
-3. No copies or reproductions of confidential materials without written consent
-4. Return or destroy all confidential information upon request
-
-TERM: This agreement shall remain in effect for 5 years from the date of signing.
-
-EXCEPTIONS: Publicly available information, independently developed information, and information received from third parties without breach of confidentiality obligations are excluded.
-
-REMEDIES: Breach of this agreement may result in immediate injunctive relief and monetary damages.
-
-GOVERNING LAW: This agreement shall be governed by the laws of Delaware.
-
-Signed: DataTech Innovations LLC, Alex Morgan`;
-    
-    this.result = '';
-    this.error = '';
-  }
-
-  getActionLabel(): string {
-    switch (this.currentAction) {
-      case 'summary': return 'Document Summary';
-      case 'terms': return 'Key Terms Extraction';
-      case 'risk': return 'Risk Assessment';
-      default: return 'Analysis';
+  // File handling methods
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      this.handleFile(file);
     }
   }
 
-  copyToClipboard() {
-    navigator.clipboard.writeText(this.result).then(() => {
-      // Could add a toast notification here
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragging = false;
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.handleFile(files[0]);
+    }
+  }
+
+  private handleFile(file: File): void {
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'application/rtf'
+    ];
+
+    if (!validTypes.includes(file.type)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File Type',
+        text: 'Please upload a PDF, Word document, or text file.',
+        confirmButtonColor: '#6691e7'
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      Swal.fire({
+        icon: 'error',
+        title: 'File Too Large',
+        text: 'Please upload a file smaller than 10MB.',
+        confirmButtonColor: '#6691e7'
+      });
+      return;
+    }
+
+    this.selectedFile = file;
+  }
+
+  analyzeDocument(): void {
+    if (!this.selectedFile) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No File Selected',
+        text: 'Please select a document to analyze.',
+        confirmButtonColor: '#6691e7'
+      });
+      return;
+    }
+
+    this.isAnalyzing = true;
+    this.activeTab = 'results';
+
+    this.documentAnalyzerService.analyzeDocument(this.selectedFile, this.selectedAnalysisType)
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(result => result !== null)
+      )
+      .subscribe({
+        next: (result) => {
+          this.currentAnalysis = result;
+          this.isAnalyzing = false;
+          this.loadAnalysisHistory(); // Refresh history
+
+          if (result.status === 'completed') {
+            Swal.fire({
+              icon: 'success',
+              title: 'Analysis Complete',
+              text: 'Your document has been successfully analyzed.',
+              confirmButtonColor: '#6691e7'
+            });
+          }
+        },
+        error: (error) => {
+          this.isAnalyzing = false;
+          console.error('Analysis failed:', error);
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Analysis Failed',
+            text: error.error?.error || 'Failed to analyze the document. Please try again.',
+            confirmButtonColor: '#6691e7'
+          });
+        }
+      });
+  }
+
+  loadSampleDocument(doc: any): void {
+    // TODO: Load actual sample document
+    Swal.fire({
+      icon: 'info',
+      title: 'Sample Document',
+      text: `Loading ${doc.name} for analysis...`,
+      timer: 2000,
+      showConfirmButton: false
     });
   }
 
-  downloadResult() {
-    const blob = new Blob([this.result], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${this.getActionLabel()}_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  viewAnalysis(analysis: AnalysisHistory): void {
+    this.documentAnalyzerService.getAnalysisById(analysis.analysisId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.currentAnalysis = result;
+          this.activeTab = 'results';
+        },
+        error: (error) => {
+          console.error('Failed to load analysis:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load analysis details.',
+            confirmButtonColor: '#6691e7'
+          });
+        }
+      });
+  }
+
+  downloadReport(): void {
+    if (!this.currentAnalysis) return;
+
+    this.documentAnalyzerService.downloadAnalysisReport(this.currentAnalysis.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `analysis-report-${this.currentAnalysis!.id}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (error) => {
+          console.error('Failed to download report:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Download Failed',
+            text: 'Failed to download the analysis report.',
+            confirmButtonColor: '#6691e7'
+          });
+        }
+      });
+  }
+
+  copyToClipboard(text: string): void {
+    navigator.clipboard.writeText(text).then(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'Copied!',
+        text: 'Analysis copied to clipboard.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    });
+  }
+
+  resetAnalysis(): void {
+    this.selectedFile = null;
+    this.currentAnalysis = null;
+    this.uploadProgress = 0;
+    this.activeTab = 'upload';
+    this.documentAnalyzerService.resetAnalysisState();
+
+    if (this.fileInput) {
+      this.fileInput.nativeElement.value = '';
+    }
+  }
+
+  getFileIcon(fileName: string): string {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return 'ri-file-pdf-line text-danger';
+      case 'doc':
+      case 'docx':
+        return 'ri-file-word-line text-primary';
+      case 'txt':
+        return 'ri-file-text-line text-info';
+      default:
+        return 'ri-file-line text-secondary';
+    }
+  }
+
+  getRiskBadgeClass(riskLevel: string | undefined): string {
+    return this.documentAnalyzerService.getRiskLevelClass(riskLevel);
+  }
+
+  getStatusBadgeClass(status: string): string {
+    return this.documentAnalyzerService.getStatusClass(status);
+  }
+
+  formatFileSize(bytes: number): string {
+    return this.documentAnalyzerService.formatFileSize(bytes);
+  }
+
+  getCurrentDate(): Date {
+    return new Date();
   }
 }

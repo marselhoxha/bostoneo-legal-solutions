@@ -1,0 +1,669 @@
+// Legal Research Component - Enhanced Velzon Theme Styles
+
+// Import flatpickr styles
+@import 'flatpickr/dist/flatpickr.min.css';
+
+// Velzon Theme Variables (using existing theme colors)
+$primary-color: #405189;
+$success-color: #0ab39c;
+$info-color: #299cdb;
+$warning-color: #f7b84b;
+$danger-color: #f06548;
+$secondary-color: #74788d;
+$dark-color: #212529;
+$light-color: #f3f3f9;
+$gray-600: #74788d;
+$gray-700: #495057;
+
+// Animation Mixins
+@mixin card-hover-effect {
+  transition: all 0.3s ease;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(18, 38, 63, 0.1) !important;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(64, 81, 137, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(64, 81, 137, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(64, 81, 137, 0);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.legal-research-container {
+  // Hero Section Gradient
+  .bg-gradient {
+    background: linear-gradient(135deg, rgba($primary-color, 0.1) 0%, rgba($info-color, 0.05) 100%);
+    animation: fadeIn 0.5s ease;
+  }
+
+  // Animated Cards
+  .card-animate {
+    @include card-hover-effect;
+    animation: slideInFromTop 0.6s ease backwards;
+
+    &:nth-child(1) { animation-delay: 0.1s; }
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+    &:nth-child(4) { animation-delay: 0.4s; }
+  }
+
+  // Material Shadow
+  .material-shadow {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075),
+                0 0.25rem 0.5rem rgba(0, 0, 0, 0.05),
+                0 0.5rem 1rem rgba(0, 0, 0, 0.025);
+  }
+
+  // Simple Ribbon Styles
+  .ribbon-box {
+    position: relative;
+  }
+
+  .ribbon-three {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 1;
+
+    &-primary {
+      background-color: $primary-color;
+      color: #fff;
+      border-radius: 0.25rem;
+    }
+  }
+
+  .ribbon-two {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 1;
+
+    &-success {
+      background-color: $success-color;
+      color: #fff;
+      border-radius: 0.25rem;
+    }
+  }
+
+  // Counter Animation
+  .counter-value {
+    display: inline-block;
+    animation: fadeIn 1s ease;
+  }
+
+  // Search Box Styles - Velzon Pattern
+  .search-box {
+    .form-control-lg {
+      padding-right: 60px;
+      border-radius: 0.4rem;
+      font-size: 0.9375rem;
+
+      &:focus {
+        border-color: rgba($primary-color, 0.3);
+        background-color: #fff;
+      }
+    }
+
+    .btn-lg {
+      padding: 0.5rem 1.5rem;
+      border-radius: 0.4rem;
+    }
+
+    .dropdown-menu {
+      border: 1px solid #eff2f7;
+      box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.03);
+
+      .dropdown-item {
+        padding: 0.5rem 1rem;
+        color: #495057;
+
+        &:hover {
+          background-color: #f3f6f9;
+          color: $primary-color;
+        }
+      }
+    }
+  }
+
+  // Velzon Card Styles
+  .card {
+    border: 0;
+    box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.03);
+    margin-bottom: 1.5rem;
+
+    .card-header {
+      background-color: transparent;
+      border-bottom: 1px solid #eff2f7;
+      padding: 1.25rem;
+
+      .card-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #495057;
+      }
+    }
+
+    .card-body {
+      padding: 1.25rem;
+    }
+  }
+
+  // Avatar Styles - Velzon Pattern
+  .avatar-sm {
+    height: 2.5rem;
+    width: 2.5rem;
+  }
+
+  .avatar-xs {
+    height: 2rem;
+    width: 2rem;
+  }
+
+  .avatar-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    font-weight: 500;
+  }
+
+  .avatar-lg {
+    height: 4rem;
+    width: 4rem;
+  }
+
+  // Badge Styles - Velzon Soft Badges
+  .badge-soft-primary {
+    color: #405189;
+    background-color: rgba(64, 81, 137, 0.18);
+    border: 1px solid rgba(64, 81, 137, 0.1);
+  }
+
+  .badge-soft-success {
+    color: #0ab39c;
+    background-color: rgba(10, 179, 156, 0.18);
+    border: 1px solid rgba(10, 179, 156, 0.1);
+  }
+
+  .badge-soft-info {
+    color: #299cdb;
+    background-color: rgba(41, 156, 219, 0.18);
+    border: 1px solid rgba(41, 156, 219, 0.1);
+  }
+
+  .badge-soft-warning {
+    color: #f7b84b;
+    background-color: rgba(247, 184, 75, 0.18);
+    border: 1px solid rgba(247, 184, 75, 0.1);
+  }
+
+  .badge-soft-danger {
+    color: #f06548;
+    background-color: rgba(240, 101, 72, 0.18);
+    border: 1px solid rgba(240, 101, 72, 0.1);
+  }
+
+  .badge-soft-secondary {
+    color: #74788d;
+    background-color: rgba(116, 120, 141, 0.18);
+    border: 1px solid rgba(116, 120, 141, 0.1);
+  }
+
+  // Tab Styles - Velzon Custom Tabs
+  .nav-tabs-custom {
+    border-bottom: 2px solid #eff2f7;
+
+    .nav-link {
+      padding: 0.625rem 1.25rem;
+      color: #74788d;
+      font-weight: 500;
+      border: none;
+      border-bottom: 2px solid transparent;
+
+      &:hover {
+        color: $primary-color;
+      }
+
+      &.active {
+        color: $primary-color;
+        background-color: transparent;
+        border-color: transparent;
+        border-bottom-color: $primary-color;
+      }
+    }
+
+    &.nav-success {
+      .nav-link.active {
+        color: $success-color;
+        border-bottom-color: $success-color;
+      }
+    }
+  }
+
+  // Button Styles - Velzon Soft Buttons
+  .btn-soft-primary {
+    color: #405189;
+    background-color: rgba(64, 81, 137, 0.1);
+    border-color: transparent;
+
+    &:hover {
+      color: #fff;
+      background-color: #405189;
+      border-color: #405189;
+    }
+  }
+
+  .btn-soft-secondary {
+    color: #74788d;
+    background-color: rgba(116, 120, 141, 0.1);
+    border-color: transparent;
+
+    &:hover {
+      color: #fff;
+      background-color: #74788d;
+      border-color: #74788d;
+    }
+  }
+
+  .btn-soft-success {
+    color: #0ab39c;
+    background-color: rgba(10, 179, 156, 0.1);
+    border-color: transparent;
+
+    &:hover {
+      color: #fff;
+      background-color: #0ab39c;
+      border-color: #0ab39c;
+    }
+  }
+
+  .btn-soft-info {
+    color: #299cdb;
+    background-color: rgba(41, 156, 219, 0.1);
+    border-color: transparent;
+
+    &:hover {
+      color: #fff;
+      background-color: #299cdb;
+      border-color: #299cdb;
+    }
+  }
+
+  .btn-soft-danger {
+    color: #f06548;
+    background-color: rgba(240, 101, 72, 0.1);
+    border-color: transparent;
+
+    &:hover {
+      color: #fff;
+      background-color: #f06548;
+      border-color: #f06548;
+    }
+  }
+
+  // Form Styles - Velzon Pattern
+  .form-label {
+    font-weight: 500;
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-control,
+  .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+
+    &:focus {
+      border-color: #a0a7c5;
+      box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.15);
+    }
+  }
+
+  .form-check-input {
+    &:checked {
+      background-color: $primary-color;
+      border-color: $primary-color;
+    }
+  }
+
+  .form-switch {
+    .form-check-input {
+      width: 2.5rem;
+      height: 1.25rem;
+
+      &:focus {
+        box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.15);
+      }
+    }
+
+    &.form-switch-lg .form-check-input {
+      width: 3rem;
+      height: 1.5rem;
+    }
+  }
+
+  // Table Styles - Velzon Table Card
+  .table-card {
+    .table {
+      margin-bottom: 0;
+
+      thead th {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        color: #878a99;
+        background-color: #f3f6f9;
+        border-bottom: 1px solid #e9ebec;
+        padding: 0.75rem;
+      }
+
+      tbody td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        color: #495057;
+        font-size: 0.875rem;
+      }
+
+      &.table-hover tbody tr:hover {
+        background-color: #f3f6f9;
+      }
+    }
+  }
+
+  // Alert Styles - Velzon Border Left Alert
+  .alert-border-left {
+    border-left: 3px solid;
+    border-radius: 0.25rem;
+
+    &.alert-danger {
+      background-color: rgba(240, 101, 72, 0.1);
+      border-left-color: #f06548;
+      color: #b73e2c;
+    }
+  }
+
+  // Ribbon Box - Velzon Pattern
+  .ribbon-box {
+    position: relative;
+
+    .ribbon {
+      position: absolute;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      z-index: 1;
+
+      &.ribbon-primary {
+        background-color: $primary-color;
+        color: #fff;
+      }
+
+      &.ribbon-shape {
+        right: -5px;
+        top: 15px;
+
+        &:before {
+          content: "";
+          position: absolute;
+          right: 0;
+          top: 100%;
+          width: 0;
+          height: 0;
+          border-top: 5px solid darken($primary-color, 10%);
+          border-right: 5px solid transparent;
+        }
+      }
+    }
+  }
+
+  // AI Analysis Content Styles
+  .ai-analysis-content {
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: #495057;
+
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: 600;
+      color: #212529;
+      margin-top: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.125rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+      color: $primary-color;
+    }
+
+    h5 {
+      font-size: 0.9375rem;
+      color: #495057;
+    }
+
+    p {
+      margin-bottom: 0.75rem;
+    }
+
+    ul, ol {
+      padding-left: 1.5rem;
+      margin-bottom: 0.75rem;
+
+      li {
+        margin-bottom: 0.25rem;
+        color: #495057;
+      }
+    }
+
+    strong {
+      font-weight: 600;
+      color: #212529;
+    }
+
+    em {
+      color: #74788d;
+    }
+  }
+
+  // Progress Styles - Velzon
+  .progress {
+    height: 0.375rem;
+    background-color: #eff2f7;
+
+    &.progress-sm {
+      height: 0.25rem;
+    }
+
+    .progress-bar {
+      background-color: $primary-color;
+
+      &.bg-success {
+        background-color: $success-color;
+      }
+    }
+  }
+
+  // Empty State - Velzon Pattern
+  .noresult {
+    padding: 3rem 0;
+
+    h5 {
+      font-size: 1rem;
+      color: #495057;
+      font-weight: 600;
+    }
+
+    p {
+      color: #878a99;
+      font-size: 0.8125rem;
+    }
+  }
+
+  // Card Border Styles
+  .card-border-primary {
+    border: 1px solid rgba(64, 81, 137, 0.2);
+
+    .card-header {
+      background-color: rgba(64, 81, 137, 0.05);
+    }
+  }
+
+  .card-border-light {
+    border: 1px solid #eff2f7;
+  }
+
+  // Result Type Badges
+  .badge-statute {
+    @extend .badge-soft-primary;
+  }
+
+  .badge-case {
+    @extend .badge-soft-danger;
+  }
+
+  .badge-rule {
+    @extend .badge-soft-info;
+  }
+
+  .badge-regulation {
+    @extend .badge-soft-warning;
+  }
+
+  .badge-guideline {
+    @extend .badge-soft-success;
+  }
+
+  .badge-opinion {
+    @extend .badge-soft-secondary;
+  }
+
+  // Flatpickr Customization for Velzon
+  .flatpickr-input {
+    background-color: #fff;
+
+    &:focus {
+      border-color: #a0a7c5;
+      box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.15);
+    }
+  }
+
+  input[data-provider="flatpickr"] {
+    background-color: #fff;
+  }
+
+  // Subtle Backgrounds - Velzon Pattern
+  .bg-primary-subtle {
+    background-color: rgba(64, 81, 137, 0.1) !important;
+  }
+
+  .text-primary {
+    color: $primary-color !important;
+  }
+
+  // Modal Styles - Velzon
+  .modal-content {
+    border: 0;
+    box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.1);
+
+    .modal-header {
+      border-bottom: 1px solid #eff2f7;
+      padding: 1rem 1.5rem;
+
+      .modal-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #495057;
+      }
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      border-top: 1px solid #eff2f7;
+      padding: 1rem 1.5rem;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .legal-research-container {
+    .search-box {
+      .form-control-lg {
+        font-size: 0.875rem;
+      }
+    }
+
+    .nav-tabs-custom {
+      .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+      }
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .legal-research-container {
+    .btn,
+    .form-control,
+    .form-select,
+    .nav-tabs-custom {
+      display: none !important;
+    }
+
+    .ai-analysis-content {
+      page-break-inside: avoid;
+    }
+  }
+}

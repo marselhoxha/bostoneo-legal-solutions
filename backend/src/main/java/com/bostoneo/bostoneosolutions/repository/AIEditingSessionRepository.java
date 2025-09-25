@@ -1,0 +1,1 @@
+package com.bostoneo.bostoneosolutions.repository; import org.springframework.data.jpa.repository.JpaRepository; import org.springframework.stereotype.Repository; @Repository public interface AIEditingSessionRepository extends JpaRepository<com.bostoneo.bostoneosolutions.model.AIEditingSession, Long> {}

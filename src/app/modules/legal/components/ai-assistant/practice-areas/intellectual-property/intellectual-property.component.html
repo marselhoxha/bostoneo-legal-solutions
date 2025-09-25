@@ -1,0 +1,832 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Intellectual Property Tools</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/legal">Legal</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant">AI Assistant</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant/practice-areas">Practice Areas</a></li>
+            <li class="breadcrumb-item active">Intellectual Property</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="row">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-3" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'patent-application'" 
+             (click)="setActiveTab('patent-application')" role="tab">
+            <i class="ri-lightbulb-line me-2"></i>Patent Application
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'trademark-search'" 
+             (click)="setActiveTab('trademark-search')" role="tab">
+            <i class="ri-trademark-line me-2"></i>Trademark Search
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'copyright-registration'" 
+             (click)="setActiveTab('copyright-registration')" role="tab">
+            <i class="ri-copyright-line me-2"></i>Copyright Registration
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'prior-art'" 
+             (click)="setActiveTab('prior-art')" role="tab">
+            <i class="ri-search-2-line me-2"></i>Prior Art Search
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'license-agreement'" 
+             (click)="setActiveTab('license-agreement')" role="tab">
+            <i class="ri-file-shield-2-line me-2"></i>License Agreement
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Patent Application Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'patent-application'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Patent Application Details</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="patentForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Patent Type</label>
+                  <select class="form-select" formControlName="patentType">
+                    <option *ngFor="let type of patentTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Technical Field</label>
+                  <input type="text" class="form-control" formControlName="technicalField">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Title of Invention</label>
+                  <input type="text" class="form-control" formControlName="title" 
+                         placeholder="Maximum 500 characters">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Inventor Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Primary Inventor</label>
+                  <input type="text" class="form-control" formControlName="primaryInventor">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Inventor Address</label>
+                  <input type="text" class="form-control" formControlName="inventorAddress">
+                </div>
+                
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Invention Description</h6>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Field of Invention</label>
+                  <textarea class="form-control" formControlName="fieldOfInvention" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Background of Invention</label>
+                  <textarea class="form-control" formControlName="backgroundOfInvention" rows="3"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Summary of Invention</label>
+                  <textarea class="form-control" formControlName="summaryOfInvention" rows="3"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Problem Solved</label>
+                  <textarea class="form-control" formControlName="problemSolved" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Abstract (Max 150 words)</label>
+                  <textarea class="form-control" formControlName="abstract" rows="3"></textarea>
+                </div>
+              </div>
+            </form>
+            
+            <!-- Claims Section -->
+            <div class="mt-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold text-primary mb-0">Patent Claims</h6>
+                <button class="btn btn-sm btn-outline-primary" (click)="addClaim()">
+                  <i class="ri-add-line"></i> Add Claim
+                </button>
+              </div>
+              <div class="claims-list">
+                <div class="claim-item" *ngFor="let claim of patentClaims">
+                  <div class="d-flex align-items-start">
+                    <span class="claim-number">{{ claim.claimNumber }}.</span>
+                    <div class="flex-grow-1 mx-2">
+                      <textarea class="form-control" [(ngModel)]="claim.claimText" 
+                                (change)="updateClaim(claim)"
+                                placeholder="Enter claim text..."></textarea>
+                      <div class="mt-2">
+                        <select class="form-select form-select-sm w-auto d-inline-block" 
+                                [(ngModel)]="claim.type">
+                          <option value="independent">Independent</option>
+                          <option value="dependent">Dependent</option>
+                        </select>
+                        <input *ngIf="claim.type === 'dependent'" type="number" 
+                               class="form-control form-control-sm w-auto d-inline-block ms-2"
+                               [(ngModel)]="claim.dependsOn" 
+                               placeholder="Depends on claim #" min="1">
+                      </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" (click)="removeClaim(claim.id)">
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="text-center py-3" *ngIf="patentClaims.length === 0">
+                  <small class="text-muted">No claims added yet. Click "Add Claim" to start.</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="generatePatentApplication()"
+                        [disabled]="patentForm.invalid || patentClaims.length === 0 || isGeneratingPatent">
+                  <span *ngIf="!isGeneratingPatent">
+                    <i class="ri-file-text-line me-2"></i>Generate Application
+                  </span>
+                  <span *ngIf="isGeneratingPatent">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                  </span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadSamplePatentApplication()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedApplication">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Patent Application</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedApplication, 'patent-application')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedApplication }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trademark Search Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'trademark-search'">
+    <div class="row">
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Trademark Search</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="trademarkForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Mark Text</label>
+                  <input type="text" class="form-control" formControlName="markText" 
+                         placeholder="Enter trademark to search">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Mark Type</label>
+                  <select class="form-select" formControlName="markType">
+                    <option value="wordmark">Word Mark</option>
+                    <option value="design">Design Mark</option>
+                    <option value="composite">Composite Mark</option>
+                    <option value="sound">Sound Mark</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Search Scope</label>
+                  <select class="form-select" formControlName="searchScope">
+                    <option value="federal">Federal (USPTO)</option>
+                    <option value="state">State</option>
+                    <option value="common-law">Common Law</option>
+                    <option value="international">International</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Goods/Services Description</label>
+                  <textarea class="form-control" formControlName="goodsServices" rows="3"
+                            placeholder="Describe goods or services..."></textarea>
+                </div>
+                <div class="col-12">
+                  <h6 class="fw-semibold">Select Classes</h6>
+                  <div class="row g-2">
+                    <div class="col-md-6" *ngFor="let class of trademarkClasses">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               [(ngModel)]="class.selected" 
+                               [ngModelOptions]="{standalone: true}"
+                               [id]="'class' + class.classNumber">
+                        <label class="form-check-label" [for]="'class' + class.classNumber">
+                          Class {{ class.classNumber }}: {{ class.description }}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Owner Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Owner Name</label>
+                  <input type="text" class="form-control" formControlName="ownerName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Owner Type</label>
+                  <select class="form-select" formControlName="ownerType">
+                    <option value="individual">Individual</option>
+                    <option value="corporation">Corporation</option>
+                    <option value="llc">LLC</option>
+                    <option value="partnership">Partnership</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="searchTrademark()"
+                          [disabled]="trademarkForm.invalid || isSearchingTrademark">
+                    <span *ngIf="!isSearchingTrademark">
+                      <i class="ri-search-line me-2"></i>Search Trademarks
+                    </span>
+                    <span *ngIf="isSearchingTrademark">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Searching...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleTrademarkSearch()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Search Results</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive" *ngIf="trademarkResults.length > 0">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Mark</th>
+                    <th>Registration #</th>
+                    <th>Owner</th>
+                    <th>Classes</th>
+                    <th>Status</th>
+                    <th>Similarity</th>
+                    <th>Risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let result of trademarkResults">
+                    <td><strong>{{ result.mark }}</strong></td>
+                    <td>{{ result.registrationNumber }}</td>
+                    <td>{{ result.owner }}</td>
+                    <td>
+                      <span class="badge bg-info-subtle text-info me-1" 
+                            *ngFor="let class of result.classes">
+                        Class {{ class }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="result.status === 'Registered' ? 'bg-success' : 'bg-warning'">
+                        {{ result.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="progress" style="width: 80px;">
+                        <div class="progress-bar" 
+                             [ngClass]="'bg-' + getSimilarityColor(result.similarity)"
+                             [style.width.%]="result.similarity">
+                          {{ result.similarity }}%
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span [ngClass]="getConflictLevelClass(result.conflictLevel)">
+                        {{ result.conflictLevel }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="trademarkResults.length === 0">
+              <i class="ri-search-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Search Results</h5>
+              <p class="text-muted">Enter trademark details and search to find similar marks</p>
+            </div>
+            
+            <div class="alert alert-info mt-3" *ngIf="trademarkResults.length > 0">
+              <i class="ri-information-line me-2"></i>
+              This is a preliminary search. Consult with a trademark attorney for comprehensive clearance.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Copyright Registration Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'copyright-registration'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Copyright Registration Form</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="copyrightForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Title of Work</label>
+                  <input type="text" class="form-control" formControlName="workTitle">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Type of Work</label>
+                  <select class="form-select" formControlName="workType">
+                    <option value="">Select Type</option>
+                    <option *ngFor="let type of workTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Year of Creation</label>
+                  <input type="number" class="form-control" formControlName="yearOfCreation" 
+                         [min]="1900" [max]="2025">
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Publication Status</label>
+                  <select class="form-select" formControlName="publicationStatus">
+                    <option value="unpublished">Unpublished</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+                <div class="col-md-6" *ngIf="copyrightForm.get('publicationStatus')?.value === 'published'">
+                  <label class="form-label">Publication Date</label>
+                  <input type="date" class="form-control" formControlName="publicationDate">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Author Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Author Name</label>
+                  <input type="text" class="form-control" formControlName="authorName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Author Type</label>
+                  <select class="form-select" formControlName="authorType">
+                    <option value="individual">Individual</option>
+                    <option value="employer">Employer (Work for Hire)</option>
+                    <option value="anonymous">Anonymous</option>
+                    <option value="pseudonymous">Pseudonymous</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Citizenship</label>
+                  <input type="text" class="form-control" formControlName="authorCitizenship">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Domicile</label>
+                  <input type="text" class="form-control" formControlName="authorDomicile">
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="workForHire" id="workHire">
+                    <label class="form-check-label" for="workHire">
+                      Work made for hire
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Claimant Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Claimant Name</label>
+                  <input type="text" class="form-control" formControlName="claimantName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Claimant Address</label>
+                  <input type="text" class="form-control" formControlName="claimantAddress">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Transfer Statement (if different from author)</label>
+                  <input type="text" class="form-control" formControlName="transferStatement"
+                         placeholder="e.g., By written agreement">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Limitation of Claim (Optional)</h6>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Material Excluded</label>
+                  <input type="text" class="form-control" formControlName="materialExcluded"
+                         placeholder="Previously published or public domain material">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">New Material Included</label>
+                  <input type="text" class="form-control" formControlName="newMaterialIncluded"
+                         placeholder="Description of new material">
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generateCopyrightRegistration()"
+                          [disabled]="copyrightForm.invalid || isGeneratingCopyright">
+                    <span *ngIf="!isGeneratingCopyright">
+                      <i class="ri-file-text-line me-2"></i>Generate Registration
+                    </span>
+                    <span *ngIf="isGeneratingCopyright">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleCopyrightRegistration()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedCopyright">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Copyright Application</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedCopyright, 'copyright-registration')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedCopyright }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prior Art Search Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'prior-art'">
+    <div class="row">
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Prior Art Search</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="priorArtForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Invention Title</label>
+                  <input type="text" class="form-control" formControlName="inventionTitle">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Keywords (comma separated)</label>
+                  <input type="text" class="form-control" formControlName="keywords"
+                         placeholder="e.g., machine learning, neural network, AI">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Technical Field</label>
+                  <input type="text" class="form-control" formControlName="technicalField">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Invention Description</label>
+                  <textarea class="form-control" formControlName="inventionDescription" rows="4"></textarea>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold">Search Databases</h6>
+                  <div formGroupName="searchDatabases">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="uspto" id="uspto">
+                      <label class="form-check-label" for="uspto">USPTO Patents</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="googlePatents" id="google">
+                      <label class="form-check-label" for="google">Google Patents</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="espacenet" id="epo">
+                      <label class="form-check-label" for="epo">EPO Espacenet</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="wipo" id="wipo">
+                      <label class="form-check-label" for="wipo">WIPO Global Brand</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" formControlName="nonPatentLiterature" id="npl">
+                      <label class="form-check-label" for="npl">Non-Patent Literature</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold">Date Range</h6>
+                </div>
+                <div formGroupName="dateRange">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">From Date</label>
+                      <input type="date" class="form-control" formControlName="startDate">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">To Date</label>
+                      <input type="date" class="form-control" formControlName="endDate">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="searchPriorArt()"
+                          [disabled]="priorArtForm.invalid || isSearchingPriorArt">
+                    <span *ngIf="!isSearchingPriorArt">
+                      <i class="ri-search-2-line me-2"></i>Search Prior Art
+                    </span>
+                    <span *ngIf="isSearchingPriorArt">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Searching...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSamplePriorArtSearch()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Prior Art Results</h5>
+          </div>
+          <div class="card-body">
+            <div class="prior-art-results" *ngIf="priorArtResults.length > 0">
+              <div class="result-item" *ngFor="let result of priorArtResults">
+                <div class="d-flex justify-content-between align-items-start mb-3 p-3 border rounded">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">{{ result.title }}</h6>
+                    <p class="text-muted mb-2">{{ result.abstract }}</p>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="badge bg-primary-subtle text-primary">
+                        {{ result.publicationNumber }}
+                      </span>
+                      <span class="badge bg-info-subtle text-info">
+                        {{ result.publicationDate | date:'mediumDate' }}
+                      </span>
+                      <span class="badge" [ngClass]="'bg-' + (result.relevance === 'high' ? 'danger' : result.relevance === 'medium' ? 'warning' : 'success')">
+                        {{ result.relevance }} relevance
+                      </span>
+                    </div>
+                  </div>
+                  <div class="text-center ms-3">
+                    <div class="similarity-score">
+                      <div class="progress" style="width: 60px; height: 60px;">
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                          <path class="circle" [style.stroke-dasharray]="result.similarity + ', 100'" 
+                                [ngClass]="getRelevanceClass(result.relevance)"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                          <text x="18" y="20.35" class="percentage">{{ result.similarity }}%</text>
+                        </svg>
+                      </div>
+                      <small class="text-muted">Similarity</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="priorArtResults.length === 0">
+              <i class="ri-search-2-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Prior Art Found</h5>
+              <p class="text-muted">Enter invention details and search to find related prior art</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- License Agreement Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'license-agreement'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">License Agreement Details</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="licenseForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">License Type</label>
+                  <select class="form-select" formControlName="licenseType">
+                    <option value="">Select Type</option>
+                    <option *ngFor="let type of licenseTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">IP Type</label>
+                  <select class="form-select" formControlName="ipType">
+                    <option value="">Select Type</option>
+                    <option value="patent">Patent</option>
+                    <option value="trademark">Trademark</option>
+                    <option value="copyright">Copyright</option>
+                    <option value="trade-secret">Trade Secret</option>
+                  </select>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Parties</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Licensor Name</label>
+                  <input type="text" class="form-control" formControlName="licensorName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Licensor Address</label>
+                  <input type="text" class="form-control" formControlName="licensorAddress">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Licensee Name</label>
+                  <input type="text" class="form-control" formControlName="licenseeName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Licensee Address</label>
+                  <input type="text" class="form-control" formControlName="licenseeAddress">
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label">IP Description</label>
+                  <textarea class="form-control" formControlName="ipDescription" rows="3"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Registration/Patent Numbers</label>
+                  <input type="text" class="form-control" formControlName="registrationNumbers">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">License Terms</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Territory</label>
+                  <input type="text" class="form-control" formControlName="territory"
+                         placeholder="e.g., United States, Worldwide">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Field of Use</label>
+                  <input type="text" class="form-control" formControlName="fieldOfUse"
+                         placeholder="Optional restriction">
+                </div>
+                
+                <div formGroupName="duration">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Start Date</label>
+                      <input type="date" class="form-control" formControlName="startDate">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">End Date</label>
+                      <input type="date" class="form-control" formControlName="endDate"
+                             [disabled]="licenseForm.get('duration.perpetual')?.value">
+                    </div>
+                    <div class="col-12">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" formControlName="perpetual" id="perpetual">
+                        <label class="form-check-label" for="perpetual">Perpetual License</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Financial Terms</h6>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Upfront Payment</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="upfrontPayment">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Royalty Rate (%)</label>
+                  <input type="number" class="form-control" formControlName="royaltyRate" step="0.1">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Minimum Royalties</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="minimumRoyalties">
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold">Rights & Restrictions</h6>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="sublicenseRights" id="sublicense">
+                    <label class="form-check-label" for="sublicense">Sublicense Rights</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="qualityControl" id="quality">
+                    <label class="form-check-label" for="quality">Quality Control Provisions</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="confidentiality" id="confidential">
+                    <label class="form-check-label" for="confidential">Confidentiality Clause</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generateLicenseAgreement()"
+                          [disabled]="licenseForm.invalid || isGeneratingLicense">
+                    <span *ngIf="!isGeneratingLicense">
+                      <i class="ri-file-text-line me-2"></i>Generate Agreement
+                    </span>
+                    <span *ngIf="isGeneratingLicense">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleLicenseAgreement()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedLicense">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated License Agreement</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedLicense, 'license-agreement')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedLicense }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

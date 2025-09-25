@@ -1,0 +1,178 @@
+@import '../../shared/form-validation.scss';
+
+.document-preview {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.nav-tabs-custom {
+  .nav-link {
+    color: #6c757d;
+    background-color: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    
+    &:hover {
+      color: #405189;
+      background-color: rgba(64, 81, 137, 0.05);
+    }
+    
+    &.active {
+      color: #405189;
+      background-color: transparent;
+      border-bottom: 3px solid #405189;
+    }
+  }
+}
+
+.claims-list {
+  .claim-item {
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    
+    .claim-number {
+      font-weight: bold;
+      min-width: 30px;
+    }
+    
+    textarea {
+      min-height: 80px;
+    }
+  }
+}
+
+.result-item {
+  .similarity-score {
+    position: relative;
+    
+    .circular-chart {
+      display: block;
+      margin: 0 auto;
+      max-width: 80%;
+      max-height: 250px;
+    }
+    
+    .circle-bg {
+      fill: none;
+      stroke: #eee;
+      stroke-width: 3.8;
+    }
+    
+    .circle {
+      fill: none;
+      stroke-width: 2.8;
+      stroke-linecap: round;
+      animation: progress 1s ease-out forwards;
+    }
+    
+    .percentage {
+      fill: #666;
+      font-size: 0.5em;
+      text-anchor: middle;
+    }
+  }
+}
+
+@keyframes progress {
+  0% {
+    stroke-dasharray: 0 100;
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+  }
+  
+  td {
+    vertical-align: middle;
+  }
+}
+
+.progress {
+  height: 20px;
+  background-color: #e9ecef;
+}
+
+.form-check-input:checked {
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.alert {
+  border: none;
+  border-radius: 5px;
+}
+
+.badge {
+  padding: 5px 10px;
+  font-weight: 500;
+}
+
+.bg-primary-subtle {
+  background-color: rgba(64, 81, 137, 0.1) !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(41, 156, 219, 0.1) !important;
+}
+
+.text-primary {
+  color: #405189 !important;
+}
+
+.text-danger {
+  color: #f06548 !important;
+  
+  &.circle {
+    stroke: #f06548 !important;
+  }
+}
+
+.text-warning {
+  color: #f7b84b !important;
+  
+  &.circle {
+    stroke: #f7b84b !important;
+  }
+}
+
+.text-success {
+  color: #0ab39c !important;
+  
+  &.circle {
+    stroke: #0ab39c !important;
+  }
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.prior-art-results {
+  max-height: 600px;
+  overflow-y: auto;
+}

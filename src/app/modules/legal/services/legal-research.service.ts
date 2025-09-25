@@ -1,0 +1,340 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
+
+export interface LegalSearchRequest {
+  query: string;
+  searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines';
+  jurisdiction?: string;
+  userId?: number;
+  sessionId?: string;
+  filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    practiceArea?: string;
+    courtLevel?: string;
+  };
+}
+
+export interface SearchResult {
+  id: number;
+  type: 'statute' | 'court_rule' | 'guideline';
+  title: string;
+  citation: string;
+  summary: string;
+  fullText: string;
+  effectiveDate?: string;
+  practiceArea?: string;
+  courtLevel?: string;
+  category?: string;
+  relevanceScore?: number;
+}
+
+export interface LegalSearchResponse {
+  success: boolean;
+  results: SearchResult[];
+  totalResults: number;
+  searchQuery: string;
+  searchType: string;
+  jurisdiction: string;
+  aiAnalysis?: string;
+  hasAIAnalysis: boolean;
+  executionTimeMs?: number;
+  error?: string;
+}
+
+export interface SearchHistory {
+  id: number;
+  searchQuery: string;
+  queryType: string;
+  searchFilters?: string;
+  resultsCount: number;
+  executionTimeMs: number;
+  searchedAt: string;
+  isSaved: boolean;
+}
+
+export interface SearchSuggestion {
+  query: string;
+  type: string;
+  description?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LegalResearchService {
+  private apiUrl = `${environment.apiUrl}/api/ai/legal-research`;
+
+  private searchStatusSubject = new BehaviorSubject<string>('idle');
+  public searchStatus$ = this.searchStatusSubject.asObservable();
+
+  private currentSessionId = this.generateSessionId();
+
+  constructor(private http: HttpClient) {}
+
+  performSearch(searchRequest: LegalSearchRequest): Observable<LegalSearchResponse> {
+    this.searchStatusSubject.next('searching');
+
+    // Add session ID if not provided
+    const requestWithSession = {
+      ...searchRequest,
+      sessionId: searchRequest.sessionId || this.currentSessionId
+    };
+
+    return this.http.post<LegalSearchResponse>(
+      `${this.apiUrl}/search`,
+      requestWithSession,
+      { withCredentials: true }
+    ).pipe(
+      tap(response => {
+        this.searchStatusSubject.next(response.success ? 'completed' : 'failed');
+      }),
+      catchError(error => {
+        this.searchStatusSubject.next('failed');
+        console.error('Legal search error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getSearchHistory(userId?: number, limit: number = 50): Observable<SearchHistory[]> {
+    const params: any = { limit };
+    if (userId) {
+      params.userId = userId;
+    }
+
+    return this.http.get<{ success: boolean; history: SearchHistory[] }>(
+      `${this.apiUrl}/search-history`,
+      {
+        params,
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => response.history || []),
+      catchError(error => {
+        console.error('Failed to fetch search history:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getSavedSearches(userId?: number): Observable<SearchHistory[]> {
+    const params: any = {};
+    if (userId) {
+      params.userId = userId;
+    }
+
+    return this.http.get<{ success: boolean; savedSearches: SearchHistory[] }>(
+      `${this.apiUrl}/saved-searches`,
+      {
+        params,
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => response.savedSearches || []),
+      catchError(error => {
+        console.error('Failed to fetch saved searches:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  saveSearch(searchId: number): Observable<any> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${this.apiUrl}/save-search/${searchId}`,
+      {},
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to save search:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  deleteSearchHistory(searchId: number, userId?: number): Observable<any> {
+    const params: any = {};
+    if (userId) {
+      params.userId = userId;
+    }
+
+    return this.http.delete<{ success: boolean; message: string }>(
+      `${this.apiUrl}/search-history/${searchId}`,
+      {
+        params,
+        withCredentials: true
+      }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to delete search history:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getSearchSuggestions(query: string, userId?: number): Observable<string[]> {
+    const params: any = { query };
+    if (userId) {
+      params.userId = userId;
+    }
+
+    return this.http.get<{ success: boolean; suggestions: string[] }>(
+      `${this.apiUrl}/search-suggestions`,
+      {
+        params,
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => response.suggestions || []),
+      catchError(error => {
+        console.error('Failed to get search suggestions:', error);
+        return [];
+      })
+    );
+  }
+
+  getSearchTypes(): Observable<{ [key: string]: string }> {
+    return this.http.get<{ success: boolean; searchTypes: { [key: string]: string } }>(
+      `${this.apiUrl}/search-types`,
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.searchTypes || {}),
+      catchError(error => {
+        console.error('Failed to fetch search types:', error);
+        // Return default search types as fallback
+        return [
+          {
+            'all': 'All Legal Sources',
+            'statutes': 'Massachusetts Statutes',
+            'rules': 'Court Rules',
+            'regulations': 'Regulations',
+            'guidelines': 'Sentencing Guidelines'
+          }
+        ];
+      })
+    );
+  }
+
+  // Helper methods
+  getSearchTypeOptions(): { value: string; label: string; description: string }[] {
+    return [
+      {
+        value: 'all',
+        label: 'All Sources',
+        description: 'Search across all available legal sources'
+      },
+      {
+        value: 'statutes',
+        label: 'Massachusetts Statutes',
+        description: 'Massachusetts General Laws and statutes'
+      },
+      {
+        value: 'rules',
+        label: 'Court Rules',
+        description: 'Massachusetts court rules and procedures'
+      },
+      {
+        value: 'regulations',
+        label: 'Regulations',
+        description: 'State and federal regulations'
+      },
+      {
+        value: 'guidelines',
+        label: 'Sentencing Guidelines',
+        description: 'Massachusetts sentencing guidelines'
+      }
+    ];
+  }
+
+  getResultTypeIcon(type: string): string {
+    switch (type) {
+      case 'statute':
+        return 'fas fa-gavel';
+      case 'court_rule':
+        return 'fas fa-balance-scale';
+      case 'guideline':
+        return 'fas fa-list-alt';
+      default:
+        return 'fas fa-file-alt';
+    }
+  }
+
+  getResultTypeBadgeClass(type: string): string {
+    switch (type) {
+      case 'statute':
+        return 'badge-primary';
+      case 'court_rule':
+        return 'badge-info';
+      case 'guideline':
+        return 'badge-warning';
+      default:
+        return 'badge-secondary';
+    }
+  }
+
+  formatResultType(type: string): string {
+    switch (type) {
+      case 'statute':
+        return 'Statute';
+      case 'court_rule':
+        return 'Court Rule';
+      case 'guideline':
+        return 'Guideline';
+      default:
+        return 'Document';
+    }
+  }
+
+  // Session management
+  generateSessionId(): string {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  getCurrentSessionId(): string {
+    return this.currentSessionId;
+  }
+
+  startNewSession(): void {
+    this.currentSessionId = this.generateSessionId();
+  }
+
+  // Search query validation
+  validateSearchQuery(query: string): { isValid: boolean; message?: string } {
+    if (!query || query.trim().length === 0) {
+      return { isValid: false, message: 'Please enter a search query' };
+    }
+
+    if (query.trim().length < 3) {
+      return { isValid: false, message: 'Search query must be at least 3 characters long' };
+    }
+
+    if (query.length > 500) {
+      return { isValid: false, message: 'Search query is too long (maximum 500 characters)' };
+    }
+
+    return { isValid: true };
+  }
+
+  // Format search date for display
+  formatSearchDate(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    } catch (error) {
+      return dateString;
+    }
+  }
+
+  // Reset search state
+  resetSearchState(): void {
+    this.searchStatusSubject.next('idle');
+  }
+
+  // Health check
+  healthCheck(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/health`, { withCredentials: true });
+  }
+}

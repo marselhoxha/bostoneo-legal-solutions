@@ -1,0 +1,213 @@
+.document-editor {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 600px;
+}
+
+.document-preview {
+  min-height: 700px;
+  max-width: 8.5in;
+  margin: 20px auto;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 1in 1.25in;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 2;
+  color: #000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  
+  .legal-document {
+    // Court header at top
+    .court-header {
+      text-align: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 12pt;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    
+    // Case number line
+    .case-number-line {
+      text-align: right;
+      font-size: 12pt;
+      margin-bottom: 30px;
+    }
+    
+    // Party section formatting
+    .party-section {
+      margin: 30px 0 40px 0;
+      
+      .party-line {
+        margin: 0;
+        text-align: left;
+      }
+      
+      .party-name {
+        text-transform: uppercase;
+        font-weight: normal;
+      }
+      
+      .party-designation-line {
+        margin: 5px 0 15px 0;
+        padding-left: 100px;
+        
+        .party-designation {
+          font-style: italic;
+        }
+      }
+      
+      .versus-line {
+        text-align: center;
+        margin: 15px 0;
+        font-style: italic;
+      }
+    }
+    
+    // Document title (COMPLAINT FOR...)
+    .document-title {
+      text-align: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 14pt;
+      margin: 40px 0 30px 0;
+      text-decoration: underline;
+    }
+    
+    // Section headings
+    .section-heading {
+      text-align: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 12pt;
+      margin: 30px 0 20px 0;
+      text-decoration: underline;
+    }
+    
+    // Numbered paragraphs (the main formatting for legal documents)
+    .numbered-paragraph {
+      display: flex;
+      margin: 0 0 15px 0;
+      text-align: justify;
+      
+      .paragraph-num {
+        min-width: 35px;
+        font-weight: normal;
+        margin-right: 15px;
+        flex-shrink: 0;
+      }
+      
+      .paragraph-text {
+        flex: 1;
+        line-height: 2;
+        text-align: justify;
+      }
+    }
+    
+    // Lettered sub-paragraphs
+    .lettered-paragraph {
+      display: flex;
+      margin: 0 0 15px 50px;
+      text-align: justify;
+      
+      .paragraph-letter {
+        min-width: 25px;
+        margin-right: 10px;
+        flex-shrink: 0;
+      }
+      
+      .paragraph-text {
+        flex: 1;
+        line-height: 2;
+        text-align: justify;
+      }
+    }
+    
+    // Intro paragraph (NOW COMES...)
+    .intro-paragraph {
+      margin: 0 0 20px 0;
+      text-indent: 50px;
+      text-align: justify;
+      line-height: 2;
+    }
+    
+    // WHEREFORE clause
+    .wherefore-clause {
+      margin: 15px 0;
+      text-indent: 50px;
+      text-align: justify;
+      line-height: 2;
+      
+      &:first-of-type {
+        margin-top: 30px;
+      }
+    }
+    
+    // Regular text paragraphs
+    .regular-text {
+      margin: 15px 0;
+      text-indent: 50px;
+      text-align: justify;
+      line-height: 2;
+    }
+    
+    p {
+      margin: 15px 0;
+      text-align: justify;
+      line-height: 2;
+    }
+    
+    // Inline formatting
+    strong {
+      font-weight: bold;
+    }
+    
+    em {
+      font-style: italic;
+    }
+    
+    .case-ref {
+      font-weight: bold;
+    }
+    
+    // Signature block
+    .signature-block {
+      margin-top: 50px;
+      text-align: right;
+      
+      .signature-line {
+        display: inline-block;
+        width: 300px;
+        border-bottom: 1px solid #000;
+        margin: 40px 0 5px 0;
+      }
+      
+      .signature-title {
+        font-size: 11pt;
+        margin-right: 50px;
+      }
+    }
+  }
+}
+
+.ai-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.font-size-18 {
+  font-size: 18px;
+}

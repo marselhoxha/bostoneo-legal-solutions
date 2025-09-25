@@ -1,0 +1,815 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Family Law Tools</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/legal">Legal</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant">AI Assistant</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant/practice-areas">Practice Areas</a></li>
+            <li class="breadcrumb-item active">Family Law</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="row">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-3" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'child-support'" 
+             (click)="setActiveTab('child-support')" role="tab">
+            <i class="ri-parent-line me-2"></i>Child Support Calculator
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'custody'" 
+             (click)="setActiveTab('custody')" role="tab">
+            <i class="ri-group-line me-2"></i>Custody Agreement
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'divorce'" 
+             (click)="setActiveTab('divorce')" role="tab">
+            <i class="ri-file-paper-2-line me-2"></i>Divorce Documents
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'property'" 
+             (click)="setActiveTab('property')" role="tab">
+            <i class="ri-home-4-line me-2"></i>Property Division
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'alimony'" 
+             (click)="setActiveTab('alimony')" role="tab">
+            <i class="ri-money-dollar-circle-line me-2"></i>Alimony Calculator
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Child Support Calculator Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'child-support'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Massachusetts Child Support Calculator</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="childSupportForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Payor's Gross Annual Income</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="payorIncome" 
+                           placeholder="Enter amount">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Payee's Gross Annual Income</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="payeeIncome" 
+                           placeholder="Enter amount">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Number of Children</label>
+                  <select class="form-select" formControlName="numberOfChildren">
+                    <option value="1">1 Child</option>
+                    <option value="2">2 Children</option>
+                    <option value="3">3 Children</option>
+                    <option value="4">4 Children</option>
+                    <option value="5">5+ Children</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Annual Health Insurance Cost</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="healthInsurance" 
+                           placeholder="Enter amount">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Annual Childcare Cost</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="childcare" 
+                           placeholder="Enter amount">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Other Deductions</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="otherDeductions" 
+                           placeholder="Enter amount">
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="parentsShareCustody" id="sharedCustody">
+                    <label class="form-check-label" for="sharedCustody">
+                      Parents share physical custody
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6" *ngIf="childSupportForm.get('parentsShareCustody')?.value">
+                  <label class="form-label">Overnights with Payor (per year)</label>
+                  <input type="number" class="form-control" formControlName="overnightsWithPayor" 
+                         max="365" placeholder="0-365">
+                </div>
+              </div>
+              <div class="mt-4 d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="calculateChildSupport()"
+                        [disabled]="childSupportForm.invalid || isCalculatingSupport">
+                  <span *ngIf="!isCalculatingSupport">
+                    <i class="ri-calculator-line me-2"></i>Calculate Support
+                  </span>
+                  <span *ngIf="isCalculatingSupport">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Calculating...
+                  </span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadChildSupportSample()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="calculatedSupport">
+        <div class="card border-success">
+          <div class="card-header bg-success-subtle">
+            <h5 class="card-title mb-0">Calculated Child Support</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-borderless mb-0">
+                <tbody>
+                  <tr>
+                    <td class="fw-medium">Weekly Amount:</td>
+                    <td class="text-end text-success fw-bold fs-5">${{ calculatedSupport.weeklyAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Monthly Amount:</td>
+                    <td class="text-end text-primary fw-bold fs-5">${{ calculatedSupport.monthlyAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Annual Amount:</td>
+                    <td class="text-end">${{ calculatedSupport.yearlyAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Payor's Share:</td>
+                    <td class="text-end">{{ calculatedSupport.payorShare }}%</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Effective Date:</td>
+                    <td class="text-end">{{ calculatedSupport.effectiveDate }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Guidelines Used:</td>
+                    <td class="text-end">{{ calculatedSupport.guidelines }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="alert alert-info mt-3" *ngIf="calculatedSupport.deviationFactors.length > 0">
+              <h6 class="alert-heading">Deviation Factors:</h6>
+              <ul class="mb-0">
+                <li *ngFor="let factor of calculatedSupport.deviationFactors">{{ factor }}</li>
+              </ul>
+            </div>
+            
+            <div class="mt-3">
+              <button class="btn btn-outline-primary w-100" 
+                      (click)="exportDocument(JSON.stringify(calculatedSupport, null, 2), 'child-support-calculation')">
+                <i class="ri-download-line me-2"></i>Export Calculation
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custody Agreement Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'custody'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Generate Custody Agreement</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="custodyForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <h6 class="fw-semibold">Custody Type</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Legal Custody</label>
+                  <select class="form-select" formControlName="legalCustody">
+                    <option *ngFor="let type of custodyTypes.slice(0, 2)" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Physical Custody</label>
+                  <select class="form-select" formControlName="physicalCustody">
+                    <option *ngFor="let type of custodyTypes.slice(2, 4)" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold mt-3">Parent Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Parent A Name</label>
+                  <input type="text" class="form-control" formControlName="parentAName" 
+                         placeholder="Enter full name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Parent B Name</label>
+                  <input type="text" class="form-control" formControlName="parentBName" 
+                         placeholder="Enter full name">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Children's Names</label>
+                  <input type="text" class="form-control" formControlName="childrenNames" 
+                         placeholder="Enter all children's names">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold mt-3">Schedule Details</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">School District</label>
+                  <input type="text" class="form-control" formControlName="schoolDistrict" 
+                         placeholder="Enter district name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Holiday Schedule</label>
+                  <select class="form-select" formControlName="holidaySchedule">
+                    <option value="alternating">Alternating Holidays</option>
+                    <option value="split">Split Holidays</option>
+                    <option value="custom">Custom Schedule</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Vacation Time</label>
+                  <select class="form-select" formControlName="vacationTime">
+                    <option value="1week">1 Week</option>
+                    <option value="2weeks">2 Weeks</option>
+                    <option value="3weeks">3 Weeks</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Dispute Resolution</label>
+                  <select class="form-select" formControlName="disputeResolution">
+                    <option value="mediation">Mediation</option>
+                    <option value="arbitration">Arbitration</option>
+                    <option value="court">Court</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Relocation Notice (days)</label>
+                  <input type="number" class="form-control" formControlName="relocationNotice" 
+                         min="30" placeholder="60">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold mt-3">Decision Making</h6>
+                </div>
+                <div formGroupName="decisionMaking">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Education</label>
+                      <select class="form-select" formControlName="education">
+                        <option value="joint">Joint Decision</option>
+                        <option value="parentA">Parent A</option>
+                        <option value="parentB">Parent B</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Medical</label>
+                      <select class="form-select" formControlName="medical">
+                        <option value="joint">Joint Decision</option>
+                        <option value="parentA">Parent A</option>
+                        <option value="parentB">Parent B</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4 d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="generateCustodyAgreement()"
+                        [disabled]="custodyForm.invalid || isGeneratingCustody">
+                  <span *ngIf="!isGeneratingCustody">
+                    <i class="ri-file-text-line me-2"></i>Generate Agreement
+                  </span>
+                  <span *ngIf="isGeneratingCustody">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                  </span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadCustodySample()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedCustody">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Custody Agreement</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedCustody, 'custody-agreement')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="custody-preview">
+              <pre>{{ generatedCustody }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Divorce Documents Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'divorce'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Divorce Document Preparation</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="divorceForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Type of Divorce</label>
+                  <select class="form-select" formControlName="divorceType">
+                    <option value="">Select type</option>
+                    <option *ngFor="let type of divorceTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">County</label>
+                  <input type="text" class="form-control" formControlName="county" 
+                         placeholder="Enter county">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Plaintiff Name</label>
+                  <input type="text" class="form-control" formControlName="plaintiffName" 
+                         placeholder="Enter name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Defendant Name</label>
+                  <input type="text" class="form-control" formControlName="defendantName" 
+                         placeholder="Enter name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Date of Marriage</label>
+                  <input type="date" class="form-control" formControlName="marriageDate">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Date of Separation</label>
+                  <input type="date" class="form-control" formControlName="separationDate">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Grounds (if fault-based)</label>
+                  <input type="text" class="form-control" formControlName="grounds" 
+                         placeholder="Enter grounds for divorce">
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="irretrievableBreakdown" id="breakdown">
+                    <label class="form-check-label" for="breakdown">
+                      Irretrievable breakdown of marriage
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="hasChildren" id="children">
+                    <label class="form-check-label" for="children">
+                      Minor children involved
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="hasProperty" id="property">
+                    <label class="form-check-label" for="property">
+                      Marital property to divide
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="seekingAlimony" id="alimony">
+                    <label class="form-check-label" for="alimony">
+                      Seeking alimony
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4 d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="prepareDivorceDocuments()"
+                        [disabled]="divorceForm.invalid || isPreparingDocuments">
+                  <span *ngIf="!isPreparingDocuments">
+                    <i class="ri-file-list-3-line me-2"></i>Prepare Documents
+                  </span>
+                  <span *ngIf="isPreparingDocuments">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Preparing...
+                  </span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadDivorceSample()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="divorceDocuments.length > 0">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Required Documents Checklist</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th>Required</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let doc of divorceDocuments">
+                    <td>{{ doc.name }}</td>
+                    <td>
+                      <span class="badge bg-danger" *ngIf="doc.required">Required</span>
+                      <span class="badge bg-secondary" *ngIf="!doc.required">Optional</span>
+                    </td>
+                    <td>
+                      <span [ngClass]="getDocumentStatusClass(doc.status)">
+                        {{ doc.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-primary">
+                        <i class="ri-download-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+              <i class="ri-information-line me-2"></i>
+              All documents must be filed with the Probate and Family Court in your county.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Property Division Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'property'">
+    <div class="row">
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Property Division Analyzer</h5>
+          </div>
+          <div class="card-body">
+            <!-- Add Asset Form -->
+            <div class="border-bottom pb-3 mb-3">
+              <h6 class="mb-3">Add Asset</h6>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <select class="form-select" [(ngModel)]="newAsset.type">
+                    <option value="real-estate">Real Estate</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="retirement">Retirement</option>
+                    <option value="investment">Investment</option>
+                    <option value="personal">Personal</option>
+                    <option value="business">Business</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <input type="text" class="form-control" [(ngModel)]="newAsset.description" 
+                         placeholder="Description">
+                </div>
+                <div class="col-md-2">
+                  <input type="number" class="form-control" [(ngModel)]="newAsset.value" 
+                         placeholder="Value">
+                </div>
+                <div class="col-md-2">
+                  <select class="form-select" [(ngModel)]="newAsset.ownership">
+                    <option value="joint">Joint</option>
+                    <option value="plaintiff">Plaintiff</option>
+                    <option value="defendant">Defendant</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select class="form-select" [(ngModel)]="newAsset.proposed">
+                    <option value="plaintiff">To Plaintiff</option>
+                    <option value="defendant">To Defendant</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-primary mt-3" (click)="addPropertyAsset()">
+                <i class="ri-add-line me-2"></i>Add Asset
+              </button>
+            </div>
+            
+            <!-- Assets List -->
+            <div class="assets-list">
+              <h6 class="mb-3">Marital Assets</h6>
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Description</th>
+                      <th>Value</th>
+                      <th>Current Owner</th>
+                      <th>Proposed</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let asset of propertyAssets">
+                      <td>
+                        <i [class]="getAssetTypeIcon(asset.type) + ' me-2'"></i>
+                        {{ asset.type }}
+                      </td>
+                      <td>{{ asset.description }}</td>
+                      <td>${{ asset.value.toLocaleString() }}</td>
+                      <td>{{ asset.ownership }}</td>
+                      <td>
+                        <span class="badge" 
+                              [ngClass]="asset.proposed === 'plaintiff' ? 'bg-primary' : 'bg-info'">
+                          {{ asset.proposed }}
+                        </span>
+                      </td>
+                      <td>
+                        <button class="btn btn-sm btn-danger" (click)="removeAsset(asset.id)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="propertyAssets.length === 0">
+                      <td colspan="6" class="text-center text-muted">No assets added yet</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-success" (click)="analyzePropertyDivision()"
+                        [disabled]="propertyAssets.length === 0 || isAnalyzingProperty">
+                  <span *ngIf="!isAnalyzingProperty">
+                    <i class="ri-pie-chart-line me-2"></i>Analyze Division
+                  </span>
+                  <span *ngIf="isAnalyzingProperty">
+                    <i class="ri-loader-4-line ri-spin me-2"></i>Analyzing...
+                  </span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadPropertySample()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-5" *ngIf="propertyAnalysis">
+        <div class="card border-primary">
+          <div class="card-header bg-primary-subtle">
+            <h5 class="card-title mb-0">Division Analysis</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-4">
+              <h6>Total Marital Property</h6>
+              <h3 class="text-primary">${{ propertyAnalysis.totalMaritalProperty.toLocaleString() }}</h3>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-6">
+                <div class="p-3 border rounded">
+                  <h6 class="text-muted mb-1">Plaintiff</h6>
+                  <h5>${{ propertyAnalysis.plaintiffAllocation.toLocaleString() }}</h5>
+                  <span class="badge bg-primary">{{ propertyAnalysis.plaintiffPercentage }}%</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-3 border rounded">
+                  <h6 class="text-muted mb-1">Defendant</h6>
+                  <h5>${{ propertyAnalysis.defendantAllocation.toLocaleString() }}</h5>
+                  <span class="badge bg-info">{{ propertyAnalysis.defendantPercentage }}%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="alert alert-warning">
+              <h6 class="alert-heading">Equalization Payment</h6>
+              <p class="mb-0">${{ propertyAnalysis.equalizationPayment.toLocaleString() }}</p>
+            </div>
+            
+            <div class="alert alert-info" *ngIf="propertyAnalysis.recommendation && !propertyAnalysis.aiAnalysis">
+              <h6 class="alert-heading">Recommendation</h6>
+              <p class="mb-0">{{ propertyAnalysis.recommendation }}</p>
+            </div>
+
+            <div class="card mt-3" *ngIf="propertyAnalysis.aiAnalysis">
+              <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="ri-robot-line me-2"></i>AI Analysis</h6>
+              </div>
+              <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div [innerHTML]="propertyAnalysis.aiAnalysis | aiResponseFormatter"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alimony Calculator Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'alimony'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Massachusetts Alimony Calculator</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="alimonyForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Type of Alimony</label>
+                  <select class="form-select" formControlName="alimonyType">
+                    <option *ngFor="let type of alimonyTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Payor's Annual Income</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="payorIncome">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Recipient's Annual Income</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="recipientIncome">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Marriage Length (years)</label>
+                  <input type="number" class="form-control" formControlName="marriageLength">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Payor's Age</label>
+                  <input type="number" class="form-control" formControlName="payorAge">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Recipient's Age</label>
+                  <input type="number" class="form-control" formControlName="recipientAge">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Recipient's Need</label>
+                  <textarea class="form-control" formControlName="recipientNeed" rows="2"
+                            placeholder="Describe the recipient's financial need"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Payor's Ability to Pay</label>
+                  <textarea class="form-control" formControlName="payorAbilityToPay" rows="2"
+                            placeholder="Describe payor's ability to pay"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Standard of Living During Marriage</label>
+                  <input type="text" class="form-control" formControlName="standardOfLiving"
+                         placeholder="Describe marital standard of living">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Health Conditions (Optional)</label>
+                  <input type="text" class="form-control" formControlName="healthConditions"
+                         placeholder="Any relevant health conditions">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Non-Economic Contributions (Optional)</label>
+                  <textarea class="form-control" formControlName="contributions" rows="2"
+                            placeholder="Describe non-economic contributions"></textarea>
+                </div>
+              </div>
+              
+              <div class="mt-4 d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="calculateAlimony()"
+                        [disabled]="alimonyForm.invalid">
+                  <i class="ri-calculator-line me-2"></i>Calculate Alimony
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadAlimonySample()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="calculatedAlimony">
+        <div class="card border-success">
+          <div class="card-header bg-success-subtle">
+            <h5 class="card-title mb-0">Calculated Alimony</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <td class="fw-medium">Monthly Amount:</td>
+                    <td class="text-end text-success fw-bold fs-5">
+                      ${{ calculatedAlimony.monthlyAmount.toLocaleString() }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Annual Amount:</td>
+                    <td class="text-end">
+                      ${{ calculatedAlimony.yearlyAmount.toLocaleString() }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Duration:</td>
+                    <td class="text-end fw-bold">{{ calculatedAlimony.duration }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Type:</td>
+                    <td class="text-end">{{ calculatedAlimony.type }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-medium">Start Date:</td>
+                    <td class="text-end">{{ calculatedAlimony.startDate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="alert alert-info">
+              <h6 class="alert-heading">Tax Implications</h6>
+              <p class="mb-0">{{ calculatedAlimony.taxImplications }}</p>
+            </div>
+            
+            <div class="alert alert-warning" *ngIf="calculatedAlimony.factors.length > 0">
+              <h6 class="alert-heading">Factors Considered</h6>
+              <ul class="mb-0">
+                <li *ngFor="let factor of calculatedAlimony.factors">{{ factor }}</li>
+              </ul>
+            </div>
+            
+            <button class="btn btn-outline-primary w-100 mt-3" 
+                    (click)="exportDocument(JSON.stringify(calculatedAlimony, null, 2), 'alimony-calculation')">
+              <i class="ri-download-line me-2"></i>Export Calculation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

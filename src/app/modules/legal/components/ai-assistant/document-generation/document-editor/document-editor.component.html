@@ -1,0 +1,133 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 font-size-18">📝 Document Editor</h4>
+        <div class="page-title-right">
+          <button class="btn btn-outline-secondary me-2" (click)="goBack()">
+            <i class="ri-arrow-left-line me-1"></i>Back
+          </button>
+          <button class="btn btn-warning me-2" (click)="toggleEdit()" *ngIf="documentContent">
+            <i class="ri-pencil-line me-1"></i>{{isEditing ? 'Preview' : 'Edit'}}
+          </button>
+          <button class="btn btn-primary me-2" (click)="saveDocument()">
+            <i class="ri-save-line me-1"></i>Save
+          </button>
+          <button class="btn btn-success me-2" [disabled]="isGenerating" (click)="generateDocument()">
+            <i class="ri-magic-line me-1" *ngIf="!isGenerating"></i>
+            <i class="ri-loader-4-line me-1 spin" *ngIf="isGenerating"></i>
+            {{isGenerating ? 'Processing...' : 'Generate with AI'}}
+          </button>
+          <div class="btn-group" *ngIf="documentContent && !isGenerating">
+            <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" 
+                    [disabled]="!documentContent || documentContent.includes('[') || isGenerating">
+              <i class="ri-download-line me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" (click)="exportPDF()">
+                <i class="ri-file-pdf-line me-2"></i>Export as PDF
+              </a></li>
+              <li><a class="dropdown-item" (click)="exportDOCX()">
+                <i class="ri-file-word-line me-2"></i>Export as RTF (Word)
+              </a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress indicator -->
+  <div class="row" *ngIf="isGenerating">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <div class="d-flex align-items-center">
+          <i class="ri-loader-4-line spin me-2"></i>
+          <span>Claude AI is generating your legal document...</span>
+        </div>
+        <div class="progress mt-2" *ngIf="generationProgress > 0">
+          <div class="progress-bar" [style.width.%]="generationProgress"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div class="row" *ngIf="errorMessage">
+    <div class="col-12">
+      <div class="alert alert-danger" *ngIf="!errorMessage.includes('log in again')">
+        <i class="ri-error-warning-line me-2"></i>
+        {{errorMessage}}
+      </div>
+      <div class="alert alert-warning" *ngIf="errorMessage.includes('log in again')">
+        <i class="ri-information-line me-2"></i>
+        {{errorMessage}}
+        <div class="mt-2">
+          <small class="text-muted">
+            <strong>For testing:</strong> You can still use PDF forms without authentication - default field mappings will be used.
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case/Client Selection -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Case/Client</label>
+          <select class="form-select" [(ngModel)]="selectedCaseId">
+            <option value="">-- Select a Case --</option>
+            <option *ngFor="let case of availableCases" [value]="case.id">
+              {{case.clientName}} - {{case.caseNumber}} ({{case.caseType}})
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card" *ngIf="selectedCaseId">
+        <div class="card-body">
+          <h6 class="text-muted">Selected Case Details</h6>
+          <p class="mb-1"><strong>Client:</strong> {{getSelectedCase()?.clientName}}</p>
+          <p class="mb-1"><strong>Case #:</strong> {{getSelectedCase()?.caseNumber}}</p>
+          <p class="mb-0"><strong>Type:</strong> {{getSelectedCase()?.caseType}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Editor -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Document Content</label>
+                <div class="position-relative">
+                  <div class="document-preview" *ngIf="documentContent && !isEditing" [innerHTML]="getFormattedContent()"></div>
+                  <textarea 
+                    class="form-control document-editor" 
+                    rows="25"
+                    *ngIf="isEditing || !documentContent"
+                    [(ngModel)]="documentContent"
+                    [disabled]="isGenerating"
+                    placeholder="Document content will appear here...">
+                  </textarea>
+                  <div class="ai-badge" *ngIf="!isGenerating && documentContent && documentContent.includes('Claude')">
+                    <span class="badge bg-success">
+                      <i class="ri-robot-line me-1"></i>Generated by Claude AI
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

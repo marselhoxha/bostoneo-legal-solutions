@@ -1,0 +1,118 @@
+@import '../../shared/form-validation.scss';
+
+.custody-preview {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.nav-tabs-custom {
+  .nav-link {
+    color: #6c757d;
+    background-color: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    
+    &:hover {
+      color: #405189;
+      background-color: rgba(64, 81, 137, 0.05);
+    }
+    
+    &.active {
+      color: #405189;
+      background-color: transparent;
+      border-bottom: 3px solid #405189;
+    }
+  }
+}
+
+.assets-list {
+  .table {
+    th {
+      font-weight: 600;
+      background-color: #f8f9fa;
+      border-bottom: 2px solid #dee2e6;
+    }
+    
+    td {
+      vertical-align: middle;
+    }
+  }
+}
+
+.form-check-input:checked {
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.alert {
+  border: none;
+  border-radius: 5px;
+}
+
+.badge {
+  padding: 5px 10px;
+  font-weight: 500;
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border-color: #ced4da;
+}
+
+.card-header {
+  background-color: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+  
+  &.bg-primary-subtle {
+    background-color: rgba(64, 81, 137, 0.1) !important;
+  }
+  
+  &.bg-success-subtle {
+    background-color: rgba(10, 179, 156, 0.1) !important;
+  }
+}
+
+.border-primary {
+  border-color: #405189 !important;
+}
+
+.border-success {
+  border-color: #0ab39c !important;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ri-spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}

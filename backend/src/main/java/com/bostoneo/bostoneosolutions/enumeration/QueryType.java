@@ -1,0 +1,19 @@
+package com.bostoneo.bostoneosolutions.enumeration;
+
+public enum QueryType {
+    CASE_LAW,
+    STATUTE_INTERPRETATION,
+    PRECEDENT_SEARCH,
+    LEGAL_MEMO,
+    CONTRACT_ANALYSIS,
+    IMMIGRATION_RESEARCH,
+    CRIMINAL_RESEARCH,
+    FAMILY_LAW_RESEARCH,
+    REAL_ESTATE_RESEARCH,
+    PATENT_RESEARCH,
+    ALL,
+    STATUTES,
+    RULES,
+    REGULATIONS,
+    GUIDELINES
+}

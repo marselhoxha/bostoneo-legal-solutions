@@ -1,0 +1,41 @@
+<div class="modal-header bg-light">
+  <h5 class="modal-title">
+    <i class="ri-robot-line me-2"></i>{{ title }}
+  </h5>
+  <button type="button" class="btn-close" aria-label="Close" (click)="close()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Action buttons -->
+  <div class="d-flex justify-content-end mb-3 gap-2">
+    <button class="btn btn-sm btn-outline-primary" (click)="copyToClipboard()">
+      <i class="ri-file-copy-line me-1"></i>
+      {{ copySuccess ? 'Copied!' : 'Copy' }}
+    </button>
+    <button class="btn btn-sm btn-outline-danger" (click)="exportAsPDF()">
+      <i class="ri-file-pdf-line me-1"></i>
+      Export PDF
+    </button>
+    <button class="btn btn-sm btn-outline-secondary" (click)="print()">
+      <i class="ri-printer-line me-1"></i>
+      Print
+    </button>
+  </div>
+
+  <!-- Context info if provided -->
+  <div *ngIf="contextInfo" class="alert alert-info mb-3">
+    <h6 class="alert-heading mb-2">Context Information</h6>
+    <div class="row">
+      <div class="col-md-6" *ngFor="let item of contextInfo | keyvalue">
+        <small><strong>{{ item.key }}:</strong> {{ item.value }}</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Response Content -->
+  <div class="ai-response-content" [innerHTML]="content | aiResponseFormatter"></div>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" (click)="close()">Close</button>
+</div>

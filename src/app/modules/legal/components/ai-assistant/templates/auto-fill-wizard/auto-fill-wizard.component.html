@@ -1,0 +1,575 @@
+<div class="auto-fill-wizard">
+  <!-- Velzon Header -->
+  <div class="modal-header">
+    <h5 class="modal-title">
+      <i class="ri-magic-line me-2 text-primary"></i>
+      {{ templateName || 'Document Generation Wizard' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close()" aria-label="Close"></button>
+  </div>
+
+  <div class="modal-body p-0">
+    <!-- Progress Steps -->
+    <div class="wizard">
+      <div class="stepper-header bg-light">
+        <ol>
+          <li [class.active]="currentStep === 1" [class.completed]="currentStep > 1">
+            <span class="number">{{ currentStep > 1 ? '✓' : '1' }}</span>
+            Context Selection
+          </li>
+          <li [class.active]="currentStep === 2" [class.completed]="currentStep > 2">
+            <span class="number">{{ currentStep > 2 ? '✓' : '2' }}</span>
+            Fill Variables
+          </li>
+          <li [class.active]="currentStep === 3" [class.completed]="currentStep > 3">
+            <span class="number">{{ currentStep > 3 ? '✓' : '3' }}</span>
+            Review
+          </li>
+          <li [class.active]="currentStep === 4" [class.completed]="currentStep > 4">
+            <span class="number">{{ currentStep > 4 ? '✓' : '4' }}</span>
+            Complete
+          </li>
+        </ol>
+      </div>
+
+      <!-- Wizard Content -->
+      <div class="content p-4">
+        <!-- Step 1: Context Selection -->
+        <div class="body" *ngIf="currentStep === 1">
+          <div class="row">
+            <div class="col-12">
+              <h5 class="mb-1">Select Document Context</h5>
+              <p class="text-muted mb-4">Choose how this document will be used</p>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6" *ngFor="let context of contextTypes">
+              <div class="card border cursor-pointer"
+                   [class.border-primary]="selectedContext === context.value"
+                   [class.bg-soft-primary]="selectedContext === context.value"
+                   (click)="selectContext(context.value)">
+                <div class="card-body">
+                  <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                      <i [class]="getContextIcon(context.value) + ' fs-1 text-primary'"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <h6 class="mb-1">{{ context.label }}</h6>
+                      <p class="text-muted mb-0 fs-13">{{ context.description }}</p>
+                      <span class="badge bg-info-subtle text-info mt-2"
+                            *ngIf="context.requiresCase || context.requiresClient || context.requiresMultipleCases">
+                        <i class="ri-information-line me-1"></i>
+                        {{ context.requiresCase ? 'Requires Case' :
+                           context.requiresClient ? 'Requires Client' :
+                           'Multiple Cases' }}
+                      </span>
+                    </div>
+                    <div class="flex-shrink-0" *ngIf="selectedContext === context.value">
+                      <i class="ri-checkbox-circle-fill text-primary fs-5"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Case Selection -->
+          <div class="card" *ngIf="currentContext?.requiresCase">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="ri-briefcase-line me-2"></i>Select Case
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="search-box mb-3">
+                <input type="text" class="form-control" placeholder="Search cases..."
+                       [(ngModel)]="caseSearchTerm" (input)="filterCases()">
+              </div>
+
+              <div class="table-responsive" style="max-height: 300px;">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Select</th>
+                      <th>Case Number</th>
+                      <th>Title</th>
+                      <th>Client</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let case of filteredCases"
+                        class="cursor-pointer"
+                        [class.table-active]="selectedCase?.id === case.id"
+                        (click)="selectCase(case)">
+                      <td>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio"
+                                 name="caseSelection"
+                                 [checked]="selectedCase?.id === case.id">
+                        </div>
+                      </td>
+                      <td>{{ case.caseNumber }}</td>
+                      <td>{{ case.title }}</td>
+                      <td>
+                        <span class="badge bg-light text-dark">{{ case.clientName }}</span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="filteredCases.length === 0">
+                      <td colspan="4" class="text-center text-muted">
+                        <i class="ri-folder-2-line fs-3"></i>
+                        <p class="mb-0">No cases found</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="text-center py-3" *ngIf="isLoading">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading cases...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Client Selection -->
+          <div class="card" *ngIf="currentContext?.requiresClient">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="ri-user-line me-2"></i>Select Client
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="search-box mb-3">
+                <input type="text" class="form-control" placeholder="Search clients..."
+                       [(ngModel)]="clientSearchTerm" (input)="filterClients()">
+              </div>
+
+              <div class="table-responsive" style="max-height: 300px;">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Select</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let client of filteredClients"
+                        class="cursor-pointer"
+                        [class.table-active]="selectedClient?.id === client.id"
+                        (click)="selectClient(client)">
+                      <td>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio"
+                                 name="clientSelection"
+                                 [checked]="selectedClient?.id === client.id">
+                        </div>
+                      </td>
+                      <td>{{ client.name }}</td>
+                      <td>{{ client.email }}</td>
+                    </tr>
+                    <tr *ngIf="filteredClients.length === 0">
+                      <td colspan="3" class="text-center text-muted">
+                        <i class="ri-user-line fs-3"></i>
+                        <p class="mb-0">No clients found</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="text-center py-3" *ngIf="isLoading">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading clients...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multiple Cases Selection -->
+          <div class="card" *ngIf="currentContext?.requiresMultipleCases">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">
+                <i class="ri-stack-line me-2"></i>Select Multiple Cases
+              </h5>
+              <span class="badge bg-primary">{{ selectedCases.length }} selected</span>
+            </div>
+            <div class="card-body">
+              <div class="search-box mb-3">
+                <input type="text" class="form-control" placeholder="Search cases..."
+                       [(ngModel)]="caseSearchTerm" (input)="filterCases()">
+              </div>
+
+              <div class="case-selection-list" style="max-height: 300px; overflow-y: auto;">
+                <div class="form-check mb-2" *ngFor="let case of filteredCases">
+                  <input class="form-check-input" type="checkbox"
+                         [id]="'multi-case-' + case.id"
+                         [checked]="isCaseSelected(case)"
+                         (change)="toggleCaseSelection(case, $any($event.target).checked)">
+                  <label class="form-check-label" [for]="'multi-case-' + case.id">
+                    <strong>{{ case.caseNumber }}</strong> - {{ case.title }}
+                    <span class="d-block text-muted small">
+                      <i class="ri-user-line"></i> {{ case.clientName }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="text-center py-3" *ngIf="filteredCases.length === 0">
+                <i class="ri-folder-2-line fs-3 text-muted"></i>
+                <p class="text-muted mb-0">No cases available</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Options -->
+          <div class="card bg-light">
+            <div class="card-body">
+              <h6 class="mb-3">
+                <i class="ri-robot-line me-2 text-primary"></i>AI Assistant Options
+              </h6>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="aiSuggestions"
+                       [(ngModel)]="useAiSuggestions">
+                <label class="form-check-label" for="aiSuggestions">
+                  Enable Smart Suggestions
+                  <small class="d-block text-muted">AI will suggest values based on context</small>
+                </label>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="aiEnhancement"
+                       [(ngModel)]="useAiEnhancement">
+                <label class="form-check-label" for="aiEnhancement">
+                  Enable Content Enhancement
+                  <small class="d-block text-muted">Improve language and formatting automatically</small>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Variables -->
+        <div class="body" *ngIf="currentStep === 2">
+          <div class="row">
+            <div class="col-12">
+              <h5 class="mb-1">Fill Template Variables</h5>
+              <p class="text-muted mb-4">Complete the required fields below</p>
+            </div>
+          </div>
+
+          <!-- AI Banner -->
+          <div class="alert alert-info d-flex align-items-center mb-4"
+               *ngIf="useAiSuggestions && variableSuggestions.length > 0">
+            <i class="ri-robot-line fs-4 me-3"></i>
+            <div>
+              <strong>AI Assistant Active</strong>
+              <p class="mb-0">Found {{ variableSuggestions.length }} suggestions based on your selection</p>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div class="text-center py-5" *ngIf="isLoading">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted">Analyzing template variables...</p>
+          </div>
+
+          <!-- Variables Form -->
+          <form [formGroup]="variablesForm" *ngIf="!isLoading">
+            <div class="row g-3">
+              <div class="col-12" *ngFor="let control of variablesForm.controls | keyvalue">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <label class="form-label fw-semibold">
+                        {{ formatVariableName(control.key) }}
+                        <span class="text-danger" *ngIf="control.value.hasError('required')">*</span>
+                      </label>
+
+                      <!-- AI Suggestion Badge -->
+                      <span class="badge bg-primary-subtle text-primary"
+                            *ngIf="getSuggestionForVariable(control.key)">
+                        <i class="ri-robot-line me-1"></i>
+                        {{ getConfidencePercentage(getSuggestionForVariable(control.key)) }}% confidence
+                      </span>
+                    </div>
+
+                    <!-- Variable Description -->
+                    <p class="text-muted small mb-2" *ngIf="getVariableForName(control.key)?.description">
+                      {{ getVariableForName(control.key)?.description }}
+                    </p>
+
+                    <div class="input-group">
+                      <input *ngIf="getVariableForName(control.key)?.variableType !== 'textarea'"
+                             [type]="getVariableForName(control.key)?.variableType === 'date' ? 'date' : 'text'"
+                             class="form-control"
+                             [formControlName]="control.key"
+                             [class.is-invalid]="control.value.invalid && control.value.touched"
+                             [placeholder]="'Enter ' + formatVariableName(control.key).toLowerCase()">
+
+                      <textarea *ngIf="getVariableForName(control.key)?.variableType === 'textarea'"
+                                class="form-control"
+                                [formControlName]="control.key"
+                                [class.is-invalid]="control.value.invalid && control.value.touched"
+                                [placeholder]="'Enter ' + formatVariableName(control.key).toLowerCase()"
+                                rows="3"></textarea>
+
+                      <!-- AI Suggestion Button -->
+                      <button type="button"
+                              class="btn btn-outline-primary"
+                              *ngIf="getSuggestionForVariable(control.key)"
+                              (click)="acceptSuggestion(control.key, getSuggestionForVariable(control.key)?.suggestedValue || '')"
+                              title="Use AI suggestion">
+                        <i class="ri-magic-line"></i> Use AI
+                      </button>
+                    </div>
+
+                    <div class="invalid-feedback d-block"
+                         *ngIf="control.value.invalid && control.value.touched">
+                      This field is required
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Variables Message -->
+              <div class="col-12" *ngIf="(variablesForm.controls | keyvalue).length === 0">
+                <div class="card">
+                  <div class="card-body text-center py-5">
+                    <i class="ri-file-list-3-line fs-1 text-muted"></i>
+                    <p class="text-muted mt-3">No variables to fill for this template</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="body" *ngIf="currentStep === 3">
+          <div class="row">
+            <div class="col-12">
+              <h5 class="mb-1">Review & Generate</h5>
+              <p class="text-muted mb-4">Review your selections before generating the document</p>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <!-- Context Review -->
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="card-title mb-0">
+                    <i class="ri-settings-3-line me-2"></i>Document Context
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <tbody>
+                        <tr>
+                          <td class="text-muted">Type:</td>
+                          <td class="text-end fw-semibold">{{ currentContext?.label }}</td>
+                        </tr>
+                        <tr *ngIf="selectedCase">
+                          <td class="text-muted">Case:</td>
+                          <td class="text-end">
+                            <span class="badge bg-primary-subtle text-primary">
+                              {{ selectedCase.caseNumber }}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr *ngIf="selectedClient">
+                          <td class="text-muted">Client:</td>
+                          <td class="text-end">{{ selectedClient.name }}</td>
+                        </tr>
+                        <tr *ngIf="selectedCases.length > 0">
+                          <td class="text-muted">Cases:</td>
+                          <td class="text-end">
+                            <span class="badge bg-info">{{ selectedCases.length }} selected</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Generation Options -->
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="card-title mb-0">
+                    <i class="ri-settings-line me-2"></i>Generation Options
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <tbody>
+                        <tr>
+                          <td class="text-muted">AI Suggestions:</td>
+                          <td class="text-end">
+                            <span class="badge"
+                                  [class.bg-success-subtle]="useAiSuggestions"
+                                  [class.text-success]="useAiSuggestions"
+                                  [class.bg-secondary-subtle]="!useAiSuggestions"
+                                  [class.text-secondary]="!useAiSuggestions">
+                              {{ useAiSuggestions ? 'Enabled' : 'Disabled' }}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="text-muted">AI Enhancement:</td>
+                          <td class="text-end">
+                            <span class="badge"
+                                  [class.bg-success-subtle]="useAiEnhancement"
+                                  [class.text-success]="useAiEnhancement"
+                                  [class.bg-secondary-subtle]="!useAiEnhancement"
+                                  [class.text-secondary]="!useAiEnhancement">
+                              {{ useAiEnhancement ? 'Enabled' : 'Disabled' }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variables Review -->
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="card-title mb-0">
+                    <i class="ri-file-list-3-line me-2"></i>Template Variables
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <tbody>
+                        <tr *ngFor="let control of variablesForm.controls | keyvalue">
+                          <td class="text-muted">{{ formatVariableName(control.key) }}:</td>
+                          <td class="text-end">
+                            <strong>{{ control.value.value || '(Empty)' }}</strong>
+                          </td>
+                        </tr>
+                        <tr *ngIf="(variablesForm.controls | keyvalue).length === 0">
+                          <td colspan="2" class="text-center text-muted">No variables configured</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Result -->
+        <div class="body" *ngIf="currentStep === 4">
+          <div class="row">
+            <div class="col-12">
+              <!-- Success Alert -->
+              <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                <i class="ri-checkbox-circle-line fs-4 me-3"></i>
+                <div>
+                  <h6 class="alert-heading mb-1">Document Generated Successfully!</h6>
+                  <p class="mb-0">Your document has been generated and is ready for download.</p>
+                </div>
+              </div>
+
+              <!-- Warnings -->
+              <div class="alert alert-warning mb-4" *ngIf="warnings.length > 0">
+                <h6 class="alert-heading">
+                  <i class="ri-alert-line me-2"></i>Warnings
+                </h6>
+                <ul class="mb-0">
+                  <li *ngFor="let warning of warnings">{{ warning }}</li>
+                </ul>
+              </div>
+
+              <!-- Compliance Checks -->
+              <div class="alert alert-info mb-4" *ngIf="complianceChecks.length > 0">
+                <h6 class="alert-heading">
+                  <i class="ri-shield-check-line me-2"></i>Compliance Checks
+                </h6>
+                <ul class="mb-0">
+                  <li *ngFor="let check of complianceChecks">
+                    <i class="ri-checkbox-circle-line text-success me-1"></i>{{ check }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Document Preview -->
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h5 class="card-title mb-0">
+                    <i class="ri-file-text-line me-2"></i>Document Preview
+                  </h5>
+                  <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" (click)="copyToClipboard()">
+                      <i class="ri-file-copy-line me-1"></i>Copy
+                    </button>
+                    <button class="btn btn-sm btn-danger" (click)="downloadAsPDF()">
+                      <i class="ri-file-pdf-line me-1"></i>Download PDF
+                    </button>
+                    <button class="btn btn-sm btn-primary" (click)="downloadAsWord()">
+                      <i class="ri-file-word-line me-1"></i>Download Word
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="document-preview-content border rounded p-4 bg-light"
+                       style="max-height: 400px; overflow-y: auto; font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; white-space: pre-wrap;">
+                    {{ generatedContent }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light"
+            *ngIf="currentStep > 1 && currentStep < 4"
+            (click)="previousStep()">
+      <i class="ri-arrow-left-line me-1"></i>Previous
+    </button>
+
+    <button type="button" class="btn btn-primary ms-auto"
+            *ngIf="currentStep < 3"
+            (click)="nextStep()">
+      Next<i class="ri-arrow-right-line ms-1"></i>
+    </button>
+
+    <button type="button" class="btn btn-success ms-auto"
+            *ngIf="currentStep === 3"
+            [disabled]="isLoading || variablesForm.invalid"
+            (click)="generateDocument()">
+      <i class="ri-magic-line me-1" *ngIf="!isLoading"></i>
+      <span class="spinner-border spinner-border-sm me-1" *ngIf="isLoading"></span>
+      {{ isLoading ? 'Generating...' : 'Generate Document' }}
+    </button>
+
+    <button type="button" class="btn btn-primary ms-2"
+            *ngIf="currentStep === 4"
+            (click)="editAndRegenerate()">
+      <i class="ri-edit-line me-1"></i>Edit & Regenerate
+    </button>
+
+    <button type="button" class="btn btn-success"
+            *ngIf="currentStep === 4"
+            (click)="close()">
+      <i class="ri-check-line me-1"></i>Done
+    </button>
+  </div>
+</div>

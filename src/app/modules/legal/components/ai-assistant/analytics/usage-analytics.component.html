@@ -1,0 +1,203 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Usage Analytics</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">AI Assistant</a></li>
+            <li class="breadcrumb-item active">Analytics</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <label class="form-label mb-0">Time Period:</label>
+            </div>
+            <div class="col-auto">
+              <select class="form-select" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
+                <option value="24hours">Last 24 Hours</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="90days">Last 90 Days</option>
+                <option value="year">Last Year</option>
+              </select>
+            </div>
+            <div class="col-auto ms-auto">
+              <button class="btn btn-primary" (click)="exportReport()">
+                <i class="ri-download-2-line align-middle me-1"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics -->
+  <div class="row">
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">{{metrics.totalDocuments}}</h4>
+          <p class="text-muted mb-0">Total Documents</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">{{metrics.totalUsers}}</h4>
+          <p class="text-muted mb-0">Active Users</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">{{metrics.avgProcessingTime}}s</h4>
+          <p class="text-muted mb-0">Avg Processing</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">{{metrics.successRate}}%</h4>
+          <p class="text-muted mb-0">Success Rate</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">${{metrics.costSaved | number}}</h4>
+          <p class="text-muted mb-0">Cost Saved</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="mb-1">{{metrics.timeSaved}}hrs</h4>
+          <p class="text-muted mb-0">Time Saved</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Practice Area Usage -->
+    <div class="col-xl-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Usage by Practice Area</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Practice Area</th>
+                  <th>Documents</th>
+                  <th>Usage</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let area of practiceAreaUsage">
+                  <td>{{area.name}}</td>
+                  <td>{{area.documents}}</td>
+                  <td>
+                    <div class="progress" style="height: 20px;">
+                      <div class="progress-bar bg-primary" [style.width.%]="area.percentage">
+                        {{area.percentage}}%
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Templates -->
+    <div class="col-xl-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Top Templates</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Template</th>
+                  <th>Uses</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let template of topTemplates">
+                  <td>{{template.name}}</td>
+                  <td>{{template.uses}}</td>
+                  <td>
+                    <span *ngIf="template.trend === 'up'" class="text-success">
+                      <i class="ri-arrow-up-line"></i> Up
+                    </span>
+                    <span *ngIf="template.trend === 'down'" class="text-danger">
+                      <i class="ri-arrow-down-line"></i> Down
+                    </span>
+                    <span *ngIf="template.trend === 'stable'" class="text-muted">
+                      <i class="ri-arrow-right-line"></i> Stable
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Activity -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">User Activity</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Documents Generated</th>
+                  <th>Last Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of userActivity">
+                  <td>{{user.name}}</td>
+                  <td>{{user.documents}}</td>
+                  <td>{{user.lastActive | date:'short'}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

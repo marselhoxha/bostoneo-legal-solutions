@@ -1,0 +1,963 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Immigration Law Tools</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/legal">Legal</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant">AI Assistant</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant/practice-areas">Practice Areas</a></li>
+            <li class="breadcrumb-item active">Immigration Law</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="row">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-3" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'form-completion'" 
+             (click)="setActiveTab('form-completion')" role="tab">
+            <i class="ri-file-text-line me-2"></i>USCIS Form Completion
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'visa-petition'" 
+             (click)="setActiveTab('visa-petition')" role="tab">
+            <i class="ri-passport-line me-2"></i>Visa Petition Drafting
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'case-tracker'" 
+             (click)="setActiveTab('case-tracker')" role="tab">
+            <i class="ri-radar-line me-2"></i>Case Status Tracker
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'document-checklist'" 
+             (click)="setActiveTab('document-checklist')" role="tab">
+            <i class="ri-list-check-2 me-2"></i>Document Checklist
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'timeline'" 
+             (click)="setActiveTab('timeline')" role="tab">
+            <i class="ri-timeline-line me-2"></i>Timeline Calculator
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- USCIS Form Completion Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'form-completion'">
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Select USCIS Form</h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group">
+              <button class="list-group-item list-group-item-action" 
+                      *ngFor="let form of availableForms"
+                      [class.active]="selectedForm === form.code"
+                      (click)="selectForm(form.code)">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1">{{ form.code }}</h6>
+                    <small class="text-muted">{{ form.name }}</small>
+                  </div>
+                  <span class="badge bg-info-subtle text-info">{{ form.category }}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card" *ngIf="!showPdfReview">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Form Information</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="fillWithAI()"
+                    *ngIf="selectedForm && pdfFormFields.length > 0">
+              <i class="ri-magic-line me-1"></i>Fill with AI
+            </button>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="formCompletionForm" *ngIf="selectedForm">
+              <div class="row g-3">
+                <!-- Petitioner Information -->
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Petitioner Information</h6>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" [class.required]="isFieldRequired(formCompletionForm, 'clientFirstName')">First Name</label>
+                  <input type="text" class="form-control" formControlName="clientFirstName"
+                         [class.is-invalid]="isFieldInvalid(formCompletionForm, 'clientFirstName')"
+                         placeholder="Enter first name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, 'clientFirstName')">
+                    First name is required
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Middle Name</label>
+                  <input type="text" class="form-control" formControlName="clientMiddleName"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" [class.required]="isFieldRequired(formCompletionForm, 'clientName')">Last Name</label>
+                  <input type="text" class="form-control" formControlName="clientName"
+                         [class.is-invalid]="isFieldInvalid(formCompletionForm, 'clientName')"
+                         placeholder="Enter last name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, 'clientName')">
+                    Last name is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" [class.required]="isFieldRequired(formCompletionForm, 'petitionerDateOfBirth')">Date of Birth</label>
+                  <input type="date" class="form-control" formControlName="petitionerDateOfBirth"
+                         [class.is-invalid]="isFieldInvalid(formCompletionForm, 'petitionerDateOfBirth')">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, 'petitionerDateOfBirth')">
+                    Date of birth is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">City of Birth</label>
+                  <input type="text" class="form-control" formControlName="petitionerCityOfBirth"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Country of Birth</label>
+                  <input type="text" class="form-control" formControlName="petitionerCountryOfBirth"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Alien Number (if applicable)</label>
+                  <input type="text" class="form-control" formControlName="petitionerAlienNumber" 
+                         placeholder="A-Number">
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="petitionerUSCitizen" id="usCitizen">
+                    <label class="form-check-label" for="usCitizen">
+                      U.S. Citizen
+                    </label>
+                  </div>
+                </div>
+                
+                <!-- Beneficiary Information -->
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Beneficiary Information</h6>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" [class.required]="isFieldRequired(formCompletionForm, 'beneficiaryFirstName')">First Name</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryFirstName"
+                         [class.is-invalid]="isFieldInvalid(formCompletionForm, 'beneficiaryFirstName')"
+                         placeholder="Enter first name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, 'beneficiaryFirstName')">
+                    First name is required
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Middle Name</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryMiddleName"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" [class.required]="isFieldRequired(formCompletionForm, 'beneficiaryLastName')">Last Name</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryLastName"
+                         [class.is-invalid]="isFieldInvalid(formCompletionForm, 'beneficiaryLastName')"
+                         placeholder="Enter last name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, 'beneficiaryLastName')">
+                    Last name is required
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Date of Birth</label>
+                  <input type="date" class="form-control" formControlName="beneficiaryDateOfBirth"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">City of Birth</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryCityOfBirth"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Country of Birth</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryCountryOfBirth"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Relationship to Petitioner</label>
+                  <select class="form-select" formControlName="beneficiaryRelationship">
+                    <option value="">Select Relationship</option>
+                    <option value="spouse">Spouse</option>
+                    <option value="child">Child</option>
+                    <option value="parent">Parent</option>
+                    <option value="sibling">Brother/Sister</option>
+                  </select>
+                </div>
+                
+                <!-- Address Information -->
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Current Address</h6>
+                </div>
+                <div class="row g-3">
+                  <div class="col-8">
+                    <label class="form-label">Street Address</label>
+                    <input type="text" class="form-control" formControlName="petitionerStreetAddress">
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label">Apt/Suite</label>
+                    <input type="text" class="form-control" formControlName="petitionerApartmentNumber">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-control" formControlName="petitionerCity">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">State</label>
+                    <input type="text" class="form-control" formControlName="petitionerState">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">ZIP Code</label>
+                    <input type="text" class="form-control" formControlName="petitionerZipCode">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">SSN</label>
+                    <input type="text" class="form-control" formControlName="petitionerSSN"
+                           placeholder="Social Security Number">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Country</label>
+                    <input type="text" class="form-control" formControlName="petitionerCountry">
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Dynamic PDF Form Fields -->
+              <div class="mt-4" *ngIf="pdfFormFields.length > 0">
+                <h6 class="fw-semibold text-primary">Additional PDF Fields</h6>
+                <div class="row g-3">
+                  <div class="col-md-6" *ngFor="let field of pdfFormFields">
+                    <label class="form-label" [class.required]="field.isRequired">
+                      {{ formatFieldName(field.caseDataPath) }}
+                    </label>
+                    <ng-container [ngSwitch]="field.fieldType">
+                      <input *ngSwitchCase="'DATE'" type="date" class="form-control"
+                             [formControlName]="field.caseDataPath"
+                             [class.is-invalid]="isFieldInvalid(formCompletionForm, field.caseDataPath)">
+                      <div *ngSwitchCase="'CHECKBOX'" class="form-check">
+                        <input type="checkbox" class="form-check-input"
+                               [formControlName]="field.caseDataPath">
+                      </div>
+                      <input *ngSwitchDefault type="text" class="form-control"
+                             [formControlName]="field.caseDataPath"
+                             [class.is-invalid]="isFieldInvalid(formCompletionForm, field.caseDataPath)"
+                             [placeholder]="field.defaultValue || 'Enter value'">
+                    </ng-container>
+                    <div class="invalid-feedback" *ngIf="isFieldInvalid(formCompletionForm, field.caseDataPath)">
+                      This field is required
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="proceedToReview()">
+                    <i class="ri-arrow-right-line me-2"></i>Next: Review & Generate PDF
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleUSCISForm()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+              
+              <div class="progress mt-3" *ngIf="isGeneratingForm">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     [style.width.%]="formProgress">
+                  {{ formProgress }}%
+                </div>
+              </div>
+            </form>
+            
+            <div class="text-center py-5" *ngIf="!selectedForm">
+              <i class="ri-file-list-3-line display-1 text-muted"></i>
+              <h5 class="mt-3">Select a Form to Begin</h5>
+              <p class="text-muted">Choose a USCIS form from the list to start filling it out</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PDF Review and Edit Section -->
+        <div class="card" *ngIf="showPdfReview">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Review and Edit PDF</h5>
+            <div>
+              <button class="btn btn-warning btn-sm me-2" (click)="enableEditMode()" *ngIf="!editMode">
+                <i class="ri-edit-line"></i> Edit Fields
+              </button>
+              <button class="btn btn-success btn-sm me-2" (click)="saveEdits()" *ngIf="editMode">
+                <i class="ri-save-line"></i> Save Changes
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="cancelEdits()" *ngIf="editMode">
+                <i class="ri-close-line"></i> Cancel
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- PDF Viewer -->
+              <div class="col-md-8">
+                <div class="pdf-viewer-container">
+                  <iframe *ngIf="pdfSrc"
+                    [src]="pdfSrc"
+                    width="100%"
+                    height="600px"
+                    style="border: 1px solid #ddd; border-radius: 4px;"
+                    title="PDF Viewer">
+                  </iframe>
+
+                  <div class="text-center py-5" *ngIf="!pdfSrc">
+                    <i class="ri-file-pdf-line display-1 text-muted"></i>
+                    <p class="text-muted mt-3">Generating PDF preview...</p>
+                  </div>
+
+                  <!-- Download section -->
+                  <div class="mt-3" *ngIf="pdfUrl">
+                    <div class="alert alert-info">
+                      <p class="mb-2"><strong>PDF Generated Successfully!</strong></p>
+                      <a [href]="pdfUrl" target="_blank" class="btn btn-primary btn-sm">
+                        <i class="ri-external-link-line"></i> Open in New Tab
+                      </a>
+                      <button (click)="downloadPDF()" class="btn btn-success btn-sm ms-2">
+                        <i class="ri-download-line"></i> Download PDF
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Edit Fields Panel -->
+              <div class="col-md-4">
+                <div class="edit-panel" *ngIf="editMode">
+                  <h6>Edit Form Fields</h6>
+                  <div class="edit-fields-container" style="max-height: 550px; overflow-y: auto;">
+                    <div class="form-group mb-3" *ngFor="let field of pdfFormFields">
+                      <label class="form-label small">{{ formatFieldName(field.caseDataPath) }}</label>
+                      <ng-container [ngSwitch]="field.fieldType">
+                        <input *ngSwitchCase="'DATE'" type="date" class="form-control form-control-sm"
+                               [(ngModel)]="editableFields[field.caseDataPath]">
+                        <div *ngSwitchCase="'CHECKBOX'" class="form-check">
+                          <input type="checkbox" class="form-check-input"
+                                 [(ngModel)]="editableFields[field.caseDataPath]">
+                        </div>
+                        <input *ngSwitchDefault type="text" class="form-control form-control-sm"
+                               [(ngModel)]="editableFields[field.caseDataPath]">
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="info-panel" *ngIf="!editMode">
+                  <h6>Form Information</h6>
+                  <ul class="list-group">
+                    <li class="list-group-item">
+                      <strong>Form Type:</strong> {{ selectedForm }}
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Category:</strong> {{ getFormCategory(selectedForm) }}
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Fields Filled:</strong> {{ pdfFormFields.length }}
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Status:</strong> <span class="badge bg-success">Ready</span>
+                    </li>
+                  </ul>
+
+                  <div class="mt-3">
+                    <p class="text-muted small">
+                      <i class="ri-information-line"></i>
+                      Click "Edit Fields" to modify the form data before downloading.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <button class="btn btn-secondary me-2" (click)="backToForm()">
+                <i class="ri-arrow-left-line"></i> Back to Form
+              </button>
+              <button class="btn btn-primary" (click)="saveAndContinue()">
+                Save & Continue <i class="ri-arrow-right-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visa Petition Drafting Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'visa-petition'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Visa Petition Details</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="visaPetitionForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" [class.required]="isFieldRequired(visaPetitionForm, 'visaType')">Visa Type</label>
+                  <select class="form-select" formControlName="visaType"
+                          [class.is-invalid]="isFieldInvalid(visaPetitionForm, 'visaType')">
+                    <option value="">Select Visa Type</option>
+                    <optgroup label="Employment-Based">
+                      <option *ngFor="let visa of getVisaTypesByCategory('Employment')" 
+                              [value]="visa.code">
+                        {{ visa.code }} - {{ visa.name }}
+                      </option>
+                    </optgroup>
+                    <optgroup label="Family-Based">
+                      <option *ngFor="let visa of getVisaTypesByCategory('Family')" 
+                              [value]="visa.code">
+                        {{ visa.code }} - {{ visa.name }}
+                      </option>
+                    </optgroup>
+                    <optgroup label="Student">
+                      <option *ngFor="let visa of getVisaTypesByCategory('Student')" 
+                              [value]="visa.code">
+                        {{ visa.code }} - {{ visa.name }}
+                      </option>
+                    </optgroup>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(visaPetitionForm, 'visaType')">
+                    Please select a visa type
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label" [class.required]="isFieldRequired(visaPetitionForm, 'petitionerName')">Petitioner Name</label>
+                  <input type="text" class="form-control" formControlName="petitionerName"
+                         [class.is-invalid]="isFieldInvalid(visaPetitionForm, 'petitionerName')"
+                         placeholder="Enter petitioner name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(visaPetitionForm, 'petitionerName')">
+                    Petitioner name is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Petitioner Type</label>
+                  <select class="form-select" formControlName="petitionerType">
+                    <option value="employer">Employer</option>
+                    <option value="self">Self-Petition</option>
+                  </select>
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label" [class.required]="isFieldRequired(visaPetitionForm, 'beneficiaryName')">Beneficiary Name</label>
+                  <input type="text" class="form-control" formControlName="beneficiaryName"
+                         [class.is-invalid]="isFieldInvalid(visaPetitionForm, 'beneficiaryName')"
+                         placeholder="Enter beneficiary name">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(visaPetitionForm, 'beneficiaryName')">
+                    Beneficiary name is required
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label" [class.required]="isFieldRequired(visaPetitionForm, 'beneficiaryQualifications')">Beneficiary Qualifications</label>
+                  <textarea class="form-control" formControlName="beneficiaryQualifications" 
+                            rows="3" placeholder="Education, experience, skills..."
+                            [class.is-invalid]="isFieldInvalid(visaPetitionForm, 'beneficiaryQualifications')"></textarea>
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(visaPetitionForm, 'beneficiaryQualifications')">
+                    Please provide beneficiary qualifications (minimum 50 characters)
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label">Job Description</label>
+                  <textarea class="form-control" formControlName="jobDescription" 
+                            rows="3" placeholder="Optional - Position duties and requirements..."></textarea>
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label">Supporting Evidence</label>
+                  <textarea class="form-control" formControlName="supportingEvidence" 
+                            rows="3" placeholder="Optional - List all supporting documents..."></textarea>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Previous Status</label>
+                  <input type="text" class="form-control" formControlName="previousStatus" 
+                         placeholder="Current visa status">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Priority Date</label>
+                  <input type="date" class="form-control" formControlName="priorityDate">
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generateVisaPetition()"
+                          [disabled]="visaPetitionForm.invalid || isGeneratingPetition">
+                    <span *ngIf="!isGeneratingPetition">
+                      <i class="ri-file-text-line me-2"></i>Generate Petition
+                    </span>
+                    <span *ngIf="isGeneratingPetition">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleVisaPetition()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedPetition">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Petition</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedPetition, 'visa-petition')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="petition-preview">
+              <pre>{{ generatedPetition }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case Status Tracker Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'case-tracker'">
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Add Case to Track</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="caseTrackerForm">
+              <div class="mb-3">
+                <label class="form-label">Receipt Number</label>
+                <input type="text" class="form-control" formControlName="receiptNumber" 
+                       placeholder="e.g., MSC2190123456" style="text-transform: uppercase;">
+                <small class="text-muted">Format: 3 letters + 10 digits</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Case Type</label>
+                <select class="form-select" formControlName="caseType">
+                  <option value="">Select Type</option>
+                  <option value="I-130">I-130 Family Petition</option>
+                  <option value="I-140">I-140 Employment Petition</option>
+                  <option value="I-485">I-485 Adjustment of Status</option>
+                  <option value="I-765">I-765 Work Authorization</option>
+                  <option value="N-400">N-400 Naturalization</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Filing Date</label>
+                <input type="date" class="form-control" formControlName="filingDate">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Service Center</label>
+                <select class="form-select" formControlName="serviceCenter">
+                  <option value="">Select Center</option>
+                  <option *ngFor="let center of getServiceCenters()" [value]="center">
+                    {{ center }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Priority Date (if applicable)</label>
+                <input type="date" class="form-control" formControlName="priorityDate">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" formControlName="notes" rows="2"></textarea>
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="addCase()"
+                        [disabled]="caseTrackerForm.invalid">
+                  <i class="ri-add-line me-2"></i>Add Case
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadSampleCaseStatus()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Tracked Cases</h5>
+            <button class="btn btn-sm btn-outline-primary" (click)="refreshAllCases()">
+              <i class="ri-refresh-line"></i> Check All
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="accordion" id="casesAccordion">
+              <div class="accordion-item" *ngFor="let case of trackedCases; let i = index">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" 
+                          [attr.data-bs-toggle]="'collapse'" 
+                          [attr.data-bs-target]="'#case' + i">
+                    <div class="d-flex justify-content-between w-100 me-3">
+                      <span>
+                        <i [class]="getCaseStatusIcon(case.currentStatus) + ' me-2'"></i>
+                        {{ case.receiptNumber }} - {{ case.caseType }}
+                      </span>
+                      <span [ngClass]="getStatusClass(case.currentStatus)">
+                        {{ case.currentStatus }}
+                      </span>
+                    </div>
+                  </button>
+                </h2>
+                <div [id]="'case' + i" class="accordion-collapse collapse" 
+                     data-bs-parent="#casesAccordion">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <p><strong>Filing Date:</strong> {{ case.filingDate | date }}</p>
+                        <p><strong>Service Center:</strong> {{ case.serviceCenter }}</p>
+                        <p><strong>Priority Date:</strong> {{ case.priorityDate | date }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <p><strong>Last Checked:</strong> {{ case.lastChecked | date:'short' }}</p>
+                        <p><strong>Notes:</strong> {{ case.notes || 'N/A' }}</p>
+                      </div>
+                    </div>
+                    
+                    <h6 class="mt-3">Status History</h6>
+                    <div class="timeline-simple">
+                      <div class="timeline-item" *ngFor="let status of case.statusHistory">
+                        <div class="timeline-content">
+                          <small class="text-muted">{{ status.date | date:'short' }}</small>
+                          <p class="mb-0">{{ status.status }}</p>
+                          <small class="text-muted">{{ status.description }}</small>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <button class="btn btn-sm btn-info me-2" (click)="checkCaseStatus(case.receiptNumber)">
+                        <i class="ri-refresh-line"></i> Check Status
+                      </button>
+                      <button class="btn btn-sm btn-danger" (click)="removeCase(case.id)">
+                        <i class="ri-delete-bin-line"></i> Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="trackedCases.length === 0">
+              <i class="ri-inbox-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Cases Being Tracked</h5>
+              <p class="text-muted">Add a case to start tracking its status</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Checklist Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'document-checklist'">
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Generate Checklist</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="checklistForm">
+              <div class="mb-3">
+                <label class="form-label">Case Type</label>
+                <select class="form-select" formControlName="caseType">
+                  <option value="">Select Type</option>
+                  <option value="employment">Employment-Based</option>
+                  <option value="family">Family-Based</option>
+                  <option value="asylum">Asylum</option>
+                  <option value="naturalization">Naturalization</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Visa Category</label>
+                <select class="form-select" formControlName="visaCategory">
+                  <option value="">Select Category</option>
+                  <option value="EB-1">EB-1</option>
+                  <option value="EB-2">EB-2</option>
+                  <option value="EB-3">EB-3</option>
+                  <option value="F-1">F-1 (Son/Daughter of US Citizen)</option>
+                  <option value="F-2A">F-2A (Spouse/Child of LPR)</option>
+                  <option value="F-3">F-3 (Married Son/Daughter)</option>
+                  <option value="F-4">F-4 (Sibling)</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Application Type</label>
+                <select class="form-select" formControlName="applicationType">
+                  <option value="">Select Type</option>
+                  <option value="initial">Initial Filing</option>
+                  <option value="renewal">Renewal</option>
+                  <option value="adjustment">Adjustment of Status</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" 
+                         formControlName="includeDerivatives" id="derivatives">
+                  <label class="form-check-label" for="derivatives">
+                    Include Derivative Beneficiaries
+                  </label>
+                </div>
+              </div>
+              <div class="mb-3" *ngIf="checklistForm.get('includeDerivatives')?.value">
+                <label class="form-label">Number of Derivatives</label>
+                <input type="number" class="form-control" formControlName="numberOfDerivatives" 
+                       min="0" max="10">
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="generateChecklist()"
+                        [disabled]="checklistForm.invalid">
+                  <i class="ri-list-check-2 me-2"></i>Generate Checklist
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadSampleDocumentChecklist()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Document Checklist</h5>
+            <div class="progress mt-2" *ngIf="documentChecklist.length > 0">
+              <div class="progress-bar" [style.width.%]="checklistProgress">
+                {{ checklistProgress }}% Complete
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive" *ngIf="documentChecklist.length > 0">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Filed</th>
+                    <th>Document</th>
+                    <th>Form #</th>
+                    <th>Status</th>
+                    <th>Required</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let doc of documentChecklist" 
+                      [class.table-success]="doc.filed">
+                    <td>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               [checked]="doc.filed"
+                               (change)="toggleDocumentStatus(doc)">
+                      </div>
+                    </td>
+                    <td>{{ doc.name }}</td>
+                    <td>{{ doc.formNumber || '-' }}</td>
+                    <td>
+                      <span [ngClass]="getStatusClass(doc.status)">
+                        {{ doc.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="doc.required ? 'bg-danger' : 'bg-secondary'">
+                        {{ doc.required ? 'Required' : 'Optional' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="documentChecklist.length === 0">
+              <i class="ri-file-list-3-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Checklist Generated</h5>
+              <p class="text-muted">Configure your case details to generate a document checklist</p>
+            </div>
+            
+            <div class="mt-3" *ngIf="documentChecklist.length > 0">
+              <button class="btn btn-outline-primary" 
+                      (click)="exportDocument(JSON.stringify(documentChecklist, null, 2), 'document-checklist')">
+                <i class="ri-download-line me-2"></i>Export Checklist
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline Calculator Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'timeline'">
+    <div class="row">
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Case Timeline Calculator</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="timelineForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Case Type</label>
+                  <select class="form-select" formControlName="caseType">
+                    <option value="">Select Type</option>
+                    <option value="I-140">I-140 Employment Petition</option>
+                    <option value="I-485">I-485 Adjustment of Status</option>
+                    <option value="I-130">I-130 Family Petition</option>
+                    <option value="N-400">N-400 Naturalization</option>
+                    <option value="I-765">I-765 Work Authorization</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Filing Date</label>
+                  <input type="date" class="form-control" formControlName="filingDate">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Priority Date</label>
+                  <input type="date" class="form-control" formControlName="priorityDate">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Service Center</label>
+                  <select class="form-select" formControlName="serviceCenter">
+                    <option value="">Select Center</option>
+                    <option *ngFor="let center of getServiceCenters()" [value]="center">
+                      {{ center }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Current Status</label>
+                  <select class="form-select" formControlName="currentStatus">
+                    <option value="">Select Status</option>
+                    <option value="Case Received">Case Received</option>
+                    <option value="Biometrics Scheduled">Biometrics Scheduled</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="RFE Issued">RFE Issued</option>
+                    <option value="Interview Scheduled">Interview Scheduled</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Country (for visa bulletin)</label>
+                  <input type="text" class="form-control" formControlName="country" 
+                         placeholder="e.g., India, China, Philippines">
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="premiumProcessing" id="premium">
+                    <label class="form-check-label" for="premium">
+                      Premium Processing (15 days)
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           formControlName="hasRFE" id="rfe">
+                    <label class="form-check-label" for="rfe">
+                      RFE Expected/Received
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="calculateTimeline()"
+                          [disabled]="timelineForm.invalid">
+                    <i class="ri-timeline-line me-2"></i>Calculate Timeline
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleTimelineCalculator()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Estimated Timeline</h5>
+            <p class="text-muted mb-0" *ngIf="estimatedCompletionDate">
+              Estimated Completion: <strong>{{ estimatedCompletionDate | date:'longDate' }}</strong>
+            </p>
+          </div>
+          <div class="card-body">
+            <div class="timeline" *ngIf="calculatedTimeline.length > 0">
+              <div class="timeline-item" *ngFor="let stage of calculatedTimeline">
+                <div class="timeline-marker" 
+                     [class.bg-success]="stage.status === 'completed'"
+                     [class.bg-primary]="stage.status === 'in-progress'"
+                     [class.bg-secondary]="stage.status === 'pending'"></div>
+                <div class="timeline-content">
+                  <h6 class="mb-1">{{ stage.stage }}</h6>
+                  <p class="mb-0">
+                    <small class="text-muted">
+                      Estimated: {{ stage.estimatedDate | date:'mediumDate' }}
+                    </small>
+                  </p>
+                  <p class="mb-0" *ngIf="stage.actualDate">
+                    <small class="text-success">
+                      Actual: {{ stage.actualDate | date:'mediumDate' }}
+                    </small>
+                  </p>
+                  <small class="text-muted">{{ stage.notes }}</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="calculatedTimeline.length === 0">
+              <i class="ri-calendar-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Timeline Calculated</h5>
+              <p class="text-muted">Enter case details to calculate processing timeline</p>
+            </div>
+            
+            <div class="alert alert-info mt-3" *ngIf="calculatedTimeline.length > 0">
+              <i class="ri-information-line me-2"></i>
+              Processing times are estimates based on current USCIS data and may vary.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

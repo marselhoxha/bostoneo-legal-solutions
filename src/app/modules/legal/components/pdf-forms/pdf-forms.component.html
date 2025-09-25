@@ -1,0 +1,320 @@
+<div class="pdf-forms-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h3 class="page-title">PDF Form Management</h3>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/dashboard">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/legal">Legal</a></li>
+          <li class="breadcrumb-item active">PDF Forms</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Steps -->
+  <div class="progress-steps mb-4">
+    <div class="row">
+      <div class="col-md-3" *ngFor="let step of [1, 2, 3, 4]; let i = index">
+        <div class="step" [class.active]="currentStep === step" [class.completed]="currentStep > step">
+          <div class="step-number">{{ step }}</div>
+          <div class="step-title">
+            {{ step === 1 ? 'Select Form' :
+               step === 2 ? 'Fill Data' :
+               step === 3 ? 'Review & Edit' :
+               'Download' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1: Template Selection -->
+  <div class="card" *ngIf="currentStep === 1">
+    <div class="card-header">
+      <h4 class="card-title">Select a PDF Form Template</h4>
+    </div>
+    <div class="card-body">
+      <!-- Filters -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>Category</label>
+            <select class="form-control" [(ngModel)]="selectedCategory">
+              <option value="">All Categories</option>
+              <option *ngFor="let cat of categories" [value]="cat.value">
+                {{ cat.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>Search</label>
+            <input type="text" class="form-control" [(ngModel)]="searchTerm"
+                   placeholder="Search forms...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates Grid -->
+      <div class="row">
+        <div class="col-md-4 mb-3" *ngFor="let template of filteredTemplates">
+          <div class="card template-card" (click)="selectTemplate(template)">
+            <div class="card-body">
+              <div class="template-icon">
+                <i class="fas fa-file-pdf text-danger fa-3x"></i>
+              </div>
+              <h5 class="mt-3">{{ template.name }}</h5>
+              <p class="text-muted">{{ template.description }}</p>
+              <span class="badge badge-info">{{ template.category }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="filteredTemplates.length === 0" class="text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No templates found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Fill Form Data -->
+  <div class="card" *ngIf="currentStep === 2">
+    <div class="card-header">
+      <h4 class="card-title">Fill Form Data: {{ selectedTemplate?.name }}</h4>
+      <button class="btn btn-primary btn-sm float-end" (click)="fillWithAI()">
+        <i class="fas fa-magic"></i> Fill with AI
+      </button>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="formData">
+        <!-- Required Fields -->
+        <div class="mb-4" *ngIf="getRequiredFields().length > 0">
+          <h5 class="text-danger">Required Fields</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3" *ngFor="let field of getRequiredFields()">
+              <div class="form-group">
+                <label>{{ field.displayName }} <span class="text-danger">*</span></label>
+                <ng-container [ngSwitch]="field.fieldType">
+                  <input *ngSwitchCase="'DATE'" type="date" class="form-control"
+                         [formControlName]="field.caseDataPath">
+                  <div *ngSwitchCase="'CHECKBOX'" class="form-check">
+                    <input type="checkbox" class="form-check-input"
+                           [formControlName]="field.caseDataPath">
+                    <label class="form-check-label">{{ field.displayName }}</label>
+                  </div>
+                  <input *ngSwitchDefault type="text" class="form-control"
+                         [formControlName]="field.caseDataPath">
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Fields -->
+        <div *ngIf="getOptionalFields().length > 0">
+          <h5>Optional Fields</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3" *ngFor="let field of getOptionalFields()">
+              <div class="form-group">
+                <label>{{ field.displayName }}</label>
+                <ng-container [ngSwitch]="field.fieldType">
+                  <input *ngSwitchCase="'DATE'" type="date" class="form-control"
+                         [formControlName]="field.caseDataPath">
+                  <div *ngSwitchCase="'CHECKBOX'" class="form-check">
+                    <input type="checkbox" class="form-check-input"
+                           [formControlName]="field.caseDataPath">
+                    <label class="form-check-label">{{ field.displayName }}</label>
+                  </div>
+                  <input *ngSwitchDefault type="text" class="form-control"
+                         [formControlName]="field.caseDataPath">
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="mt-4">
+        <button class="btn btn-secondary me-2" (click)="previousStep()">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button class="btn btn-primary" (click)="nextStep()">
+          Generate PDF <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Review and Edit -->
+  <div class="card" *ngIf="currentStep === 3">
+    <div class="card-header">
+      <h4 class="card-title">Review and Edit PDF</h4>
+      <div class="float-end">
+        <button class="btn btn-warning btn-sm me-2" (click)="enableEditMode()" *ngIf="!editMode">
+          <i class="fas fa-edit"></i> Edit Fields
+        </button>
+        <button class="btn btn-success btn-sm me-2" (click)="saveEdits()" *ngIf="editMode">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+        <button class="btn btn-secondary btn-sm" (click)="cancelEdits()" *ngIf="editMode">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- PDF Viewer -->
+        <div class="col-md-8">
+          <div class="pdf-viewer-container">
+            <ng-container *ngIf="pdfSrc; else noPdfMessage">
+              <!-- PDF viewer using iframe with blob URL -->
+              <iframe
+                [src]="pdfSrc"
+                width="100%"
+                height="600px"
+                style="border: 1px solid #ddd; border-radius: 4px;"
+                title="PDF Viewer">
+              </iframe>
+            </ng-container>
+
+            <ng-template #noPdfMessage>
+              <div class="text-center py-5">
+                <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
+                <p class="text-muted">No PDF to display. Fill out the form to generate a preview.</p>
+              </div>
+            </ng-template>
+
+            <!-- Debug info and download link -->
+            <div class="mt-3" *ngIf="pdfUrl">
+              <div class="alert alert-info">
+                <p><strong>PDF Generated Successfully!</strong></p>
+                <p class="mb-1">If the PDF doesn't display above, you can:</p>
+                <a [href]="pdfUrl" target="_blank" class="btn btn-primary btn-sm">
+                  <i class="fas fa-external-link-alt"></i> Open PDF in New Tab
+                </a>
+                <button (click)="downloadPDF()" class="btn btn-success btn-sm ms-2">
+                  <i class="fas fa-download"></i> Download PDF
+                </button>
+                <div class="mt-2">
+                  <small class="text-muted">PDF Path: {{ filledPdfPath }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editable Fields Panel -->
+        <div class="col-md-4">
+          <div class="edit-panel" *ngIf="editMode">
+            <h5>Edit Form Fields</h5>
+            <div class="edit-fields-container">
+              <div class="form-group mb-3" *ngFor="let field of formFields">
+                <label>{{ field.displayName }}</label>
+                <ng-container [ngSwitch]="field.fieldType">
+                  <input *ngSwitchCase="'DATE'" type="date" class="form-control form-control-sm"
+                         [(ngModel)]="editableFields[field.caseDataPath]">
+                  <div *ngSwitchCase="'CHECKBOX'" class="form-check">
+                    <input type="checkbox" class="form-check-input"
+                           [(ngModel)]="editableFields[field.caseDataPath]">
+                  </div>
+                  <input *ngSwitchDefault type="text" class="form-control form-control-sm"
+                         [(ngModel)]="editableFields[field.caseDataPath]">
+                </ng-container>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-panel" *ngIf="!editMode">
+            <h5>Form Information</h5>
+            <ul class="list-group">
+              <li class="list-group-item">
+                <strong>Template:</strong> {{ selectedTemplate?.name }}
+              </li>
+              <li class="list-group-item">
+                <strong>Category:</strong> {{ selectedTemplate?.category }}
+              </li>
+              <li class="list-group-item">
+                <strong>Fields Filled:</strong> {{ formFields.length }}
+              </li>
+              <li class="list-group-item">
+                <strong>Status:</strong> <span class="badge badge-success">Ready</span>
+              </li>
+            </ul>
+
+            <div class="mt-3">
+              <p class="text-muted">
+                <i class="fas fa-info-circle"></i>
+                Click "Edit Fields" to modify the form data before downloading.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button class="btn btn-secondary me-2" (click)="previousStep()">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button class="btn btn-primary" (click)="saveAndContinue()">
+          Save & Continue <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Download -->
+  <div class="card" *ngIf="currentStep === 4">
+    <div class="card-body text-center py-5">
+      <i class="fas fa-check-circle text-success fa-5x mb-4"></i>
+      <h3>PDF Form Completed!</h3>
+      <p class="text-muted">Your PDF form has been successfully filled and is ready for download.</p>
+
+      <div class="mt-4">
+        <button class="btn btn-success btn-lg me-2" (click)="downloadPDF()">
+          <i class="fas fa-download"></i> Download PDF
+        </button>
+        <button class="btn btn-primary btn-lg" (click)="startOver()">
+          <i class="fas fa-plus"></i> Fill Another Form
+        </button>
+      </div>
+
+      <div class="mt-5">
+        <h5>What's Next?</h5>
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <div class="next-step-card">
+              <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
+              <h6>Email to Client</h6>
+              <p class="text-muted">Send the completed form directly to your client</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="next-step-card">
+              <i class="fas fa-print fa-2x text-primary mb-3"></i>
+              <h6>Print Form</h6>
+              <p class="text-muted">Print the form for physical submission</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="next-step-card">
+              <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-3"></i>
+              <h6>E-File</h6>
+              <p class="text-muted">Submit electronically to the appropriate agency</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+  </div>
+</div>

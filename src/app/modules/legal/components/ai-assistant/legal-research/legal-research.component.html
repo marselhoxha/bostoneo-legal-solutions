@@ -1,0 +1,1297 @@
+<div class="container-fluid legal-research-container" style="margin-top: 120px;">
+  <!-- Enhanced Hero Section with Gradient Background -->
+  <div class="row">
+    <div class="col-12">
+      <div class="bg-gradient bg-primary bg-opacity-10 rounded-3 p-4 mb-4">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar-lg">
+                <div class="avatar-title bg-primary text-white rounded-circle">
+                  <i class="ri-scales-3-line fs-24"></i>
+                </div>
+              </div>
+              <div class="ms-3">
+                <h2 class="mb-1 fw-bold">Legal Research Assistant</h2>
+                <p class="text-muted mb-0 fs-15">
+                  AI-Powered Massachusetts Legal Research Platform with Claude Intelligence
+                </p>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-auto">
+                <div class="d-flex align-items-center">
+                  <i class="ri-database-2-fill text-primary me-2"></i>
+                  <span class="text-muted">50,000+ Legal Documents</span>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="d-flex align-items-center">
+                  <i class="ri-robot-2-fill text-success me-2"></i>
+                  <span class="text-muted">Claude 4.0 AI Analysis</span>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="d-flex align-items-center">
+                  <i class="ri-shield-check-fill text-info me-2"></i>
+                  <span class="text-muted">Real-time Updates</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-end d-none d-lg-block">
+            <img src="assets/images/legal-research-illustration.svg" alt="Legal Research" class="img-fluid" style="max-height: 150px;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Stats Cards with Animations -->
+  <div class="row g-3 mb-4">
+    <div class="col-xxl-3 col-md-6">
+      <div class="card card-animate card-height-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-semibold text-muted text-truncate fs-12 mb-2">Legal Database</p>
+              <h4 class="fs-20 fw-bold mb-3">
+                <span class="counter-value" data-target="50000">0</span>+
+              </h4>
+              <div class="d-flex align-items-center">
+                <span class="badge badge-soft-success fs-11 me-2">
+                  <i class="ri-arrow-up-s-line fs-13 align-middle"></i> 12.5%
+                </span>
+                <span class="text-muted fs-12">Documents Added</span>
+              </div>
+            </div>
+            <div class="avatar-md flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle text-primary rounded-3 fs-2">
+                <i class="ri-database-2-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xxl-3 col-md-6">
+      <div class="card card-animate card-height-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-semibold text-muted text-truncate fs-12 mb-2">AI Performance</p>
+              <h4 class="fs-20 fw-bold mb-3">95% Accuracy</h4>
+              <div class="d-flex align-items-center">
+                <span class="badge badge-soft-success fs-11 me-2">Live</span>
+                <span class="text-muted fs-12">Claude 4.0 Active</span>
+              </div>
+            </div>
+            <div class="avatar-md flex-shrink-0">
+              <span class="avatar-title bg-success-subtle text-success rounded-3 fs-2">
+                <i class="ri-cpu-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xxl-3 col-md-6">
+      <div class="card card-animate card-height-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-semibold text-muted text-truncate fs-12 mb-2">Recent Activity</p>
+              <h4 class="fs-20 fw-bold mb-3">
+                <span class="counter-value" [attr.data-target]="searchHistory.length">{{searchHistory.length}}</span> Searches
+              </h4>
+              <div class="d-flex align-items-center">
+                <span class="text-muted fs-12">Last 30 days</span>
+              </div>
+            </div>
+            <div class="avatar-md flex-shrink-0">
+              <span class="avatar-title bg-info-subtle text-info rounded-3 fs-2">
+                <i class="ri-search-2-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xxl-3 col-md-6">
+      <div class="card card-animate card-height-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-semibold text-muted text-truncate fs-12 mb-2">Saved Items</p>
+              <h4 class="fs-20 fw-bold mb-3">
+                <span class="counter-value" [attr.data-target]="savedSearches.length">{{savedSearches.length}}</span> Searches
+              </h4>
+              <div class="d-flex align-items-center">
+                <span class="text-muted fs-12">Quick Access Library</span>
+              </div>
+            </div>
+            <div class="avatar-md flex-shrink-0">
+              <span class="avatar-title bg-warning-subtle text-warning rounded-3 fs-2">
+                <i class="ri-bookmark-3-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Tips Banner -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="alert alert-info border-0 alert-dismissible fade show material-shadow" role="alert">
+        <div class="d-flex align-items-center">
+          <lord-icon src="https://cdn.lordicon.com/lomfljuq.json" trigger="loop" colors="primary:#0ab39c" style="width:40px;height:40px"></lord-icon>
+          <div class="ms-3 flex-grow-1">
+            <h6 class="fs-14 mb-1">Pro Tip: Advanced Search Techniques</h6>
+            <p class="mb-0 fs-13">Use quotation marks for exact phrases, Boolean operators (AND, OR, NOT) for complex queries, and wildcards (*) for partial matches. Try: <code>"breach of contract" AND damages NOT punitive</code></p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="row">
+    <!-- Left Column - Enhanced Search Interface -->
+    <div class="col-xxl-8">
+      <div class="card ribbon-box right material-shadow">
+        <span class="ribbon-three ribbon-three-primary"><span>AI-Powered</span></span>
+
+        <div class="card-header border-0 bg-light bg-opacity-50">
+          <div class="row align-items-center">
+            <div class="col">
+              <h4 class="card-title mb-0">
+                <i class="ri-search-eye-line text-primary me-2"></i>
+                Intelligent Legal Search
+              </h4>
+            </div>
+            <div class="col-auto">
+              <div class="hstack gap-2">
+                <button class="btn btn-soft-primary btn-sm" (click)="showSearchHelp()">
+                  <i class="ri-question-line"></i> Help
+                </button>
+                <button class="btn btn-soft-secondary btn-sm" (click)="resetSearch()">
+                  <i class="ri-refresh-line"></i> Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Welcome State - Show by default -->
+          <div class="text-center py-5" *ngIf="showDefaultState">
+            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop"
+                       colors="primary:#405189,secondary:#0ab39c" style="width:120px;height:120px">
+            </lord-icon>
+
+            <h3 class="mt-4">Start Your Legal Research Journey</h3>
+            <p class="text-muted fs-15 mb-4">
+              Access comprehensive Massachusetts legal resources with AI-powered insights.<br>
+              Search statutes, cases, regulations, and more with intelligent analysis.
+            </p>
+
+            <div class="hstack gap-2 justify-content-center">
+              <button class="btn btn-primary btn-lg" (click)="showDefaultState = false; focusSearchInput()">
+                <i class="ri-search-line me-2"></i>Start Searching
+              </button>
+              <button class="btn btn-soft-info btn-lg" (click)="showTour()">
+                <i class="ri-compass-3-line me-2"></i>Take a Tour
+              </button>
+              <button class="btn btn-soft-success btn-lg" (click)="showVideoGuide()">
+                <i class="ri-play-circle-line me-2"></i>Watch Guide
+              </button>
+            </div>
+          </div>
+
+          <!-- Enhanced Search Tabs with Icons and Badges -->
+          <ul class="nav nav-tabs nav-tabs-custom nav-primary nav-justified mb-4" role="tablist" *ngIf="!showDefaultState">
+            <li class="nav-item">
+              <a class="nav-link active" data-bs-toggle="tab" href="#search-tab" role="tab">
+                <i class="ri-search-line d-block fs-20 mb-1"></i>
+                <span class="d-none d-sm-block">Search Database</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link position-relative" data-bs-toggle="tab" href="#history-tab" role="tab">
+                <i class="ri-time-line d-block fs-20 mb-1"></i>
+                <span class="d-none d-sm-block">History</span>
+                <span class="badge bg-danger position-absolute top-0 start-100 translate-middle" *ngIf="searchHistory.length > 0">{{searchHistory.length}}</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link position-relative" data-bs-toggle="tab" href="#saved-tab" role="tab">
+                <i class="ri-bookmark-line d-block fs-20 mb-1"></i>
+                <span class="d-none d-sm-block">Saved</span>
+                <span class="badge bg-warning position-absolute top-0 start-100 translate-middle" *ngIf="savedSearches.length > 0">{{savedSearches.length}}</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-bs-toggle="tab" href="#templates-tab" role="tab">
+                <i class="ri-file-text-line d-block fs-20 mb-1"></i>
+                <span class="d-none d-sm-block">Templates</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- Tab Content -->
+          <div class="tab-content" *ngIf="!showDefaultState">
+            <!-- Enhanced Search Tab -->
+            <div class="tab-pane fade show active" id="search-tab" role="tabpanel">
+              <form [formGroup]="searchForm">
+                <!-- Main Search Input with Autocomplete -->
+                <div class="position-relative mb-4">
+                  <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-primary-subtle border-0">
+                      <i class="ri-search-line text-primary"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control border-0 shadow-none"
+                           formControlName="query"
+                           placeholder="Enter legal query, statute, case name, or citation..."
+                           (keyup.enter)="performSearch()"
+                           autocomplete="off">
+                    <button class="btn btn-primary" type="button" (click)="performSearch()" [disabled]="isSearching">
+                      <span *ngIf="!isSearching">Search Now</span>
+                      <span *ngIf="isSearching">
+                        <span class="spinner-border spinner-border-sm me-2"></span>Searching...
+                      </span>
+                    </button>
+                  </div>
+
+                  <!-- Enhanced Search Suggestions Dropdown -->
+                  <div class="dropdown-menu show w-100 material-shadow" *ngIf="searchSuggestions.length > 0">
+                    <h6 class="dropdown-header">
+                      <i class="ri-lightbulb-flash-line me-2 text-warning"></i>
+                      Intelligent Suggestions
+                    </h6>
+                    <a class="dropdown-item d-flex align-items-center"
+                       *ngFor="let suggestion of searchSuggestions"
+                       (click)="applySuggestion(suggestion)">
+                      <i class="ri-arrow-right-s-line me-2 text-muted"></i>
+                      <div>
+                        <div>{{suggestion}}</div>
+                        <small class="text-muted">Click to use this search</small>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Quick Filters Row -->
+                <div class="row g-3 mb-4">
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <select class="form-select" formControlName="searchType" id="searchType">
+                        <option value="all">All Sources</option>
+                        <option value="statutes">Statutes & Codes</option>
+                        <option value="cases">Case Law</option>
+                        <option value="rules">Court Rules</option>
+                        <option value="regulations">Regulations</option>
+                        <option value="guidelines">Guidelines</option>
+                      </select>
+                      <label for="searchType">
+                        <i class="ri-file-list-3-line me-1"></i>Document Type
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <select class="form-select" formControlName="jurisdiction" id="jurisdiction">
+                        <option value="massachusetts">Massachusetts State</option>
+                        <option value="federal">Federal</option>
+                        <option value="first_circuit">First Circuit</option>
+                        <option value="all">All Jurisdictions</option>
+                      </select>
+                      <label for="jurisdiction">
+                        <i class="ri-government-line me-1"></i>Jurisdiction
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="d-grid h-100">
+                      <button type="button"
+                              class="btn btn-soft-primary d-flex align-items-center justify-content-center"
+                              (click)="toggleAdvancedFilters()">
+                        <i class="ri-equalizer-line me-2"></i>
+                        Advanced Options
+                        <span class="badge bg-primary ms-auto" *ngIf="getActiveFiltersCount() > 0">
+                          {{getActiveFiltersCount()}}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Boolean Search Helper -->
+                <div class="alert alert-primary border-0 mb-4" role="alert">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <i class="ri-information-line fs-16 align-middle"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-2">
+                      <div class="form-check form-switch form-switch-md mb-2">
+                        <input class="form-check-input" type="checkbox" formControlName="enableBooleanSearch" id="booleanSwitch">
+                        <label class="form-check-label fw-semibold" for="booleanSwitch">Enable Boolean Search</label>
+                      </div>
+                      <p class="mb-2 fs-13">Enhance your search with operators:</p>
+                      <div class="row g-2">
+                        <div class="col-auto">
+                          <span class="badge badge-soft-primary">AND</span> Both terms
+                        </div>
+                        <div class="col-auto">
+                          <span class="badge badge-soft-info">OR</span> Either term
+                        </div>
+                        <div class="col-auto">
+                          <span class="badge badge-soft-danger">NOT</span> Exclude term
+                        </div>
+                        <div class="col-auto">
+                          <span class="badge badge-soft-success">"quotes"</span> Exact phrase
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Enhanced Advanced Filters Panel -->
+                <div class="advanced-filters-panel" *ngIf="showAdvancedFilters">
+                  <div class="card border border-primary border-dashed">
+                    <div class="card-header bg-primary bg-opacity-10">
+                      <h5 class="card-title mb-0">
+                        <i class="ri-filter-3-fill me-2"></i>Advanced Search Filters
+                      </h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-4">
+                        <!-- Date Range -->
+                        <div class="col-lg-6">
+                          <label class="form-label fw-semibold">
+                            <i class="ri-calendar-line me-1"></i>Date Range
+                          </label>
+                          <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Start Date" #startDatePicker>
+                            <span class="input-group-text">to</span>
+                            <input type="text" class="form-control" placeholder="End Date" #endDatePicker>
+                          </div>
+                        </div>
+
+                        <!-- Court Level -->
+                        <div class="col-lg-6">
+                          <label class="form-label fw-semibold">
+                            <i class="ri-government-line me-1"></i>Court Level
+                          </label>
+                          <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check" *ngFor="let court of courtLevels.slice(0, 4)">
+                              <input class="form-check-input" type="checkbox"
+                                     [id]="'court-' + court.value"
+                                     [checked]="isFilterSelected('courtLevels', court.value)"
+                                     (change)="toggleFilter('courtLevels', court.value)">
+                              <label class="form-check-label" [for]="'court-' + court.value">
+                                {{court.label}}
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Practice Areas -->
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">
+                            <i class="ri-briefcase-line me-1"></i>Practice Areas
+                          </label>
+                          <div class="row g-3">
+                            <div class="col-md-3" *ngFor="let area of practiceAreas">
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       [id]="'area-' + area.value"
+                                       [checked]="isFilterSelected('practiceAreas', area.value)"
+                                       (change)="toggleFilter('practiceAreas', area.value)">
+                                <label class="form-check-label" [for]="'area-' + area.value">
+                                  {{area.label}}
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Document Types -->
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">
+                            <i class="ri-file-text-line me-1"></i>Document Types
+                          </label>
+                          <div class="d-flex flex-wrap gap-2">
+                            <button type="button"
+                                    *ngFor="let type of documentTypes"
+                                    class="btn btn-sm"
+                                    [ngClass]="isFilterSelected('documentTypes', type.value) ? 'btn-primary' : 'btn-soft-primary'"
+                                    (click)="toggleFilter('documentTypes', type.value)">
+                              {{type.label}}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row mt-4">
+                        <div class="col-12">
+                          <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-soft-danger" (click)="clearFilters()">
+                              <i class="ri-delete-bin-line me-1"></i>Clear All Filters
+                            </button>
+                            <div class="hstack gap-2">
+                              <button type="button" class="btn btn-soft-secondary" (click)="saveFilterPreset()">
+                                <i class="ri-save-line me-1"></i>Save Preset
+                              </button>
+                              <button type="button" class="btn btn-primary" (click)="applyFilters()">
+                                <i class="ri-check-line me-1"></i>Apply Filters
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+              <!-- Search Error Alert -->
+              <div class="alert alert-danger alert-dismissible alert-label-icon label-arrow fade show material-shadow"
+                   role="alert" *ngIf="searchError">
+                <i class="ri-error-warning-line label-icon"></i>
+                <strong>Search Error</strong> - {{searchError}}
+                <button type="button" class="btn-close" (click)="searchError = ''"></button>
+              </div>
+            </div>
+
+            <!-- Enhanced History Tab -->
+            <div class="tab-pane fade" id="history-tab" role="tabpanel">
+              <div class="table-responsive" *ngIf="searchHistory.length > 0">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Search Query</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Results</th>
+                      <th scope="col">Date</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let history of searchHistory">
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-xs flex-shrink-0 me-3">
+                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                              <i class="ri-search-line"></i>
+                            </span>
+                          </div>
+                          <div>
+                            <h6 class="mb-0">{{history.searchQuery}}</h6>
+                            <small class="text-muted">{{history.jurisdiction || 'All'}}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge badge-soft-info">{{history.queryType}}</span>
+                      </td>
+                      <td>
+                        <span class="fw-semibold">{{history.resultsCount}}</span>
+                      </td>
+                      <td>
+                        <span class="text-muted">{{formatSearchDate(history.searchedAt)}}</span>
+                      </td>
+                      <td>
+                        <div class="hstack gap-2">
+                          <button class="btn btn-sm btn-soft-primary" (click)="loadSavedSearch(history)"
+                                  data-bs-toggle="tooltip" title="Re-run Search">
+                            <i class="ri-refresh-line"></i>
+                          </button>
+                          <button class="btn btn-sm btn-soft-success" (click)="saveSearchToLibrary(history)"
+                                  data-bs-toggle="tooltip" title="Save to Library">
+                            <i class="ri-bookmark-line"></i>
+                          </button>
+                          <button class="btn btn-sm btn-soft-danger" (click)="deleteSavedSearch(history.id)"
+                                  data-bs-toggle="tooltip" title="Delete">
+                            <i class="ri-delete-bin-line"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="text-center py-5" *ngIf="searchHistory.length === 0">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                    <i class="ri-time-line fs-2"></i>
+                  </div>
+                </div>
+                <h5>No Search History</h5>
+                <p class="text-muted">Your search history will appear here</p>
+              </div>
+            </div>
+
+            <!-- Enhanced Saved Tab -->
+            <div class="tab-pane fade" id="saved-tab" role="tabpanel">
+              <div class="row g-3" *ngIf="savedSearches.length > 0">
+                <div class="col-md-6" *ngFor="let saved of savedSearches">
+                  <div class="card border card-border-primary">
+                    <div class="card-body">
+                      <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-primary-subtle text-primary rounded">
+                              <i class="ri-bookmark-fill"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6 class="mb-1">{{saved.searchQuery}}</h6>
+                          <p class="text-muted mb-2 fs-13">
+                            <i class="ri-calendar-line me-1"></i>{{formatSearchDate(saved.searchedAt)}}
+                            <span class="ms-2">
+                              <i class="ri-file-list-line me-1"></i>{{saved.resultsCount}} results
+                            </span>
+                          </p>
+                          <div class="hstack gap-2">
+                            <button class="btn btn-sm btn-primary" (click)="loadSavedSearch(saved)">
+                              <i class="ri-search-line me-1"></i>Search Again
+                            </button>
+                            <button class="btn btn-sm btn-soft-danger" (click)="removeFromSaved(saved.id)">
+                              <i class="ri-delete-bin-line"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-center py-5" *ngIf="savedSearches.length === 0">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                    <i class="ri-bookmark-line fs-2"></i>
+                  </div>
+                </div>
+                <h5>No Saved Searches</h5>
+                <p class="text-muted">Save important searches for quick access</p>
+              </div>
+            </div>
+
+            <!-- Templates Tab -->
+            <div class="tab-pane fade" id="templates-tab" role="tabpanel">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="card border card-border-light cursor-pointer" (click)="useTemplate('contract')">
+                    <div class="card-body text-center">
+                      <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                          <i class="ri-file-text-line fs-2"></i>
+                        </div>
+                      </div>
+                      <h6>Contract Law</h6>
+                      <p class="text-muted mb-0 fs-13">Breach, enforcement, damages</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="card border card-border-light cursor-pointer" (click)="useTemplate('criminal')">
+                    <div class="card-body text-center">
+                      <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-danger-subtle text-danger rounded-circle">
+                          <i class="ri-user-forbid-line fs-2"></i>
+                        </div>
+                      </div>
+                      <h6>Criminal Law</h6>
+                      <p class="text-muted mb-0 fs-13">Procedure, sentencing, appeals</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="card border card-border-light cursor-pointer" (click)="useTemplate('family')">
+                    <div class="card-body text-center">
+                      <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                          <i class="ri-group-line fs-2"></i>
+                        </div>
+                      </div>
+                      <h6>Family Law</h6>
+                      <p class="text-muted mb-0 fs-13">Divorce, custody, support</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column - Enhanced Information Panels -->
+    <div class="col-xxl-4">
+      <!-- Quick Actions Card -->
+      <div class="card mb-3">
+        <div class="card-header bg-primary bg-opacity-10">
+          <h5 class="card-title mb-0">
+            <i class="ri-flashlight-line me-2"></i>Quick Actions
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button class="btn btn-soft-primary text-start" (click)="performQuickSearch('Massachusetts consumer protection 93A')">
+              <i class="ri-shield-user-line me-2"></i>Consumer Protection (Ch. 93A)
+            </button>
+            <button class="btn btn-soft-info text-start" (click)="performQuickSearch('landlord tenant Massachusetts')">
+              <i class="ri-home-4-line me-2"></i>Landlord-Tenant Law
+            </button>
+            <button class="btn btn-soft-success text-start" (click)="performQuickSearch('Massachusetts criminal procedure')">
+              <i class="ri-scales-3-line me-2"></i>Criminal Procedure
+            </button>
+            <button class="btn btn-soft-warning text-start" (click)="performQuickSearch('employment law Massachusetts')">
+              <i class="ri-briefcase-4-line me-2"></i>Employment Law
+            </button>
+            <button class="btn btn-soft-danger text-start" (click)="performQuickSearch('family law Massachusetts divorce')">
+              <i class="ri-group-line me-2"></i>Family Law & Divorce
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Tips Accordion -->
+      <div class="accordion custom-accordionwithicon mb-3" id="searchTipsAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="searchTipsHeader">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#searchTipsCollapse" aria-expanded="true">
+              <i class="ri-lightbulb-flash-line me-2"></i>Pro Search Tips
+            </button>
+          </h2>
+          <div id="searchTipsCollapse" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+              <div class="d-flex mb-3">
+                <div class="flex-shrink-0">
+                  <i class="ri-checkbox-circle-fill text-success"></i>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <h6 class="fs-14 mb-1">Exact Phrases</h6>
+                  <p class="text-muted mb-0 fs-13">Use quotes: <code>"statute of limitations"</code></p>
+                </div>
+              </div>
+              <div class="d-flex mb-3">
+                <div class="flex-shrink-0">
+                  <i class="ri-checkbox-circle-fill text-success"></i>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <h6 class="fs-14 mb-1">Wildcards</h6>
+                  <p class="text-muted mb-0 fs-13">Use * for variations: <code>negligen*</code></p>
+                </div>
+              </div>
+              <div class="d-flex mb-3">
+                <div class="flex-shrink-0">
+                  <i class="ri-checkbox-circle-fill text-success"></i>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <h6 class="fs-14 mb-1">Citation Search</h6>
+                  <p class="text-muted mb-0 fs-13">Direct citation: <code>M.G.L. c. 93A § 11</code></p>
+                </div>
+              </div>
+              <div class="d-flex mb-3">
+                <div class="flex-shrink-0">
+                  <i class="ri-checkbox-circle-fill text-success"></i>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <h6 class="fs-14 mb-1">Proximity Search</h6>
+                  <p class="text-muted mb-0 fs-13">Words within distance: <code>contract w/5 breach</code></p>
+                </div>
+              </div>
+              <div class="d-flex">
+                <div class="flex-shrink-0">
+                  <i class="ri-checkbox-circle-fill text-success"></i>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <h6 class="fs-14 mb-1">Field Search</h6>
+                  <p class="text-muted mb-0 fs-13">Specific fields: <code>title:negligence</code></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="shortcutsHeader">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#shortcutsCollapse">
+              <i class="ri-keyboard-line me-2"></i>Keyboard Shortcuts
+            </button>
+          </h2>
+          <div id="shortcutsCollapse" class="accordion-collapse collapse">
+            <div class="accordion-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-borderless mb-0">
+                  <tbody>
+                    <tr>
+                      <td><kbd>Ctrl</kbd> + <kbd>K</kbd></td>
+                      <td class="text-muted">Focus search</td>
+                    </tr>
+                    <tr>
+                      <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
+                      <td class="text-muted">Execute search</td>
+                    </tr>
+                    <tr>
+                      <td><kbd>Ctrl</kbd> + <kbd>S</kbd></td>
+                      <td class="text-muted">Save search</td>
+                    </tr>
+                    <tr>
+                      <td><kbd>Ctrl</kbd> + <kbd>H</kbd></td>
+                      <td class="text-muted">Search history</td>
+                    </tr>
+                    <tr>
+                      <td><kbd>Esc</kbd></td>
+                      <td class="text-muted">Clear search</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Database Stats -->
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex align-items-center">
+            <h5 class="card-title mb-0 flex-grow-1">
+              <i class="ri-database-2-line me-2"></i>Database Coverage
+            </h5>
+            <span class="badge bg-success">Live</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row text-center g-2">
+            <div class="col-6">
+              <div class="p-2 border border-dashed rounded">
+                <h5 class="mb-1">12.5K+</h5>
+                <p class="text-muted mb-0 fs-12">MA Statutes</p>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border border-dashed rounded">
+                <h5 class="mb-1">25K+</h5>
+                <p class="text-muted mb-0 fs-12">Case Law</p>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border border-dashed rounded">
+                <h5 class="mb-1">2.5K+</h5>
+                <p class="text-muted mb-0 fs-12">Court Rules</p>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border border-dashed rounded">
+                <h5 class="mb-1">8.7K+</h5>
+                <p class="text-muted mb-0 fs-12">Regulations</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-top">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-muted fs-13">Coverage Completeness</span>
+              <span class="fw-semibold">98%</span>
+            </div>
+            <div class="progress progress-sm">
+              <div class="progress-bar bg-gradient bg-primary" style="width: 98%"></div>
+            </div>
+            <p class="text-muted fs-11 mb-0 mt-2">
+              <i class="ri-refresh-line me-1"></i>Updated daily at 2:00 AM EST
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis Card - Brief Summary with Modal Trigger -->
+  <div class="row mt-4" *ngIf="currentSearchResponse?.aiAnalysis">
+    <div class="col-12">
+      <div class="card border border-success border-opacity-25">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-3">
+              <div class="avatar-title bg-success text-white rounded-circle">
+                <i class="ri-robot-2-line"></i>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">AI Legal Analysis Ready</h6>
+              <p class="text-muted mb-0 fs-13">
+                Claude AI has analyzed {{searchResults.length}} documents • Generated in {{analysisTime || '< 1'}}s
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal">
+                <i class="ri-eye-line me-1"></i>View Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Search Results Grid -->
+  <div class="row mt-4" *ngIf="searchResults.length > 0">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header border-bottom-dashed">
+          <div class="row align-items-center">
+            <div class="col-sm">
+              <h5 class="card-title mb-0">
+                Search Results
+                <span class="badge bg-primary ms-2">{{searchResults.length}} Found</span>
+              </h5>
+            </div>
+            <div class="col-sm-auto">
+              <div class="d-flex gap-2">
+                <div class="search-box search-box-sm">
+                  <input type="text" class="form-control search-input" placeholder="Filter results...">
+                  <i class="ri-search-line search-icon"></i>
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-soft-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="ri-sort-desc"></i> Sort
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Relevance</a></li>
+                    <li><a class="dropdown-item" href="#">Date (Newest)</a></li>
+                    <li><a class="dropdown-item" href="#">Date (Oldest)</a></li>
+                    <li><a class="dropdown-item" href="#">Citation</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12" *ngFor="let result of searchResults; let i = index">
+              <div class="card border card-border-light result-card-enhanced">
+                <div class="card-body">
+                  <div class="row align-items-center">
+                    <div class="col-auto">
+                      <div class="avatar-md">
+                        <div class="avatar-title bg-primary-subtle text-primary rounded fs-18 fw-bold">
+                          {{i + 1}}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col">
+                      <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                          <h5 class="mb-1">
+                            <a href="javascript:void(0)" (click)="selectResult(result)" class="text-reset">
+                              {{result.title}}
+                            </a>
+                          </h5>
+                          <div class="hstack gap-3 flex-wrap mb-2">
+                            <span [class]="getResultTypeBadgeClass(result.type)">
+                              <i [class]="getResultTypeIcon(result.type)"></i> {{formatResultType(result.type)}}
+                            </span>
+                            <span class="text-muted fs-13">
+                              <i class="ri-bookmark-line me-1"></i>{{result.citation}}
+                            </span>
+                            <span class="text-muted fs-13" *ngIf="result.effectiveDate">
+                              <i class="ri-calendar-line me-1"></i>{{formatSearchDate(result.effectiveDate)}}
+                            </span>
+                            <span class="text-muted fs-13" *ngIf="result.practiceArea">
+                              <i class="ri-briefcase-line me-1"></i>{{result.practiceArea}}
+                            </span>
+                          </div>
+                          <p class="text-muted mb-3">{{result.summary}}</p>
+
+                          <!-- Relevance Score -->
+                          <div class="d-flex align-items-center mb-3">
+                            <span class="text-muted fs-13 me-2">Relevance:</span>
+                            <div class="progress flex-grow-1" style="height: 6px; max-width: 150px;">
+                              <div class="progress-bar bg-gradient bg-success" [style.width.%]="result.relevanceScore || 85"></div>
+                            </div>
+                            <span class="ms-2 fs-13 fw-semibold">{{result.relevanceScore || 85}}%</span>
+                          </div>
+
+                          <div class="hstack gap-2 flex-wrap">
+                            <button class="btn btn-primary btn-sm" (click)="selectResult(result)">
+                              <i class="ri-eye-line me-1"></i>View Full Text
+                            </button>
+                            <button class="btn btn-soft-success btn-sm" (click)="addToNotebook(result)">
+                              <i class="ri-add-line me-1"></i>Add to Research
+                            </button>
+                            <button class="btn btn-soft-info btn-sm" (click)="citationHelper(result)">
+                              <i class="ri-quote-text me-1"></i>Cite
+                            </button>
+                            <button class="btn btn-soft-secondary btn-sm" (click)="findSimilar(result)">
+                              <i class="ri-search-2-line me-1"></i>Find Similar
+                            </button>
+                            <div class="dropdown">
+                              <button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                                <i class="ri-more-2-fill"></i>
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="ri-download-line me-2"></i>Download</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="ri-share-line me-2"></i>Share</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="ri-bookmark-line me-2"></i>Save</a></li>
+                                <li class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="ri-flag-line me-2"></i>Report Issue</a></li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="row mt-4">
+            <div class="col-sm">
+              <div class="text-muted">
+                Showing <span class="fw-semibold">{{searchResults.length}}</span> results
+              </div>
+            </div>
+            <div class="col-sm-auto">
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item disabled">
+                    <a class="page-link">Previous</a>
+                  </li>
+                  <li class="page-item active">
+                    <a class="page-link" href="#">1</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Empty State - Show only after search with no results -->
+  <div class="row mt-4" *ngIf="!isSearching && !showDefaultState && searchResults.length === 0 && searchQuery.trim().length > 0 && !currentSearchResponse">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body py-5">
+          <div class="text-center">
+            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop"
+                       colors="primary:#405189,secondary:#0ab39c" style="width:120px;height:120px">
+            </lord-icon>
+
+            <h3 class="mt-4">Start Your Legal Research Journey</h3>
+            <p class="text-muted fs-15 mb-4">
+              Access comprehensive Massachusetts legal resources with AI-powered insights.<br>
+              Search statutes, cases, regulations, and more with intelligent analysis.
+            </p>
+
+            <div class="row justify-content-center mb-4">
+              <div class="col-lg-8">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                      <i class="ri-search-eye-line text-primary fs-24 me-2"></i>
+                      <div class="text-start">
+                        <h6 class="mb-0">Smart Search</h6>
+                        <p class="text-muted mb-0 fs-12">Natural language queries</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                      <i class="ri-robot-2-line text-success fs-24 me-2"></i>
+                      <div class="text-start">
+                        <h6 class="mb-0">AI Analysis</h6>
+                        <p class="text-muted mb-0 fs-12">Instant legal insights</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                      <i class="ri-bookmark-3-line text-warning fs-24 me-2"></i>
+                      <div class="text-start">
+                        <h6 class="mb-0">Save Research</h6>
+                        <p class="text-muted mb-0 fs-12">Organize findings</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hstack gap-2 justify-content-center">
+              <button class="btn btn-primary btn-lg" (click)="focusSearchInput()">
+                <i class="ri-search-line me-2"></i>Start Searching
+              </button>
+              <button class="btn btn-soft-info btn-lg" (click)="showTour()">
+                <i class="ri-compass-3-line me-2"></i>Take a Tour
+              </button>
+              <button class="btn btn-soft-success btn-lg" (click)="showVideoGuide()">
+                <i class="ri-play-circle-line me-2"></i>Watch Guide
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Document Viewer Modal -->
+  <div class="modal fade" id="documentViewerModal" tabindex="-1" *ngIf="selectedResult">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content">
+        <div class="modal-header bg-primary bg-opacity-10">
+          <h5 class="modal-title">
+            <i [class]="getResultTypeIcon(selectedResult.type)" class="me-2"></i>
+            {{selectedResult.title}}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-lg-8">
+              <div class="card">
+                <div class="card-body">
+                  <div class="document-metadata mb-4">
+                    <div class="hstack gap-3 flex-wrap">
+                      <span [class]="getResultTypeBadgeClass(selectedResult.type)">
+                        {{formatResultType(selectedResult.type)}}
+                      </span>
+                      <span class="text-muted">
+                        <i class="ri-bookmark-line me-1"></i>{{selectedResult.citation}}
+                      </span>
+                      <span class="text-muted" *ngIf="selectedResult.effectiveDate">
+                        <i class="ri-calendar-line me-1"></i>{{formatSearchDate(selectedResult.effectiveDate)}}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="document-content">
+                    <div class="text-justify lh-lg" [innerHTML]="selectedResult.fullText || selectedResult.summary"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="card bg-light">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">Document Details</h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-borderless table-sm">
+                      <tbody>
+                        <tr>
+                          <td class="fw-medium">Type:</td>
+                          <td>{{formatResultType(selectedResult.type)}}</td>
+                        </tr>
+                        <tr>
+                          <td class="fw-medium">Citation:</td>
+                          <td>{{selectedResult.citation}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult.courtLevel">
+                          <td class="fw-medium">Court:</td>
+                          <td>{{selectedResult.courtLevel}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult.practiceArea">
+                          <td class="fw-medium">Practice Area:</td>
+                          <td>{{selectedResult.practiceArea}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult.effectiveDate">
+                          <td class="fw-medium">Date:</td>
+                          <td>{{formatSearchDate(selectedResult.effectiveDate)}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="mt-4">
+                    <h6 class="mb-3">Related Documents</h6>
+                    <div class="list-group">
+                      <a href="#" class="list-group-item list-group-item-action">
+                        <i class="ri-file-text-line me-2"></i>Similar Case 1
+                      </a>
+                      <a href="#" class="list-group-item list-group-item-action">
+                        <i class="ri-file-text-line me-2"></i>Similar Case 2
+                      </a>
+                      <a href="#" class="list-group-item list-group-item-action">
+                        <i class="ri-file-text-line me-2"></i>Related Statute
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-soft-secondary">
+            <i class="ri-printer-line me-1"></i>Print
+          </button>
+          <button type="button" class="btn btn-soft-info">
+            <i class="ri-share-line me-1"></i>Share
+          </button>
+          <button type="button" class="btn btn-success">
+            <i class="ri-download-2-line me-1"></i>Download PDF
+          </button>
+          <button type="button" class="btn btn-primary">
+            <i class="ri-add-line me-1"></i>Add to Research
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis Modal -->
+  <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true" *ngIf="currentSearchResponse?.aiAnalysis">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-success bg-opacity-10">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-3">
+              <div class="avatar-title bg-success text-white rounded-circle">
+                <i class="ri-robot-2-line"></i>
+              </div>
+            </div>
+            <div>
+              <h5 class="modal-title" id="aiAnalysisModalLabel">Claude AI Legal Analysis</h5>
+              <p class="text-muted mb-0 fs-13">
+                Generated in {{analysisTime || '< 1'}}s • Confidence: 95%
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-lg-8">
+              <div class="ai-analysis-content" [innerHTML]="currentSearchResponse.aiAnalysis | markdownToHtml"></div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card bg-light">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Analysis Details
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title bg-primary-subtle text-primary rounded">
+                            <i class="ri-file-list-3-line"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fs-14">Sources</h6>
+                          <p class="text-muted mb-0 fs-12">{{searchResults.length}} docs</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title bg-success-subtle text-success rounded">
+                            <i class="ri-shield-check-line"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fs-14">Confidence</h6>
+                          <p class="text-muted mb-0 fs-12">95%</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title bg-info-subtle text-info rounded">
+                            <i class="ri-time-line"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fs-14">Time</h6>
+                          <p class="text-muted mb-0 fs-12">{{analysisTime || '< 1'}}s</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title bg-warning-subtle text-warning rounded">
+                            <i class="ri-cpu-line"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fs-14">Model</h6>
+                          <p class="text-muted mb-0 fs-12">Claude 4.0</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-4">
+                    <h6 class="mb-3">Quick Actions</h6>
+                    <div class="d-grid gap-2">
+                      <button type="button" class="btn btn-soft-primary btn-sm" (click)="copyAIAnalysis()">
+                        <i class="ri-file-copy-line me-2"></i>Copy Analysis
+                      </button>
+                      <button type="button" class="btn btn-soft-secondary btn-sm" (click)="exportAIAnalysis()">
+                        <i class="ri-download-2-line me-2"></i>Export as PDF
+                      </button>
+                      <button type="button" class="btn btn-soft-success btn-sm" (click)="saveAnalysis()">
+                        <i class="ri-bookmark-line me-2"></i>Save Analysis
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" (click)="regenerateAnalysis()">
+            <i class="ri-refresh-line me-1"></i>Regenerate
+          </button>
+          <button type="button" class="btn btn-primary" (click)="exportAIAnalysis()">
+            <i class="ri-download-2-line me-1"></i>Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

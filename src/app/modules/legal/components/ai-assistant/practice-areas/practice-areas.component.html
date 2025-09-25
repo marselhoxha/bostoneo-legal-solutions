@@ -1,0 +1,176 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Practice Area Dashboard</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">AI Assistant</a></li>
+            <li class="breadcrumb-item active">Practice Areas</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Overview -->
+  <div class="row">
+    <div class="col-lg-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <p class="text-muted mb-2">Total Practice Areas</p>
+              <h4 class="mb-0">{{practiceAreas.length}}</h4>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-primary-subtle text-primary rounded">
+                <i class="ri-briefcase-line fs-4"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <p class="text-muted mb-2">Active Tools</p>
+              <h4 class="mb-0">{{activePracticeAreas}}</h4>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-success-subtle text-success rounded">
+                <i class="ri-tools-line fs-4"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <p class="text-muted mb-2">Recent Updates</p>
+              <h4 class="mb-0">{{recentUpdates}}</h4>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-info-subtle text-info rounded">
+                <i class="ri-refresh-line fs-4"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <p class="text-muted mb-2">Most Used</p>
+              <h4 class="mb-0">{{mostUsed}}</h4>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-warning-subtle text-warning rounded">
+                <i class="ri-star-line fs-4"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Practice Areas Grid -->
+  <div class="row">
+    <div class="col-lg-4 col-md-6" *ngFor="let area of practiceAreas">
+      <div class="card border h-100" [class.border-primary]="area.isActive">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="avatar-sm me-3">
+              <span class="avatar-title rounded-circle" [ngClass]="'bg-' + area.color + '-subtle text-' + area.color">
+                <i [class]="area.icon + ' fs-4'"></i>
+              </span>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-0">{{area.name}}</h5>
+              <span class="badge" [ngClass]="area.isActive ? 'badge-soft-success' : 'badge-soft-secondary'">
+                {{area.isActive ? 'Active' : 'Coming Soon'}}
+              </span>
+            </div>
+          </div>
+
+          <p class="text-muted mb-3">{{area.description}}</p>
+
+          <div class="mb-3">
+            <h6 class="fs-13 text-muted mb-2">Available Tools:</h6>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge badge-soft-primary" *ngFor="let tool of area.tools">
+                {{tool}}
+              </span>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">{{area.documentsGenerated}} documents</small>
+            <button class="btn btn-sm"
+                    [ngClass]="area.isActive ? 'btn-primary' : 'btn-secondary'"
+                    [disabled]="!area.isActive"
+                    (click)="navigateToPracticeArea(area)">
+              {{area.isActive ? 'Access Tools' : 'Coming Soon'}}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Recent Activity</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Practice Area</th>
+                  <th>Tool Used</th>
+                  <th>Document Type</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let activity of recentActivities">
+                  <td>
+                    <span class="badge badge-soft-primary">{{activity.practiceArea}}</span>
+                  </td>
+                  <td>{{activity.tool}}</td>
+                  <td>{{activity.documentType}}</td>
+                  <td>{{activity.date | date:'short'}}</td>
+                  <td>
+                    <span class="badge"
+                          [ngClass]="activity.status === 'completed' ? 'badge-soft-success' : 'badge-soft-warning'">
+                      {{activity.status}}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

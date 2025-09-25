@@ -1,0 +1,79 @@
+@import '../../shared/form-validation.scss';
+
+.motion-preview {
+  //background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.nav-tabs-custom {
+  .nav-link {
+    color: #6c757d;
+    background-color: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    
+    &:hover {
+      color: #405189;
+      background-color: rgba(64, 81, 137, 0.05);
+    }
+    
+    &.active {
+      color: #405189;
+      background-color: transparent;
+      border-bottom: 3px solid #405189;
+    }
+  }
+}
+
+.list-group-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #40404015;
+  }
+  
+  &.active {
+    background-color: #405189;
+    border-color: #405189;
+    
+    h6 {
+      color: white !important;
+    }
+  }
+}
+
+.progress {
+  background-color: #e9ecef;
+}
+
+.table {
+  th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+  }
+}
+
+.form-check-input:checked {
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.alert {
+  border: none;
+  border-radius: 5px;
+}
+
+.badge {
+  padding: 5px 10px;
+  font-weight: 500;
+}

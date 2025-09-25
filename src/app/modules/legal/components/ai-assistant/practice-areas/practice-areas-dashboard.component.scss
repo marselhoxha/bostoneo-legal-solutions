@@ -1,0 +1,81 @@
+.card-disabled {
+  opacity: 0.8;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+  }
+}
+
+.feature-list {
+  li {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateX(5px);
+    }
+  }
+}
+
+.search-box {
+  position: relative;
+  
+  .search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #878a99;
+  }
+  
+  .search {
+    padding-left: 40px;
+  }
+}
+
+.card {
+  transition: all 0.3s ease;
+  
+  &:not(.card-disabled):hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  }
+}
+
+.avatar-title {
+  transition: all 0.3s ease;
+}
+
+.card:hover .avatar-title {
+  transform: scale(1.1);
+}
+
+// Practice area specific colors
+.text-primary { color: #405189 !important; }
+.text-success { color: #0ab39c !important; }
+.text-info { color: #299cdb !important; }
+.text-warning { color: #f7b84b !important; }
+.text-danger { color: #f06548 !important; }
+.text-dark { color: #212529 !important; }
+
+.bg-primary-subtle { background-color: rgba(64, 81, 137, 0.1) !important; }
+.bg-success-subtle { background-color: rgba(10, 179, 156, 0.1) !important; }
+.bg-info-subtle { background-color: rgba(41, 156, 219, 0.1) !important; }
+.bg-warning-subtle { background-color: rgba(247, 184, 75, 0.1) !important; }
+.bg-danger-subtle { background-color: rgba(240, 101, 72, 0.1) !important; }
+.bg-dark-subtle { background-color: rgba(33, 37, 41, 0.1) !important; }
+
+.ribbon-box {
+  overflow: visible !important;
+}
+
+.ff-secondary {
+  font-family: var(--vz-font-sans-serif);
+}

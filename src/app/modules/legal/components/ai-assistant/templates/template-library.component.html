@@ -1,0 +1,467 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Template Library</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Legal</a></li>
+            <li class="breadcrumb-item"><a href="javascript: void(0);">AI Assistant</a></li>
+            <li class="breadcrumb-item active">Template Library</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row">
+    <div class="col-xl-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex">
+            <div class="flex-grow-1">
+              <p class="text-truncate font-size-14 mb-2">Total Templates</p>
+              <h4 class="mb-2">{{totalTemplatesCount}}</h4>
+              <p class="text-muted mb-0">
+                <span class="text-success fw-bold font-size-12 me-2">
+                  <i class="ri-arrow-right-up-line me-1 align-middle"></i>+12%
+                </span>from previous month
+              </p>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-light text-primary rounded-3">
+                <i class="ri-file-text-line font-size-24"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex">
+            <div class="flex-grow-1">
+              <p class="text-truncate font-size-14 mb-2">Active Categories</p>
+              <h4 class="mb-2">{{categories.length}}</h4>
+              <p class="text-muted mb-0">
+                <span class="text-success fw-bold font-size-12 me-2">
+                  <i class="ri-arrow-right-up-line me-1 align-middle"></i>+2
+                </span>new this week
+              </p>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-light text-success rounded-3">
+                <i class="ri-folder-3-line font-size-24"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex">
+            <div class="flex-grow-1">
+              <p class="text-truncate font-size-14 mb-2">Recently Used</p>
+              <h4 class="mb-2">{{recentlyUsedCount}}</h4>
+              <p class="text-muted mb-0">
+                <span class="text-muted fw-bold font-size-12 me-2">
+                  <i class="ri-time-line me-1 align-middle"></i>
+                </span>Last 7 days
+              </p>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-light text-warning rounded-3">
+                <i class="ri-history-line font-size-24"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex">
+            <div class="flex-grow-1">
+              <p class="text-truncate font-size-14 mb-2">Custom Templates</p>
+              <h4 class="mb-2">{{customTemplatesCount}}</h4>
+              <p class="text-muted mb-0">
+                <span class="text-info fw-bold font-size-12 me-2">
+                  <i class="ri-user-3-line me-1 align-middle"></i>
+                </span>User created
+              </p>
+            </div>
+            <div class="avatar-sm">
+              <span class="avatar-title bg-light text-info rounded-3">
+                <i class="ri-file-add-line font-size-24"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title mb-0">Legal Document Templates</h5>
+            </div>
+            <div class="col-auto">
+              <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" *ngIf="hasSelectedTemplates()" (click)="generateFromSelected()">
+                  <i class="ri-file-add-line align-bottom me-1"></i> Generate Document
+                </button>
+                <button class="btn btn-soft-secondary btn-sm" (click)="importTemplate()">
+                  <i class="ri-upload-2-line align-bottom me-1"></i> Import
+                </button>
+                <button class="btn btn-soft-secondary btn-sm" (click)="exportTemplates()">
+                  <i class="ri-download-2-line align-bottom me-1"></i> Export
+                </button>
+                <button class="btn btn-primary btn-sm" (click)="createNewTemplate()">
+                  <i class="ri-add-line align-bottom me-1"></i> Create Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-header border-bottom border-bottom-dashed">
+          <div class="row g-3">
+            <div class="col-xxl-3 col-lg-4">
+              <div class="search-box">
+                <input type="text" class="form-control" [(ngModel)]="searchQuery"
+                       (ngModelChange)="filterTemplates()" placeholder="Search templates...">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+            </div>
+            <div class="col-xxl-2 col-lg-3">
+              <select class="form-control" [(ngModel)]="selectedCategory" (ngModelChange)="filterTemplates()">
+                <option value="">All Categories</option>
+                <option *ngFor="let cat of categories" [value]="cat.id">{{cat.name}}</option>
+              </select>
+            </div>
+            <div class="col-xxl-2 col-lg-3">
+              <select class="form-control" [(ngModel)]="selectedPracticeArea" (ngModelChange)="filterTemplates()">
+                <option value="">All Practice Areas</option>
+                <option *ngFor="let area of practiceAreas" [value]="area">{{area}}</option>
+              </select>
+            </div>
+            <div class="col-xxl-2 col-lg-2">
+              <select class="form-control" [(ngModel)]="sortBy" (ngModelChange)="sortTemplates()">
+                <option value="name">Sort by Name</option>
+                <option value="date">Sort by Date</option>
+                <option value="usage">Sort by Usage</option>
+                <option value="rating">Sort by Rating</option>
+              </select>
+            </div>
+            <div class="col-xxl-3 col-lg-12">
+              <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="viewMode" id="listView"
+                       [(ngModel)]="viewMode" value="list">
+                <label class="btn btn-outline-secondary" for="listView">
+                  <i class="ri-list-unordered"></i> List
+                </label>
+                <input type="radio" class="btn-check" name="viewMode" id="gridView"
+                       [(ngModel)]="viewMode" value="grid">
+                <label class="btn btn-outline-secondary" for="gridView">
+                  <i class="ri-grid-fill"></i> Grid
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- List View -->
+          <div class="table-responsive" *ngIf="viewMode === 'list'">
+            <table class="table align-middle table-nowrap">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col" style="width: 50px;">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" [(ngModel)]="selectAll"
+                             (change)="toggleSelectAll()">
+                    </div>
+                  </th>
+                  <th scope="col">Template Name</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Practice Area</th>
+                  <th scope="col">Last Modified</th>
+                  <th scope="col">Usage</th>
+                  <th scope="col">Rating</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let template of paginatedTemplates">
+                  <td>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox"
+                             [(ngModel)]="template.selected">
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-3">
+                        <span class="avatar-title bg-soft-primary text-primary rounded-circle">
+                          <i class="ri-file-text-line"></i>
+                        </span>
+                      </div>
+                      <div>
+                        <h5 class="font-size-14 mb-1">
+                          <a href="javascript:void(0)" class="text-dark">{{template.name}}</a>
+                        </h5>
+                        <p class="text-muted mb-0">{{template.description}}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-soft-secondary">{{template.category}}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-soft-primary">{{template.practiceArea}}</span>
+                  </td>
+                  <td>{{template.lastModified | date:'MMM d, y'}}</td>
+                  <td>
+                    <span class="text-muted">{{template.usageCount}} uses</span>
+                  </td>
+                  <td>
+                    <div class="text-warning">
+                      <i class="ri-star-fill" *ngFor="let star of [1,2,3,4,5]"
+                         [class.text-muted]="star > template.rating"></i>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="dropdown">
+                      <a href="javascript:void(0)" class="dropdown-toggle arrow-none"
+                         data-bs-toggle="dropdown">
+                        <i class="ri-more-2-fill"></i>
+                      </a>
+                      <div class="dropdown-menu dropdown-menu-end">
+                        <h6 class="dropdown-header">Generate Document</h6>
+                        <a class="dropdown-item" (click)="quickGenerate(template)">
+                          <i class="ri-magic-line me-2 align-middle text-primary"></i>Quick Generate
+                        </a>
+                        <a class="dropdown-item" (click)="openDocumentEditor(template)">
+                          <i class="ri-edit-box-line me-2 align-middle text-info"></i>Advanced Editor
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <h6 class="dropdown-header">Template Actions</h6>
+                        <a class="dropdown-item" (click)="editTemplate(template)">
+                          <i class="ri-pencil-line me-2 align-middle"></i>Edit Template
+                        </a>
+                        <a class="dropdown-item" (click)="duplicateTemplate(template)">
+                          <i class="ri-file-copy-line me-2 align-middle"></i>Duplicate
+                        </a>
+                        <a class="dropdown-item" (click)="previewTemplate(template)">
+                          <i class="ri-eye-line me-2 align-middle"></i>Preview
+                        </a>
+                        <a class="dropdown-item" (click)="shareTemplate(template)">
+                          <i class="ri-share-line me-2 align-middle"></i>Share
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item text-danger" (click)="deleteTemplate(template)">
+                          <i class="ri-delete-bin-line me-2 align-middle"></i>Delete
+                        </a>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Grid View -->
+          <div class="row" *ngIf="viewMode === 'grid'">
+            <div class="col-xxl-3 col-lg-4 col-md-6" *ngFor="let template of paginatedTemplates">
+              <div class="card border">
+                <div class="card-body">
+                  <div class="d-flex align-items-start">
+                    <div class="flex-grow-1">
+                      <div class="avatar-sm mb-3">
+                        <span class="avatar-title bg-light text-primary rounded">
+                          <i class="ri-file-text-line font-size-20"></i>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <div class="dropdown">
+                        <a href="javascript:void(0)" class="dropdown-toggle arrow-none"
+                           data-bs-toggle="dropdown">
+                          <i class="ri-more-2-fill"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end">
+                          <h6 class="dropdown-header">Generate Document</h6>
+                          <a class="dropdown-item" (click)="quickGenerate(template)">
+                            <i class="ri-magic-line me-2"></i>Quick Generate
+                          </a>
+                          <a class="dropdown-item" (click)="openDocumentEditor(template)">
+                            <i class="ri-edit-box-line me-2"></i>Advanced Editor
+                          </a>
+                          <div class="dropdown-divider"></div>
+                          <a class="dropdown-item" (click)="editTemplate(template)">Edit Template</a>
+                          <a class="dropdown-item" (click)="duplicateTemplate(template)">Duplicate</a>
+                          <a class="dropdown-item" (click)="previewTemplate(template)">Preview</a>
+                          <a class="dropdown-item text-danger" (click)="deleteTemplate(template)">Delete</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h5 class="font-size-15 mb-1">{{template.name}}</h5>
+                  <p class="text-muted mb-3">{{template.description}}</p>
+
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge badge-soft-secondary">{{template.category}}</span>
+                    <span class="badge badge-soft-primary">{{template.practiceArea}}</span>
+                  </div>
+
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="text-warning me-3">
+                      <i class="ri-star-fill" *ngFor="let star of [1,2,3,4,5]"
+                         [class.text-muted]="star > template.rating"></i>
+                    </div>
+                    <span class="text-muted">{{template.usageCount}} uses</span>
+                  </div>
+
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary flex-grow-1" (click)="quickGenerate(template)">
+                      <i class="ri-magic-line me-1"></i>Quick Generate
+                    </button>
+                    <div class="dropdown">
+                      <button type="button" class="btn btn-sm btn-light dropdown-toggle"
+                              data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ri-more-2-line"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openDocumentEditor(template)">
+                          <i class="ri-edit-box-line me-2"></i>Advanced Editor
+                        </a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openDocumentWizard(template)">
+                          <i class="ri-file-list-3-line me-2"></i>Step-by-Step Wizard
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="previewTemplate(template)">
+                          <i class="ri-eye-line me-2"></i>Preview Template
+                        </a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="row mt-4">
+            <div class="col-sm">
+              <div class="text-muted">
+                Showing <span class="fw-semibold">{{getPaginationStart()}}</span> to
+                <span class="fw-semibold">{{getPaginationEnd()}}</span> of
+                <span class="fw-semibold">{{filteredTemplates.length}}</span> Results
+              </div>
+            </div>
+            <div class="col-sm-auto">
+              <nav>
+                <ul class="pagination">
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <a class="page-link" (click)="previousPage()">Previous</a>
+                  </li>
+                  <li class="page-item" *ngFor="let page of getPageNumbers()"
+                      [class.active]="page === currentPage">
+                    <a class="page-link" (click)="goToPage(page)">{{page}}</a>
+                  </li>
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <a class="page-link" (click)="nextPage()">Next</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template Preview Modal -->
+  <ng-template #previewModal let-modal>
+    <div class="modal-header">
+      <h5 class="modal-title">Template Preview</h5>
+      <button type="button" class="btn-close" aria-label="Close" (click)="closePreview()"></button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="selectedPreviewTemplate">
+        <div class="mb-3">
+          <h6>{{selectedPreviewTemplate.name}}</h6>
+          <p class="text-muted">{{selectedPreviewTemplate.description}}</p>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <small class="text-muted">Category:</small>
+            <div>
+              <span [class]="'badge ' + getCategoryBadgeClass(selectedPreviewTemplate.category)">
+                {{formatCategoryName(selectedPreviewTemplate.category)}}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <small class="text-muted">Practice Area:</small>
+            <div>{{selectedPreviewTemplate.practiceArea || 'N/A'}}</div>
+          </div>
+          <div class="col-md-4">
+            <small class="text-muted">Jurisdiction:</small>
+            <div>{{selectedPreviewTemplate.jurisdiction || 'N/A'}}</div>
+          </div>
+        </div>
+
+        <div class="template-content-preview p-3 border rounded bg-light" style="max-height: 400px; overflow-y: auto;">
+          <pre class="mb-0" style="white-space: pre-wrap; font-size: 13px;">{{previewContent}}</pre>
+        </div>
+
+        <div class="mt-3" *ngIf="selectedPreviewTemplate.usageCount">
+          <small class="text-muted">
+            <i class="ri-eye-line"></i> Used {{selectedPreviewTemplate.usageCount}} times
+            <span *ngIf="selectedPreviewTemplate.averageRating" class="ms-2">
+              <i class="ri-star-fill text-warning"></i> {{selectedPreviewTemplate.averageRating}}/5
+            </span>
+          </small>
+        </div>
+      </div>
+      <div *ngIf="isLoading" class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-light" (click)="closePreview()">Close</button>
+      <button type="button" class="btn btn-primary" (click)="useTemplate(selectedPreviewTemplate!); closePreview()" [disabled]="!selectedPreviewTemplate">
+        <i class="ri-file-edit-line me-1"></i> Use Template
+      </button>
+    </div>
+  </ng-template>
+
+  <!-- Auto-fill Wizard Modal -->
+  <ng-template #autoFillModal>
+    <app-auto-fill-wizard
+      *ngIf="selectedTemplateForGeneration"
+      [templateId]="selectedTemplateForGeneration.id"
+      [templateName]="selectedTemplateForGeneration.name"
+      (documentGenerated)="onDocumentGenerated($event)"
+      (closed)="onAutoFillWizardClosed()">
+    </app-auto-fill-wizard>
+  </ng-template>
+</div>

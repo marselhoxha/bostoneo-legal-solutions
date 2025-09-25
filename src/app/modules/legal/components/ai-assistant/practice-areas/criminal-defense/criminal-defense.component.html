@@ -1,0 +1,613 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">
+          <i class="ri-shield-line text-danger me-2"></i>
+          Criminal Defense Tools
+        </h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant/practice-areas">Practice Areas</a></li>
+            <li class="breadcrumb-item active">Criminal Defense</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Navigation Tabs -->
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-body">
+          <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'motion-drafting'"
+                 (click)="setActiveTab('motion-drafting')" role="tab">
+                <i class="ri-file-text-line me-1"></i> Motion Drafting
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'sentencing'"
+                 (click)="setActiveTab('sentencing')" role="tab">
+                <i class="ri-calculator-line me-1"></i> Sentencing Calculator
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'case-analysis'"
+                 (click)="setActiveTab('case-analysis')" role="tab">
+                <i class="ri-search-eye-line me-1"></i> Case Analysis
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'evidence'"
+                 (click)="setActiveTab('evidence')" role="tab">
+                <i class="ri-folder-3-line me-1"></i> Evidence Tracker
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'plea'"
+                 (click)="setActiveTab('plea')" role="tab">
+                <i class="ri-scales-3-line me-1"></i> Plea Analyzer
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Motion Drafting Tab -->
+  <div class="row" *ngIf="activeTab === 'motion-drafting'">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Motion Templates</h5>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <a href="javascript:void(0);" 
+               class="list-group-item list-group-item-action"
+               [class.active]="selectedMotionTemplate?.id === template.id"
+               *ngFor="let template of motionTemplates"
+               (click)="selectMotionTemplate(template)">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">{{ template.name }}</h6>
+                <small class="badge bg-info-subtle text-info">{{ template.type }}</small>
+              </div>
+              <small class="text-muted">{{ template.description }}</small>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Motion Details</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="motionForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Motion Type</label>
+                <input type="text" class="form-control" formControlName="motionType" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Case Number <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="caseNumber"
+                       placeholder="e.g., CR-2024-001">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Defendant Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="defendantName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Court Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="courtName"
+                       placeholder="e.g., Superior Court of Massachusetts">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Factual Basis <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="4" formControlName="factualBasis"
+                          placeholder="Describe the facts supporting this motion..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Legal Arguments <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="4" formControlName="legalArguments"
+                          placeholder="Present legal arguments and case law..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Requested Relief <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="2" formControlName="requestedRelief"
+                          placeholder="Specify the relief requested..."></textarea>
+              </div>
+              <div class="col-12">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary"
+                          [disabled]="isGeneratingMotion"
+                          (click)="generateMotion()">
+                    <span *ngIf="!isGeneratingMotion">
+                      <i class="ri-file-add-line me-1"></i> Generate Motion
+                    </span>
+                    <span *ngIf="isGeneratingMotion">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleMotionDrafting()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Generated Motion -->
+      <div class="card" *ngIf="generatedMotion">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Generated Motion</h5>
+          <button class="btn btn-sm btn-success" 
+                  (click)="exportDocument(generatedMotion, 'motion')">
+            <i class="ri-download-line me-1"></i> Export
+          </button>
+        </div>
+        <div class="card-body">
+          <pre class="motion-preview">{{ generatedMotion }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sentencing Calculator Tab -->
+  <div class="row" *ngIf="activeTab === 'sentencing'">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Federal Sentencing Guidelines Calculator</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="sentencingForm">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Offense Category</label>
+                <select class="form-select" formControlName="offenseCategory">
+                  <option value="">Select category</option>
+                  <option *ngFor="let cat of offenseCategories" [value]="cat.value">
+                    {{ cat.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Base Offense Level</label>
+                <input type="number" class="form-control" formControlName="offenseLevel" 
+                       min="1" max="43">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Criminal History Points</label>
+                <input type="number" class="form-control" formControlName="criminalHistory"
+                       min="0">
+              </div>
+
+              <!-- Enhancements -->
+              <div class="col-12">
+                <h6 class="mb-3">Enhancements</h6>
+                <div formGroupName="enhancements" class="row g-2">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="firearmUsed">
+                      <label class="form-check-label">
+                        Firearm Used (+2 levels)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="drugQuantity">
+                      <label class="form-check-label">
+                        Large Drug Quantity (+2 levels)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="victimVulnerable">
+                      <label class="form-check-label">
+                        Vulnerable Victim (+3 levels)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="leadershipRole">
+                      <label class="form-check-label">
+                        Leadership Role (+4 levels)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mitigations -->
+              <div class="col-12">
+                <h6 class="mb-3">Mitigating Factors</h6>
+                <div formGroupName="mitigations" class="row g-2">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="acceptResponsibility">
+                      <label class="form-check-label">
+                        Acceptance of Responsibility (-3 levels)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="minorRole">
+                      <label class="form-check-label">
+                        Minor Role (-2 levels)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" 
+                             formControlName="cooperation">
+                      <label class="form-check-label">
+                        Substantial Cooperation (-2 levels)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="calculateSentence()">
+                    <i class="ri-calculator-line me-1"></i> Calculate Sentence
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleSentencingCalculator()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card" *ngIf="calculatedSentence">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">Sentencing Results</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="text-muted">Original Level:</label>
+            <p class="mb-1 fs-5">{{ calculatedSentence.originalLevel }}</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted">Adjusted Level:</label>
+            <p class="mb-1 fs-5 fw-bold text-primary">{{ calculatedSentence.adjustedLevel }}</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted">Criminal History Category:</label>
+            <p class="mb-1">{{ calculatedSentence.criminalHistoryCategory }}</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted">Sentencing Range:</label>
+            <p class="mb-1 fs-4 fw-bold text-danger">
+              {{ calculatedSentence.minimumMonths }} - {{ calculatedSentence.maximumMonths }} months
+            </p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted">Probation Possible:</label>
+            <p class="mb-1">
+              <span class="badge" 
+                    [class.bg-success]="calculatedSentence.probationPossible"
+                    [class.bg-danger]="!calculatedSentence.probationPossible">
+                {{ calculatedSentence.probationPossible ? 'Yes' : 'No' }}
+              </span>
+            </p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted">Mandatory Minimum:</label>
+            <p class="mb-1">{{ calculatedSentence.mandatoryMinimum }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case Analysis Tab -->
+  <div class="row" *ngIf="activeTab === 'case-analysis'">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Case Information</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="caseAnalysisForm">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Charges <span class="text-danger">*</span></label>
+
+                <!-- Add New Charge -->
+                <div class="input-group mb-2">
+                  <input type="text" class="form-control" [(ngModel)]="newCharge"
+                         [ngModelOptions]="{standalone: true}"
+                         placeholder="Enter a charge (e.g., Possession with Intent to Distribute)"
+                         (keyup.enter)="addCharge()">
+                  <button class="btn btn-primary" type="button" (click)="addCharge()"
+                          [disabled]="isAddChargeDisabled()">
+                    <i class="ri-add-line me-1"></i>Add Charge
+                  </button>
+                </div>
+
+                <!-- Display Charges -->
+                <div class="border rounded p-2 bg-light" style="min-height: 80px;">
+                  <div *ngIf="charges.length === 0" class="text-muted text-center py-2">
+                    No charges added yet. Click "Add Charge" to add charges.
+                  </div>
+                  <div *ngFor="let charge of charges; let i = index" class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="flex-grow-1">{{ charge }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" (click)="removeCharge(i)">
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div *ngIf="charges.length === 0" class="text-danger small mt-1">
+                  At least one charge is required
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Case Facts <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="5" formControlName="facts"
+                          placeholder="Describe the key facts of the case..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Prior Criminal Record</label>
+                <textarea class="form-control" rows="2" formControlName="priorRecord"
+                          placeholder="Describe any prior convictions..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Witness Information</label>
+                <textarea class="form-control" rows="2" formControlName="witnessInfo"
+                          placeholder="List witnesses and their potential testimony..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Evidence Summary</label>
+                <textarea class="form-control" rows="3" formControlName="evidenceSummary"
+                          placeholder="Summarize key evidence..."></textarea>
+              </div>
+              <div class="col-12">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary"
+                          [disabled]="caseAnalysisForm.invalid || charges.length === 0 || isAnalyzing"
+                          (click)="analyzeCase()">
+                    <span *ngIf="!isAnalyzing">
+                      <i class="ri-search-eye-line me-1"></i> Analyze Case
+                    </span>
+                    <span *ngIf="isAnalyzing">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Analyzing...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleCaseAnalysis()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Evidence Tracker Tab -->
+  <div class="row" *ngIf="activeTab === 'evidence'">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Add New Evidence</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <select class="form-select" [(ngModel)]="newEvidence.type">
+                <option value="">Evidence Type</option>
+                <option value="Physical">Physical</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Digital">Digital</option>
+                <option value="Testimonial">Testimonial</option>
+                <option value="Expert">Expert</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <input type="text" class="form-control" 
+                     [(ngModel)]="newEvidence.description"
+                     placeholder="Evidence description">
+            </div>
+            <div class="col-md-2">
+              <input type="text" class="form-control" 
+                     [(ngModel)]="newEvidence.source"
+                     placeholder="Source">
+            </div>
+            <div class="col-md-2">
+              <select class="form-select" [(ngModel)]="newEvidence.admissibility">
+                <option value="pending">Pending Review</option>
+                <option value="admissible">Admissible</option>
+                <option value="inadmissible">Inadmissible</option>
+              </select>
+            </div>
+            <div class="col-md-1">
+              <select class="form-select" [(ngModel)]="newEvidence.importance">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="col-md-1">
+              <button class="btn btn-primary w-100" (click)="addEvidence()">
+                <i class="ri-add-line"></i> Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Evidence List</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Source</th>
+                  <th>Admissibility</th>
+                  <th>Importance</th>
+                  <th>Date Added</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of evidenceItems">
+                  <td>{{ item.type }}</td>
+                  <td>{{ item.description }}</td>
+                  <td>{{ item.source }}</td>
+                  <td>
+                    <span [class]="getAdmissibilityClass(item.admissibility)">
+                      {{ item.admissibility }}
+                    </span>
+                  </td>
+                  <td>
+                    <span [class]="getImportanceClass(item.importance)">
+                      {{ item.importance }}
+                    </span>
+                  </td>
+                  <td>{{ item.dateAdded | date:'short' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-danger" (click)="removeEvidence(item.id)">
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="evidenceItems.length === 0">
+                  <td colspan="7" class="text-center text-muted">No evidence items added yet</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plea Agreement Analyzer Tab -->
+  <div class="row" *ngIf="activeTab === 'plea'">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Plea Agreement Details</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="pleaForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Original Charges</label>
+                <input type="text" class="form-control" formControlName="originalCharges">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Offered Plea</label>
+                <input type="text" class="form-control" formControlName="offeredPlea">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Sentence Range</label>
+                <input type="text" class="form-control" formControlName="sentenceRange"
+                       placeholder="e.g., 12-24 months">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Probation Terms</label>
+                <input type="text" class="form-control" formControlName="probationTerms">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Fines/Restitution</label>
+                <input type="text" class="form-control" formControlName="fines">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Special Conditions</label>
+                <textarea class="form-control" rows="3" formControlName="specialConditions"
+                          placeholder="Any special conditions of the plea..."></textarea>
+              </div>
+              <div class="col-12">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="analyzePlea()">
+                    <i class="ri-scales-3-line me-1"></i> Analyze Plea Agreement
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSamplePleaAgreement()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card" *ngIf="pleaAnalysis">
+        <div class="card-header bg-warning">
+          <h5 class="card-title mb-0">Plea Analysis</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <strong>Recommendation:</strong> {{ pleaAnalysis.recommendation }}
+          </div>
+          
+          <div class="mb-3">
+            <h6 class="text-success">Advantages:</h6>
+            <ul>
+              <li *ngFor="let pro of pleaAnalysis.pros">{{ pro }}</li>
+            </ul>
+          </div>
+
+          <div class="mb-3">
+            <h6 class="text-danger">Disadvantages:</h6>
+            <ul>
+              <li *ngFor="let con of pleaAnalysis.cons">{{ con }}</li>
+            </ul>
+          </div>
+
+          <div class="mb-3">
+            <h6 class="text-primary">Alternative Options:</h6>
+            <ul>
+              <li *ngFor="let alt of pleaAnalysis.alternativeOptions">{{ alt }}</li>
+            </ul>
+          </div>
+
+          <div class="alert alert-warning">
+            <strong>Risk Assessment:</strong> {{ pleaAnalysis.riskAssessment }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

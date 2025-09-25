@@ -59,6 +59,14 @@ const routes: Routes = [
     data: {
       title: 'Legal Research Assistant'
     }
+  },
+  {
+    path: 'pdf-forms',
+    loadChildren: () => import('@app/modules/legal/components/pdf-forms/pdf-forms.module').then(m => m.PdfFormsModule),
+    canActivate: [AuthenticationGuard],
+    data: {
+      title: 'PDF Forms'
+    }
   }
 ];
 

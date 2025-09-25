@@ -1,0 +1,117 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 font-size-18">🪄 Auto-Fill Wizard</h4>
+        <div class="page-title-right">
+          <button class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="ri-arrow-left-line me-1"></i>Back to Templates
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <!-- Progress Steps -->
+          <div class="d-flex justify-content-center mb-4">
+            <div class="step-progress">
+              <div class="step" [class.active]="currentStep >= 1" [class.completed]="currentStep > 1">
+                <div class="step-number">1</div>
+                <div class="step-label">Template Info</div>
+              </div>
+              <div class="step-connector" [class.active]="currentStep > 1"></div>
+              <div class="step" [class.active]="currentStep >= 2" [class.completed]="currentStep > 2">
+                <div class="step-number">2</div>
+                <div class="step-label">Fill Variables</div>
+              </div>
+              <div class="step-connector" [class.active]="currentStep > 2"></div>
+              <div class="step" [class.active]="currentStep >= 3">
+                <div class="step-number">3</div>
+                <div class="step-label">Review & Generate</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 1: Template Info -->
+          <div *ngIf="currentStep === 1" class="step-content">
+            <h5>Template Information</h5>
+            <p class="text-muted">You're about to auto-fill template #{{templateId}}</p>
+            <div class="alert alert-info">
+              <i class="ri-information-line me-2"></i>
+              This wizard will help you automatically fill in the template variables using AI assistance.
+            </div>
+          </div>
+
+          <!-- Step 2: Fill Variables -->
+          <div *ngIf="currentStep === 2" class="step-content">
+            <h5>Template Variables</h5>
+            <div class="row">
+              <div class="col-md-6" *ngFor="let variable of variables">
+                <div class="mb-3">
+                  <label class="form-label">
+                    {{variable.displayName}}
+                    <span class="text-danger" *ngIf="variable.required">*</span>
+                  </label>
+                  <input 
+                    type="{{variable.type === 'date' ? 'date' : 'text'}}"
+                    class="form-control"
+                    [(ngModel)]="variable.value"
+                    [placeholder]="'Enter ' + variable.displayName">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Review -->
+          <div *ngIf="currentStep === 3" class="step-content">
+            <h5>Review Variables</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Variable</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let variable of variables">
+                    <td>{{variable.displayName}}</td>
+                    <td>{{variable.value || 'Not specified'}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Navigation Buttons -->
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-outline-secondary" 
+                    [disabled]="currentStep === 1" 
+                    (click)="prevStep()">
+              <i class="ri-arrow-left-line me-1"></i>Previous
+            </button>
+            
+            <button class="btn btn-primary" 
+                    *ngIf="currentStep < totalSteps"
+                    (click)="nextStep()">
+              Next<i class="ri-arrow-right-line ms-1"></i>
+            </button>
+            
+            <button class="btn btn-success" 
+                    *ngIf="currentStep === totalSteps"
+                    [disabled]="isProcessing"
+                    (click)="generateDocument()">
+              <i class="ri-magic-line me-1" *ngIf="!isProcessing"></i>
+              <i class="ri-loader-4-line me-1 spin" *ngIf="isProcessing"></i>
+              {{isProcessing ? 'Processing...' : 'Generate Document'}}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

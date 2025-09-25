@@ -1,0 +1,501 @@
+<div class="container-fluid" style="margin-top: 120px;">
+  <!-- Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">AI-Powered Document Analyzer</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Legal</a></li>
+            <li class="breadcrumb-item active">Document Analyzer</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Analyzed</p>
+              <h4 class="fs-20 fw-semibold mb-0">{{stats.totalAnalyzed}}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle rounded fs-3">
+                <i class="ri-file-text-line text-primary"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Time Saved</p>
+              <h4 class="fs-20 fw-semibold mb-0">{{stats.timeSaved}}h</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-success-subtle rounded fs-3">
+                <i class="ri-time-line text-success"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Accuracy</p>
+              <h4 class="fs-20 fw-semibold mb-0">{{stats.accuracy}}%</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-info-subtle rounded fs-3">
+                <i class="ri-shield-check-line text-info"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Risk Issues</p>
+              <h4 class="fs-20 fw-semibold mb-0">{{stats.riskIssues}}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-danger-subtle rounded fs-3">
+                <i class="ri-alert-line text-danger"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Today</p>
+              <h4 class="fs-20 fw-semibold mb-0">{{stats.todayAnalyses}}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-warning-subtle rounded fs-3">
+                <i class="ri-calendar-line text-warning"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0 fs-12">Trend</p>
+              <h4 class="fs-20 fw-semibold mb-0 text-success">{{stats.weeklyTrend}}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-secondary-subtle rounded fs-3">
+                <i class="ri-line-chart-line text-secondary"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Tabs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header border-bottom">
+          <ul class="nav nav-tabs card-header-tabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'upload'"
+                 (click)="activeTab = 'upload'" href="javascript:void(0);">
+                <i class="ri-upload-2-line me-2"></i>Upload & Analyze
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" [class.active]="activeTab === 'history'"
+                 (click)="activeTab = 'history'" href="javascript:void(0);">
+                <i class="ri-history-line me-2"></i>Analysis History
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="currentAnalysis">
+              <a class="nav-link" [class.active]="activeTab === 'results'"
+                 (click)="activeTab = 'results'" href="javascript:void(0);">
+                <i class="ri-file-chart-line me-2"></i>Analysis Results
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <!-- Upload Tab -->
+          <div *ngIf="activeTab === 'upload'">
+            <div class="row">
+              <!-- Analysis Type Selection -->
+              <div class="col-lg-12 mb-4">
+                <h5 class="mb-3">Select Analysis Type</h5>
+                <div class="row">
+                  <div class="col-md-4 mb-3" *ngFor="let type of analysisTypes">
+                    <div class="form-check card-radio">
+                      <input class="form-check-input" type="radio"
+                             [id]="'analysisType' + type.value"
+                             name="analysisType"
+                             [value]="type.value"
+                             [(ngModel)]="selectedAnalysisType">
+                      <label class="form-check-label" [for]="'analysisType' + type.value">
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0">
+                            <div class="avatar-xs">
+                              <div class="avatar-title rounded-circle" [ngClass]="'bg-' + type.color + '-subtle'">
+                                <i [class]="type.icon + ' text-' + type.color"></i>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1">{{type.label}}</h6>
+                            <p class="text-muted mb-0 fs-12">{{type.description}}</p>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- File Upload Area -->
+              <div class="col-lg-8">
+                <h5 class="mb-3">Upload Document</h5>
+                <div class="upload-area"
+                     [class.active]="isDragging"
+                     (dragover)="onDragOver($event)"
+                     (dragleave)="onDragLeave($event)"
+                     (drop)="onDrop($event)"
+                     (click)="fileInput.click()">
+                  <input type="file" #fileInput hidden
+                         accept=".pdf,.doc,.docx,.txt,.rtf"
+                         (change)="onFileSelected($event)">
+
+                  <div *ngIf="!selectedFile">
+                    <i class="ri-upload-cloud-2-line display-4 text-muted"></i>
+                    <h5 class="mt-3">Drag & Drop your document here</h5>
+                    <p class="text-muted">or click to browse</p>
+                    <p class="text-muted fs-12">Supported formats: PDF, DOC, DOCX, TXT, RTF (Max 10MB)</p>
+                  </div>
+
+                  <div *ngIf="selectedFile" class="text-center">
+                    <i [class]="getFileIcon(selectedFile.name) + ' display-4'"></i>
+                    <h5 class="mt-3">{{selectedFile.name}}</h5>
+                    <p class="text-muted">{{formatFileSize(selectedFile.size)}}</p>
+                    <button class="btn btn-sm btn-soft-danger" (click)="selectedFile = null; $event.stopPropagation()">
+                      <i class="ri-delete-bin-line"></i> Remove
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mt-3" *ngIf="uploadProgress > 0 && uploadProgress < 100">
+                  <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                         [style.width.%]="uploadProgress">
+                      {{uploadProgress}}%
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Analysis Status -->
+                <div class="alert alert-info mt-3" *ngIf="analysisStatus === 'analyzing'">
+                  <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                      <span class="visually-hidden">Analyzing...</span>
+                    </div>
+                    <strong>Analyzing document with Claude AI...</strong>
+                  </div>
+                </div>
+
+                <!-- Analyze Button -->
+                <div class="mt-4">
+                  <button class="btn btn-primary btn-lg w-100"
+                          [disabled]="!selectedFile || isAnalyzing"
+                          (click)="analyzeDocument()">
+                    <i class="ri-search-eye-line me-2" *ngIf="!isAnalyzing"></i>
+                    <span class="spinner-border spinner-border-sm me-2" *ngIf="isAnalyzing"></span>
+                    {{isAnalyzing ? 'Analyzing...' : 'Analyze Document'}}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Sample Documents -->
+              <div class="col-lg-4">
+                <h5 class="mb-3">Sample Documents</h5>
+                <div class="list-group">
+                  <a href="javascript:void(0);" class="list-group-item list-group-item-action"
+                     *ngFor="let doc of sampleDocuments"
+                     (click)="loadSampleDocument(doc)">
+                    <div class="d-flex align-items-center">
+                      <div class="flex-shrink-0">
+                        <div class="avatar-xs">
+                          <div class="avatar-title rounded bg-light text-primary">
+                            <i class="ri-file-text-line"></i>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">{{doc.name}}</h6>
+                        <p class="text-muted mb-0 fs-12">{{doc.type}} • {{doc.size}}</p>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+
+                <!-- Tips Card -->
+                <div class="card bg-light border-0 mt-3">
+                  <div class="card-body">
+                    <h5 class="card-title fs-14">
+                      <i class="ri-lightbulb-line text-warning"></i> Pro Tips
+                    </h5>
+                    <ul class="mb-0 ps-3">
+                      <li class="fs-12">Upload clear, text-based documents for best results</li>
+                      <li class="fs-12">Choose the appropriate analysis type for accurate insights</li>
+                      <li class="fs-12">Larger documents may take longer to analyze</li>
+                      <li class="fs-12">Analysis is powered by Claude AI for maximum accuracy</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Tab -->
+          <div *ngIf="activeTab === 'history'">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Document</th>
+                    <th>Analysis Type</th>
+                    <th>Status</th>
+                    <th>Risk Level</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let analysis of analysisHistory">
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <div class="avatar-title rounded bg-light">
+                            <i [class]="getFileIcon(analysis.fileName)"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fs-14">{{analysis.fileName}}</h6>
+                          <p class="text-muted mb-0 fs-12">{{analysis.fileType}}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-soft-primary">{{analysis.analysisType}}</span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getStatusBadgeClass(analysis.status)">
+                        {{analysis.status}}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getRiskBadgeClass(analysis.riskLevel)">
+                        {{analysis.riskLevel || 'N/A'}}
+                      </span>
+                    </td>
+                    <td>{{analysis.createdAt | date:'short'}}</td>
+                    <td>
+                      <button class="btn btn-sm btn-soft-primary me-1"
+                              (click)="viewAnalysis(analysis)"
+                              title="View Analysis">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                      <button class="btn btn-sm btn-soft-secondary"
+                              title="Download Report">
+                        <i class="ri-download-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="analysisHistory.length === 0">
+                    <td colspan="6" class="text-center py-4">
+                      <i class="ri-file-search-line display-4 text-muted"></i>
+                      <p class="text-muted mt-2">No analysis history yet</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Results Tab -->
+          <div *ngIf="activeTab === 'results' && currentAnalysis">
+            <div class="row">
+              <div class="col-lg-12">
+                <!-- Results Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                  <div>
+                    <h5 class="mb-1">Analysis Results</h5>
+                    <p class="text-muted mb-0">
+                      <i [class]="getFileIcon(currentAnalysis.fileName)"></i>
+                      {{currentAnalysis.fileName}} •
+                      <span class="badge" [ngClass]="getRiskBadgeClass(currentAnalysis.analysis?.riskLevel)">
+                        Risk: {{currentAnalysis.analysis?.riskLevel || 'N/A'}}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <button class="btn btn-soft-primary me-2" (click)="downloadReport()">
+                      <i class="ri-download-line me-1"></i> Download Report
+                    </button>
+                    <button class="btn btn-soft-secondary me-2"
+                            (click)="copyToClipboard(currentAnalysis.analysis?.fullAnalysis || '')">
+                      <i class="ri-file-copy-line me-1"></i> Copy
+                    </button>
+                    <button class="btn btn-soft-danger" (click)="resetAnalysis()">
+                      <i class="ri-refresh-line me-1"></i> New Analysis
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Risk Score Card -->
+                <div class="row" *ngIf="currentAnalysis.analysis?.riskScore">
+                  <div class="col-lg-12 mb-4">
+                    <div class="card border">
+                      <div class="card-body">
+                        <h6 class="card-title">Risk Assessment</h6>
+                        <div class="d-flex align-items-center">
+                          <div class="flex-grow-1">
+                            <div class="progress" style="height: 10px;">
+                              <div class="progress-bar"
+                                   [ngClass]="{
+                                     'bg-success': currentAnalysis.analysis.riskScore < 40,
+                                     'bg-warning': currentAnalysis.analysis.riskScore >= 40 && currentAnalysis.analysis.riskScore < 70,
+                                     'bg-danger': currentAnalysis.analysis.riskScore >= 70
+                                   }"
+                                   [style.width.%]="currentAnalysis.analysis.riskScore">
+                              </div>
+                            </div>
+                          </div>
+                          <div class="flex-shrink-0 ms-3">
+                            <h5 class="mb-0">{{currentAnalysis.analysis.riskScore}}/100</h5>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Analysis Content -->
+                <div class="row">
+                  <!-- Summary -->
+                  <div class="col-lg-12 mb-3" *ngIf="currentAnalysis.analysis?.summary">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="card-title mb-0">Executive Summary</h6>
+                      </div>
+                      <div class="card-body">
+                        <p class="mb-0">{{currentAnalysis.analysis.summary}}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Key Findings -->
+                  <div class="col-lg-6 mb-3" *ngIf="currentAnalysis.analysis?.keyFindings">
+                    <div class="card h-100">
+                      <div class="card-header">
+                        <h6 class="card-title mb-0">Key Findings</h6>
+                      </div>
+                      <div class="card-body">
+                        <ul class="mb-0">
+                          <li *ngFor="let finding of currentAnalysis.analysis.keyFindings">
+                            {{finding}}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Recommendations -->
+                  <div class="col-lg-6 mb-3" *ngIf="currentAnalysis.analysis?.recommendations">
+                    <div class="card h-100">
+                      <div class="card-header">
+                        <h6 class="card-title mb-0">Recommendations</h6>
+                      </div>
+                      <div class="card-body">
+                        <ul class="mb-0">
+                          <li *ngFor="let rec of currentAnalysis.analysis.recommendations" class="text-primary">
+                            {{rec}}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Compliance Issues -->
+                  <div class="col-lg-12 mb-3" *ngIf="currentAnalysis.analysis?.complianceIssues && currentAnalysis.analysis.complianceIssues.length > 0">
+                    <div class="card border-warning">
+                      <div class="card-header bg-warning-subtle">
+                        <h6 class="card-title mb-0">
+                          <i class="ri-alert-line text-warning me-2"></i>Compliance Issues
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <ul class="mb-0">
+                          <li *ngFor="let issue of currentAnalysis.analysis.complianceIssues" class="text-warning">
+                            {{issue}}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Full Analysis -->
+                  <div class="col-lg-12">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="card-title mb-0">Detailed Analysis</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="analysis-content">
+                          <pre class="mb-0" style="white-space: pre-wrap; word-wrap: break-word;">{{currentAnalysis.analysis?.fullAnalysis}}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

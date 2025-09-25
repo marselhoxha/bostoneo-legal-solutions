@@ -1,0 +1,767 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Real Estate Law Tools</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/legal">Legal</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant">AI Assistant</a></li>
+            <li class="breadcrumb-item"><a routerLink="/legal/ai-assistant/practice-areas">Practice Areas</a></li>
+            <li class="breadcrumb-item active">Real Estate Law</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="row">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-3" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'purchase-agreement'" 
+             (click)="setActiveTab('purchase-agreement')" role="tab">
+            <i class="ri-file-contract-line me-2"></i>Purchase Agreement
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'closing-documents'" 
+             (click)="setActiveTab('closing-documents')" role="tab">
+            <i class="ri-folder-5-line me-2"></i>Closing Documents
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'title-review'" 
+             (click)="setActiveTab('title-review')" role="tab">
+            <i class="ri-shield-check-line me-2"></i>Title Review
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'deed-drafting'" 
+             (click)="setActiveTab('deed-drafting')" role="tab">
+            <i class="ri-file-paper-line me-2"></i>Deed Drafting
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'lease-agreement'" 
+             (click)="setActiveTab('lease-agreement')" role="tab">
+            <i class="ri-home-3-line me-2"></i>Lease Agreement
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Purchase Agreement Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'purchase-agreement'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Purchase Agreement Details</h5>
+          </div>
+          <div class="card-body">
+            <div class="required-note">
+              <small><span class="text-danger">*</span> indicates required fields</small>
+            </div>
+            <form [formGroup]="purchaseForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Property Information</h6>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" [class.required]="isFieldRequired(purchaseForm, 'propertyAddress')">
+                    Property Address
+                  </label>
+                  <input type="text" class="form-control" formControlName="propertyAddress"
+                         [class.is-invalid]="isFieldInvalid(purchaseForm, 'propertyAddress')"
+                         placeholder="123 Main St, Boston, MA">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(purchaseForm, 'propertyAddress')">
+                    Property address is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" [class.required]="isFieldRequired(purchaseForm, 'propertyType')">
+                    Property Type
+                  </label>
+                  <select class="form-select" formControlName="propertyType"
+                          [class.is-invalid]="isFieldInvalid(purchaseForm, 'propertyType')">
+                    <option *ngFor="let type of propertyTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Parcel Number</label>
+                  <input type="text" class="form-control" formControlName="parcelNumber"
+                         placeholder="Optional">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Legal Description</label>
+                  <textarea class="form-control" formControlName="legalDescription" rows="2"
+                            placeholder="Optional - Legal description of the property"></textarea>
+                </div>
+                
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Parties</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label required">Seller Name</label>
+                  <input type="text" class="form-control" formControlName="sellerName"
+                         [class.is-invalid]="isFieldInvalid(purchaseForm, 'sellerName')"
+                         placeholder="John Doe">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(purchaseForm, 'sellerName')">
+                    Seller name is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Seller Address</label>
+                  <input type="text" class="form-control" formControlName="sellerAddress"
+                         placeholder="Optional">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label required">Buyer Name</label>
+                  <input type="text" class="form-control" formControlName="buyerName"
+                         [class.is-invalid]="isFieldInvalid(purchaseForm, 'buyerName')"
+                         placeholder="Jane Smith">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(purchaseForm, 'buyerName')">
+                    Buyer name is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Buyer Address</label>
+                  <input type="text" class="form-control" formControlName="buyerAddress"
+                         placeholder="Optional">
+                </div>
+                
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Terms</h6>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label required">Purchase Price</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="purchasePrice"
+                           [class.is-invalid]="isFieldInvalid(purchaseForm, 'purchasePrice')"
+                           placeholder="500000">
+                  </div>
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(purchaseForm, 'purchasePrice')">
+                    Purchase price must be greater than 0
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Earnest Money</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="earnestMoney"
+                           placeholder="Optional">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Down Payment</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="downPayment"
+                           placeholder="Optional">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label required">Closing Date</label>
+                  <input type="date" class="form-control" formControlName="closingDate"
+                         [class.is-invalid]="isFieldInvalid(purchaseForm, 'closingDate')">
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid(purchaseForm, 'closingDate')">
+                    Closing date is required
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Possession Date</label>
+                  <input type="date" class="form-control" formControlName="possessionDate"
+                         placeholder="Optional">
+                </div>
+                
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="financingContingency" id="financing">
+                    <label class="form-check-label" for="financing">Financing Contingency</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="inspectionContingency" id="inspection">
+                    <label class="form-check-label" for="inspection">Inspection Contingency</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="appraisalContingency" id="appraisal">
+                    <label class="form-check-label" for="appraisal">Appraisal Contingency</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generatePurchaseAgreement()"
+                          [disabled]="purchaseForm.invalid || isGeneratingAgreement">
+                    <span *ngIf="!isGeneratingAgreement">
+                      <i class="ri-file-text-line me-2"></i>Generate Agreement
+                    </span>
+                    <span *ngIf="isGeneratingAgreement">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSamplePurchaseAgreement()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedAgreement">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Agreement</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedAgreement, 'purchase-agreement')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedAgreement }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Closing Documents Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'closing-documents'">
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Closing Information</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="closingForm">
+              <div class="mb-3">
+                <label class="form-label">Transaction Type</label>
+                <select class="form-select" formControlName="transactionType">
+                  <option value="purchase">Purchase</option>
+                  <option value="sale">Sale</option>
+                  <option value="refinance">Refinance</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Closing Date</label>
+                <input type="date" class="form-control" formControlName="closingDate">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Property Address</label>
+                <input type="text" class="form-control" formControlName="propertyAddress">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Purchase Price</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="purchasePrice">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Loan Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="loanAmount">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Title Company</label>
+                <input type="text" class="form-control" formControlName="titleCompany">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Escrow Agent</label>
+                <input type="text" class="form-control" formControlName="escrowAgent">
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" (click)="prepareClosingDocuments()"
+                        [disabled]="closingForm.invalid">
+                  <i class="ri-folder-5-line me-2"></i>Prepare Documents
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="loadSampleClosingDocuments()">
+                  <i class="ri-file-copy-line me-2"></i>Load Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Closing Document Checklist</h5>
+            <p class="text-muted mb-0" *ngIf="closingDate">
+              Closing Date: {{ closingDate | date:'longDate' }}
+            </p>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive" *ngIf="closingDocuments.length > 0">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th>Type</th>
+                    <th>Party</th>
+                    <th>Required</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let doc of closingDocuments">
+                    <td>{{ doc.name }}</td>
+                    <td>
+                      <span class="badge bg-info-subtle text-info">{{ doc.type }}</span>
+                    </td>
+                    <td>{{ doc.party }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="doc.required ? 'bg-danger' : 'bg-secondary'">
+                        {{ doc.required ? 'Required' : 'Optional' }}
+                      </span>
+                    </td>
+                    <td>
+                      <button [ngClass]="getDocumentStatusClass(doc.status)"
+                              (click)="toggleDocumentStatus(doc)">
+                        {{ doc.status }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="closingDocuments.length === 0">
+              <i class="ri-folder-5-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Documents Prepared</h5>
+              <p class="text-muted">Enter closing information to generate document checklist</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Title Review Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'title-review'">
+    <div class="row">
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Title Information</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="titleReviewForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Property Address</label>
+                  <input type="text" class="form-control" formControlName="propertyAddress">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Title Company</label>
+                  <input type="text" class="form-control" formControlName="titleCompany">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Title Number</label>
+                  <input type="text" class="form-control" formControlName="titleNumber">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Effective Date</label>
+                  <input type="date" class="form-control" formControlName="effectiveDate">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Vesting Type</label>
+                  <select class="form-select" formControlName="vestingType">
+                    <option value="">Select Type</option>
+                    <option value="sole">Sole Ownership</option>
+                    <option value="joint">Joint Tenancy</option>
+                    <option value="common">Tenancy in Common</option>
+                    <option value="community">Community Property</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Current Owner</label>
+                  <input type="text" class="form-control" formControlName="currentOwner">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Known Encumbrances</label>
+                  <textarea class="form-control" formControlName="encumbrances" rows="2"></textarea>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="performTitleReview()"
+                          [disabled]="titleReviewForm.invalid">
+                    <i class="ri-search-line me-2"></i>Review Title
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleTitleReview()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Title Issues</h5>
+            <div class="d-flex align-items-center">
+              <div class="progress me-3" style="width: 150px;" *ngIf="titleIssues.length > 0">
+                <div class="progress-bar" [style.width.%]="titleClearance"
+                     [ngClass]="{'bg-success': titleClearance >= 80, 'bg-warning': titleClearance >= 50 && titleClearance < 80, 'bg-danger': titleClearance < 50}">
+                  {{ titleClearance }}% Clear
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary" (click)="addTitleIssue()">
+                <i class="ri-add-line"></i> Add Issue
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="list-group" *ngIf="titleIssues.length > 0">
+              <div class="list-group-item" *ngFor="let issue of titleIssues">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                      <i [class]="getIssueTypeIcon(issue.type) + ' me-2 ' + getIssueSeverityClass(issue.severity)"></i>
+                      <h6 class="mb-0">{{ issue.description }}</h6>
+                    </div>
+                    <p class="mb-1 text-muted">{{ issue.resolution }}</p>
+                    <div>
+                      <span class="badge" [ngClass]="{'bg-danger': issue.severity === 'high', 'bg-warning': issue.severity === 'medium', 'bg-info': issue.severity === 'low'}">
+                        {{ issue.severity }} severity
+                      </span>
+                      <span class="badge ms-1" [ngClass]="issue.resolved ? 'bg-success' : 'bg-secondary'">
+                        {{ issue.resolved ? 'Resolved' : 'Pending' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="btn-group-vertical btn-group-sm">
+                    <button class="btn btn-outline-success" (click)="toggleIssueResolution(issue)"
+                            [disabled]="issue.resolved">
+                      <i class="ri-check-line"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" (click)="removeTitleIssue(issue.id)">
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="titleIssues.length === 0">
+              <i class="ri-shield-check-line display-1 text-muted"></i>
+              <h5 class="mt-3">No Title Issues Found</h5>
+              <p class="text-muted">Perform a title review to identify any issues</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deed Drafting Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'deed-drafting'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Deed Information</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="deedForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Deed Type</label>
+                  <select class="form-select" formControlName="deedType">
+                    <option *ngFor="let type of deedTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Grantor (Seller)</h6>
+                </div>
+                <div formGroupName="grantor">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Name</label>
+                      <input type="text" class="form-control" formControlName="name">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Marital Status</label>
+                      <select class="form-select" formControlName="maritalStatus">
+                        <option value="">Select Status</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control" formControlName="address">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Grantee (Buyer)</h6>
+                </div>
+                <div formGroupName="grantee">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Name</label>
+                      <input type="text" class="form-control" formControlName="name">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Vesting Type</label>
+                      <select class="form-select" formControlName="vestingType">
+                        <option value="">Select Type</option>
+                        <option value="sole ownership">Sole Ownership</option>
+                        <option value="joint tenants">Joint Tenants</option>
+                        <option value="tenants in common">Tenants in Common</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control" formControlName="address">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12 mt-3">
+                  <h6 class="fw-semibold text-primary">Property</h6>
+                </div>
+                <div formGroupName="property">
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control" formControlName="address">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Legal Description</label>
+                      <textarea class="form-control" formControlName="legalDescription" rows="3"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">County</label>
+                      <input type="text" class="form-control" formControlName="county">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">State</label>
+                      <input type="text" class="form-control" formControlName="state">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Consideration</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="consideration">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tax Stamps</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="taxStamps">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generateDeed()"
+                          [disabled]="deedForm.invalid || isGeneratingDeed">
+                    <span *ngIf="!isGeneratingDeed">
+                      <i class="ri-file-paper-line me-2"></i>Generate Deed
+                    </span>
+                    <span *ngIf="isGeneratingDeed">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleDeedDrafting()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedDeed">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Deed</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedDeed, 'deed')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedDeed }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lease Agreement Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'lease-agreement'">
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Lease Agreement Details</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="leaseForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Lease Type</label>
+                  <select class="form-select" formControlName="leaseType">
+                    <option *ngFor="let type of leaseTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Property Type</label>
+                  <select class="form-select" formControlName="propertyType">
+                    <option value="">Select Type</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="house">House</option>
+                    <option value="condo">Condo</option>
+                    <option value="room">Room</option>
+                    <option value="commercial">Commercial</option>
+                  </select>
+                </div>
+                
+                <div class="col-12">
+                  <label class="form-label">Property Address</label>
+                  <input type="text" class="form-control" formControlName="propertyAddress">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Parties</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Landlord Name</label>
+                  <input type="text" class="form-control" formControlName="landlordName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Landlord Address</label>
+                  <input type="text" class="form-control" formControlName="landlordAddress">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Tenant Name(s)</label>
+                  <input type="text" class="form-control" formControlName="tenantNames"
+                         placeholder="Separate multiple names with commas">
+                </div>
+                
+                <div class="col-12">
+                  <h6 class="fw-semibold text-primary">Lease Terms</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Start Date</label>
+                  <input type="date" class="form-control" formControlName="leaseStartDate">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">End Date</label>
+                  <input type="date" class="form-control" formControlName="leaseEndDate">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Monthly Rent</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="monthlyRent">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Security Deposit</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="securityDeposit">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Max Occupants</label>
+                  <input type="number" class="form-control" formControlName="maxOccupants" min="1">
+                </div>
+                
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="petsAllowed" id="pets">
+                    <label class="form-check-label" for="pets">Pets Allowed</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="smokingAllowed" id="smoking">
+                    <label class="form-check-label" for="smoking">Smoking Allowed</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="lastMonthRent" id="lastMonth">
+                    <label class="form-check-label" for="lastMonth">Last Month's Rent Required</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary" (click)="generateLeaseAgreement()"
+                          [disabled]="leaseForm.invalid || isGeneratingLease">
+                    <span *ngIf="!isGeneratingLease">
+                      <i class="ri-file-text-line me-2"></i>Generate Lease
+                    </span>
+                    <span *ngIf="isGeneratingLease">
+                      <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                    </span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="loadSampleLeaseAgreement()">
+                    <i class="ri-file-copy-line me-2"></i>Load Sample
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6" *ngIf="generatedLease">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Generated Lease Agreement</h5>
+            <button class="btn btn-sm btn-outline-primary" 
+                    (click)="exportDocument(generatedLease, 'lease-agreement')">
+              <i class="ri-download-line"></i> Export
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="document-preview">
+              <pre>{{ generatedLease }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
