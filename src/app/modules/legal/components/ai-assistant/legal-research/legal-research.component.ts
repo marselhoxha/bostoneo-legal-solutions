@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import flatpickr from 'flatpickr';
+import { jsPDF } from 'jspdf';
 import {
   LegalResearchService,
   LegalSearchRequest,
@@ -21,7 +22,7 @@ import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
   templateUrl: './legal-research.component.html',
   styleUrls: ['./legal-research.component.scss']
 })
-export class LegalResearchComponent implements OnInit, OnDestroy {
+export class LegalResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('startDatePicker') startDatePicker!: ElementRef;
   @ViewChild('endDatePicker') endDatePicker!: ElementRef;
 
@@ -82,6 +83,7 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
   searchResults: SearchResult[] = [];
   savedSearches: SearchHistory[] = [];
   searchHistory: SearchHistory[] = [];
+  savedAnalyses: any[] = [];
   currentSearchResponse?: LegalSearchResponse;
   searchSuggestions: string[] = [];
   recentCases: any[] = [];
@@ -91,6 +93,10 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
   selectedResult?: SearchResult;
   activeTab: 'search' | 'history' | 'saved' = 'search';
   showDefaultState: boolean = true;
+
+  // Accordion states
+  courtSystemExpanded = true;
+  quickCitationsExpanded = false;
 
   constructor(
     private legalResearchService: LegalResearchService,
@@ -103,11 +109,14 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSavedSearches();
     this.loadSearchHistory();
+    this.loadSavedAnalyses();
 
     // Setup search suggestions
     this.setupSearchSuggestions();
+  }
 
-    // Initialize date pickers after view init
+  ngAfterViewInit(): void {
+    // Initialize date pickers after view is initialized
     setTimeout(() => {
       this.initializeDatePickers();
     }, 100);
@@ -125,6 +134,9 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
     if (this.endDateInstance) {
       this.endDateInstance.destroy();
     }
+
+    // Clean up any remaining modal backdrops
+    this.cleanupModalBackdrops();
   }
 
   private initializeSearchForm(): void {
@@ -199,7 +211,7 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
     // Build advanced search request
     const searchRequest: any = {
       query: query.trim(),
-      searchType: formValue.searchType || this.searchType,
+      searchType: this.mapSearchTypeToBackend(formValue.searchType || this.searchType),
       jurisdiction: formValue.jurisdiction || this.jurisdiction,
       enableBooleanSearch: formValue.enableBooleanSearch,
       courtLevels: formValue.courtLevels,
@@ -217,6 +229,11 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
           if (response.success) {
             this.currentSearchResponse = response;
             this.searchResults = response.results;
+            this.showAllFederalRegisterSources = false; // Reset view state for new search
+
+            // Save search to localStorage for history fallback
+            this.saveSearchToLocalStorage(searchRequest, response);
+
             this.loadSearchHistory(); // Refresh search history
 
             // Trigger change detection for modal updates
@@ -322,9 +339,27 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading search history:', error);
-          this.searchHistory = [];
+          // Fallback to localStorage if backend is not available
+          try {
+            const localHistory = JSON.parse(localStorage.getItem('legalSearchHistory') || '[]');
+            this.searchHistory = localHistory;
+          } catch (e) {
+            this.searchHistory = [];
+          }
         }
       });
+  }
+
+  private loadSavedAnalyses(): void {
+    try {
+      const savedAnalyses = JSON.parse(localStorage.getItem('savedLegalAnalyses') || '[]');
+      this.savedAnalyses = savedAnalyses.sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+    } catch (error) {
+      console.error('Error loading saved analyses:', error);
+      this.savedAnalyses = [];
+    }
   }
 
   private setupSearchSuggestions(): void {
@@ -381,6 +416,14 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
     this.showAdvancedFilters = !this.showAdvancedFilters;
   }
 
+  toggleCourtSystemAccordion(): void {
+    this.courtSystemExpanded = !this.courtSystemExpanded;
+  }
+
+  toggleQuickCitationsAccordion(): void {
+    this.quickCitationsExpanded = !this.quickCitationsExpanded;
+  }
+
   getResultTypeIcon(type: string): string {
     return this.legalResearchService.getResultTypeIcon(type);
   }
@@ -395,6 +438,218 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
 
   formatSearchDate(dateString: string): string {
     return this.legalResearchService.formatSearchDate(dateString);
+  }
+
+  showAllFederalRegisterSources = false;
+
+  getFederalRegisterSources(): any[] {
+    if (!this.searchResults) return [];
+    return this.searchResults.filter(result => result.source === 'Federal Register');
+  }
+
+  getFederalRegisterSourcesDisplay(): any[] {
+    const sources = this.getFederalRegisterSources();
+    return this.showAllFederalRegisterSources ? sources : sources.slice(0, 4);
+  }
+
+  toggleFederalRegisterSources(): void {
+    this.showAllFederalRegisterSources = !this.showAllFederalRegisterSources;
+  }
+
+  // Helper method for user notifications
+  private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    // Create a temporary notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = `
+      top: 20px;
+      right: 20px;
+      z-index: 1060;
+      min-width: 300px;
+      max-width: 500px;
+    `;
+
+    const icon = type === 'success' ? 'ri-check-line' :
+                 type === 'error' ? 'ri-error-warning-line' :
+                 type === 'warning' ? 'ri-alert-line' : 'ri-information-line';
+
+    notification.innerHTML = `
+      <i class="${icon} me-2"></i>${message}
+      <button type="button" class="btn-close" aria-label="Close"></button>
+    `;
+
+    // Add to document
+    document.body.appendChild(notification);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 4000);
+
+    // Handle close button click
+    const closeBtn = notification.querySelector('.btn-close');
+    closeBtn?.addEventListener('click', () => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    });
+  }
+
+  // Generate comprehensive PDF document
+  private generatePDFDocument(): void {
+    if (!this.currentSearchResponse) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const lineHeight = 7;
+    let yPosition = margin;
+
+    // Helper function to convert markdown to plain text
+    const markdownToText = (markdown: string): string => {
+      if (!markdown) return '';
+
+      let text = markdown
+        // Remove markdown headers
+        .replace(/#{1,6}\s+(.+)/g, '$1')
+        // Convert bold text
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1')
+        // Convert italic text
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/_(.+?)_/g, '$1')
+        // Convert code blocks
+        .replace(/```[\s\S]*?```/g, '[Code Block]')
+        .replace(/`(.+?)`/g, '$1')
+        // Convert lists
+        .replace(/^\s*[-*+]\s+(.+)/gm, '• $1')
+        .replace(/^\s*\d+\.\s+(.+)/gm, '$1')
+        // Convert links
+        .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+        // Remove extra whitespace and normalize line breaks
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+      return text;
+    };
+
+    // Helper function to add text with automatic wrapping and page breaks
+    const addText = (text: string, fontSize: number = 10, style: 'normal' | 'bold' = 'normal'): void => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', style);
+
+      const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
+
+      for (const line of lines) {
+        if (yPosition > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += lineHeight;
+      }
+    };
+
+    const addSection = (title: string, content: string): void => {
+      // Add some spacing before sections (except first)
+      if (yPosition > margin + 10) {
+        yPosition += 5;
+      }
+
+      // Add section title
+      addText(title, 14, 'bold');
+      yPosition += 3;
+
+      // Add section content (convert markdown to plain text)
+      const plainTextContent = markdownToText(content);
+      addText(plainTextContent, 10, 'normal');
+      yPosition += 5;
+    };
+
+    const timestamp = new Date().toLocaleString();
+
+    // Header
+    doc.setFillColor(41, 128, 185);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LEGAL RESEARCH ANALYSIS REPORT', pageWidth / 2, 20, { align: 'center' });
+
+    yPosition = 45;
+    doc.setTextColor(0, 0, 0);
+
+    // Generated info
+    addText(`Generated: ${timestamp}`, 10);
+    addText('Generated by: Claude AI Legal Research Assistant', 10);
+    yPosition += 10;
+
+    // Search Details Section
+    const searchDetails = [
+      `Query: ${this.currentSearchResponse.searchQuery}`,
+      `Search Type: ${this.currentSearchResponse.searchType}`,
+      `Jurisdiction: ${this.currentSearchResponse.jurisdiction}`,
+      `Total Results: ${this.currentSearchResponse.totalResults}`
+    ].join('\n');
+
+    addSection('SEARCH DETAILS', searchDetails);
+
+    // AI Analysis Section (moved before Federal Register Sources)
+    addSection('AI LEGAL ANALYSIS', this.currentSearchResponse.aiAnalysis);
+
+    // Federal Register Sources (moved to end, before disclaimer)
+    const federalRegisterSources = this.getFederalRegisterSources();
+    if (federalRegisterSources.length > 0) {
+      let sourcesContent = '';
+      federalRegisterSources.forEach((doc, index) => {
+        sourcesContent += `${index + 1}. ${doc.title}\n`;
+        sourcesContent += `   Document Number: ${doc.documentNumber}\n`;
+        sourcesContent += `   Type: ${doc.documentType}\n`;
+        sourcesContent += `   Publication Date: ${doc.publicationDate}\n`;
+        if (doc.agencies && doc.agencies.length > 0) {
+          sourcesContent += `   Agencies: ${doc.agencies.join(', ')}\n`;
+        }
+        sourcesContent += `   HTML URL: ${doc.htmlUrl}\n`;
+        if (doc.pdfUrl) {
+          sourcesContent += `   PDF URL: ${doc.pdfUrl}\n`;
+        }
+        sourcesContent += '\n';
+      });
+
+      addSection('FEDERAL REGISTER SOURCES', sourcesContent);
+    }
+
+    // Disclaimer Section
+    const disclaimer = [
+      'This analysis is generated by AI and should be reviewed by a licensed attorney.',
+      'This is not legal advice and should not be relied upon as such.',
+      'Always verify information with primary sources and current law.'
+    ].join('\n');
+
+    // Add disclaimer in a highlighted box
+    yPosition += 5;
+    const disclaimerHeight = 25;
+    if (yPosition + disclaimerHeight > pageHeight - margin) {
+      doc.addPage();
+      yPosition = margin;
+    }
+
+    doc.setDrawColor(255, 165, 0);
+    doc.setFillColor(255, 248, 220);
+    doc.rect(margin, yPosition, pageWidth - 2 * margin, disclaimerHeight, 'FD');
+
+    yPosition += 5;
+    doc.setTextColor(150, 75, 0);
+    addText('DISCLAIMER', 12, 'bold');
+    doc.setTextColor(0, 0, 0);
+    addText(disclaimer, 9);
+
+    // Save the PDF
+    const fileName = `legal-analysis-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   }
 
   // New methods for advanced filters
@@ -482,12 +737,32 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
     this.performSearch();
   }
 
+  fillSearchInput(query: string): void {
+    // Only fill the search input without executing the search
+    this.searchForm.patchValue({ query: query });
+    this.searchQuery = query;
+
+    // Focus on the search input for user convenience
+    setTimeout(() => {
+      const searchInput = document.querySelector('.form-control[formControlName="query"]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        // Position cursor at the end of the text
+        searchInput.setSelectionRange(query.length, query.length);
+      }
+    }, 100);
+  }
+
   // New methods for enhanced features
   analysisTime: number = 0;
 
   showSearchHelp(): void {
-    // Show search help modal or guide
-    console.log('Showing search help');
+    // Open the search guide modal
+    const modal = document.getElementById('searchGuideModal');
+    if (modal && (window as any).bootstrap) {
+      const modalInstance = new (window as any).bootstrap.Modal(modal);
+      modalInstance.show();
+    }
   }
 
   resetSearch(): void {
@@ -553,24 +828,87 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
 
   copyAIAnalysis(): void {
     if (this.currentSearchResponse?.aiAnalysis) {
-      navigator.clipboard.writeText(this.currentSearchResponse.aiAnalysis);
-      console.log('Analysis copied to clipboard');
+      // Copy the raw markdown text (clean version)
+      const analysisText = this.currentSearchResponse.aiAnalysis;
+
+      navigator.clipboard.writeText(analysisText).then(() => {
+        // Show success message
+        this.showNotification('Analysis copied to clipboard!', 'success');
+      }).catch((err) => {
+        console.error('Failed to copy text: ', err);
+        this.showNotification('Failed to copy analysis', 'error');
+      });
+    } else {
+      this.showNotification('No analysis available to copy', 'warning');
     }
   }
 
   exportAIAnalysis(): void {
-    console.log('Exporting AI analysis as PDF');
-    // Implementation for PDF export
+    if (!this.currentSearchResponse?.aiAnalysis) {
+      this.showNotification('No analysis available to export', 'warning');
+      return;
+    }
+
+    try {
+      this.generatePDFDocument();
+      this.showNotification('Analysis exported successfully!', 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      this.showNotification('Failed to export analysis', 'error');
+    }
   }
 
   saveAnalysis(): void {
-    console.log('Saving analysis');
-    // Implementation for saving analysis
+    if (!this.currentSearchResponse?.aiAnalysis) {
+      this.showNotification('No analysis available to save', 'warning');
+      return;
+    }
+
+    try {
+      // Create analysis data object
+      const analysisData = {
+        id: Date.now().toString(),
+        query: this.currentSearchResponse.searchQuery,
+        analysis: this.currentSearchResponse.aiAnalysis,
+        results: this.searchResults.length,
+        timestamp: new Date().toISOString(),
+        searchType: this.currentSearchResponse.searchType,
+        jurisdiction: this.currentSearchResponse.jurisdiction
+      };
+
+      // Save to localStorage
+      const savedAnalyses = JSON.parse(localStorage.getItem('savedLegalAnalyses') || '[]');
+      savedAnalyses.push(analysisData);
+
+      // Keep only the last 50 analyses
+      const recentAnalyses = savedAnalyses.slice(-50);
+      localStorage.setItem('savedLegalAnalyses', JSON.stringify(recentAnalyses));
+
+      // Refresh the saved analyses list
+      this.loadSavedAnalyses();
+
+      this.showNotification('Analysis saved successfully!', 'success');
+    } catch (error) {
+      console.error('Save failed:', error);
+      this.showNotification('Failed to save analysis', 'error');
+    }
   }
 
   regenerateAnalysis(): void {
-    if (this.searchQuery) {
+    if (!this.searchQuery || this.searchQuery.trim() === '') {
+      this.showNotification('No search query available to regenerate', 'warning');
+      return;
+    }
+
+    try {
+      // Show loading state
+      this.showNotification('Regenerating analysis...', 'info');
+
+      // Perform the search again
       this.performSearch();
+    } catch (error) {
+      console.error('Regeneration failed:', error);
+      this.showNotification('Failed to regenerate analysis', 'error');
     }
   }
 
@@ -607,8 +945,21 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
   }
 
   showSearchGuide(): void {
-    console.log('Showing search guide');
-    // Implementation for search guide
+    // Open the search guide modal
+    const modal = document.getElementById('searchGuideModal');
+    if (modal && (window as any).bootstrap) {
+      const modalInstance = new (window as any).bootstrap.Modal(modal);
+      modalInstance.show();
+    }
+  }
+
+  showExampleQueries(): void {
+    // Open the examples modal
+    const modal = document.getElementById('examplesModal');
+    if (modal && (window as any).bootstrap) {
+      const modalInstance = new (window as any).bootstrap.Modal(modal);
+      modalInstance.show();
+    }
   }
 
   loadExampleSearches(): void {
@@ -620,5 +971,153 @@ export class LegalResearchComponent implements OnInit, OnDestroy {
       'employment discrimination claims',
       'family law custody factors'
     ];
+  }
+
+  // Modal cleanup methods
+  closeAIAnalysisModal(): void {
+    // Close the modal programmatically
+    const modalElement = document.getElementById('aiAnalysisModal');
+    if (modalElement) {
+      // Remove modal classes and attributes
+      modalElement.classList.remove('show');
+      modalElement.style.display = 'none';
+      modalElement.setAttribute('aria-hidden', 'true');
+      modalElement.removeAttribute('aria-modal');
+      modalElement.removeAttribute('role');
+
+      // Remove modal-open class from body
+      document.body.classList.remove('modal-open');
+
+      // Clean up modal backdrop
+      this.cleanupModalBackdrops();
+    }
+  }
+
+  cleanupModalBackdrops(): void {
+    // Remove any remaining modal backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+      backdrop.remove();
+    });
+
+    // Reset body styles
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
+    // Remove modal-open class if still present
+    document.body.classList.remove('modal-open');
+  }
+
+  // Event handler for modal hidden event
+  onModalHidden(): void {
+    this.cleanupModalBackdrops();
+  }
+
+  // Methods for saved analyses
+  loadSavedAnalysis(savedAnalysis: any): void {
+    // Create a mock response to display the saved analysis
+    const mockResponse: LegalSearchResponse = {
+      success: true,
+      results: [],
+      totalResults: savedAnalysis.results,
+      searchQuery: savedAnalysis.query,
+      searchType: savedAnalysis.searchType,
+      jurisdiction: savedAnalysis.jurisdiction,
+      aiAnalysis: savedAnalysis.analysis,
+      hasAIAnalysis: true
+    };
+
+    this.currentSearchResponse = mockResponse;
+    this.searchQuery = savedAnalysis.query;
+
+    // Show the analysis modal
+    setTimeout(() => {
+      const modal = document.getElementById('aiAnalysisModal');
+      if (modal && (window as any).bootstrap) {
+        const modalInstance = new (window as any).bootstrap.Modal(modal);
+        modalInstance.show();
+      }
+    }, 100);
+
+    this.showNotification('Saved analysis loaded successfully!', 'success');
+  }
+
+  rerunSavedAnalysis(savedAnalysis: any): void {
+    this.searchQuery = savedAnalysis.query;
+    this.searchForm.patchValue({
+      query: savedAnalysis.query,
+      searchType: savedAnalysis.searchType || 'all',
+      jurisdiction: savedAnalysis.jurisdiction || 'massachusetts'
+    });
+    this.performSearch();
+    this.showNotification('Re-running analysis...', 'info');
+  }
+
+  deleteSavedAnalysis(analysisId: string): void {
+    try {
+      const savedAnalyses = JSON.parse(localStorage.getItem('savedLegalAnalyses') || '[]');
+      const filteredAnalyses = savedAnalyses.filter((analysis: any) => analysis.id !== analysisId);
+      localStorage.setItem('savedLegalAnalyses', JSON.stringify(filteredAnalyses));
+
+      // Refresh the saved analyses list
+      this.loadSavedAnalyses();
+
+      this.showNotification('Analysis deleted successfully!', 'success');
+    } catch (error) {
+      console.error('Error deleting saved analysis:', error);
+      this.showNotification('Failed to delete analysis', 'error');
+    }
+  }
+
+  // Save search history to localStorage as fallback
+  private saveSearchToLocalStorage(searchRequest: any, response: LegalSearchResponse): void {
+    try {
+      const historyItem = {
+        id: Date.now(),
+        searchQuery: searchRequest.query,
+        queryType: searchRequest.searchType || 'all',
+        searchFilters: JSON.stringify({
+          jurisdiction: searchRequest.jurisdiction,
+          courtLevels: searchRequest.courtLevels,
+          practiceAreas: searchRequest.practiceAreas,
+          documentTypes: searchRequest.documentTypes,
+          startDate: searchRequest.startDate,
+          endDate: searchRequest.endDate
+        }),
+        resultsCount: response.totalResults,
+        executionTimeMs: response.executionTimeMs || 0,
+        searchedAt: new Date().toISOString(),
+        isSaved: false,
+        jurisdiction: searchRequest.jurisdiction || 'massachusetts'
+      };
+
+      // Get existing history from localStorage
+      const existingHistory = JSON.parse(localStorage.getItem('legalSearchHistory') || '[]');
+
+      // Add new item to the beginning
+      existingHistory.unshift(historyItem);
+
+      // Keep only the last 50 searches
+      const recentHistory = existingHistory.slice(0, 50);
+
+      // Save back to localStorage
+      localStorage.setItem('legalSearchHistory', JSON.stringify(recentHistory));
+    } catch (error) {
+      console.error('Error saving search history to localStorage:', error);
+    }
+  }
+
+  // Map frontend search type values to backend enum values
+  private mapSearchTypeToBackend(frontendType: string): string {
+    const mapping: { [key: string]: string } = {
+      'all': 'ALL',
+      'statutes': 'STATUTES',
+      'case_law': 'CASE_LAW',
+      'rules': 'RULES',
+      'regulations': 'REGULATIONS',
+      'guidelines': 'GUIDELINES'
+    };
+
+    return mapping[frontendType] || 'ALL';
   }
 }

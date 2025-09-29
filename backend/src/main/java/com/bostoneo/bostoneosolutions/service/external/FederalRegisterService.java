@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -32,10 +34,25 @@ public class FederalRegisterService {
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             log.info("Calling Federal Register API: {}", url);
+            log.debug("Federal Register query: {}, type: {}", query, documentType);
+
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
-                return parseDocumentsResponse(response.getBody()).getResults();
+                // Log raw response to see what Federal Register is actually returning
+                String responseBody = response.getBody();
+
+
+
+                FrSearchResult searchResult = parseDocumentsResponse(responseBody);
+                List<FrDocument> results = searchResult.getResults();
+                log.info("Federal Register API returned {} documents for query: {}", results.size(), query);
+
+                if (results.isEmpty()) {
+                    log.warn("Federal Register API returned 0 documents for query: {}", query);
+                }
+
+                return results;
             } else {
                 log.error("Federal Register API returned error: {}", response.getStatusCode());
                 return new ArrayList<>();
@@ -111,34 +128,94 @@ public class FederalRegisterService {
     private String buildSearchUrl(String query, String documentType, LocalDate fromDate, LocalDate toDate) {
         StringBuilder url = new StringBuilder(apiProperties.getFederalRegister().getBaseUrl())
                 .append("documents.json")
-                .append("?per_page=20")
+                .append("?per_page=100")
                 .append("&order=relevance");
 
         if (StringUtils.hasText(query)) {
-            url.append("&conditions[term]=").append(query);
+            try {
+                // Normalize query by trimming and collapsing multiple spaces
+                String normalizedQuery = query.trim().replaceAll("\\s+", " ");
+                log.debug("Normalized query from '{}' to '{}'", query, normalizedQuery);
+                url.append("&conditions%5Bterm%5D=").append(URLEncoder.encode(normalizedQuery, StandardCharsets.UTF_8.toString()));
+            } catch (Exception e) {
+                log.warn("Failed to encode query parameter: {}", query);
+                String normalizedQuery = query.trim().replaceAll("\\s+", " ");
+                url.append("&conditions%5Bterm%5D=").append(normalizedQuery);
+            }
         }
 
         if (StringUtils.hasText(documentType)) {
-            url.append("&conditions[type][]=").append(documentType);
+            try {
+                url.append("&conditions%5Btype%5D%5B%5D=").append(URLEncoder.encode(documentType, StandardCharsets.UTF_8.toString()));
+            } catch (Exception e) {
+                log.warn("Failed to encode document type parameter: {}", documentType);
+                url.append("&conditions%5Btype%5D%5B%5D=").append(documentType);
+            }
         }
 
         if (fromDate != null) {
-            url.append("&conditions[publication_date][gte]=").append(fromDate.toString());
+            url.append("&conditions%5Bpublication_date%5D%5Bgte%5D=").append(fromDate.toString());
         }
 
         if (toDate != null) {
-            url.append("&conditions[publication_date][lte]=").append(toDate.toString());
+            url.append("&conditions%5Bpublication_date%5D%5Blte%5D=").append(toDate.toString());
+        }
+
+        // Add agency filters based on query content
+        if (query != null) {
+            String lowerQuery = query.toLowerCase();
+
+            if (lowerQuery.contains("epa") || lowerQuery.contains("environmental") ||
+                lowerQuery.contains("clean air") || lowerQuery.contains("clean water")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=environmental-protection-agency");
+                log.info("Added EPA agency filter to Federal Register search for query: {}", query);
+            }
+
+            if (lowerQuery.contains("sec ") || lowerQuery.contains("securities") || lowerQuery.contains("exchange commission")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=securities-and-exchange-commission");
+                log.debug("Added SEC agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("ftc") || lowerQuery.contains("federal trade")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=federal-trade-commission");
+                log.debug("Added FTC agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("dol") || lowerQuery.contains("labor") || lowerQuery.contains("department of labor")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=labor-department");
+                log.debug("Added Department of Labor agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("irs") || lowerQuery.contains("internal revenue") || lowerQuery.contains("treasury")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=internal-revenue-service");
+                log.debug("Added IRS/Treasury agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("osha") || lowerQuery.contains("occupational safety")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=occupational-safety-and-health-administration");
+                log.debug("Added OSHA agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("fda") || lowerQuery.contains("food and drug")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=food-and-drug-administration");
+                log.debug("Added FDA agency filter to Federal Register search");
+            }
+
+            if (lowerQuery.contains("cfpb") || lowerQuery.contains("consumer financial")) {
+                url.append("&conditions%5Bagencies%5D%5B%5D=consumer-financial-protection-bureau");
+                log.debug("Added CFPB agency filter to Federal Register search");
+            }
         }
 
         // Add fields to return (removed invalid federal_register_url field)
-        url.append("&fields[]=title")
-           .append("&fields[]=abstract")
-           .append("&fields[]=document_number")
-           .append("&fields[]=html_url")
-           .append("&fields[]=pdf_url")
-           .append("&fields[]=publication_date")
-           .append("&fields[]=type")
-           .append("&fields[]=agencies");
+        url.append("&fields%5B%5D=title")
+           .append("&fields%5B%5D=abstract")
+           .append("&fields%5B%5D=document_number")
+           .append("&fields%5B%5D=html_url")
+           .append("&fields%5B%5D=pdf_url")
+           .append("&fields%5B%5D=publication_date")
+           .append("&fields%5B%5D=type")
+           .append("&fields%5B%5D=agencies");
 
         return url.toString();
     }
@@ -187,7 +264,13 @@ public class FederalRegisterService {
                     }
 
                     document.setSource("Federal Register");
-                    document.setSummary(truncateText(result.path("abstract").asText(), 300));
+
+                    // Store the full abstract for AI analysis
+                    String fullAbstract = result.path("abstract").asText();
+                    document.setAbstractText(fullAbstract);
+
+                    // Also keep truncated summary for display
+                    document.setSummary(truncateText(fullAbstract, 300));
                     document.setDocumentType(result.path("type").asText());
 
                     // Extract agencies

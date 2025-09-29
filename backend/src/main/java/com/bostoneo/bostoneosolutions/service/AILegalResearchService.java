@@ -6,8 +6,8 @@ import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.bostoneo.bostoneosolutions.service.external.CourtListenerService;
 import com.bostoneo.bostoneosolutions.service.external.FederalRegisterService;
+import com.bostoneo.bostoneosolutions.service.external.MassachusettsLegalService;
 import com.bostoneo.bostoneosolutions.dto.FrDocument;
-import com.bostoneo.bostoneosolutions.service.search.BooleanSearchParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AILegalResearchService {
 
-    private final AIMAStatuteRepository statuteRepository;
-    private final AIMACourtRuleRepository courtRuleRepository;
-    private final AIMASentencingGuidelineRepository sentencingGuidelineRepository;
     private final AIResearchCacheRepository cacheRepository;
     private final SearchHistoryRepository searchHistoryRepository;
     private final ResearchSessionRepository sessionRepository;
@@ -41,17 +38,21 @@ public class AILegalResearchService {
     private final ClaudeSonnet4Service claudeService;
     private final CourtListenerService courtListenerService;
     private final FederalRegisterService federalRegisterService;
-    private final BooleanSearchParser booleanSearchParser;
+    private final MassachusettsLegalService massachusettsLegalService;
+    private final ImmigrationKnowledgeService immigrationKnowledgeService;
+    private final MassachusettsCivilProcedureService massachusettsCivilProcedureService;
     private final ObjectMapper objectMapper;
 
     public Map<String, Object> performSearch(Map<String, Object> searchRequest) {
-        log.info("Performing legal research search: {}", searchRequest);
+        log.info("Legal research search request: {}", searchRequest);
 
         String query = (String) searchRequest.get("query");
         String searchType = (String) searchRequest.getOrDefault("searchType", "all");
         String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "massachusetts");
         Long userId = searchRequest.containsKey("userId") ? Long.valueOf(searchRequest.get("userId").toString()) : null;
         String sessionId = (String) searchRequest.get("sessionId");
+
+        log.info("Parsed search parameters - query: '{}', searchType: '{}', jurisdiction: '{}'", query, searchType, jurisdiction);
 
         long startTime = System.currentTimeMillis();
 
@@ -112,50 +113,65 @@ public class AILegalResearchService {
     }
 
     private Map<String, Object> executeSearch(String query, String searchType, String jurisdiction) {
+        log.info("Executing search with query: '{}', searchType: '{}', jurisdiction: '{}'", query, searchType, jurisdiction);
         Map<String, Object> results = new HashMap<>();
         List<Map<String, Object>> allResults = new ArrayList<>();
         int totalCount = 0;
 
         try {
-            // Search Massachusetts Statutes
-            if ("all".equals(searchType) || "statutes".equals(searchType)) {
-                List<AIMAStatute> statutes = searchStatutes(query);
-                List<Map<String, Object>> statuteResults = statutes.stream()
-                    .map(this::convertStatuteToResult)
-                    .collect(Collectors.toList());
-                allResults.addAll(statuteResults);
-                totalCount += statutes.size();
-            }
+            // Check if this is an immigration query first (always federal)
+            boolean isImmigrationQuery = isImmigrationQuery(query);
 
-            // Search Court Rules
-            if ("all".equals(searchType) || "regulations".equals(searchType) || "rules".equals(searchType)) {
-                List<AIMACourtRule> courtRules = searchCourtRules(query);
-                List<Map<String, Object>> ruleResults = courtRules.stream()
-                    .map(this::convertCourtRuleToResult)
-                    .collect(Collectors.toList());
-                allResults.addAll(ruleResults);
-                totalCount += courtRules.size();
-            }
+            if (isImmigrationQuery) {
+                // For immigration queries, skip state sources and focus on federal
+                log.info("Detected IMMIGRATION QUERY - routing to federal sources only");
 
-            // Search Sentencing Guidelines
-            if ("all".equals(searchType) || "guidelines".equals(searchType)) {
-                List<AIMASentencingGuideline> guidelines = searchSentencingGuidelines(query);
-                List<Map<String, Object>> guidelineResults = guidelines.stream()
-                    .map(this::convertSentencingGuidelineToResult)
-                    .collect(Collectors.toList());
-                allResults.addAll(guidelineResults);
-                totalCount += guidelines.size();
+                // Add structured immigration knowledge
+                Map<String, Object> immigrationGuidance = immigrationKnowledgeService.getStructuredImmigrationGuidance(query);
+                results.put("structuredImmigrationData", immigrationGuidance);
+                log.info("Added structured immigration guidance to results");
+            } else if (isMassachusettsCivilProcedureQuery(query)) {
+                log.info("Detected MASSACHUSETTS CIVIL PROCEDURE QUERY - routing to state sources");
+
+                // Add structured Massachusetts civil procedure knowledge
+                Map<String, Object> civilProcedureGuidance = massachusettsCivilProcedureService.getStructuredCivilProcedureGuidance(query);
+                results.put("structuredMassachusettsCivilProcedureData", civilProcedureGuidance);
+                log.info("Added structured Massachusetts civil procedure guidance to results");
+
+            } else {
+                // Check if this is a Massachusetts state law query
+                boolean isStateLawQuery = isStateLawQuery(query);
+
+                if (isStateLawQuery) {
+                    // For Massachusetts queries, fetch directly from official sources
+                    log.info("Detected Massachusetts state law query - fetching from official sources");
+                    List<Map<String, Object>> massResults = massachusettsLegalService.searchMassachusettsLaw(query);
+                    allResults.addAll(massResults);
+                    totalCount += massResults.size();
+                    log.info("Massachusetts Legal Service returned {} results", massResults.size());
+                }
             }
 
             // Search External APIs (parallel execution for better performance)
             List<CompletableFuture<List<Map<String, Object>>>> externalSearches = new ArrayList<>();
 
             // Court Listener API - search opinions and dockets
-            if ("all".equals(searchType) || "cases".equals(searchType) || "opinions".equals(searchType)) {
+            if ("all".equalsIgnoreCase(searchType) || "cases".equalsIgnoreCase(searchType) || "opinions".equalsIgnoreCase(searchType)) {
                 externalSearches.add(CompletableFuture.supplyAsync(() -> {
                     try {
-                        List<Map<String, Object>> opinions = courtListenerService.searchOpinions(query, jurisdiction, null, null);
-                        List<Map<String, Object>> dockets = courtListenerService.searchDockets(query, jurisdiction);
+                        // For immigration queries, enhance the search and set appropriate jurisdiction
+                        String searchQuery = query;
+                        String searchJurisdiction = jurisdiction;
+                        if (isImmigrationQuery(query)) {
+                            // Immigration cases are federal - search federal courts
+                            searchJurisdiction = "federal";
+                            // Enhance the query for better immigration case results
+                            searchQuery = enhanceImmigrationQueryForCourtListener(query);
+                            log.info("Enhanced Court Listener immigration query from '{}' to '{}'", query, searchQuery);
+                        }
+
+                        List<Map<String, Object>> opinions = courtListenerService.searchOpinions(searchQuery, searchJurisdiction, null, null);
+                        List<Map<String, Object>> dockets = courtListenerService.searchDockets(searchQuery, searchJurisdiction);
                         List<Map<String, Object>> combined = new ArrayList<>(opinions);
                         combined.addAll(dockets);
                         return combined;
@@ -167,25 +183,81 @@ public class AILegalResearchService {
             }
 
 
-            // Federal Register API - search regulations and rules
-            if ("all".equals(searchType) || "regulations".equals(searchType) || "rules".equals(searchType)) {
+            // Federal Register API - only use for federal regulatory queries
+            boolean useFederalRegister = shouldUseFederalRegister(query, searchType);
+            if (useFederalRegister) {
+                log.info("Starting Federal Register search for searchType: {}, query: {} (intelligent classification: YES)", searchType, query);
                 externalSearches.add(CompletableFuture.supplyAsync(() -> {
                     try {
-                        List<FrDocument> rules = federalRegisterService.searchRules(query, null, null);
-                        List<FrDocument> proposedRules = federalRegisterService.searchProposedRules(query, null, null);
-                        List<FrDocument> notices = federalRegisterService.searchNotices(query, null, null);
+                        // Enhance query for immigration-specific searches
+                        String enhancedQuery = query;
+                        if (isImmigrationQuery(query)) {
+                            // For immigration queries, make the search more specific
+                            enhancedQuery = enhanceImmigrationQuery(query);
+                            log.info("Enhanced immigration query from '{}' to '{}'", query, enhancedQuery);
+                        }
+
+                        log.info("Executing Federal Register API calls for query: {}", enhancedQuery);
+                        List<FrDocument> rules = federalRegisterService.searchRules(enhancedQuery, null, null);
+                        log.info("Federal Register rules search returned {} results", rules.size());
+                        if (!rules.isEmpty()) {
+                            log.error("🟢🟢🟢 BEFORE CONVERSION - First rule title: {}", rules.get(0).getTitle());
+                        }
+
+                        List<FrDocument> proposedRules = federalRegisterService.searchProposedRules(enhancedQuery, null, null);
+                        log.info("Federal Register proposed rules search returned {} results", proposedRules.size());
+                        if (!proposedRules.isEmpty()) {
+                            log.error("🟢🟢🟢 BEFORE CONVERSION - First proposed rule title: {}", proposedRules.get(0).getTitle());
+                        }
+
+                        List<FrDocument> notices = federalRegisterService.searchNotices(enhancedQuery, null, null);
+                        log.info("Federal Register notices search returned {} results", notices.size());
+                        if (!notices.isEmpty()) {
+                            log.error("🟢🟢🟢 BEFORE CONVERSION - First notice title: {}", notices.get(0).getTitle());
+                        }
 
                         // Convert FrDocument to Map<String, Object> for compatibility
                         List<Map<String, Object>> combined = new ArrayList<>();
-                        combined.addAll(convertFrDocumentsToMaps(rules));
-                        combined.addAll(convertFrDocumentsToMaps(proposedRules));
-                        combined.addAll(convertFrDocumentsToMaps(notices));
+                        List<Map<String, Object>> rulesConverted = convertFrDocumentsToMaps(rules);
+                        if (!rulesConverted.isEmpty()) {
+                            log.error("🟡🟡🟡 AFTER CONVERSION - First rule title: {}", rulesConverted.get(0).get("title"));
+                        }
+                        combined.addAll(rulesConverted);
+
+                        List<Map<String, Object>> proposedRulesConverted = convertFrDocumentsToMaps(proposedRules);
+                        if (!proposedRulesConverted.isEmpty()) {
+                            log.error("🟡🟡🟡 AFTER CONVERSION - First proposed rule title: {}", proposedRulesConverted.get(0).get("title"));
+                        }
+                        combined.addAll(proposedRulesConverted);
+
+                        List<Map<String, Object>> noticesConverted = convertFrDocumentsToMaps(notices);
+                        if (!noticesConverted.isEmpty()) {
+                            log.error("🟡🟡🟡 AFTER CONVERSION - First notice title: {}", noticesConverted.get(0).get("title"));
+                        }
+                        combined.addAll(noticesConverted);
+
+                        // Filter results for relevance if this is an immigration query
+                        if (isImmigrationQuery(query)) {
+                            int originalSize = combined.size();
+                            // Remove filtering - it's too restrictive and removes valid results
+                            // Instead, trust the enhanced query to return relevant results
+                            log.info("Federal Register returned {} results for immigration query (no additional filtering)", combined.size());
+                        }
+
+                        log.info("Federal Register total combined results: {}", combined.size());
+                        if (!combined.isEmpty()) {
+                            log.error("🟣🟣🟣 COMBINED - First result title: {}", combined.get(0).get("title"));
+                            log.error("🟣🟣🟣 COMBINED - First result source: {}", combined.get(0).get("source"));
+                        }
                         return combined;
                     } catch (Exception e) {
-                        log.warn("Error searching Federal Register: ", e);
+                        log.error("Error searching Federal Register: ", e);
                         return Collections.emptyList();
                     }
                 }));
+                log.info("Federal Register CompletableFuture added to externalSearches");
+            } else {
+                log.info("Federal Register search skipped for searchType: {}, query: {} (intelligent classification: NO)", searchType, query);
             }
 
             // Wait for all external searches to complete and combine results
@@ -201,17 +273,193 @@ public class AILegalResearchService {
                         allResults.addAll(externalResults);
                         totalCount += externalResults.size();
                     }
+
                 } catch (Exception e) {
                     log.warn("Error waiting for external API results: ", e);
                 }
             }
 
+            // === AUTONOMOUS WEB SEARCH ENHANCEMENT ===
+            // Check if we need to enhance results with autonomous web search
+            log.info("Checking if autonomous web search is needed for query: {}", query);
+            try {
+                CompletableFuture<List<Map<String, Object>>> webEnhancedResults =
+                    claudeService.enhanceWithWebSearch(query, jurisdiction, allResults);
+
+                allResults = webEnhancedResults.get(); // Wait for web search completion
+                totalCount = allResults.size(); // Update count after web enhancement
+
+                log.info("Web search enhancement completed. Final result count: {}", totalCount);
+            } catch (Exception e) {
+                log.warn("Web search enhancement failed, continuing with existing results: ", e);
+            }
+
             // Sort results by relevance (this is simplified - could be more sophisticated)
+
+            // Filter out completely irrelevant results before sorting
+            allResults = allResults.stream()
+                .filter(result -> {
+                    String title = (String) result.get("title");
+                    String summary = (String) result.get("summary");
+                    String source = (String) result.get("source");
+                    String content = (title + " " + (summary != null ? summary : "")).toLowerCase();
+                    String queryLower = query.toLowerCase();
+
+                    // For Federal Register results, be more lenient with filtering
+                    if ("Federal Register".equals(source)) {
+                        // For immigration queries, only filter out obviously irrelevant content
+                        if (isImmigrationQuery(query)) {
+                            // Filter out clearly non-immigration content that damages credibility
+                            if (content.contains("viticultural") || content.contains("wine") ||
+                                content.contains("food safety") || content.contains("pharmaceutical") ||
+                                content.contains("securities and exchange") || content.contains("depository trust") ||
+                                content.contains("marine mammals") || content.contains("environmental protection") ||
+                                title.contains("AVA") || title.contains("Wine") || title.contains("SEC") ||
+                                title.contains("Treasury Department") || title.contains("Commerce Department") ||
+                                title.contains("Defense Department")) {
+                                log.debug("Filtering out non-immigration Federal Register result: {}", title);
+                                return false;
+                            }
+                            // For immigration, also require some immigration-related terms
+                            if (content.contains("immigration") || content.contains("bia") ||
+                                content.contains("eoir") || content.contains("uscis") ||
+                                content.contains("deportation") || content.contains("removal") ||
+                                content.contains("asylum") || content.contains("visa") ||
+                                content.contains("8 cfr") || content.contains("homeland security") ||
+                                content.contains("department of justice")) {
+                                return true;
+                            }
+                            // If no immigration keywords, filter out
+                            log.debug("Filtering out Federal Register result with no immigration keywords: {}", title);
+                            return false;
+                        }
+
+                        // Check for agency-specific terms with expanded matching
+                        if (queryLower.contains("epa") || queryLower.contains("environmental")) {
+                            if (content.contains("environmental protection agency") ||
+                                content.contains("epa") ||
+                                content.contains("clean air") ||
+                                content.contains("clean water") ||
+                                content.contains("environmental")) {
+                                return true;
+                            }
+                        }
+
+                        if (queryLower.contains("sec") || queryLower.contains("securities")) {
+                            if (content.contains("securities and exchange commission") ||
+                                content.contains("sec") ||
+                                content.contains("securities") ||
+                                content.contains("exchange commission")) {
+                                return true;
+                            }
+                        }
+
+                        // For other Federal Register queries, since we've already filtered at the API level
+                        // with agency filters and search terms, we should trust those results
+                        // Only filter out completely unrelated documents
+                        String[] significantTerms = queryLower.split("\\s+");
+                        int matchCount = 0;
+                        int totalSignificantTerms = 0;
+
+                        for (String term : significantTerms) {
+                            // Skip common words and very short terms
+                            if (term.length() > 2 &&
+                                !term.equals("from") && !term.equals("with") && !term.equals("that") &&
+                                !term.equals("the") && !term.equals("and") && !term.equals("for")) {
+                                totalSignificantTerms++;
+                                if (content.contains(term)) {
+                                    matchCount++;
+                                }
+                            }
+                        }
+
+                        // For Federal Register, be very lenient since API already filtered
+                        // Include if ANY significant term matches (since API did the main filtering)
+                        return totalSignificantTerms == 0 || matchCount > 0;
+                    }
+
+                    // For non-Federal Register sources, use standard relevance scoring
+                    double relevanceScore = 0;
+                    for (String term : queryLower.split("\\s+")) {
+                        if (content.contains(term)) {
+                            relevanceScore++;
+                        }
+                    }
+
+                    // Keep only if at least 30% of query terms match for other sources
+                    return relevanceScore >= (queryLower.split("\\s+").length * 0.3);
+                })
+                .collect(Collectors.toList());
+
             allResults.sort((a, b) -> {
                 String titleA = (String) a.get("title");
                 String titleB = (String) b.get("title");
-                return calculateRelevance(titleA, query).compareTo(calculateRelevance(titleB, query));
+                // Sort by relevance in DESCENDING order (most relevant first)
+                return calculateRelevance(titleB, query).compareTo(calculateRelevance(titleA, query));
             });
+
+
+            // AI Autonomous Research Integration
+            log.info("Starting AI autonomous research for query: {}", query);
+
+            try {
+                // Step 1: Identify knowledge gaps in the current results
+                CompletableFuture<List<String>> knowledgeGapsFuture = claudeService.identifyKnowledgeGaps(query, allResults);
+                List<String> knowledgeGaps = knowledgeGapsFuture.get();
+                log.info("AI identified {} knowledge gaps", knowledgeGaps.size());
+
+                // Step 2: Perform autonomous research if gaps are identified
+                Map<String, Object> autonomousFindings = new HashMap<>();
+                if (!knowledgeGaps.isEmpty()) {
+                    CompletableFuture<Map<String, Object>> autonomousResearchFuture =
+                        claudeService.autonomousLegalResearch(query, jurisdiction, allResults);
+                    autonomousFindings = autonomousResearchFuture.get();
+                    log.info("Autonomous research completed with {} findings", autonomousFindings.size());
+                }
+
+                // Step 3: Synthesize comprehensive analysis
+                CompletableFuture<String> synthesisFuture = claudeService.synthesizeComprehensiveAnalysis(
+                    query, allResults, autonomousFindings);
+                String comprehensiveAnalysis = synthesisFuture.get();
+
+                // Add AI enhancement metadata to results
+                Map<String, Object> aiEnhancement = new HashMap<>();
+                aiEnhancement.put("knowledgeGaps", knowledgeGaps);
+                aiEnhancement.put("autonomousFindings", autonomousFindings);
+                aiEnhancement.put("comprehensiveAnalysis", comprehensiveAnalysis);
+                aiEnhancement.put("enhanced", true);
+
+                results.put("aiEnhancement", aiEnhancement);
+                log.info("AI autonomous research integration completed successfully");
+
+            } catch (Exception e) {
+                log.warn("AI autonomous research failed, continuing with basic results: ", e);
+                // Add fallback indicator
+                Map<String, Object> aiEnhancement = new HashMap<>();
+                aiEnhancement.put("enhanced", false);
+                aiEnhancement.put("error", e.getMessage());
+                results.put("aiEnhancement", aiEnhancement);
+            }
+
+            // Debug logging to see what results are being returned
+            log.info("executeSearch complete - Total results: {}", totalCount);
+            log.info("Result breakdown - allResults.size(): {}", allResults.size());
+
+            // Log sources of results
+            Map<String, Long> sourceCount = allResults.stream()
+                .collect(Collectors.groupingBy(
+                    result -> (String) result.getOrDefault("source", "unknown"),
+                    Collectors.counting()
+                ));
+            log.info("Results by source: {}", sourceCount);
+
+            // Log sample Federal Register titles
+            List<String> federalRegisterTitles = allResults.stream()
+                .filter(result -> "Federal Register".equals(result.get("source")))
+                .limit(3)
+                .map(result -> (String) result.get("title"))
+                .collect(Collectors.toList());
+            log.info("Sample Federal Register titles: {}", federalRegisterTitles);
 
             results.put("success", true);
             results.put("results", allResults);
@@ -230,202 +478,37 @@ public class AILegalResearchService {
         return results;
     }
 
-    private List<AIMAStatute> searchStatutes(String query) {
-        // Parse boolean query
-        BooleanSearchParser.ParsedQuery parsedQuery = booleanSearchParser.parseQuery(query);
 
-        Set<Long> seen = new HashSet<>();
-        List<AIMAStatute> results = new ArrayList<>();
-
-        if (parsedQuery.hasAdvancedOperators()) {
-            // Handle boolean search with advanced operators
-            log.info("Processing advanced boolean query: {}", query);
-
-            // Process MUST terms (AND logic)
-            if (!parsedQuery.getMustTerms().isEmpty()) {
-                if (parsedQuery.getMustTerms().size() >= 2) {
-                    String term1 = parsedQuery.getMustTerms().get(0);
-                    String term2 = parsedQuery.getMustTerms().get(1);
-                    List<AIMAStatute> andResults = statuteRepository.findByBothTerms(term1, term2);
-                    andResults.forEach(statute -> {
-                        if (seen.add(statute.getId())) {
-                            results.add(statute);
-                        }
-                    });
-                } else {
-                    // Single must term
-                    String term = parsedQuery.getMustTerms().get(0);
-                    List<AIMAStatute> mustResults = statuteRepository.findByTitleContainingIgnoreCase(term);
-                    mustResults.addAll(statuteRepository.findByStatuteTextContainingIgnoreCase(term));
-                    mustResults.forEach(statute -> {
-                        if (seen.add(statute.getId())) {
-                            results.add(statute);
-                        }
-                    });
-                }
-            }
-
-            // Process SHOULD terms (OR logic)
-            if (!parsedQuery.getShouldTerms().isEmpty()) {
-                if (parsedQuery.getShouldTerms().size() >= 2) {
-                    String term1 = parsedQuery.getShouldTerms().get(0);
-                    String term2 = parsedQuery.getShouldTerms().get(1);
-                    List<AIMAStatute> orResults = statuteRepository.findByEitherTerm(term1, term2);
-                    orResults.forEach(statute -> {
-                        if (seen.add(statute.getId())) {
-                            results.add(statute);
-                        }
-                    });
-                } else {
-                    // Single should term
-                    String term = parsedQuery.getShouldTerms().get(0);
-                    List<AIMAStatute> shouldResults = statuteRepository.findByTitleContainingIgnoreCase(term);
-                    shouldResults.addAll(statuteRepository.findByStatuteTextContainingIgnoreCase(term));
-                    shouldResults.forEach(statute -> {
-                        if (seen.add(statute.getId())) {
-                            results.add(statute);
-                        }
-                    });
-                }
-            }
-
-            // Process MUST_NOT terms (NOT logic)
-            if (!parsedQuery.getMustNotTerms().isEmpty() && !parsedQuery.getMustTerms().isEmpty()) {
-                String includeTerm = parsedQuery.getMustTerms().get(0);
-                String excludeTerm = parsedQuery.getMustNotTerms().get(0);
-                List<AIMAStatute> notResults = statuteRepository.findWithTermButNotAnother(includeTerm, excludeTerm);
-                notResults.forEach(statute -> {
-                    if (seen.add(statute.getId())) {
-                        results.add(statute);
-                    }
-                });
-            }
-
-        } else {
-            // Simple search fallback
-            List<AIMAStatute> titleMatches = statuteRepository.findByTitleContainingIgnoreCase(query);
-            List<AIMAStatute> textMatches = statuteRepository.findByStatuteTextContainingIgnoreCase(query);
-
-            titleMatches.forEach(statute -> {
-                if (seen.add(statute.getId())) {
-                    results.add(statute);
-                }
-            });
-
-            textMatches.forEach(statute -> {
-                if (seen.add(statute.getId())) {
-                    results.add(statute);
-                }
-            });
-        }
-
-        return results.stream().limit(10).collect(Collectors.toList());
-    }
-
-    private List<AIMACourtRule> searchCourtRules(String query) {
-        // Parse boolean query
-        BooleanSearchParser.ParsedQuery parsedQuery = booleanSearchParser.parseQuery(query);
-
-        Set<Long> seen = new HashSet<>();
-        List<AIMACourtRule> results = new ArrayList<>();
-
-        if (parsedQuery.hasAdvancedOperators()) {
-            // Handle boolean search with advanced operators
-            log.info("Processing advanced boolean query for court rules: {}", query);
-
-            // Process MUST terms (AND logic)
-            if (!parsedQuery.getMustTerms().isEmpty()) {
-                if (parsedQuery.getMustTerms().size() >= 2) {
-                    String term1 = parsedQuery.getMustTerms().get(0);
-                    String term2 = parsedQuery.getMustTerms().get(1);
-                    List<AIMACourtRule> andResults = courtRuleRepository.findByBothTerms(term1, term2);
-                    andResults.forEach(rule -> {
-                        if (seen.add(rule.getId())) {
-                            results.add(rule);
-                        }
-                    });
-                } else {
-                    // Single must term
-                    String term = parsedQuery.getMustTerms().get(0);
-                    List<AIMACourtRule> mustResults = courtRuleRepository.findByRuleTitleContainingIgnoreCase(term);
-                    mustResults.addAll(courtRuleRepository.findByRuleTextContainingIgnoreCase(term));
-                    mustResults.forEach(rule -> {
-                        if (seen.add(rule.getId())) {
-                            results.add(rule);
-                        }
-                    });
-                }
-            }
-
-            // Process SHOULD terms (OR logic)
-            if (!parsedQuery.getShouldTerms().isEmpty()) {
-                if (parsedQuery.getShouldTerms().size() >= 2) {
-                    String term1 = parsedQuery.getShouldTerms().get(0);
-                    String term2 = parsedQuery.getShouldTerms().get(1);
-                    List<AIMACourtRule> orResults = courtRuleRepository.findByEitherTerm(term1, term2);
-                    orResults.forEach(rule -> {
-                        if (seen.add(rule.getId())) {
-                            results.add(rule);
-                        }
-                    });
-                } else {
-                    // Single should term
-                    String term = parsedQuery.getShouldTerms().get(0);
-                    List<AIMACourtRule> shouldResults = courtRuleRepository.findByRuleTitleContainingIgnoreCase(term);
-                    shouldResults.addAll(courtRuleRepository.findByRuleTextContainingIgnoreCase(term));
-                    shouldResults.forEach(rule -> {
-                        if (seen.add(rule.getId())) {
-                            results.add(rule);
-                        }
-                    });
-                }
-            }
-
-            // Process MUST_NOT terms (NOT logic)
-            if (!parsedQuery.getMustNotTerms().isEmpty() && !parsedQuery.getMustTerms().isEmpty()) {
-                String includeTerm = parsedQuery.getMustTerms().get(0);
-                String excludeTerm = parsedQuery.getMustNotTerms().get(0);
-                List<AIMACourtRule> notResults = courtRuleRepository.findWithTermButNotAnother(includeTerm, excludeTerm);
-                notResults.forEach(rule -> {
-                    if (seen.add(rule.getId())) {
-                        results.add(rule);
-                    }
-                });
-            }
-
-        } else {
-            // Simple search fallback
-            List<AIMACourtRule> titleMatches = courtRuleRepository.findByRuleTitleContainingIgnoreCase(query);
-            List<AIMACourtRule> textMatches = courtRuleRepository.findByRuleTextContainingIgnoreCase(query);
-
-            titleMatches.forEach(rule -> {
-                if (seen.add(rule.getId())) {
-                    results.add(rule);
-                }
-            });
-
-            textMatches.forEach(rule -> {
-                if (seen.add(rule.getId())) {
-                    results.add(rule);
-                }
-            });
-        }
-
-        return results.stream().limit(10).collect(Collectors.toList());
-    }
-
-    private List<AIMASentencingGuideline> searchSentencingGuidelines(String query) {
-        // Simplified search for sentencing guidelines
-        return sentencingGuidelineRepository.findAll().stream()
-            .filter(guideline ->
-                guideline.getOffenseDescription().toLowerCase().contains(query.toLowerCase()) ||
-                (guideline.getCategory() != null && guideline.getCategory().toLowerCase().contains(query.toLowerCase())) ||
-                (guideline.getStatutoryCitation() != null && guideline.getStatutoryCitation().toLowerCase().contains(query.toLowerCase())))
-            .limit(10)
-            .collect(Collectors.toList());
-    }
 
     private CompletableFuture<String> generateAIAnalysis(String query, Map<String, Object> searchResults, QueryType queryType) {
+        // Debug logging for AI input
+        log.info("generateAIAnalysis called with query: '{}'", query);
+        log.info("searchResults totalResults: {}", searchResults.get("totalResults"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> results = (List<Map<String, Object>>) searchResults.get("results");
+        if (results != null) {
+            log.info("AI is receiving {} results", results.size());
+
+            // Log sources being sent to AI
+            Map<String, Long> aiSourceCount = results.stream()
+                .collect(Collectors.groupingBy(
+                    result -> (String) result.getOrDefault("source", "unknown"),
+                    Collectors.counting()
+                ));
+            log.info("AI input - Results by source: {}", aiSourceCount);
+
+            // Log sample Federal Register titles being sent to AI
+            List<String> aiFederalRegisterTitles = results.stream()
+                .filter(result -> "Federal Register".equals(result.get("source")))
+                .limit(3)
+                .map(result -> (String) result.get("title"))
+                .collect(Collectors.toList());
+            log.info("AI input - Sample Federal Register titles: {}", aiFederalRegisterTitles);
+        } else {
+            log.warn("AI is receiving NULL results list!");
+        }
+
         String prompt = buildAIPrompt(query, searchResults, queryType);
 
         return claudeService.generateCompletion(prompt, false)
@@ -438,30 +521,419 @@ public class AILegalResearchService {
     private String buildAIPrompt(String query, Map<String, Object> searchResults, QueryType queryType) {
         StringBuilder prompt = new StringBuilder();
 
-        prompt.append("You are a legal research assistant specializing in Massachusetts law. ");
-        prompt.append("Analyze the following legal search results and provide insights.\n\n");
-        prompt.append("Search Query: ").append(query).append("\n");
-        prompt.append("Query Type: ").append(queryType).append("\n\n");
+        // Detect query type for specialized prompt
+        QueryCategory category = detectQueryCategory(query);
+
+        // Detect jurisdiction and adjust prompt accordingly
+        boolean isImmigrationQuery = isImmigrationQuery(query);
+        String jurisdiction = isImmigrationQuery ? "Federal/Immigration" :
+                            (isStateLawQuery(query) ? "Massachusetts State" : "General");
+
+        prompt.append("📊 COMPREHENSIVE LEGAL ANALYSIS\n\n");
+        prompt.append("You are an expert legal research assistant specializing in ").append(jurisdiction).append(" law.\n\n");
+
+        prompt.append("**AUTONOMOUS RESEARCH INSTRUCTION**: You have access to both legal database results AND autonomous web research capabilities. Your task is to provide comprehensive legal guidance:\n");
+        prompt.append("- **When database results are sufficient**: Use them as primary sources with confident analysis\n");
+        prompt.append("- **When results include AI Web Research**: This contains autonomous research findings - use this to fill knowledge gaps and provide substantive guidance\n");
+        prompt.append("- **For state law queries (Mass. R. Civ. P., etc.)**: Prioritize web research findings over federal databases\n");
+        prompt.append("- **Never default to generic disclaimers**: Always provide specific, actionable guidance based on available research\n\n");
+
+        prompt.append("**AUTONOMOUS RESEARCH REQUIREMENTS**:\n");
+        prompt.append("- Synthesize information from ALL sources: database results + autonomous web research\n");
+        prompt.append("- Provide specific citations, forms, procedures, and deadlines found through research\n");
+        prompt.append("- Use confident language when research supports findings ('the rule states', 'the procedure requires')\n");
+        prompt.append("- Give practical, step-by-step guidance that attorneys can immediately implement\n");
+        prompt.append("- Include procedural details, filing requirements, and strategic considerations\n");
+        prompt.append("- Minimize disclaimers - focus on substantive legal analysis\n\n");
+
+        if (isImmigrationQuery) {
+            prompt.append("**IMMIGRATION LAW QUERY - USE STRUCTURED DATA**:\n\n");
+
+            // Include structured immigration data if available
+            @SuppressWarnings("unchecked")
+            Map<String, Object> structuredData = (Map<String, Object>) searchResults.get("structuredImmigrationData");
+            if (structuredData != null) {
+                prompt.append("**AUTHORITATIVE IMMIGRATION PROCEDURES PROVIDED:**\n");
+                prompt.append("You have been provided with structured, accurate immigration law data.\n");
+                prompt.append("USE THIS DATA DIRECTLY for forms, deadlines, and procedures.\n\n");
+
+                // Include the actual structured data in the prompt
+                try {
+                    String structuredJson = objectMapper.writeValueAsString(structuredData);
+                    prompt.append("**STRUCTURED DATA:**\n").append(structuredJson).append("\n\n");
+                } catch (Exception e) {
+                    log.warn("Could not serialize structured data", e);
+                }
+            }
+
+            prompt.append("**OUTPUT REQUIREMENTS FOR IMMIGRATION APPEALS:**\n");
+            prompt.append("1. **Quick Answer**: [Form] to [Where] within [Days] - BE SPECIFIC\n");
+            prompt.append("2. **Appeal Lanes**: List all applicable routes (IJ→BIA, USCIS→AAO, etc.)\n");
+            prompt.append("3. **Forms & Deadlines**: Use exact form numbers and specific deadline language from timelineGuidance\n");
+            prompt.append("4. **Filing Procedures**: Where to file, serve whom, fees\n");
+            prompt.append("5. **Standards of Review**: Clear error vs de novo vs substantial evidence\n");
+            prompt.append("6. **Common Pitfalls**: Receipt vs postmark, jurisdictional deadlines, stay issues\n");
+            prompt.append("7. **Citations**: Provide exact 8 CFR and INA sections from structured data\n\n");
+
+            prompt.append("**CRITICAL: DO NOT USE FEDERAL REGISTER SOURCES FOR IMMIGRATION APPEALS**:\n");
+            prompt.append("- COMPLETELY IGNORE all Federal Register documents in your response\n");
+            prompt.append("- Federal Register contains regulatory updates, not core immigration procedures\n");
+            prompt.append("- Use ONLY the structured immigration data provided above\n");
+            prompt.append("- Do NOT include any 'Federal Register Sources' section in your output\n");
+            prompt.append("- Base your response entirely on the authoritative structured procedures\n\n");
+        }
+
+        // Check for Massachusetts civil procedure structured data
+        @SuppressWarnings("unchecked")
+        Map<String, Object> massStructuredData = (Map<String, Object>) searchResults.get("structuredMassachusettsCivilProcedureData");
+        if (massStructuredData != null) {
+            prompt.append("**MASSACHUSETTS CIVIL PROCEDURE QUERY - USE STRUCTURED DATA**:\n\n");
+            prompt.append("You have been provided with structured, accurate Massachusetts civil procedure data.\n");
+            prompt.append("USE THIS DATA DIRECTLY for rules, deadlines, and court procedures.\n\n");
+
+            // Include the actual structured data in the prompt
+            try {
+                String structuredJson = objectMapper.writeValueAsString(massStructuredData);
+                prompt.append("**STRUCTURED MASSACHUSETTS CIVIL PROCEDURE DATA:**\n").append(structuredJson).append("\n\n");
+            } catch (Exception e) {
+                log.warn("Could not serialize Massachusetts civil procedure structured data", e);
+            }
+
+            prompt.append("**OUTPUT REQUIREMENTS FOR MASSACHUSETTS CIVIL PROCEDURE:**\n");
+            prompt.append("1. **Quick Answer**: [Motion/Action] to [Court] within [Deadline] - BE SPECIFIC\n");
+            prompt.append("2. **Rule Citation**: Exact Mass. R. Civ. P. citation\n");
+            prompt.append("3. **Filing Requirements**: Deadlines, court, service requirements\n");
+            prompt.append("4. **Procedural Steps**: Step-by-step filing and compliance guidance\n");
+            prompt.append("5. **Court Selection**: Superior vs District vs other Massachusetts courts\n");
+            prompt.append("6. **Common Pitfalls**: Waiver issues, deadline calculations, local rules\n");
+            prompt.append("7. **Practice Tips**: Practical guidance for Massachusetts practitioners\n\n");
+
+            prompt.append("**CRITICAL: PRIORITIZE MASSACHUSETTS STRUCTURED DATA**:\n");
+            prompt.append("- Use the authoritative Massachusetts civil procedure data provided above\n");
+            prompt.append("- Provide specific Mass. R. Civ. P. citations and court-specific guidance\n");
+            prompt.append("- Include exact deadlines and filing requirements\n");
+            prompt.append("- Base your response on Massachusetts state court practice\n\n");
+        }
+
+        prompt.append("**Legal Query:** ").append(query).append("\n");
+        prompt.append("**Jurisdiction:** ").append(jurisdiction).append("\n\n");
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> results = (List<Map<String, Object>>) searchResults.get("results");
 
-        prompt.append("Search Results Summary:\n");
-        results.stream().limit(5).forEach(result -> {
-            prompt.append("- ").append(result.get("title"))
-                  .append(" (").append(result.get("type")).append(")\n");
-            prompt.append("  Summary: ").append(result.get("summary")).append("\n\n");
-        });
+        // Include detailed document content (increased from 500 to 2000 characters)
+        prompt.append("=== LEGAL DOCUMENTS FOUND ===\n");
+        prompt.append("Total: ").append(results.size()).append(" documents\n\n");
 
-        prompt.append("Please provide:\n");
-        prompt.append("1. Key legal principles identified\n");
-        prompt.append("2. Relevant precedents or authorities\n");
-        prompt.append("3. Practical implications\n");
-        prompt.append("4. Suggested next steps for research\n");
-        prompt.append("5. Any potential legal issues to consider\n\n");
-        prompt.append("Format your response in clear, professional legal language.");
+        // Group results by source for better organization, prioritizing AI Web Research
+        Map<String, List<Map<String, Object>>> resultsBySource = results.stream()
+            .collect(Collectors.groupingBy(r -> (String) r.getOrDefault("source", "Other")));
+
+        // Special handling for AI Web Research results
+        boolean hasWebResearch = resultsBySource.containsKey("AI Web Research");
+        if (hasWebResearch) {
+            prompt.append("🌐 **AUTONOMOUS WEB RESEARCH FINDINGS AVAILABLE** 🌐\n");
+            prompt.append("The system has conducted autonomous web research to supplement database results.\n");
+            prompt.append("These findings should be prioritized for comprehensive legal guidance.\n\n");
+        }
+
+        int resultsIncluded = 0;
+
+        // Process AI Web Research first if available
+        if (hasWebResearch) {
+            List<Map<String, Object>> webResults = resultsBySource.get("AI Web Research");
+            prompt.append("--- 🌐 AI WEB RESEARCH (").append(webResults.size()).append(" comprehensive analysis) ---\n");
+
+            for (Map<String, Object> result : webResults) {
+                prompt.append("\n").append(resultsIncluded + 1).append(". ").append(result.get("title")).append("\n");
+                prompt.append("   Type: AUTONOMOUS LEGAL RESEARCH\n");
+
+                // Include web search findings details
+                @SuppressWarnings("unchecked")
+                Map<String, Object> webFindings = (Map<String, Object>) result.get("webFindings");
+                if (webFindings != null) {
+                    prompt.append("   Research Strategy: ").append(webFindings.get("searchStrategy")).append("\n");
+                    prompt.append("   Confidence Level: ").append(webFindings.get("confidenceLevel")).append("\n");
+
+                    // Include legal authorities found
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> legalAuthorities = (Map<String, Object>) webFindings.get("legalAuthorities");
+                    if (legalAuthorities != null) {
+                        prompt.append("   Legal Authorities Found:\n");
+                        if (legalAuthorities.get("primaryStatutes") != null) {
+                            prompt.append("     - Statutes: ").append(legalAuthorities.get("primaryStatutes")).append("\n");
+                        }
+                        if (legalAuthorities.get("courtRules") != null) {
+                            prompt.append("     - Court Rules: ").append(legalAuthorities.get("courtRules")).append("\n");
+                        }
+                    }
+                }
+
+                // Include comprehensive analysis
+                String analysis = (String) result.get("summary");
+                if (analysis != null && !analysis.isEmpty()) {
+                    String textSnippet = analysis.length() > 3000 ? analysis.substring(0, 3000) + "..." : analysis;
+                    prompt.append("   Comprehensive Analysis: ").append(textSnippet).append("\n");
+                }
+
+                resultsIncluded++;
+            }
+            prompt.append("\n");
+        }
+
+        // Process other sources
+        for (Map.Entry<String, List<Map<String, Object>>> entry : resultsBySource.entrySet()) {
+            String source = entry.getKey();
+            if ("AI Web Research".equals(source)) continue; // Already processed
+
+            List<Map<String, Object>> sourceResults = entry.getValue();
+            prompt.append("--- ").append(source.toUpperCase()).append(" (").append(sourceResults.size()).append(" documents) ---\n");
+
+            for (Map<String, Object> result : sourceResults) {
+                if (resultsIncluded >= 20) break;
+
+                prompt.append("\n").append(resultsIncluded + 1).append(". ").append(result.get("title")).append("\n");
+                prompt.append("   Type: ").append(result.get("type")).append("\n");
+
+                // Include more detailed content (increased limit to 2000 chars)
+                String fullText = (String) result.get("fullText");
+                String abstractText = (String) result.get("abstractText");
+                String summary = (String) result.get("summary");
+                String content = (String) result.get("content");
+
+                String textToUse = null;
+                if (fullText != null && !fullText.isEmpty()) {
+                    textToUse = fullText;
+                } else if (content != null && !content.isEmpty()) {
+                    textToUse = content;
+                } else if (abstractText != null && !abstractText.isEmpty()) {
+                    textToUse = abstractText;
+                } else if (summary != null && !summary.isEmpty()) {
+                    textToUse = summary;
+                }
+
+                if (textToUse != null) {
+                    // Increased limit from 500 to 2000 characters for better context
+                    String textSnippet = textToUse.length() > 2000 ?
+                        textToUse.substring(0, 2000) + "..." : textToUse;
+                    prompt.append("   Content: ").append(textSnippet).append("\n");
+                }
+
+                // Add document URL if available
+                String url = (String) result.get("federalRegisterUrl");
+                if (url == null) url = (String) result.get("htmlUrl");
+                if (url == null) url = (String) result.get("documentUrl");
+                if (url != null) {
+                    prompt.append("   URL: ").append(url).append("\n");
+                }
+
+                resultsIncluded++;
+            }
+
+            if (resultsIncluded >= 20) break;
+        }
+
+        // Add comprehensive analysis structure
+        prompt.append("\n=== COMPREHENSIVE ANALYSIS REQUIREMENTS ===\n\n");
+        prompt.append("Create a comprehensive, attorney-ready legal analysis following this structure:\n\n");
+
+        prompt.append("## 📋 EXECUTIVE SUMMARY\n");
+        prompt.append("- **Legal Situation:** Clear, concise description of the issue\n");
+        prompt.append("- **Primary Findings:** Top 3-5 most critical legal points\n");
+        prompt.append("- **Bottom Line:** Direct answer to the legal query with confidence level\n");
+        prompt.append("- **Jurisdiction:** Clearly state if this is federal, state, or immigration law\n\n");
+
+        prompt.append("## ⚖️ LEGAL FRAMEWORK & AUTHORITIES\n");
+        prompt.append("- **Controlling Statutes:** Specific citations with relevant sections");
+        if (isImmigrationQuery) {
+            prompt.append(" (INA sections for immigration)");
+        }
+        prompt.append("\n");
+        prompt.append("- **Binding Precedents:** Key cases with holdings and relevance\n");
+        prompt.append("- **Regulatory Requirements:** Administrative rules and compliance requirements");
+        if (isImmigrationQuery) {
+            prompt.append(" (8 CFR for immigration)");
+        }
+        prompt.append("\n");
+        prompt.append("- **Jurisdictional Considerations:** State vs federal law interactions\n");
+        if (isImmigrationQuery) {
+            prompt.append("- **Immigration-Specific:** BIA precedents, AAO decisions, USCIS Policy Manual references\n");
+        }
+        prompt.append("\n");
+
+        prompt.append("## 🎯 ACTIONABLE GUIDANCE\n");
+        prompt.append("- **Immediate Steps:** Prioritized action items with deadlines\n");
+        prompt.append("- **Required Procedures:** Step-by-step compliance requirements\n");
+        prompt.append("- **Forms & Documentation:** Specific forms needed with filing locations\n");
+        prompt.append("- **Timeline Management:** Critical deadlines and time-sensitive actions\n");
+        if (isImmigrationQuery) {
+            prompt.append("- **Immigration Appeals:** Specify BIA 30-day deadline, EOIR-26/29 forms, or Circuit Court 30-day petition deadline\n");
+        }
+        prompt.append("\n");
+
+        prompt.append("## 🚨 RISK ASSESSMENT & STRATEGY\n");
+        prompt.append("- **Primary Risks:** Legal exposure and potential complications\n");
+        prompt.append("- **Mitigation Strategies:** Specific approaches to minimize risks\n");
+        prompt.append("- **Alternative Approaches:** Different strategic options with pros/cons\n\n");
+
+        prompt.append("## 📞 PRACTICAL IMPLEMENTATION\n");
+        prompt.append("- **Next Steps:** Concrete actions the user should take immediately\n");
+        prompt.append("- **Resources Needed:** Forms, documents, or professional help required\n\n");
+
+        // Add category-specific additions
+        String categorySpecific = buildCategorySpecificPrompt(category, query);
+        if (!categorySpecific.isEmpty()) {
+            prompt.append("\n**Additional Category-Specific Requirements:**\n");
+            prompt.append(categorySpecific).append("\n");
+        }
+
+        prompt.append("\n**ANALYSIS APPROACH**:\n");
+        prompt.append("- Base your analysis on the ").append(results.size()).append(" search results provided\n");
+        prompt.append("- Provide specific guidance when you have substantial data\n");
+        prompt.append("- Use confident language when citing available sources\n");
+        prompt.append("- Focus on actionable, attorney-ready guidance\n\n");
+
+        prompt.append("**STANDARD DISCLAIMER** (include at end): This analysis is based on available federal sources and regulations. For case-specific legal advice, consult with a qualified immigration attorney.\n\n");
 
         return prompt.toString();
+    }
+
+    private enum QueryCategory {
+        FILING_PROCEDURE, APPEAL_PROCESS, LEGAL_REQUIREMENTS, COURT_RULES,
+        CRIMINAL_DEFENSE, CIVIL_LITIGATION, FAMILY_LAW, REAL_ESTATE,
+        BUSINESS_LAW, GENERAL_LEGAL
+    }
+
+    private QueryCategory detectQueryCategory(String query) {
+        if (query == null) return QueryCategory.GENERAL_LEGAL;
+
+        String queryLower = query.toLowerCase();
+
+        // Filing and procedure keywords
+        if (queryLower.contains("file") || queryLower.contains("filing") ||
+            queryLower.contains("submit") || queryLower.contains("how to") ||
+            queryLower.contains("procedure") || queryLower.contains("process") ||
+            queryLower.contains("requirements")) {
+            return QueryCategory.FILING_PROCEDURE;
+        }
+
+        // Appeal keywords
+        if (queryLower.contains("appeal") || queryLower.contains("appellate") ||
+            queryLower.contains("reverse") || queryLower.contains("overturn")) {
+            return QueryCategory.APPEAL_PROCESS;
+        }
+
+        // Criminal law keywords
+        if (queryLower.contains("criminal") || queryLower.contains("conviction") ||
+            queryLower.contains("defendant") || queryLower.contains("sentence") ||
+            queryLower.contains("bail") || queryLower.contains("arrest")) {
+            return QueryCategory.CRIMINAL_DEFENSE;
+        }
+
+        // Civil litigation keywords
+        if (queryLower.contains("lawsuit") || queryLower.contains("complaint") ||
+            queryLower.contains("damages") || queryLower.contains("civil") ||
+            queryLower.contains("tort") || queryLower.contains("negligence")) {
+            return QueryCategory.CIVIL_LITIGATION;
+        }
+
+        // Family law keywords
+        if (queryLower.contains("divorce") || queryLower.contains("custody") ||
+            queryLower.contains("child support") || queryLower.contains("marriage") ||
+            queryLower.contains("family")) {
+            return QueryCategory.FAMILY_LAW;
+        }
+
+        // Business law keywords
+        if (queryLower.contains("business") || queryLower.contains("corporate") ||
+            queryLower.contains("llc") || queryLower.contains("contract") ||
+            queryLower.contains("employment")) {
+            return QueryCategory.BUSINESS_LAW;
+        }
+
+        // Court rules keywords
+        if (queryLower.contains("rule") || queryLower.contains("court rule") ||
+            queryLower.contains("procedure rule")) {
+            return QueryCategory.COURT_RULES;
+        }
+
+        return QueryCategory.GENERAL_LEGAL;
+    }
+
+    private String buildCategorySpecificPrompt(QueryCategory category, String query) {
+        switch (category) {
+            case FILING_PROCEDURE:
+                return "Provide step-by-step filing instructions including:\n" +
+                       "• Exact forms required and where to get them\n" +
+                       "• Filing deadlines and time limits\n" +
+                       "• Required fees and payment methods\n" +
+                       "• Court procedures and what to expect\n" +
+                       "• Common mistakes to avoid\n\n" +
+                       "Be specific about Massachusetts requirements.";
+
+            case APPEAL_PROCESS:
+                return "Explain the appeal process including:\n" +
+                       "• Specific deadlines (e.g., 30 days from judgment)\n" +
+                       "• Required forms and documents\n" +
+                       "• Filing procedures and fees\n" +
+                       "• Standards of review and chances of success\n" +
+                       "• Timeline for the appeal process\n\n" +
+                       "Cite specific Massachusetts Rules of Appellate Procedure.";
+
+            case CRIMINAL_DEFENSE:
+                return "Provide criminal defense guidance including:\n" +
+                       "• Specific legal options and defenses available\n" +
+                       "• Procedural requirements and deadlines\n" +
+                       "• Rights of the defendant\n" +
+                       "• Potential penalties and consequences\n" +
+                       "• Next steps in the legal process\n\n" +
+                       "Reference specific Massachusetts criminal statutes and court rules.";
+
+            case CIVIL_LITIGATION:
+                return "Explain civil litigation procedures including:\n" +
+                       "• Cause of action and legal theories\n" +
+                       "• Statute of limitations\n" +
+                       "• Required elements to prove the case\n" +
+                       "• Procedural requirements for filing\n" +
+                       "• Potential damages and remedies\n\n" +
+                       "Cite relevant Massachusetts General Laws and court rules.";
+
+            case FAMILY_LAW:
+                return "Address family law matters including:\n" +
+                       "• Specific legal requirements and procedures\n" +
+                       "• Required documentation and forms\n" +
+                       "• Timeline and court process\n" +
+                       "• Rights and obligations of parties\n" +
+                       "• Potential outcomes and enforcement\n\n" +
+                       "Reference Massachusetts family law statutes and guidelines.";
+
+            case BUSINESS_LAW:
+                return "Explain business law requirements including:\n" +
+                       "• Legal compliance requirements\n" +
+                       "• Filing procedures and deadlines\n" +
+                       "• Required documentation\n" +
+                       "• Regulatory obligations\n" +
+                       "• Potential legal consequences\n\n" +
+                       "Cite specific Massachusetts business statutes and regulations.";
+
+            case COURT_RULES:
+                return "Interpret court rules including:\n" +
+                       "• Specific rule requirements and procedures\n" +
+                       "• Deadlines and time limits\n" +
+                       "• Formatting and filing requirements\n" +
+                       "• Consequences of non-compliance\n" +
+                       "• Practical application tips\n\n" +
+                       "Explain how the rules apply to this specific situation.";
+
+            default:
+                return "Provide comprehensive legal guidance including:\n" +
+                       "• Applicable laws and regulations\n" +
+                       "• Specific requirements and procedures\n" +
+                       "• Deadlines and time limits\n" +
+                       "• Rights and obligations\n" +
+                       "• Practical next steps\n\n" +
+                       "Be specific about Massachusetts law and procedures.";
+        }
     }
 
     private Map<String, Object> combineResultsWithAI(Map<String, Object> searchResults, String aiAnalysis) {
@@ -520,49 +992,6 @@ public class AILegalResearchService {
         }
     }
 
-    // Helper methods for converting models to results
-    private Map<String, Object> convertStatuteToResult(AIMAStatute statute) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", statute.getId());
-        result.put("type", "statute");
-        result.put("title", statute.getTitle());
-        result.put("citation", "M.G.L. Ch. " + statute.getChapter() + " § " + statute.getSection());
-        result.put("summary", truncateText(statute.getStatuteText(), 300));
-        result.put("fullText", statute.getStatuteText());
-        result.put("effectiveDate", statute.getEffectiveDate());
-        result.put("practiceArea", statute.getPracticeArea());
-        return result;
-    }
-
-    private Map<String, Object> convertCourtRuleToResult(AIMACourtRule courtRule) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", courtRule.getId());
-        result.put("type", "court_rule");
-        result.put("title", courtRule.getRuleTitle());
-        result.put("citation", courtRule.getCourtLevel() + " Rule " + courtRule.getRuleNumber());
-        result.put("summary", truncateText(courtRule.getRuleText(), 300));
-        result.put("fullText", courtRule.getRuleText());
-        result.put("courtLevel", courtRule.getCourtLevel());
-        result.put("effectiveDate", courtRule.getEffectiveDate());
-        return result;
-    }
-
-    private Map<String, Object> convertSentencingGuidelineToResult(AIMASentencingGuideline guideline) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", guideline.getId());
-        result.put("type", "guideline");
-        result.put("title", guideline.getOffenseDescription());
-        result.put("citation", "Mass. Sentencing Guidelines " + guideline.getOffenseCode());
-        result.put("summary", truncateText(guideline.getOffenseDescription() + " - " +
-                  (guideline.getMinSentence() != null ? "Min: " + guideline.getMinSentence() : "") +
-                  (guideline.getMaxSentence() != null ? " Max: " + guideline.getMaxSentence() : ""), 300));
-        result.put("fullText", buildFullGuidelineText(guideline));
-        result.put("category", guideline.getCategory());
-        result.put("effectiveDate", guideline.getEffectiveDate());
-        result.put("offenseCode", guideline.getOffenseCode());
-        result.put("statutoryCitation", guideline.getStatutoryCitation());
-        return result;
-    }
 
     // Utility methods
     private String generateQueryHash(String query, String searchType, String jurisdiction) {
@@ -579,7 +1008,7 @@ public class AILegalResearchService {
 
     private Map<String, Object> parseAIResponse(String aiResponse) {
         try {
-            return objectMapper.readValue(aiResponse, Map.class);
+            return objectMapper.readValue(aiResponse, objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
         } catch (JsonProcessingException e) {
             // If it's not JSON, treat as simple text response
             Map<String, Object> result = new HashMap<>();
@@ -610,43 +1039,388 @@ public class AILegalResearchService {
         return text.substring(0, maxLength) + "...";
     }
 
-    private String buildFullGuidelineText(AIMASentencingGuideline guideline) {
-        StringBuilder text = new StringBuilder();
-        text.append("Offense: ").append(guideline.getOffenseDescription()).append("\n");
+    /**
+     * Filters Federal Register results for immigration relevance
+     */
+    private List<Map<String, Object>> filterImmigrationResults(List<Map<String, Object>> results, String originalQuery) {
+        // Keywords that indicate immigration-related content
+        String[] immigrationKeywords = {
+            "immigration", "immigrant", "visa", "uscis", "ice", "cbp",
+            "deportation", "removal", "asylum", "refugee", "citizenship",
+            "naturalization", "8 cfr", "ina", "eoir", "bia", "homeland security",
+            "department of justice", "adjustment of status", "green card",
+            "nonimmigrant", "lawful permanent", "i-130", "i-485", "i-765",
+            "board of immigration appeals", "immigration judge"
+        };
 
-        if (guideline.getCategory() != null) {
-            text.append("Category: ").append(guideline.getCategory()).append("\n");
-        }
-        if (guideline.getSubcategory() != null) {
-            text.append("Subcategory: ").append(guideline.getSubcategory()).append("\n");
-        }
-        if (guideline.getStatutoryCitation() != null) {
-            text.append("Statutory Citation: ").append(guideline.getStatutoryCitation()).append("\n");
-        }
-        if (guideline.getMinSentence() != null) {
-            text.append("Minimum Sentence: ").append(guideline.getMinSentence()).append("\n");
-        }
-        if (guideline.getMaxSentence() != null) {
-            text.append("Maximum Sentence: ").append(guideline.getMaxSentence()).append("\n");
-        }
-        if (guideline.getMandatoryMinimum() != null && guideline.getMandatoryMinimum()) {
-            text.append("Mandatory Minimum: Yes\n");
-        }
-        if (guideline.getFineRange() != null) {
-            text.append("Fine Range: ").append(guideline.getFineRange()).append("\n");
-        }
-        if (guideline.getPointsValue() != null) {
-            text.append("Points Value: ").append(guideline.getPointsValue()).append("\n");
-        }
-        if (guideline.getEligibilityNotes() != null) {
-            text.append("Eligibility Notes: ").append(guideline.getEligibilityNotes()).append("\n");
-        }
-        if (guideline.getRecentUpdates() != null) {
-            text.append("Recent Updates: ").append(guideline.getRecentUpdates()).append("\n");
-        }
+        // Keywords that indicate NOT immigration (to filter out)
+        String[] excludeKeywords = {
+            "environmental", "epa", "water quality", "air quality", "pollution",
+            "fda", "drug", "medical device", "food safety", "pharmaceutical",
+            "securities", "sec", "financial", "banking", "treasury",
+            "agriculture", "usda", "farm", "crop", "livestock"
+        };
 
-        return text.toString();
+        return results.stream()
+            .filter(result -> {
+                String title = ((String) result.getOrDefault("title", "")).toLowerCase();
+                String summary = ((String) result.getOrDefault("summary", "")).toLowerCase();
+                String content = title + " " + summary;
+
+                // Exclude if it contains exclude keywords
+                for (String exclude : excludeKeywords) {
+                    if (content.contains(exclude)) {
+                        log.debug("Filtering out non-immigration result: {}", title);
+                        return false;
+                    }
+                }
+
+                // Include if it contains immigration keywords
+                for (String keyword : immigrationKeywords) {
+                    if (content.contains(keyword)) {
+                        return true;
+                    }
+                }
+
+                // Default to excluding if no immigration keywords found
+                log.debug("Filtering out result with no immigration keywords: {}", title);
+                return false;
+            })
+            .collect(Collectors.toList());
     }
+
+    /**
+     * Enhances immigration queries for Court Listener searches
+     */
+    private String enhanceImmigrationQueryForCourtListener(String query) {
+        String queryLower = query.toLowerCase();
+
+        // For Court Listener, we want to find relevant case law
+        if (queryLower.contains("immigration") && queryLower.contains("appeal")) {
+            return "Board Immigration Appeals OR BIA OR immigration judge OR removal proceedings appeal";
+        }
+        if (queryLower.contains("asylum")) {
+            return "asylum persecution refugee withholding removal CAT";
+        }
+        if (queryLower.contains("deportation") || queryLower.contains("removal")) {
+            return "removal proceedings deportation immigration judge BIA";
+        }
+        if (queryLower.contains("visa")) {
+            return "visa petition consular processing immigrant nonimmigrant";
+        }
+        if (queryLower.contains("green card")) {
+            return "adjustment status permanent resident I-485";
+        }
+
+        // Default enhancement for general immigration queries
+        return query + " immigration";
+    }
+
+    /**
+     * Enhances immigration queries to be more specific for Federal Register searches
+     */
+    private String enhanceImmigrationQuery(String query) {
+        String queryLower = query.toLowerCase();
+
+        // Map common immigration terms to more specific Federal Register search terms
+        if (queryLower.contains("immigration") && queryLower.contains("appeal")) {
+            return "\"Board of Immigration Appeals\" OR \"immigration judge\" OR \"8 CFR 1003\" OR \"EOIR\" OR \"removal proceedings\"";
+        }
+        if (queryLower.contains("green card")) {
+            return "\"adjustment of status\" OR \"I-485\" OR \"8 CFR 245\" OR \"lawful permanent resident\"";
+        }
+        if (queryLower.contains("visa")) {
+            return "\"nonimmigrant visa\" OR \"immigrant visa\" OR \"8 CFR 214\" OR \"consular processing\"";
+        }
+        if (queryLower.contains("deportation") || queryLower.contains("removal")) {
+            return "\"removal proceedings\" OR \"deportation\" OR \"8 CFR 1240\" OR \"immigration judge\"";
+        }
+        if (queryLower.contains("asylum")) {
+            return "\"asylum\" OR \"refugee\" OR \"8 CFR 208\" OR \"persecution\" OR \"withholding of removal\"";
+        }
+        if (queryLower.contains("citizenship") || queryLower.contains("naturalization")) {
+            return "\"naturalization\" OR \"citizenship\" OR \"8 CFR 316\" OR \"N-400\"";
+        }
+
+        // For general immigration queries, add DHS/DOJ agency filters
+        return query + " AND (\"Department of Homeland Security\" OR \"Department of Justice\" OR \"USCIS\" OR \"immigration\")";
+    }
+
+    /**
+     * Determines if a query is related to immigration law (always federal)
+     */
+    private boolean isImmigrationQuery(String query) {
+        if (query == null) return false;
+
+        String queryLower = query.toLowerCase();
+
+        // Immigration-specific terms and agencies
+        String[] immigrationIndicators = {
+            "immigration", "immigrant", "visa", "green card", "citizenship",
+            "naturalization", "deportation", "removal proceedings", "asylum",
+            "refugee", "uscis", "ice", "cbp", "eoir", "bia",
+            "board of immigration appeals", "immigration judge", "immigration court",
+            "i-130", "i-485", "i-765", "i-140", "i-129", "i-589", "n-400",
+            "adjustment of status", "consular processing", "inadmissibility",
+            "unlawful presence", "voluntary departure", "cancellation of removal",
+            "withholding of removal", "convention against torture", "cat",
+            "temporary protected status", "tps", "daca", "dream act",
+            "h1b", "h-1b", "l1", "l-1", "f1", "f-1", "j1", "j-1", "eb1", "eb2", "eb3",
+            "family-based immigration", "employment-based immigration",
+            "notice to appear", "nta", "master calendar", "individual hearing",
+            "immigration appeal", "bia appeal", "circuit court immigration",
+            "aao", "administrative appeals office", "request for evidence", "rfe",
+            "notice of intent to deny", "noid", "immigration detention"
+        };
+
+        for (String indicator : immigrationIndicators) {
+            if (queryLower.contains(indicator)) {
+                log.info("Detected immigration law indicator: '{}'", indicator);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines if a query is related to Massachusetts civil procedure
+     */
+    private boolean isMassachusettsCivilProcedureQuery(String query) {
+        if (query == null) return false;
+
+        String queryLower = query.toLowerCase();
+
+        // Massachusetts civil procedure specific indicators
+        String[] civilProcedureIndicators = {
+            "mass. r. civ. p.", "mass r civ p", "massachusetts rules of civil procedure",
+            "rule 12", "12(b)(6)", "12b6", "motion to dismiss",
+            "rule 56", "summary judgment", "rule 11", "sanctions",
+            "12(b)(2)", "personal jurisdiction", "12(b)(1)", "subject matter jurisdiction",
+            "12(b)(3)", "improper venue", "12(b)(4)", "improper service",
+            "12(b)(5)", "insufficient service", "12(b)(7)", "indispensable party",
+            "civil procedure", "motion practice", "pleading", "discovery",
+            "superior court", "district court", "housing court"
+        };
+
+        for (String indicator : civilProcedureIndicators) {
+            if (queryLower.contains(indicator)) {
+                log.info("Detected Massachusetts civil procedure indicator: '{}'", indicator);
+                return true;
+            }
+        }
+
+        // Check for Massachusetts + procedure terms
+        boolean hasMassachusetts = queryLower.contains("massachusetts") || queryLower.contains("mass.");
+        boolean hasProcedure = queryLower.contains("procedure") || queryLower.contains("motion") ||
+                              queryLower.contains("rule") || queryLower.contains("filing");
+
+        if (hasMassachusetts && hasProcedure) {
+            log.info("Detected Massachusetts + procedure terms");
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines if a query is related to Massachusetts state law
+     */
+    private boolean isStateLawQuery(String query) {
+        if (query == null) return false;
+
+        String queryLower = query.toLowerCase();
+
+        // First check if this is an immigration query - immigration is ALWAYS federal
+        if (isImmigrationQuery(query)) {
+            log.info("Immigration query detected - not a state law query");
+            return false;
+        }
+
+        // Massachusetts specific indicators
+        String[] massachusettsIndicators = {
+            "massachusetts", "ma ", " ma", "mass.", "mass ",
+            "commonwealth", "boston", "worcester", "springfield"
+        };
+
+        // State law practice area indicators (removed generic "appeal" - too broad)
+        String[] stateIndicators = {
+            "state law", "state court", "state statute", "state regulation",
+            "criminal", "conviction", "defendant", "sentencing",
+            "divorce", "custody", "child support", "family law", "domestic",
+            "probate", "estate", "will", "trust", "guardianship",
+            "real estate", "property", "landlord", "tenant", "eviction",
+            "personal injury", "tort", "negligence", "malpractice",
+            "contract", "breach", "damages", "civil procedure",
+            "superior court", "district court", "appeals court", "sjc",
+            "supreme judicial court", "housing court", "probate court",
+            "dui", "oui", "dwi", "traffic", "motor vehicle",
+            "workers compensation", "unemployment", "disability"
+        };
+
+        // Check for Massachusetts indicators
+        for (String indicator : massachusettsIndicators) {
+            if (queryLower.contains(indicator)) {
+                log.info("Detected Massachusetts indicator: '{}'", indicator);
+                return true;
+            }
+        }
+
+        // Check for state law indicators (if not clearly federal)
+        boolean hasStateIndicator = false;
+        for (String indicator : stateIndicators) {
+            if (queryLower.contains(indicator)) {
+                hasStateIndicator = true;
+                break;
+            }
+        }
+
+        // Check for federal indicators that would override state classification
+        String[] federalIndicators = {
+            "federal", "cfr", "usc", "united states code", "federal register",
+            "sec", "epa", "fda", "irs", "federal regulation", "federal law",
+            "immigration", "visa", "uscis", "ice", "deportation", "asylum"
+        };
+
+        for (String indicator : federalIndicators) {
+            if (queryLower.contains(indicator)) {
+                log.info("Federal indicator found, not a state query: '{}'", indicator);
+                return false;
+            }
+        }
+
+        // If has state indicators and no federal indicators, it's a state query
+        if (hasStateIndicator) {
+            log.info("Detected state law query based on practice area indicators");
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Determines whether the Federal Register API should be used for a given query.
+     * Returns true for federal law/regulatory queries, false for state law queries.
+     */
+    private boolean shouldUseFederalRegister(String query, String searchType) {
+        if (query == null) return false;
+
+        String queryLower = query.toLowerCase();
+
+        // NEVER use Federal Register for state law queries
+        if (queryLower.contains("mass.") || queryLower.contains("massachusetts") ||
+            queryLower.contains("m.g.l.") || queryLower.contains("state court") ||
+            queryLower.contains("r. civ. p.") || queryLower.contains("rule") ||
+            queryLower.contains("state law") || queryLower.contains("state statute")) {
+            log.info("Federal Register: NO - state law query detected: {}", query);
+            return false;
+        }
+
+        // Immigration queries should always use federal sources
+        if (isImmigrationQuery(query)) {
+            log.info("Federal Register: YES - immigration query detected");
+            return true;
+        }
+
+        // Always use Federal Register if explicitly searching for federal regulations
+        if ("regulations".equalsIgnoreCase(searchType) || "rules".equalsIgnoreCase(searchType)) {
+            // But only if not state law
+            if (!isStateLawQuery(query)) {
+                log.info("Federal Register: YES - explicit federal regulations/rules search type");
+                return true;
+            }
+        }
+
+        // Never use for non-regulatory search types (unless immigration)
+        if ("statutes".equalsIgnoreCase(searchType) || "cases".equalsIgnoreCase(searchType) ||
+            "guidelines".equalsIgnoreCase(searchType)) {
+            log.info("Federal Register: NO - search type '{}' is not regulatory", searchType);
+            return false;
+        }
+
+        // Federal agency indicators - SHOULD use Federal Register (including immigration agencies)
+        String[] federalAgencies = {
+            "epa", "environmental protection agency", "sec", "securities and exchange commission",
+            "fda", "food and drug administration", "irs", "internal revenue service",
+            "dol", "department of labor", "osha", "occupational safety",
+            "ftc", "federal trade commission", "cfpb", "consumer financial protection",
+            "cftc", "commodity futures", "treasury", "homeland security", "dhs",
+            "cms", "centers for medicare", "usda", "agriculture department",
+            "energy department", "doe", "commerce department", "transportation department",
+            "uscis", "ice", "cbp", "eoir", "state department", "dos"
+        };
+
+        for (String agency : federalAgencies) {
+            if (queryLower.contains(agency)) {
+                log.info("Federal Register: YES - contains federal agency '{}'", agency);
+                return true;
+            }
+        }
+
+        // Federal law/regulatory keywords - SHOULD use Federal Register
+        String[] federalKeywords = {
+            "federal regulation", "cfr", "code of federal regulations", "usc", "united states code",
+            "federal register", "administrative law", "agency rule", "proposed rule",
+            "federal law", "federal statute", "administrative procedure", "rule making",
+            "federal compliance", "federal requirement", "federal standard",
+            "8 cfr", "title 8", "ina", "immigration and nationality act"
+        };
+
+        for (String keyword : federalKeywords) {
+            if (queryLower.contains(keyword)) {
+                log.info("Federal Register: YES - contains federal keyword '{}'", keyword);
+                return true;
+            }
+        }
+
+        // State law indicators - SHOULD NOT use Federal Register (removed generic "appeal")
+        String[] stateIndicators = {
+            "massachusetts", "ma ", " ma", "state court", "state law", "state statute",
+            "criminal", "family law", "divorce", "custody", "child support", "probate",
+            "real estate", "personal injury", "contract", "tort", "motion",
+            "superior court", "district court", "appeals court", "supreme judicial court",
+            "state regulation", "commonwealth", "municipal", "local law", "zoning"
+        };
+
+        for (String indicator : stateIndicators) {
+            if (queryLower.contains(indicator)) {
+                log.info("Federal Register: NO - contains state law indicator '{}'", indicator);
+                return false;
+            }
+        }
+
+        // Practice area analysis - bias toward state law for common legal practice areas
+        String[] statePracticeAreas = {
+            "criminal defense", "family court", "divorce proceedings", "child custody",
+            "criminal conviction", "criminal appeal", "sentencing", "plea", "arraignment",
+            "restraining order", "domestic violence", "landlord tenant", "eviction",
+            "small claims", "traffic", "dui", "dwi", "probate court", "estate planning",
+            "workers compensation", "unemployment", "disability", "medicaid"
+        };
+
+        for (String area : statePracticeAreas) {
+            if (queryLower.contains(area)) {
+                log.info("Federal Register: NO - contains state practice area '{}'", area);
+                return false;
+            }
+        }
+
+        // Default decision based on context
+        // If no clear indicators, be conservative and skip Federal Register for:
+        // - Questions (how, what, when, where, can i, should i)
+        // - Procedural queries
+        if (queryLower.matches(".*(how do|how to|what is|what are|when|where|can i|should i|procedure|process).*")) {
+            log.info("Federal Register: NO - appears to be procedural/how-to question");
+            return false;
+        }
+
+        // If we reach here with searchType="all", make a conservative decision
+        // Bias toward NOT using Federal Register unless clearly federal
+        log.info("Federal Register: NO - no clear federal indicators found, defaulting to state sources");
+        return false;
+    }
+
 
     // Public methods for frontend
     @Transactional(readOnly = true)
@@ -724,6 +1498,10 @@ public class AILegalResearchService {
             map.put("publicationDate", doc.getPublicationDate() != null ? doc.getPublicationDate().toString() : null);
             map.put("documentType", doc.getDocumentType());
             map.put("summary", doc.getSummary());
+
+            // Include abstract text for AI analysis
+            map.put("abstractText", doc.getAbstractText());
+
             map.put("htmlUrl", doc.getHtmlUrl());
             map.put("pdfUrl", doc.getPdfUrl());
             map.put("federalRegisterUrl", doc.getFederalRegisterUrl());

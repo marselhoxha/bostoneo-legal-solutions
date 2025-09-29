@@ -1,0 +1,69 @@
+MASSACHUSETTS RULES OF CRIMINAL PROCEDURE
+
+Rule 30. Appeal from Criminal Conviction
+
+(a) Time for Appeal. A defendant may appeal from a judgment of conviction by filing a notice of appeal within 30 days after the imposition of sentence or within such extended time as the court may allow.
+
+(b) Notice of Appeal. The notice of appeal shall be filed with the clerk of the trial court and shall specify the judgment or order from which the appeal is taken.
+
+(c) Docketing in Appellate Court. Upon receipt of the notice of appeal, the clerk of the trial court shall transmit a copy to the appellate court, which shall docket the appeal.
+
+(d) Record on Appeal. The record on appeal shall consist of:
+   (1) the trial court record;
+   (2) any exhibits admitted in evidence;
+   (3) any transcript of proceedings ordered by either party.
+
+(e) Brief Requirements. Appellant's brief shall contain:
+   (1) a statement of the issues presented for review;
+   (2) a statement of the case and proceedings below;
+   (3) argument with citations to authorities and the record;
+   (4) a conclusion stating the precise relief sought.
+
+Rule 31. Stays Pending Appeal
+
+(a) Application for Stay. A defendant may apply to the trial court for a stay of execution of sentence pending appeal.
+
+(b) Factors for Consideration. The court shall consider:
+   (1) the likelihood of success on appeal;
+   (2) the nature of the offense;
+   (3) the potential danger to the community;
+   (4) the defendant's character and mental condition.
+
+MASSACHUSETTS GENERAL LAWS
+
+Chapter 278: Proceedings After Conviction
+
+Section 28. Right of Appeal
+Every person convicted of a crime has the right to appeal to the appropriate appellate court. Such appeal must be taken within the time prescribed by the Massachusetts Rules of Criminal Procedure.
+
+Section 29. Stay of Execution
+The trial court may, in its discretion, stay the execution of sentence pending appeal upon such terms and conditions as it deems appropriate to ensure the appearance of the defendant and the safety of the community.
+
+Section 30. Appellate Review Standards
+The appellate court shall review questions of law de novo and findings of fact under the clearly erroneous standard. Mixed questions of law and fact shall be reviewed under the de novo standard.
+
+ADVISORY SENTENCING GUIDELINES
+
+Chapter 1: General Principles
+
+1.1 Purpose and Authority
+These guidelines provide a framework for consistent sentencing practices throughout the Commonwealth. While advisory in nature, courts should consider these guidelines in determining appropriate sentences.
+
+1.2 Factors in Sentencing
+Courts shall consider:
+- The nature and circumstances of the offense
+- The history and characteristics of the defendant
+- The need for deterrence
+- The need for rehabilitation
+- The need for public protection
+
+Chapter 2: Offense Categories
+
+2.1 Violent Crimes
+Sentences for violent crimes should reflect the serious nature of such offenses and the need to protect public safety.
+
+2.2 Property Crimes
+Sentences for property crimes should consider the economic impact on victims and the potential for rehabilitation.
+
+2.3 Drug Offenses
+Sentences for drug offenses should balance punishment with treatment and rehabilitation opportunities.

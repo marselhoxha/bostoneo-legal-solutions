@@ -177,7 +177,7 @@ $gray-700: #495057;
 
     .card-header {
       background-color: transparent;
-      border-bottom: 1px solid #eff2f7;
+      
       padding: 1.25rem;
 
       .card-title {
@@ -256,7 +256,7 @@ $gray-700: #495057;
 
   // Tab Styles - Velzon Custom Tabs
   .nav-tabs-custom {
-    border-bottom: 2px solid #eff2f7;
+   
 
     .nav-link {
       padding: 0.625rem 1.25rem;
@@ -355,7 +355,7 @@ $gray-700: #495057;
 
   .form-control,
   .form-select {
-    border: 1px solid #ced4da;
+   
     border-radius: 0.25rem;
     font-size: 0.8125rem;
 
@@ -461,35 +461,37 @@ $gray-700: #495057;
     }
   }
 
-  // AI Analysis Content Styles
+  // AI Analysis Content Styles - Dark Mode Compatible
   .ai-analysis-content {
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: #495057;
+    color: var(--bs-body-color) !important; // Bootstrap semantic color for dark mode
 
     h1, h2, h3, h4, h5, h6 {
       font-weight: 600;
-      color: #212529;
+      color: var(--bs-body-color) !important;
       margin-top: 1.25rem;
       margin-bottom: 0.75rem;
     }
 
     h3 {
       font-size: 1.125rem;
+      color: var(--bs-body-color) !important;
     }
 
     h4 {
       font-size: 1rem;
-      color: $primary-color;
+      color: $primary-color !important;
     }
 
     h5 {
       font-size: 0.9375rem;
-      color: #495057;
+      color: var(--bs-body-color) !important;
     }
 
     p {
       margin-bottom: 0.75rem;
+      color: var(--bs-body-color) !important;
     }
 
     ul, ol {
@@ -498,17 +500,27 @@ $gray-700: #495057;
 
       li {
         margin-bottom: 0.25rem;
-        color: #495057;
+        color: var(--bs-body-color) !important;
       }
     }
 
     strong {
       font-weight: 600;
-      color: #212529;
+      color: var(--bs-body-color) !important;
     }
 
     em {
-      color: #74788d;
+      color: var(--bs-body-secondary-color) !important;
+    }
+
+    // Ensure all text elements are visible in dark mode
+    * {
+      color: var(--bs-body-color) !important;
+    }
+
+    // Override any inherited styles that might cause invisibility
+    .text-muted {
+      color: var(--bs-body-secondary-color) !important;
     }
   }
 
@@ -613,7 +625,6 @@ $gray-700: #495057;
     box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.1);
 
     .modal-header {
-      border-bottom: 1px solid #eff2f7;
       padding: 1rem 1.5rem;
 
       .modal-title {

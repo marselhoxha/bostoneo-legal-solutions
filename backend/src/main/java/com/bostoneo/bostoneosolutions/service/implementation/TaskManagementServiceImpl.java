@@ -130,7 +130,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             log.error("Failed to send task creation notifications: {}", e.getMessage());
         }
         
-        log.info("Created task with ID: {}", savedTask.getId());
+       // log.info("Created task with ID: {}", savedTask.getId());
         return convertToDTO(savedTask);
     }
 
@@ -243,7 +243,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                                            "caseId", updatedTask.getLegalCase().getId(),
                                            "taskTitle", updatedTask.getTitle()));
                                            
-                log.info("📧 Task assignment notification sent to user: {}", newAssignedToId);
+                //log.info("📧 Task assignment notification sent to user: {}", newAssignedToId);
             } catch (Exception e) {
                 log.error("Failed to send task assignment notification: {}", e.getMessage());
             }
@@ -277,7 +277,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                                                      "oldStatus", oldStatus.toString(), "newStatus", newStatus.toString()));
                 }
                 
-                log.info("Task status change notifications sent to {} users", notificationUserIds.size());
+                //log.info("Task status change notifications sent to {} users", notificationUserIds.size());
             } catch (Exception e) {
                 log.error("Failed to send task status change notifications: {}", e.getMessage());
             }
@@ -289,7 +289,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public void deleteTask(Long taskId) {
-        log.info("Deleting task {}", taskId);
+        //log.info("Deleting task {}", taskId);
         
         // Check if task exists
         if (!caseTaskRepository.existsById(taskId)) {
@@ -299,12 +299,12 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Delete the task (this will cascade delete subtasks and comments)
         caseTaskRepository.deleteById(taskId);
         
-        log.info("Successfully deleted task {}", taskId);
+        //log.info("Successfully deleted task {}", taskId);
     }
 
     @Override
     public CaseTaskDTO getTask(Long taskId) {
-        log.info("Getting task {}", taskId);
+        //log.info("Getting task {}", taskId);
         
         CaseTask task = caseTaskRepository.findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + taskId));
@@ -314,7 +314,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public Page<CaseTaskDTO> getAllTasks(Pageable pageable) {
-        log.info("Getting all tasks with pagination");
+        //log.info("Getting all tasks with pagination");
         Page<CaseTask> tasksPage = caseTaskRepository.findAll(pageable);
         
         List<CaseTaskDTO> taskDTOs = tasksPage.getContent().stream()
@@ -326,7 +326,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     
     @Override
     public Page<CaseTaskDTO> getCaseTasks(Long caseId, TaskFilterRequest filter, Pageable pageable) {
-        log.info("Getting tasks for case: {}", caseId);
+        //log.info("Getting tasks for case: {}", caseId);
         List<CaseTask> tasks = caseTaskRepository.findByCaseId(caseId);
         
         // Convert to DTOs
@@ -344,7 +344,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public Page<CaseTaskDTO> getUserTasks(Long userId, TaskFilterRequest filter, Pageable pageable) {
-        log.info("Getting tasks for user: {}", userId);
+        //log.info("Getting tasks for user: {}", userId);
         
         List<TaskStatus> statuses = filter.getStatuses();
         if (statuses == null || statuses.isEmpty()) {
@@ -363,7 +363,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public List<CaseTaskDTO> getSubtasks(Long parentTaskId) {
-        log.info("Getting subtasks for parent task: {}", parentTaskId);
+        //log.info("Getting subtasks for parent task: {}", parentTaskId);
         
         List<CaseTask> subtasks = caseTaskRepository.findByParentTaskId(parentTaskId);
         
@@ -374,7 +374,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public List<CaseTaskDTO> getOverdueTasks(Long userId) {
-        log.info("Getting overdue tasks for user: {}", userId);
+        //log.info("Getting overdue tasks for user: {}", userId);
         
         List<CaseTask> overdueTasks = caseTaskRepository.findOverdueTasksByUser(userId);
         
@@ -385,7 +385,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public List<CaseTaskDTO> getUpcomingTasks(Long userId, int days) {
-        log.info("Getting upcoming tasks for user: {} within {} days", userId, days);
+        //log.info("Getting upcoming tasks for user: {} within {} days", userId, days);
         
         LocalDateTime endDate = LocalDateTime.now().plusDays(days);
         List<CaseTask> upcomingTasks = caseTaskRepository.findUpcomingTasksByAssignee(userId, endDate);
@@ -397,7 +397,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public CaseTaskDTO assignTask(Long taskId, Long userId) {
-        log.info("Assigning task {} to user {}", taskId, userId);
+        //log.info("Assigning task {} to user {}", taskId, userId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -435,18 +435,18 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                                        "caseId", updatedTask.getLegalCase().getId(),
                                        "taskTitle", updatedTask.getTitle()));
                                        
-            log.info("📧 Task assignment notification sent to user: {}", userId);
+            //log.info("📧 Task assignment notification sent to user: {}", userId);
         } catch (Exception e) {
             log.error("Failed to send task assignment notification: {}", e.getMessage());
         }
         
-        log.info("Successfully assigned task {} to user {}", taskId, userId);
+        //log.info("Successfully assigned task {} to user {}", taskId, userId);
         return convertToDTO(updatedTask);
     }
 
     @Override
     public CaseTaskDTO updateTaskStatus(Long taskId, TaskStatus status) {
-        log.info("Updating task {} status to {}", taskId, status);
+        //log.info("Updating task {} status to {}", taskId, status);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -496,18 +496,18 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                                                  "newStatus", status.toString()));
             }
             
-            log.info("Task status change notifications sent to {} users", notificationUserIds.size());
+            //log.info("Task status change notifications sent to {} users", notificationUserIds.size());
         } catch (Exception e) {
             log.error("Failed to send task status change notifications: {}", e.getMessage());
         }
         
-        log.info("Successfully updated task {} status to {}", taskId, status);
+        //log.info("Successfully updated task {} status to {}", taskId, status);
         return convertToDTO(updatedTask);
     }
 
     @Override
     public CaseTaskDTO completeTask(Long taskId, CompleteTaskRequest request) {
-        log.info("Completing task {}", taskId);
+        //log.info("Completing task {}", taskId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -536,13 +536,13 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
         
-        log.info("Successfully completed task {}", taskId);
+        //log.info("Successfully completed task {}", taskId);
         return convertToDTO(updatedTask);
     }
 
     @Override
     public TaskCommentDTO addComment(Long taskId, CreateCommentRequest request) {
-        log.info("Adding comment to task {}", taskId);
+        //log.info("Adding comment to task {}", taskId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -566,13 +566,13 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the comment
         TaskComment savedComment = taskCommentRepository.save(comment);
         
-        log.info("Successfully added comment to task {}", taskId);
+        //log.info("Successfully added comment to task {}", taskId);
         return convertCommentToDTO(savedComment);
     }
 
     @Override
     public List<TaskCommentDTO> getTaskComments(Long taskId) {
-        log.info("Getting comments for task {}", taskId);
+        //log.info("Getting comments for task {}", taskId);
         
         // Check if task exists
         if (!caseTaskRepository.existsById(taskId)) {
@@ -588,7 +588,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public void deleteComment(Long commentId) {
-        log.info("Deleting comment {}", commentId);
+        //log.info("Deleting comment {}", commentId);
         
         // Check if comment exists
         if (!taskCommentRepository.existsById(commentId)) {
@@ -598,12 +598,12 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Delete the comment
         taskCommentRepository.deleteById(commentId);
         
-        log.info("Successfully deleted comment {}", commentId);
+        //log.info("Successfully deleted comment {}", commentId);
     }
 
     @Override
     public TaskAnalyticsDTO getTaskAnalytics(Long caseId) {
-        log.info("Getting task analytics for case {}", caseId);
+        //log.info("Getting task analytics for case {}", caseId);
         
         // Get all tasks for the case
         List<CaseTask> tasks = caseTaskRepository.findByCaseId(caseId);
@@ -660,7 +660,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public UserTaskMetricsDTO getUserTaskMetrics(Long userId) {
-        log.info("Getting task metrics for user {}", userId);
+        //log.info("Getting task metrics for user {}", userId);
         
         // Get all active tasks for the user
         List<TaskStatus> activeStatuses = List.of(TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.BLOCKED);
@@ -721,7 +721,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public void addTaskDependency(Long taskId, Long dependencyTaskId) {
-        log.info("Adding dependency {} to task {}", dependencyTaskId, taskId);
+        //log.info("Adding dependency {} to task {}", dependencyTaskId, taskId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -754,13 +754,13 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             }
             
             caseTaskRepository.save(task);
-            log.info("Successfully added dependency {} to task {}", dependencyTaskId, taskId);
+            //log.info("Successfully added dependency {} to task {}", dependencyTaskId, taskId);
         }
     }
 
     @Override
     public void removeTaskDependency(Long taskId, Long dependencyTaskId) {
-        log.info("Removing dependency {} from task {}", dependencyTaskId, taskId);
+        //log.info("Removing dependency {} from task {}", dependencyTaskId, taskId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -778,13 +778,13 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             }
             
             caseTaskRepository.save(task);
-            log.info("Successfully removed dependency {} from task {}", dependencyTaskId, taskId);
+            //log.info("Successfully removed dependency {} from task {}", dependencyTaskId, taskId);
         }
     }
 
     @Override
     public List<CaseTaskDTO> getTaskDependencies(Long taskId) {
-        log.info("Getting dependencies for task {}", taskId);
+        //log.info("Getting dependencies for task {}", taskId);
         
         // Find the task
         CaseTask task = caseTaskRepository.findById(taskId)
@@ -806,7 +806,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
 
     @Override
     public List<CaseTaskDTO> getBlockedTasks(Long userId) {
-        log.info("Getting blocked tasks for user {}", userId);
+        //log.info("Getting blocked tasks for user {}", userId);
         
         // Get all blocked tasks
         List<CaseTask> blockedTasks = caseTaskRepository.findBlockedTasks();

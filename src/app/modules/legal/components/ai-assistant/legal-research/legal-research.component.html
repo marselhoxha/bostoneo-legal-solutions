@@ -6,11 +6,7 @@
         <div class="row align-items-center">
           <div class="col-lg-8">
             <div class="d-flex align-items-center mb-3">
-              <div class="avatar-lg">
-                <div class="avatar-title bg-primary text-white rounded-circle">
-                  <i class="ri-scales-3-line fs-24"></i>
-                </div>
-              </div>
+              <img src="assets/images/legal-ai.gif" alt="Legal AI" style="width: 130px; height: 130px;" class="me-3">
               <div class="ms-3">
                 <h2 class="mb-1 fw-bold">Legal Research Assistant</h2>
                 <p class="text-muted mb-0 fs-15">
@@ -144,18 +140,77 @@
     </div>
   </div>
 
-  <!-- Quick Tips Banner -->
+  <!-- Enhanced Quick Tips Carousel -->
   <div class="row mb-4">
     <div class="col-12">
-      <div class="alert alert-info border-0 alert-dismissible fade show material-shadow" role="alert">
-        <div class="d-flex align-items-center">
-          <lord-icon src="https://cdn.lordicon.com/lomfljuq.json" trigger="loop" colors="primary:#0ab39c" style="width:40px;height:40px"></lord-icon>
-          <div class="ms-3 flex-grow-1">
-            <h6 class="fs-14 mb-1">Pro Tip: Advanced Search Techniques</h6>
-            <p class="mb-0 fs-13">Use quotation marks for exact phrases, Boolean operators (AND, OR, NOT) for complex queries, and wildcards (*) for partial matches. Try: <code>"breach of contract" AND damages NOT punitive</code></p>
+      <div id="tipsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="7000">
+        <div class="carousel-inner">
+          <!-- Tip 1: Search Basics -->
+          <div class="carousel-item active">
+            <div class="alert alert-info border-0 fade show material-shadow mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/lomfljuq.json" trigger="loop" colors="primary:#0ab39c" style="width:40px;height:40px"></lord-icon>
+                <div class="ms-3 flex-grow-1">
+                  <h6 class="fs-14 mb-1">💡 Smart Search Tips: Natural Language Queries</h6>
+                  <p class="mb-0 fs-13">Ask questions naturally like "What are the requirements for filing a civil complaint in Massachusetts?" Our AI understands context and intent, not just keywords.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip 2: Boolean Operators -->
+          <div class="carousel-item">
+            <div class="alert alert-success border-0 fade show material-shadow mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/gqzfzudq.json" trigger="loop" colors="primary:#0ab39c" style="width:40px;height:40px"></lord-icon>
+                <div class="ms-3 flex-grow-1">
+                  <h6 class="fs-14 mb-1">🎯 Pro Tip: Boolean Search Mastery</h6>
+                  <p class="mb-0 fs-13">Combine terms effectively: <code>"breach of contract" AND damages NOT punitive</code> • <code>negligence OR malpractice</code> • <code>custody w/5 visitation</code> (within 5 words)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip 3: Citation Search -->
+          <div class="carousel-item">
+            <div class="alert alert-warning border-0 fade show material-shadow mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/nocovwne.json" trigger="loop" colors="primary:#f06548" style="width:40px;height:40px"></lord-icon>
+                <div class="ms-3 flex-grow-1">
+                  <h6 class="fs-14 mb-1">📚 Citation & Case Search</h6>
+                  <p class="mb-0 fs-13">Search specific citations: <code>M.G.L. c. 93A § 11</code> • Find similar cases: <code>Commonwealth v. similar to Smith</code> • Research precedents: <code>precedent:negligence damages:punitive</code></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip 4: AI Features -->
+          <div class="carousel-item">
+            <div class="alert alert-primary border-0 fade show material-shadow mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/kipaqhoz.json" trigger="loop" colors="primary:#405189" style="width:40px;height:40px"></lord-icon>
+                <div class="ms-3 flex-grow-1">
+                  <h6 class="fs-14 mb-1">🤖 AI Analysis Features</h6>
+                  <p class="mb-0 fs-13">Claude AI automatically: • Summarizes key legal points • Identifies relevant precedents • Suggests related statutes • Provides jurisdiction-specific insights • Generates comprehensive analysis reports</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip 5: Best Practices -->
+          <div class="carousel-item">
+            <div class="alert alert-danger border-0 fade show material-shadow mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/tdrtiskw.json" trigger="loop" colors="primary:#f06548" style="width:40px;height:40px"></lord-icon>
+                <div class="ms-3 flex-grow-1">
+                  <h6 class="fs-14 mb-1">⚡ Search Best Practices</h6>
+                  <p class="mb-0 fs-13">Start broad, then refine • Use filters for precision • Save important searches • Export analyses as PDFs • Cross-reference multiple sources • Always verify with primary sources</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
       </div>
     </div>
   </div>
@@ -164,14 +219,14 @@
   <div class="row">
     <!-- Left Column - Enhanced Search Interface -->
     <div class="col-xxl-8">
-      <div class="card ribbon-box right material-shadow">
-        <span class="ribbon-three ribbon-three-primary"><span>AI-Powered</span></span>
+      <div class="card material-shadow">
 
         <div class="card-header border-0 bg-light bg-opacity-50">
           <div class="row align-items-center">
             <div class="col">
-              <h4 class="card-title mb-0">
-                <i class="ri-search-eye-line text-primary me-2"></i>
+              <h4 class="card-title mb-0 d-flex align-items-center">
+                <lord-icon src="https://cdn.lordicon.com/lomfljuq.json" trigger="hover"
+                           colors="primary:#405189" style="width:24px;height:24px" class="me-2"></lord-icon>
                 Intelligent Legal Search
               </h4>
             </div>
@@ -195,21 +250,66 @@
                        colors="primary:#405189,secondary:#0ab39c" style="width:120px;height:120px">
             </lord-icon>
 
-            <h3 class="mt-4">Start Your Legal Research Journey</h3>
-            <p class="text-muted fs-15 mb-4">
-              Access comprehensive Massachusetts legal resources with AI-powered insights.<br>
-              Search statutes, cases, regulations, and more with intelligent analysis.
+            <h3 class="mt-4">Welcome to Your AI-Powered Legal Research Assistant</h3>
+            <p class="text-muted fs-15 mb-3">
+              <strong>50,000+ Massachusetts legal documents</strong> at your fingertips with <strong>Claude AI analysis</strong>
             </p>
+
+
+            <!-- What to Expect Section -->
+            <div class="row justify-content-center mb-4">
+              <div class="col-lg-10">
+                <h5 class="mb-3">✨ What You Can Expect</h5>
+                <div class="row g-3 text-start">
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="ri-check-double-line text-success fs-20 me-2"></i>
+                      <div>
+                        <h6 class="mb-1 fs-14">Instant Comprehensive Results</h6>
+                        <p class="text-muted mb-0 fs-13">Search across statutes, case law, court rules, regulations, and federal documents simultaneously</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="ri-check-double-line text-success fs-20 me-2"></i>
+                      <div>
+                        <h6 class="mb-1 fs-14">AI-Powered Legal Analysis</h6>
+                        <p class="text-muted mb-0 fs-13">Get intelligent summaries, identify key precedents, and understand complex legal concepts</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="ri-check-double-line text-success fs-20 me-2"></i>
+                      <div>
+                        <h6 class="mb-1 fs-14">Jurisdiction-Specific Insights</h6>
+                        <p class="text-muted mb-0 fs-13">Focus on Massachusetts law with federal integration where relevant</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="ri-check-double-line text-success fs-20 me-2"></i>
+                      <div>
+                        <h6 class="mb-1 fs-14">Professional Documentation</h6>
+                        <p class="text-muted mb-0 fs-13">Export formatted PDFs with proper citations for court filings and client memos</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="hstack gap-2 justify-content-center">
               <button class="btn btn-primary btn-lg" (click)="showDefaultState = false; focusSearchInput()">
                 <i class="ri-search-line me-2"></i>Start Searching
               </button>
-              <button class="btn btn-soft-info btn-lg" (click)="showTour()">
-                <i class="ri-compass-3-line me-2"></i>Take a Tour
+              <button class="btn btn-soft-info btn-lg" (click)="showExampleQueries()">
+                <i class="ri-lightbulb-line me-2"></i>See Examples
               </button>
-              <button class="btn btn-soft-success btn-lg" (click)="showVideoGuide()">
-                <i class="ri-play-circle-line me-2"></i>Watch Guide
+              <button class="btn btn-soft-success btn-lg" (click)="showSearchGuide()">
+                <i class="ri-book-open-line me-2"></i>Search Guide
               </button>
             </div>
           </div>
@@ -233,7 +333,7 @@
               <a class="nav-link position-relative" data-bs-toggle="tab" href="#saved-tab" role="tab">
                 <i class="ri-bookmark-line d-block fs-20 mb-1"></i>
                 <span class="d-none d-sm-block">Saved</span>
-                <span class="badge bg-warning position-absolute top-0 start-100 translate-middle" *ngIf="savedSearches.length > 0">{{savedSearches.length}}</span>
+                <span class="badge bg-warning position-absolute top-0 start-100 translate-middle" *ngIf="savedAnalyses.length > 0">{{savedAnalyses.length}}</span>
               </a>
             </li>
             <li class="nav-item">
@@ -294,7 +394,7 @@
                       <select class="form-select" formControlName="searchType" id="searchType">
                         <option value="all">All Sources</option>
                         <option value="statutes">Statutes & Codes</option>
-                        <option value="cases">Case Law</option>
+                        <option value="case_law">Case Law</option>
                         <option value="rules">Court Rules</option>
                         <option value="regulations">Regulations</option>
                         <option value="guidelines">Guidelines</option>
@@ -543,31 +643,37 @@
 
             <!-- Enhanced Saved Tab -->
             <div class="tab-pane fade" id="saved-tab" role="tabpanel">
-              <div class="row g-3" *ngIf="savedSearches.length > 0">
-                <div class="col-md-6" *ngFor="let saved of savedSearches">
-                  <div class="card border card-border-primary">
+              <div class="row g-3" *ngIf="savedAnalyses.length > 0">
+                <div class="col-md-6" *ngFor="let saved of savedAnalyses">
+                  <div class="card border card-border-success">
                     <div class="card-body">
                       <div class="d-flex align-items-start">
                         <div class="flex-shrink-0">
                           <div class="avatar-sm">
-                            <div class="avatar-title bg-primary-subtle text-primary rounded">
-                              <i class="ri-bookmark-fill"></i>
+                            <div class="avatar-title bg-success-subtle text-success rounded">
+                              <i class="ri-robot-2-line"></i>
                             </div>
                           </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                          <h6 class="mb-1">{{saved.searchQuery}}</h6>
+                          <h6 class="mb-1">{{saved.query}}</h6>
                           <p class="text-muted mb-2 fs-13">
-                            <i class="ri-calendar-line me-1"></i>{{formatSearchDate(saved.searchedAt)}}
+                            <i class="ri-calendar-line me-1"></i>{{formatSearchDate(saved.timestamp)}}
                             <span class="ms-2">
-                              <i class="ri-file-list-line me-1"></i>{{saved.resultsCount}} results
+                              <i class="ri-file-list-line me-1"></i>{{saved.results}} results
+                            </span>
+                            <span class="ms-2">
+                              <i class="ri-scales-3-line me-1"></i>{{saved.jurisdiction}}
                             </span>
                           </p>
                           <div class="hstack gap-2">
-                            <button class="btn btn-sm btn-primary" (click)="loadSavedSearch(saved)">
+                            <button class="btn btn-sm btn-success" (click)="loadSavedAnalysis(saved)">
+                              <i class="ri-eye-line me-1"></i>View Analysis
+                            </button>
+                            <button class="btn btn-sm btn-soft-primary" (click)="rerunSavedAnalysis(saved)">
                               <i class="ri-search-line me-1"></i>Search Again
                             </button>
-                            <button class="btn btn-sm btn-soft-danger" (click)="removeFromSaved(saved.id)">
+                            <button class="btn btn-sm btn-soft-danger" (click)="deleteSavedAnalysis(saved.id)">
                               <i class="ri-delete-bin-line"></i>
                             </button>
                           </div>
@@ -578,14 +684,14 @@
                 </div>
               </div>
 
-              <div class="text-center py-5" *ngIf="savedSearches.length === 0">
+              <div class="text-center py-5" *ngIf="savedAnalyses.length === 0">
                 <div class="avatar-lg mx-auto mb-4">
                   <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
-                    <i class="ri-bookmark-line fs-2"></i>
+                    <i class="ri-robot-2-line fs-2"></i>
                   </div>
                 </div>
-                <h5>No Saved Searches</h5>
-                <p class="text-muted">Save important searches for quick access</p>
+                <h5>No Saved Analyses</h5>
+                <p class="text-muted">Save AI analyses from your searches for quick access</p>
               </div>
             </div>
 
@@ -640,214 +746,149 @@
 
     <!-- Right Column - Enhanced Information Panels -->
     <div class="col-xxl-4">
-      <!-- Quick Actions Card -->
+      <!-- Research Insights Card -->
       <div class="card mb-3">
-        <div class="card-header bg-primary bg-opacity-10">
+        <div class="card-header bg-success bg-opacity-10">
           <h5 class="card-title mb-0">
-            <i class="ri-flashlight-line me-2"></i>Quick Actions
+            <i class="ri-lightbulb-flash-line me-2"></i>Research Insights
           </h5>
         </div>
         <div class="card-body">
-          <div class="d-grid gap-2">
-            <button class="btn btn-soft-primary text-start" (click)="performQuickSearch('Massachusetts consumer protection 93A')">
-              <i class="ri-shield-user-line me-2"></i>Consumer Protection (Ch. 93A)
-            </button>
-            <button class="btn btn-soft-info text-start" (click)="performQuickSearch('landlord tenant Massachusetts')">
-              <i class="ri-home-4-line me-2"></i>Landlord-Tenant Law
-            </button>
-            <button class="btn btn-soft-success text-start" (click)="performQuickSearch('Massachusetts criminal procedure')">
-              <i class="ri-scales-3-line me-2"></i>Criminal Procedure
-            </button>
-            <button class="btn btn-soft-warning text-start" (click)="performQuickSearch('employment law Massachusetts')">
-              <i class="ri-briefcase-4-line me-2"></i>Employment Law
-            </button>
-            <button class="btn btn-soft-danger text-start" (click)="performQuickSearch('family law Massachusetts divorce')">
-              <i class="ri-group-line me-2"></i>Family Law & Divorce
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search Tips Accordion -->
-      <div class="accordion custom-accordionwithicon mb-3" id="searchTipsAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="searchTipsHeader">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#searchTipsCollapse" aria-expanded="true">
-              <i class="ri-lightbulb-flash-line me-2"></i>Pro Search Tips
-            </button>
-          </h2>
-          <div id="searchTipsCollapse" class="accordion-collapse collapse show">
-            <div class="accordion-body">
-              <div class="d-flex mb-3">
-                <div class="flex-shrink-0">
-                  <i class="ri-checkbox-circle-fill text-success"></i>
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="fs-14 mb-1">Exact Phrases</h6>
-                  <p class="text-muted mb-0 fs-13">Use quotes: <code>"statute of limitations"</code></p>
-                </div>
-              </div>
-              <div class="d-flex mb-3">
-                <div class="flex-shrink-0">
-                  <i class="ri-checkbox-circle-fill text-success"></i>
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="fs-14 mb-1">Wildcards</h6>
-                  <p class="text-muted mb-0 fs-13">Use * for variations: <code>negligen*</code></p>
-                </div>
-              </div>
-              <div class="d-flex mb-3">
-                <div class="flex-shrink-0">
-                  <i class="ri-checkbox-circle-fill text-success"></i>
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="fs-14 mb-1">Citation Search</h6>
-                  <p class="text-muted mb-0 fs-13">Direct citation: <code>M.G.L. c. 93A § 11</code></p>
-                </div>
-              </div>
-              <div class="d-flex mb-3">
-                <div class="flex-shrink-0">
-                  <i class="ri-checkbox-circle-fill text-success"></i>
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="fs-14 mb-1">Proximity Search</h6>
-                  <p class="text-muted mb-0 fs-13">Words within distance: <code>contract w/5 breach</code></p>
-                </div>
-              </div>
-              <div class="d-flex">
-                <div class="flex-shrink-0">
-                  <i class="ri-checkbox-circle-fill text-success"></i>
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="fs-14 mb-1">Field Search</h6>
-                  <p class="text-muted mb-0 fs-13">Specific fields: <code>title:negligence</code></p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="shortcutsHeader">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#shortcutsCollapse">
-              <i class="ri-keyboard-line me-2"></i>Keyboard Shortcuts
-            </button>
-          </h2>
-          <div id="shortcutsCollapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="table-responsive">
-                <table class="table table-sm table-borderless mb-0">
-                  <tbody>
-                    <tr>
-                      <td><kbd>Ctrl</kbd> + <kbd>K</kbd></td>
-                      <td class="text-muted">Focus search</td>
-                    </tr>
-                    <tr>
-                      <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
-                      <td class="text-muted">Execute search</td>
-                    </tr>
-                    <tr>
-                      <td><kbd>Ctrl</kbd> + <kbd>S</kbd></td>
-                      <td class="text-muted">Save search</td>
-                    </tr>
-                    <tr>
-                      <td><kbd>Ctrl</kbd> + <kbd>H</kbd></td>
-                      <td class="text-muted">Search history</td>
-                    </tr>
-                    <tr>
-                      <td><kbd>Esc</kbd></td>
-                      <td class="text-muted">Clear search</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Live Database Stats -->
-      <div class="card">
-        <div class="card-header">
-          <div class="d-flex align-items-center">
-            <h5 class="card-title mb-0 flex-grow-1">
-              <i class="ri-database-2-line me-2"></i>Database Coverage
-            </h5>
-            <span class="badge bg-success">Live</span>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row text-center g-2">
-            <div class="col-6">
-              <div class="p-2 border border-dashed rounded">
-                <h5 class="mb-1">12.5K+</h5>
-                <p class="text-muted mb-0 fs-12">MA Statutes</p>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="p-2 border border-dashed rounded">
-                <h5 class="mb-1">25K+</h5>
-                <p class="text-muted mb-0 fs-12">Case Law</p>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="p-2 border border-dashed rounded">
-                <h5 class="mb-1">2.5K+</h5>
-                <p class="text-muted mb-0 fs-12">Court Rules</p>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="p-2 border border-dashed rounded">
-                <h5 class="mb-1">8.7K+</h5>
-                <p class="text-muted mb-0 fs-12">Regulations</p>
-              </div>
-            </div>
+          <div class="mb-3">
+            <h6 class="fs-14 text-success mb-2">
+              <i class="ri-stars-line me-1"></i>Pro Tips
+            </h6>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2">
+                <i class="ri-check-line text-success me-2"></i>
+                <small>Use quotes for exact phrases: "reasonable doubt"</small>
+              </li>
+              <li class="mb-2">
+                <i class="ri-check-line text-success me-2"></i>
+                <small>Combine terms with AND, OR, NOT operators</small>
+              </li>
+              <li class="mb-2">
+                <i class="ri-check-line text-success me-2"></i>
+                <small>Search by citation: M.G.L. c. 93A § 11</small>
+              </li>
+              <li class="mb-0">
+                <i class="ri-check-line text-success me-2"></i>
+                <small>Use wildcards (*) for word variations</small>
+              </li>
+            </ul>
           </div>
 
-          <div class="mt-3 pt-3 border-top">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="text-muted fs-13">Coverage Completeness</span>
-              <span class="fw-semibold">98%</span>
-            </div>
-            <div class="progress progress-sm">
-              <div class="progress-bar bg-gradient bg-primary" style="width: 98%"></div>
-            </div>
-            <p class="text-muted fs-11 mb-0 mt-2">
-              <i class="ri-refresh-line me-1"></i>Updated daily at 2:00 AM EST
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI Analysis Card - Brief Summary with Modal Trigger -->
-  <div class="row mt-4" *ngIf="currentSearchResponse?.aiAnalysis">
-    <div class="col-12">
-      <div class="card border border-success border-opacity-25">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="avatar-sm me-3">
-              <div class="avatar-title bg-success text-white rounded-circle">
-                <i class="ri-robot-2-line"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1">
-              <h6 class="mb-1">AI Legal Analysis Ready</h6>
-              <p class="text-muted mb-0 fs-13">
-                Claude AI has analyzed {{searchResults.length}} documents • Generated in {{analysisTime || '< 1'}}s
-              </p>
-            </div>
-            <div class="flex-shrink-0">
-              <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal">
-                <i class="ri-eye-line me-1"></i>View Analysis
+          <div class="border-top pt-3">
+            <h6 class="fs-14 text-primary mb-2">
+              <i class="ri-bookmark-3-line me-1"></i>Common Searches
+            </h6>
+            <div class="d-grid gap-1">
+              <button class="btn btn-sm btn-soft-primary text-start py-1"
+                      (click)="fillSearchInput('Massachusetts consumer protection 93A')"
+                      title="Consumer Protection Law">
+                <small><i class="ri-shield-user-line me-1"></i>Consumer Protection (Ch. 93A)</small>
+              </button>
+              <button class="btn btn-sm btn-soft-info text-start py-1"
+                      (click)="fillSearchInput('premises liability Massachusetts')"
+                      title="Premises Liability">
+                <small><i class="ri-building-2-line me-1"></i>Premises Liability</small>
+              </button>
+              <button class="btn btn-sm btn-soft-success text-start py-1"
+                      (click)="fillSearchInput('contract formation Massachusetts')"
+                      title="Contract Law">
+                <small><i class="ri-file-text-line me-1"></i>Contract Formation</small>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Massachusetts Legal Resources -->
+      <div class="accordion custom-accordionwithicon mb-3" id="legalResourcesAccordion">
+        <!-- Massachusetts Courts -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="courtsHeader">
+            <button class="accordion-button" type="button" (click)="toggleCourtSystemAccordion()"
+                    [class.collapsed]="!courtSystemExpanded">
+              <i class="ri-government-line me-2"></i>MA Court System
+            </button>
+          </h2>
+          <div id="courtsCollapse" class="accordion-collapse collapse" [class.show]="courtSystemExpanded">
+            <div class="accordion-body">
+              <div class="list-group list-group-flush">
+                <a href="https://www.mass.gov/orgs/supreme-judicial-court" target="_blank" class="list-group-item list-group-item-action border-0 px-0">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-scales-3-line text-primary me-2"></i>
+                    <div>
+                      <h6 class="mb-0 fs-14">Supreme Judicial Court</h6>
+                      <small class="text-muted">Highest court in MA</small>
+                    </div>
+                  </div>
+                </a>
+                <a href="https://www.mass.gov/orgs/appeals-court" target="_blank" class="list-group-item list-group-item-action border-0 px-0">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-arrow-up-line text-info me-2"></i>
+                    <div>
+                      <h6 class="mb-0 fs-14">Appeals Court</h6>
+                      <small class="text-muted">Intermediate appeals</small>
+                    </div>
+                  </div>
+                </a>
+                <a href="https://www.mass.gov/orgs/superior-court" target="_blank" class="list-group-item list-group-item-action border-0 px-0">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-building-2-line text-success me-2"></i>
+                    <div>
+                      <h6 class="mb-0 fs-14">Superior Court</h6>
+                      <small class="text-muted">Major civil & criminal</small>
+                    </div>
+                  </div>
+                </a>
+                <a href="https://www.mass.gov/orgs/district-court" target="_blank" class="list-group-item list-group-item-action border-0 px-0">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-community-line text-warning me-2"></i>
+                    <div>
+                      <h6 class="mb-0 fs-14">District Court</h6>
+                      <small class="text-muted">Local jurisdiction</small>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Citation Formats -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="citationHeader">
+            <button class="accordion-button" type="button" (click)="toggleQuickCitationsAccordion()"
+                    [class.collapsed]="!quickCitationsExpanded">
+              <i class="ri-file-text-line me-2"></i>Quick Citations
+            </button>
+          </h2>
+          <div id="citationCollapse" class="accordion-collapse collapse" [class.show]="quickCitationsExpanded">
+            <div class="accordion-body">
+              <h6 class="fs-13 mb-2">Common Formats:</h6>
+              <div class="mb-3">
+                <code class="d-block mb-1">M.G.L. c. 93A § 11</code>
+                <small class="text-muted">Consumer Protection</small>
+              </div>
+              <div class="mb-3">
+                <code class="d-block mb-1">G.L. c. 209A</code>
+                <small class="text-muted">Abuse Prevention</small>
+              </div>
+              <div class="mb-3">
+                <code class="d-block mb-1">Mass. R. Civ. P. 12</code>
+                <small class="text-muted">Civil Procedure Rules</small>
+              </div>
+              <div>
+                <code class="d-block mb-1">Commonwealth v. [Name]</code>
+                <small class="text-muted">Criminal Cases</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -919,8 +960,28 @@
                             <span class="text-muted fs-13" *ngIf="result.practiceArea">
                               <i class="ri-briefcase-line me-1"></i>{{result.practiceArea}}
                             </span>
+                            <!-- Federal Register specific metadata -->
+                            <span class="text-body-secondary fs-13" *ngIf="result.source === 'Federal Register' && result.documentNumber">
+                              <i class="ri-hashtag me-1"></i>{{result.documentNumber}}
+                            </span>
+                            <span class="text-body-secondary fs-13" *ngIf="result.source === 'Federal Register' && result.publicationDate">
+                              <i class="ri-calendar-event-line me-1"></i>{{formatSearchDate(result.publicationDate)}}
+                            </span>
                           </div>
                           <p class="text-muted mb-3">{{result.summary}}</p>
+
+                          <!-- Federal Register agencies display -->
+                          <div class="mb-2" *ngIf="result.source === 'Federal Register' && result.agencies && result.agencies.length > 0">
+                            <div class="hstack gap-1 flex-wrap">
+                              <span class="text-body-secondary fs-12 me-2">Agencies:</span>
+                              <span class="badge badge-soft-secondary fs-11" *ngFor="let agency of result.agencies.slice(0, 3)">
+                                {{agency}}
+                              </span>
+                              <span class="text-body-secondary fs-11" *ngIf="result.agencies.length > 3">
+                                +{{result.agencies.length - 3}} more
+                              </span>
+                            </div>
+                          </div>
 
                           <!-- Relevance Score -->
                           <div class="d-flex align-items-center mb-3">
@@ -932,18 +993,33 @@
                           </div>
 
                           <div class="hstack gap-2 flex-wrap">
-                            <button class="btn btn-primary btn-sm" (click)="selectResult(result)">
-                              <i class="ri-eye-line me-1"></i>View Full Text
-                            </button>
-                            <button class="btn btn-soft-success btn-sm" (click)="addToNotebook(result)">
-                              <i class="ri-add-line me-1"></i>Add to Research
-                            </button>
-                            <button class="btn btn-soft-info btn-sm" (click)="citationHelper(result)">
-                              <i class="ri-quote-text me-1"></i>Cite
-                            </button>
-                            <button class="btn btn-soft-secondary btn-sm" (click)="findSimilar(result)">
-                              <i class="ri-search-2-line me-1"></i>Find Similar
-                            </button>
+                            <!-- Federal Register specific actions -->
+                            <a *ngIf="result.source === 'Federal Register' && result.htmlUrl"
+                               [href]="result.htmlUrl" target="_blank"
+                               class="btn btn-soft-success btn-sm">
+                              <i class="ri-external-link-line me-1"></i>View HTML
+                            </a>
+                            <a *ngIf="result.source === 'Federal Register' && result.pdfUrl"
+                               [href]="result.pdfUrl" target="_blank"
+                               class="btn btn-soft-danger btn-sm">
+                              <i class="ri-file-pdf-line me-1"></i>View PDF
+                            </a>
+                            <!-- Massachusetts specific actions -->
+                            <a *ngIf="result.source === 'Massachusetts Official' && result.documentUrl"
+                               [href]="result.documentUrl" target="_blank"
+                               class="btn btn-soft-success btn-sm">
+                              <i class="ri-external-link-line me-1"></i>View Document
+                            </a>
+                            <a *ngIf="result.source === 'Massachusetts Official' && result.htmlUrl"
+                               [href]="result.htmlUrl" target="_blank"
+                               class="btn btn-soft-success btn-sm">
+                              <i class="ri-external-link-line me-1"></i>View HTML
+                            </a>
+                            <a *ngIf="result.source === 'Massachusetts Official' && result.pdfUrl"
+                               [href]="result.pdfUrl" target="_blank"
+                               class="btn btn-soft-danger btn-sm">
+                              <i class="ri-file-pdf-line me-1"></i>View PDF
+                            </a>
                             <div class="dropdown">
                               <button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown">
                                 <i class="ri-more-2-fill"></i>
@@ -967,13 +1043,13 @@
           </div>
 
           <!-- Pagination -->
-          <div class="row mt-4">
+          <div class="row mt-4" *ngIf="searchResults.length > 0">
             <div class="col-sm">
               <div class="text-muted">
                 Showing <span class="fw-semibold">{{searchResults.length}}</span> results
               </div>
             </div>
-            <div class="col-sm-auto">
+            <div class="col-sm-auto" *ngIf="searchResults.length > 10">
               <nav>
                 <ul class="pagination pagination-sm mb-0">
                   <li class="page-item disabled">
@@ -981,12 +1057,6 @@
                   </li>
                   <li class="page-item active">
                     <a class="page-link" href="#">1</a>
-                  </li>
-                  <li class="page-item">
-                    <a class="page-link" href="#">2</a>
-                  </li>
-                  <li class="page-item">
-                    <a class="page-link" href="#">3</a>
                   </li>
                   <li class="page-item">
                     <a class="page-link" href="#">Next</a>
@@ -1000,72 +1070,6 @@
     </div>
   </div>
 
-  <!-- Enhanced Empty State - Show only after search with no results -->
-  <div class="row mt-4" *ngIf="!isSearching && !showDefaultState && searchResults.length === 0 && searchQuery.trim().length > 0 && !currentSearchResponse">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body py-5">
-          <div class="text-center">
-            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop"
-                       colors="primary:#405189,secondary:#0ab39c" style="width:120px;height:120px">
-            </lord-icon>
-
-            <h3 class="mt-4">Start Your Legal Research Journey</h3>
-            <p class="text-muted fs-15 mb-4">
-              Access comprehensive Massachusetts legal resources with AI-powered insights.<br>
-              Search statutes, cases, regulations, and more with intelligent analysis.
-            </p>
-
-            <div class="row justify-content-center mb-4">
-              <div class="col-lg-8">
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <div class="d-flex align-items-center justify-content-center">
-                      <i class="ri-search-eye-line text-primary fs-24 me-2"></i>
-                      <div class="text-start">
-                        <h6 class="mb-0">Smart Search</h6>
-                        <p class="text-muted mb-0 fs-12">Natural language queries</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="d-flex align-items-center justify-content-center">
-                      <i class="ri-robot-2-line text-success fs-24 me-2"></i>
-                      <div class="text-start">
-                        <h6 class="mb-0">AI Analysis</h6>
-                        <p class="text-muted mb-0 fs-12">Instant legal insights</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="d-flex align-items-center justify-content-center">
-                      <i class="ri-bookmark-3-line text-warning fs-24 me-2"></i>
-                      <div class="text-start">
-                        <h6 class="mb-0">Save Research</h6>
-                        <p class="text-muted mb-0 fs-12">Organize findings</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="hstack gap-2 justify-content-center">
-              <button class="btn btn-primary btn-lg" (click)="focusSearchInput()">
-                <i class="ri-search-line me-2"></i>Start Searching
-              </button>
-              <button class="btn btn-soft-info btn-lg" (click)="showTour()">
-                <i class="ri-compass-3-line me-2"></i>Take a Tour
-              </button>
-              <button class="btn btn-soft-success btn-lg" (click)="showVideoGuide()">
-                <i class="ri-play-circle-line me-2"></i>Watch Guide
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Enhanced Document Viewer Modal -->
   <div class="modal fade" id="documentViewerModal" tabindex="-1" *ngIf="selectedResult">
@@ -1175,8 +1179,185 @@
     </div>
   </div>
 
+  <!-- Lawyer-Grade Precision Analysis Card -->
+  <div class="row mt-4" *ngIf="currentSearchResponse?.lawyerGradeAnalysis">
+    <div class="col-12">
+      <div class="card border border-primary border-opacity-50">
+        <div class="card-header bg-primary bg-opacity-10">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-3">
+              <div class="avatar-title bg-primary text-white rounded-circle">
+                <i class="ri-scales-3-line"></i>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-1">⚖️ Lawyer-Grade Precision Analysis</h5>
+              <p class="text-muted mb-0 fs-13">
+                <span class="badge bg-{{currentSearchResponse.lawyerGradeAnalysis.qualityMetrics?.confidenceLevel === 'High' ? 'success' : currentSearchResponse.lawyerGradeAnalysis.qualityMetrics?.confidenceLevel === 'Medium' ? 'warning' : 'danger'}}">
+                  {{currentSearchResponse.lawyerGradeAnalysis.qualityMetrics?.confidenceLevel}} Confidence
+                </span>
+                <span class="ms-2">Citation Accuracy: {{currentSearchResponse.lawyerGradeAnalysis.qualityMetrics?.citationAccuracy || 0}}%</span>
+                <span class="ms-2">Primary Sources: {{currentSearchResponse.lawyerGradeAnalysis.qualityMetrics?.primarySourceRatio || 0}}%</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Executive Summary -->
+          <div class="mb-4" *ngIf="currentSearchResponse.lawyerGradeAnalysis.executiveSummary">
+            <h6 class="text-primary mb-2">📋 Executive Summary</h6>
+            <div class="bg-light p-3 rounded">
+              <p class="mb-2"><strong>Bottom Line:</strong> {{currentSearchResponse.lawyerGradeAnalysis.executiveSummary.bottomLine}}</p>
+              <p class="mb-2" *ngIf="currentSearchResponse.lawyerGradeAnalysis.executiveSummary.jurisdictionSpecific">
+                <strong>Jurisdiction:</strong> {{currentSearchResponse.lawyerGradeAnalysis.executiveSummary.jurisdictionSpecific}}
+              </p>
+              <p class="mb-0" *ngIf="currentSearchResponse.lawyerGradeAnalysis.executiveSummary.asOfDate">
+                <strong>Law Current As Of:</strong> {{currentSearchResponse.lawyerGradeAnalysis.executiveSummary.asOfDate}}
+              </p>
+            </div>
+            <div class="mt-3" *ngIf="currentSearchResponse.lawyerGradeAnalysis.executiveSummary.criticalDeadlines?.length">
+              <div class="alert alert-danger mb-0">
+                <h6 class="alert-heading">⏰ Critical Deadlines</h6>
+                <ul class="mb-0">
+                  <li *ngFor="let deadline of currentSearchResponse.lawyerGradeAnalysis.executiveSummary.criticalDeadlines">
+                    {{deadline}}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Primary Authorities -->
+          <div class="mb-4" *ngIf="currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities">
+            <h6 class="text-primary mb-2">⚖️ Primary Legal Authorities</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <tbody>
+                  <tr *ngIf="currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.statutory?.length">
+                    <td class="text-muted" width="120">Statutes</td>
+                    <td>
+                      <div *ngFor="let statute of currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.statutory">
+                        <code>{{statute.citation}}</code>
+                        <span class="text-muted ms-2">- {{statute.relevance}}</span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.caselaw?.length">
+                    <td class="text-muted">Cases</td>
+                    <td>
+                      <div *ngFor="let case of currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.caselaw">
+                        <code>{{case.citation}}</code>
+                        <div class="text-muted small">{{case.holding}}</div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.regulatory?.length">
+                    <td class="text-muted">Regulations</td>
+                    <td>
+                      <div *ngFor="let reg of currentSearchResponse.lawyerGradeAnalysis.primaryAuthorities.regulatory">
+                        <code>{{reg.citation}}</code>
+                        <span class="text-muted ms-2">- {{reg.relevance}}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Citation Validations -->
+          <div class="mb-4" *ngIf="currentSearchResponse.citationValidations?.length">
+            <h6 class="text-primary mb-2">✓ Citation Verification Status</h6>
+            <div class="list-group list-group-flush">
+              <div class="list-group-item px-0" *ngFor="let validation of currentSearchResponse.citationValidations">
+                <div class="d-flex align-items-center">
+                  <i class="ri-{{validation.isValid ? 'checkbox-circle-fill text-success' : 'error-warning-fill text-danger'}} me-2"></i>
+                  <div class="flex-grow-1">
+                    <code>{{validation.originalCitation}}</code>
+                    <span class="badge bg-secondary ms-2">{{validation.citationType}}</span>
+                    <div *ngIf="validation.correctedCitation && validation.correctedCitation !== validation.originalCitation" class="text-success small mt-1">
+                      <i class="ri-arrow-right-line"></i> Suggested: <code>{{validation.correctedCitation}}</code>
+                    </div>
+                    <div *ngIf="validation.errors?.length" class="text-danger small mt-1">
+                      <ul class="mb-0">
+                        <li *ngFor="let error of validation.errors">{{error}}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Practice Notes & Warnings -->
+          <div class="row">
+            <div class="col-md-6">
+              <div *ngIf="currentSearchResponse.lawyerGradeAnalysis.practiceNotes">
+                <h6 class="text-primary mb-2">💼 Practice Notes</h6>
+                <div class="alert alert-info">
+                  <ul class="mb-0">
+                    <li *ngFor="let note of currentSearchResponse.lawyerGradeAnalysis.practiceNotes.strategicConsiderations">
+                      {{note}}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div *ngIf="currentSearchResponse.lawyerGradeAnalysis.temporalWarnings">
+                <h6 class="text-primary mb-2">⚠️ Temporal Warnings</h6>
+                <div class="alert alert-warning">
+                  <ul class="mb-0">
+                    <li *ngFor="let warning of currentSearchResponse.lawyerGradeAnalysis.temporalWarnings.recentChanges">
+                      {{warning}}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- View Full Analysis Button -->
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal">
+              <i class="ri-file-text-line me-1"></i>View Complete Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis Card - Brief Summary with Modal Trigger -->
+  <div class="row mt-4" *ngIf="currentSearchResponse?.aiAnalysis && !currentSearchResponse?.lawyerGradeAnalysis">
+    <div class="col-12">
+      <div class="card border border-success border-opacity-25">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-3">
+              <div class="avatar-title bg-success text-white rounded-circle">
+                <i class="ri-robot-2-line"></i>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">AI Legal Analysis Ready</h6>
+              <p class="text-muted mb-0 fs-13">
+                Claude AI has analyzed {{searchResults.length}} documents • Generated in {{analysisTime || '< 1'}}s
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal">
+                <i class="ri-eye-line me-1"></i>View Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- AI Analysis Modal -->
-  <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true" *ngIf="currentSearchResponse?.aiAnalysis">
+  <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true" *ngIf="currentSearchResponse?.aiAnalysis" (hidden.bs.modal)="onModalHidden()">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-success bg-opacity-10">
@@ -1193,12 +1374,81 @@
               </p>
             </div>
           </div>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeAIAnalysisModal()"></button>
         </div>
         <div class="modal-body">
           <div class="row">
             <div class="col-lg-8">
               <div class="ai-analysis-content" [innerHTML]="currentSearchResponse.aiAnalysis | markdownToHtml"></div>
+
+              <!-- Source Documents Section -->
+              <div class="mt-4" *ngIf="getFederalRegisterSources().length > 0">
+                <div class="card border border-opacity-25">
+                  <div class="card-header bg-primary-subtle border-bottom border-opacity-25">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <h6 class="mb-0 text-body">
+                        <i class="ri-government-line me-2 text-primary"></i>Federal Register Sources
+                        <span class="badge badge-soft-primary ms-2">{{getFederalRegisterSources().length}}</span>
+                      </h6>
+                      <button *ngIf="getFederalRegisterSources().length > 4"
+                              type="button"
+                              class="btn btn-soft-primary btn-sm"
+                              (click)="toggleFederalRegisterSources()">
+                        <i [class]="showAllFederalRegisterSources ? 'ri-eye-off-line' : 'ri-eye-line'" class="me-1"></i>
+                        {{showAllFederalRegisterSources ? 'View Less' : 'View All'}}
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-6" *ngFor="let doc of getFederalRegisterSourcesDisplay()">
+                        <div class="card border border-opacity-10 h-100">
+                          <div class="card-body p-3">
+                            <div class="d-flex align-items-center mb-2">
+                              <span [class]="getResultTypeBadgeClass(doc.type)" class="me-2">
+                                <i [class]="getResultTypeIcon(doc.type)"></i>
+                                {{formatResultType(doc.type)}}
+                              </span>
+                              <small class="text-body-secondary">#{{doc.documentNumber}}</small>
+                            </div>
+                            <h6 class="card-title fs-14 mb-2 text-body" [title]="doc.title">
+                              {{doc.title.length > 60 ? (doc.title | slice:0:60) + '...' : doc.title}}
+                            </h6>
+                            <p class="text-body-secondary fs-12 mb-2" *ngIf="doc.agencies && doc.agencies.length > 0">
+                              <i class="ri-building-line me-1"></i>{{doc.agencies[0]}}
+                              <span *ngIf="doc.agencies.length > 1"> +{{doc.agencies.length - 1}} more</span>
+                            </p>
+                            <p class="text-body-secondary fs-12 mb-3" *ngIf="doc.publicationDate">
+                              <i class="ri-calendar-line me-1"></i>{{formatSearchDate(doc.publicationDate)}}
+                            </p>
+                            <div class="hstack gap-1">
+                              <a *ngIf="doc.htmlUrl" [href]="doc.htmlUrl" target="_blank"
+                                 class="btn btn-soft-success btn-xs">
+                                <i class="ri-external-link-line"></i>HTML
+                              </a>
+                              <a *ngIf="doc.pdfUrl" [href]="doc.pdfUrl" target="_blank"
+                                 class="btn btn-soft-danger btn-xs">
+                                <i class="ri-file-pdf-line"></i>PDF
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Status text that updates based on view state -->
+                    <div class="text-center mt-3" *ngIf="!showAllFederalRegisterSources && getFederalRegisterSources().length > 4">
+                      <small class="text-body-secondary">
+                        Showing {{getFederalRegisterSourcesDisplay().length}} of {{getFederalRegisterSources().length}} Federal Register documents
+                      </small>
+                    </div>
+                    <div class="text-center mt-3" *ngIf="showAllFederalRegisterSources && getFederalRegisterSources().length > 4">
+                      <small class="text-body-secondary">
+                        Showing all {{getFederalRegisterSources().length}} Federal Register documents
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="col-lg-4">
               <div class="card bg-light">
@@ -1283,12 +1533,481 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal" (click)="closeAIAnalysisModal()">Close</button>
           <button type="button" class="btn btn-secondary" (click)="regenerateAnalysis()">
             <i class="ri-refresh-line me-1"></i>Regenerate
           </button>
           <button type="button" class="btn btn-primary" (click)="exportAIAnalysis()">
             <i class="ri-download-2-line me-1"></i>Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- See Examples Modal -->
+  <div class="modal fade" id="examplesModal" tabindex="-1" aria-labelledby="examplesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary bg-opacity-10">
+          <h5 class="modal-title" id="examplesModalLabel">
+            <i class="ri-lightbulb-flash-line text-warning me-2"></i>
+            Legal Search Examples & Templates
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Example Categories -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="card border border-primary border-opacity-25 h-100">
+                <div class="card-header bg-primary bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-home-4-line me-2"></i>Real Estate & Property</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-primary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('landlord tenant eviction process Massachusetts')">
+                      Eviction procedures & timelines
+                    </button>
+                    <button class="btn btn-soft-primary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('security deposit return requirements MA')">
+                      Security deposit laws
+                    </button>
+                    <button class="btn btn-soft-primary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('adverse possession requirements Massachusetts')">
+                      Adverse possession claims
+                    </button>
+                    <button class="btn btn-soft-primary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('implied warranty habitability Massachusetts')">
+                      Habitability standards
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border border-success border-opacity-25 h-100">
+                <div class="card-header bg-success bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-group-line me-2"></i>Family Law</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-success btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('child custody best interests factors Massachusetts')">
+                      Child custody factors
+                    </button>
+                    <button class="btn btn-soft-success btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('alimony calculation guidelines Massachusetts')">
+                      Alimony calculations
+                    </button>
+                    <button class="btn btn-soft-success btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('divorce property division equitable distribution MA')">
+                      Property division rules
+                    </button>
+                    <button class="btn btn-soft-success btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('child support guidelines worksheet Massachusetts')">
+                      Child support guidelines
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border border-danger border-opacity-25 h-100">
+                <div class="card-header bg-danger bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-car-line me-2"></i>Criminal Law</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-danger btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('OUI DUI first offense penalties Massachusetts')">
+                      OUI/DUI penalties
+                    </button>
+                    <button class="btn btn-soft-danger btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('Massachusetts sentencing guidelines grid')">
+                      Sentencing guidelines
+                    </button>
+                    <button class="btn btn-soft-danger btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('probation violation consequences Massachusetts')">
+                      Probation violations
+                    </button>
+                    <button class="btn btn-soft-danger btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('criminal record sealing expungement Massachusetts')">
+                      Record sealing/expungement
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border border-info border-opacity-25 h-100">
+                <div class="card-header bg-info bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-briefcase-4-line me-2"></i>Employment Law</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('wrongful termination at-will employment Massachusetts')">
+                      Wrongful termination
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('overtime wage hour laws Massachusetts')">
+                      Wage & hour laws
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('discrimination harassment workplace Massachusetts')">
+                      Workplace discrimination
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('non-compete agreement enforceability Massachusetts')">
+                      Non-compete agreements
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border border-warning border-opacity-25 h-100">
+                <div class="card-header bg-warning bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-user-injured-line me-2"></i>Personal Injury</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('personal injury statute limitations Massachusetts')">
+                      Statute of limitations
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('comparative negligence damages Massachusetts')">
+                      Comparative negligence
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('medical malpractice tribunal requirements Massachusetts')">
+                      Medical malpractice
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('pain suffering damages calculation Massachusetts')">
+                      Damages calculation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border border-secondary border-opacity-25 h-100">
+                <div class="card-header bg-secondary bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-scales-3-line me-2"></i>Civil Procedure</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-secondary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('small claims court limit procedure Massachusetts')">
+                      Small claims court
+                    </button>
+                    <button class="btn btn-soft-secondary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('discovery rules interrogatories Massachusetts')">
+                      Discovery procedures
+                    </button>
+                    <button class="btn btn-soft-secondary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('summary judgment standard Massachusetts')">
+                      Summary judgment
+                    </button>
+                    <button class="btn btn-soft-secondary btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('service of process requirements Massachusetts')">
+                      Service of process
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Federal Register Section -->
+            <div class="col-md-6">
+              <div class="card border border-warning border-opacity-25 h-100">
+                <div class="card-header bg-warning bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-government-line me-2"></i>Federal Register</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('EPA environmental regulations Federal Register')">
+                      EPA environmental rules
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('FDA drug approval Federal Register notices')">
+                      FDA drug approvals
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('OSHA workplace safety regulations Federal Register')">
+                      OSHA safety standards
+                    </button>
+                    <button class="btn btn-soft-warning btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('DOT transportation regulations Federal Register')">
+                      DOT transportation rules
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Federal Agencies Section -->
+            <div class="col-md-6">
+              <div class="card border border-info border-opacity-25 h-100">
+                <div class="card-header bg-info bg-opacity-10">
+                  <h6 class="mb-0"><i class="ri-building-4-line me-2"></i>Federal Agencies</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('SEC securities regulations enforcement actions')">
+                      SEC securities rules
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('FTC consumer protection Federal Register')">
+                      FTC consumer protection
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('NLRB labor relations Federal Register')">
+                      NLRB labor decisions
+                    </button>
+                    <button class="btn btn-soft-info btn-sm text-start" data-bs-dismiss="modal" (click)="performQuickSearch('EEOC employment discrimination Federal Register')">
+                      EEOC discrimination guidance
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Guide Modal -->
+  <div class="modal fade" id="searchGuideModal" tabindex="-1" aria-labelledby="searchGuideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-success bg-opacity-10">
+          <h5 class="modal-title" id="searchGuideModalLabel">
+            <i class="ri-book-open-line text-success me-2"></i>
+            Complete Legal Search Guide
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-4">
+            <!-- Search Techniques -->
+            <div class="col-md-6">
+              <h5 class="text-primary mb-3"><i class="ri-search-eye-line me-2"></i>Search Techniques</h5>
+
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6 class="card-title text-primary">1. Natural Language Search</h6>
+                  <p class="text-muted fs-14">Ask questions as you would to a colleague. The AI understands context and intent.</p>
+                  <div class="bg-light p-2 rounded mb-2">
+                    <code>What are the requirements for filing a civil complaint in Massachusetts?</code>
+                  </div>
+                  <div class="bg-light p-2 rounded">
+                    <code>How do I appeal a criminal conviction in MA?</code>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6 class="card-title text-primary">2. Boolean Operators</h6>
+                  <p class="text-muted fs-14">Combine search terms for precision:</p>
+                  <ul class="mb-0">
+                    <li><strong>AND:</strong> <code>contract AND breach AND damages</code></li>
+                    <li><strong>OR:</strong> <code>negligence OR malpractice</code></li>
+                    <li><strong>NOT:</strong> <code>assault NOT battery</code></li>
+                    <li><strong>Parentheses:</strong> <code>(landlord OR tenant) AND eviction</code></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title text-primary">3. Exact Phrase & Wildcards</h6>
+                  <ul class="mb-0">
+                    <li><strong>Quotes:</strong> <code>"implied warranty of habitability"</code></li>
+                    <li><strong>Wildcards:</strong> <code>negligen*</code> (finds negligent, negligence)</li>
+                    <li><strong>Proximity:</strong> <code>contract w/5 breach</code> (within 5 words)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Citation Formats -->
+            <div class="col-md-6">
+              <h5 class="text-success mb-3"><i class="ri-file-text-line me-2"></i>Citation Formats</h5>
+
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6 class="card-title text-success">Massachusetts General Laws</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <tr>
+                        <td><code>M.G.L. c. 93A § 11</code></td>
+                        <td class="text-muted">Consumer protection</td>
+                      </tr>
+                      <tr>
+                        <td><code>G.L. c. 276 § 100A</code></td>
+                        <td class="text-muted">Criminal records</td>
+                      </tr>
+                      <tr>
+                        <td><code>Chapter 209A</code></td>
+                        <td class="text-muted">Abuse prevention</td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6 class="card-title text-success">Court Rules</h6>
+                  <ul class="mb-0">
+                    <li><code>Mass. R. Civ. P. 12(b)(6)</code> - Motion to dismiss</li>
+                    <li><code>Mass. R. Crim. P. 30</code> - Post-conviction relief</li>
+                    <li><code>SJC Rule 1:18</code> - Appeals procedures</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title text-success">Case Law</h6>
+                  <ul class="mb-0">
+                    <li><code>Commonwealth v. [name]</code> - Criminal cases</li>
+                    <li><code>[name] v. [name]</code> - Civil cases</li>
+                    <li><code>Matter of [name]</code> - Probate cases</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="col-12">
+              <h5 class="text-warning mb-3"><i class="ri-award-line me-2"></i>Research Best Practices</h5>
+              <div class="card">
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-primary rounded-circle">1</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Start with Broad Searches</h6>
+                          <p class="text-muted mb-0 fs-13">Begin with general terms, then narrow down using filters and specific citations.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-success rounded-circle">2</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Use Multiple Approaches</h6>
+                          <p class="text-muted mb-0 fs-13">Try natural language, Boolean, and citation searches for comprehensive results.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-info rounded-circle">3</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Review AI Analysis</h6>
+                          <p class="text-muted mb-0 fs-13">Always check the AI-generated summary before diving into individual documents.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-warning rounded-circle">4</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Save Important Findings</h6>
+                          <p class="text-muted mb-0 fs-13">Bookmark searches and save AI analyses for future reference.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-danger rounded-circle">5</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Cross-Reference Sources</h6>
+                          <p class="text-muted mb-0 fs-13">Verify information across multiple documents and jurisdictions.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-secondary rounded-circle">6</div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6>Export Documentation</h6>
+                          <p class="text-muted mb-0 fs-13">Download PDFs with proper citations for court filings and client memos.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Federal Register Guide -->
+            <div class="col-12">
+              <h5 class="text-danger mb-3"><i class="ri-government-line me-2"></i>Federal Register Research</h5>
+              <div class="card border border-danger border-opacity-25">
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <h6 class="text-danger mb-2">Search Techniques</h6>
+                      <ul class="mb-3">
+                        <li><strong>Agency Names:</strong> Search by "EPA", "FDA", "SEC", "OSHA"</li>
+                        <li><strong>Document Numbers:</strong> Use Federal Register document numbers</li>
+                        <li><strong>Date Ranges:</strong> Filter by publication dates</li>
+                        <li><strong>Rule Types:</strong> Search "proposed rule", "final rule", "notice"</li>
+                      </ul>
+                    </div>
+                    <div class="col-md-6">
+                      <h6 class="text-danger mb-2">Examples</h6>
+                      <div class="bg-light p-2 rounded mb-2">
+                        <code>EPA Clean Air Act regulations</code>
+                      </div>
+                      <div class="bg-light p-2 rounded mb-2">
+                        <code>SEC securities proposed rule 2024</code>
+                      </div>
+                      <div class="bg-light p-2 rounded">
+                        <code>OSHA workplace safety standards</code>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="alert alert-warning border-0 mb-0 mt-3">
+                    <small><strong>Note:</strong> Federal Register documents include proposed rules, final rules, notices, and presidential documents from all federal agencies.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="col-12">
+              <div class="alert alert-info border-0">
+                <h6 class="alert-heading"><i class="ri-lightbulb-flash-line me-2"></i>Pro Tips</h6>
+                <ul class="mb-0">
+                  <li>Use the date range filter to find the most current laws and regulations</li>
+                  <li>Combine jurisdiction filters with practice area filters for targeted results</li>
+                  <li>The AI analysis includes citations - use these to verify and expand your research</li>
+                  <li>Export searches as PDFs immediately after finding relevant results</li>
+                  <li>Use keyboard shortcuts (Ctrl+K for search, Ctrl+S to save) for faster workflow</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal" (click)="focusSearchInput()">
+            <i class="ri-search-line me-1"></i>Start Searching
           </button>
         </div>
       </div>

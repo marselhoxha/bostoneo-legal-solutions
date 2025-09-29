@@ -16,11 +16,15 @@ export interface LegalSearchRequest {
     practiceArea?: string;
     courtLevel?: string;
   };
+  enableLawyerGradePrecision?: boolean;
+  effectiveDate?: string;
+  validateCitations?: boolean;
+  requirePrimarySources?: boolean;
 }
 
 export interface SearchResult {
   id: number;
-  type: 'statute' | 'court_rule' | 'guideline';
+  type: 'statute' | 'court_rule' | 'guideline' | 'federal_register_rule' | 'federal_register_prorule' | 'federal_register_notice' | 'federal_register_presdocu';
   title: string;
   citation: string;
   summary: string;
@@ -30,6 +34,31 @@ export interface SearchResult {
   courtLevel?: string;
   category?: string;
   relevanceScore?: number;
+  // Federal Register specific properties
+  source?: string;
+  documentNumber?: string;
+  publicationDate?: string;
+  documentType?: string;
+  htmlUrl?: string;
+  pdfUrl?: string;
+  federalRegisterUrl?: string;
+  agencies?: string[];
+}
+
+export interface CitationValidation {
+  originalCitation: string;
+  isValid: boolean;
+  citationType: string;
+  correctedCitation?: string;
+  errors?: string[];
+  warnings?: string[];
+}
+
+export interface LegalQualityMetrics {
+  citationAccuracy: number;
+  primarySourceRatio: number;
+  confidenceLevel: 'High' | 'Medium' | 'Low';
+  verificationRequired: string[];
 }
 
 export interface LegalSearchResponse {
@@ -43,6 +72,19 @@ export interface LegalSearchResponse {
   hasAIAnalysis: boolean;
   executionTimeMs?: number;
   error?: string;
+  // Enhanced lawyer-grade fields
+  lawyerGradeAnalysis?: {
+    executiveSummary?: any;
+    primaryAuthorities?: any;
+    proceduralRequirements?: any;
+    legalAnalysis?: any;
+    practiceNotes?: any;
+    temporalWarnings?: any;
+    jurisdictionalNotes?: any;
+    qualityMetrics?: LegalQualityMetrics;
+  };
+  citationValidations?: CitationValidation[];
+  structuredData?: any;
 }
 
 export interface SearchHistory {
@@ -78,15 +120,19 @@ export class LegalResearchService {
   performSearch(searchRequest: LegalSearchRequest): Observable<LegalSearchResponse> {
     this.searchStatusSubject.next('searching');
 
-    // Add session ID if not provided
-    const requestWithSession = {
+    // Add session ID and enable lawyer-grade precision by default
+    const requestWithEnhancements = {
       ...searchRequest,
-      sessionId: searchRequest.sessionId || this.currentSessionId
+      sessionId: searchRequest.sessionId || this.currentSessionId,
+      enableLawyerGradePrecision: searchRequest.enableLawyerGradePrecision !== false, // Default to true
+      effectiveDate: searchRequest.effectiveDate || new Date().toISOString().split('T')[0],
+      validateCitations: searchRequest.validateCitations !== false, // Default to true
+      requirePrimarySources: searchRequest.requirePrimarySources !== false // Default to true
     };
 
     return this.http.post<LegalSearchResponse>(
       `${this.apiUrl}/search`,
-      requestWithSession,
+      requestWithEnhancements,
       { withCredentials: true }
     ).pipe(
       tap(response => {
@@ -257,6 +303,15 @@ export class LegalResearchService {
         return 'fas fa-balance-scale';
       case 'guideline':
         return 'fas fa-list-alt';
+      // Federal Register document types
+      case 'federal_register_rule':
+        return 'ri-government-line';
+      case 'federal_register_prorule':
+        return 'ri-draft-line';
+      case 'federal_register_notice':
+        return 'ri-notification-3-line';
+      case 'federal_register_presdocu':
+        return 'ri-medal-line';
       default:
         return 'fas fa-file-alt';
     }
@@ -270,6 +325,15 @@ export class LegalResearchService {
         return 'badge-info';
       case 'guideline':
         return 'badge-warning';
+      // Federal Register document types with distinct colors
+      case 'federal_register_rule':
+        return 'badge-statute'; // Primary blue
+      case 'federal_register_prorule':
+        return 'badge-rule'; // Info blue
+      case 'federal_register_notice':
+        return 'badge-regulation'; // Warning orange
+      case 'federal_register_presdocu':
+        return 'badge-opinion'; // Secondary gray
       default:
         return 'badge-secondary';
     }
@@ -283,6 +347,15 @@ export class LegalResearchService {
         return 'Court Rule';
       case 'guideline':
         return 'Guideline';
+      // Federal Register document types
+      case 'federal_register_rule':
+        return 'Federal Rule';
+      case 'federal_register_prorule':
+        return 'Proposed Rule';
+      case 'federal_register_notice':
+        return 'Federal Notice';
+      case 'federal_register_presdocu':
+        return 'Presidential Doc';
       default:
         return 'Document';
     }

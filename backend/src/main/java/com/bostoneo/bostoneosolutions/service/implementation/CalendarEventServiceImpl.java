@@ -53,7 +53,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
-        log.info("Creating calendar event: {}", eventDTO.getTitle());
+       // log.info("Creating calendar event: {}", eventDTO.getTitle());
         
         // Validate that userId is set
         if (eventDTO.getUserId() == null) {
@@ -91,7 +91,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
             event.setCaseId(legalCase.getId());
         }
         
-        log.info("Saving event with userId: {}", event.getUserId());
+        //log.info("Saving event with userId: {}", event.getUserId());
         
         // Save the event
         CalendarEvent savedEvent = calendarEventRepository.save(event);
@@ -138,7 +138,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                                      "caseId", savedEvent.getCaseId() != null ? savedEvent.getCaseId() : 0));
             }
             
-            log.info("Calendar event creation notifications sent to {} users", notificationUserIds.size());
+            //log.info("Calendar event creation notifications sent to {} users", notificationUserIds.size());
         } catch (Exception e) {
             log.error("Failed to send calendar event creation notifications: {}", e.getMessage());
         }
@@ -148,7 +148,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public CalendarEventDTO getEventById(Long id) {
-        log.info("Fetching calendar event with ID: {}", id);
+        //log.info("Fetching calendar event with ID: {}", id);
         
         CalendarEvent event = calendarEventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + id));
@@ -158,7 +158,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public Page<CalendarEventDTO> getAllEvents(int page, int size) {
-        log.info("Fetching all calendar events, page: {}, size: {}", page, size);
+        //log.info("Fetching all calendar events, page: {}, size: {}", page, size);
         
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<CalendarEvent> eventsPage = calendarEventRepository.findAll(pageRequest);
@@ -172,7 +172,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public CalendarEventDTO updateEvent(Long id, CalendarEventDTO eventDTO) {
-        log.info("Updating calendar event: {}", id);
+        //log.info("Updating calendar event: {}", id);
         
         CalendarEvent event = calendarEventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + id));
@@ -233,7 +233,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public void deleteEvent(Long id) {
-        log.info("Deleting calendar event with ID: {}", id);
+        //log.info("Deleting calendar event with ID: {}", id);
         
         if (!calendarEventRepository.existsById(id)) {
             throw new EntityNotFoundException("Calendar event not found with ID: " + id);
@@ -244,7 +244,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByCaseId(Long caseId) {
-        log.info("Fetching calendar events for case ID: {}", caseId);
+        //log.info("Fetching calendar events for case ID: {}", caseId);
         
         return calendarEventRepository.findByCaseId(caseId).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -253,7 +253,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByCaseIdAndDateRange(Long caseId, LocalDateTime startDate, LocalDateTime endDate) {
-        log.info("Fetching calendar events for case ID: {} between {} and {}", caseId, startDate, endDate);
+        //log.info("Fetching calendar events for case ID: {} between {} and {}", caseId, startDate, endDate);
         
         return calendarEventRepository.findByCaseIdAndDateRange(caseId, startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -262,7 +262,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByUserId(Long userId) {
-        log.info("Fetching calendar events for user ID: {}", userId);
+        //log.info("Fetching calendar events for user ID: {}", userId);
         
         return calendarEventRepository.findByUserId(userId).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -271,7 +271,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByUserIdAndDateRange(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
-        log.info("Fetching calendar events for user ID: {} between {} and {}", userId, startDate, endDate);
+        //log.info("Fetching calendar events for user ID: {} between {} and {}", userId, startDate, endDate);
         
         return calendarEventRepository.findByUserIdAndDateRange(userId, startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -280,7 +280,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        log.info("Fetching calendar events between {} and {}", startDate, endDate);
+        //log.info("Fetching calendar events between {} and {}", startDate, endDate);
         
         return calendarEventRepository.findByDateRange(startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -289,7 +289,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getUpcomingEvents(int days) {
-        log.info("Fetching upcoming calendar events for the next {} days", days);
+        //log.info("Fetching upcoming calendar events for the next {} days", days);
         
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endDate = now.plusDays(days);
@@ -301,7 +301,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getTodayEvents() {
-        log.info("Fetching today's calendar events");
+        //log.info("Fetching today's calendar events");
         
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
@@ -313,7 +313,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByStatus(String status) {
-        log.info("Fetching calendar events with status: {}", status);
+        //log.info("Fetching calendar events with status: {}", status);
         
         return calendarEventRepository.findByStatus(status).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -322,7 +322,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getEventsByType(String eventType) {
-        log.info("Fetching calendar events with type: {}", eventType);
+        //log.info("Fetching calendar events with type: {}", eventType);
         
         return calendarEventRepository.findByEventType(eventType).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -331,7 +331,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public void processEventReminders() {
-        log.info("Processing calendar event reminders");
+        //log.info("Processing calendar event reminders");
         
         // Calculate reminder time threshold for each event based on its reminderMinutes
         LocalDateTime now = LocalDateTime.now();
@@ -352,11 +352,11 @@ public class CalendarEventServiceImpl implements CalendarEventService {
      */
     private void processEventReminder(CalendarEvent event) {
         try {
-            log.info("Processing reminder for event: {} (ID: {})", event.getTitle(), event.getId());
+            //log.info("Processing reminder for event: {} (ID: {})", event.getTitle(), event.getId());
             
             // Skip if there's no reminder minutes set or reminder already sent
             if (event.getReminderMinutes() == null || event.getReminderMinutes() <= 0 || Boolean.TRUE.equals(event.getReminderSent())) {
-                log.info("Skipping reminder for event {} - no reminder set or already sent", event.getId());
+                //log.info("Skipping reminder for event {} - no reminder set or already sent", event.getId());
                 return;
             }
             
@@ -367,7 +367,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
             
             // Skip if the event time has already passed
             if (eventTime.isBefore(now)) {
-                log.info("Skipping reminder for event {} - event time already passed", event.getId());
+                //log.info("Skipping reminder for event {} - event time already passed", event.getId());
                 event.setReminderSent(true); // Mark as sent to prevent further processing
                 calendarEventRepository.save(event);
                 return;
@@ -375,16 +375,14 @@ public class CalendarEventServiceImpl implements CalendarEventService {
             
             // Check if it's time to send this reminder (within the last 5 minutes)
             if (reminderTime.isAfter(now)) {
-                log.info("Not yet time to send reminder for event {} - reminder time is {}", 
-                    event.getId(), reminderTime);
+                //log.info("Not yet time to send reminder for event {} - reminder time is {}", event.getId(), reminderTime);
                 return;
             }
             
             // Only send reminder if it's within the processing window (5 minutes)
             LocalDateTime fiveMinutesAgo = now.minusMinutes(5);
             if (reminderTime.isBefore(fiveMinutesAgo)) {
-                log.info("Skipping reminder for event {} - reminder time {} is too far in the past", 
-                    event.getId(), reminderTime);
+                //log.info("Skipping reminder for event {} - reminder time {} is too far in the past", event.getId(), reminderTime);
                 event.setReminderSent(true); // Mark as sent to prevent further processing
                 calendarEventRepository.save(event);
                 return;
@@ -413,7 +411,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                 event.getReminderMinutes()
                             );
                             
-                            log.info("Email reminder sent to user {} for event {}", userId, event.getId());
+                            //log.info("Email reminder sent to user {} for event {}", userId, event.getId());
                             emailSent = true;
                         } catch (Exception e) {
                             log.error("Failed to send email reminder for event {}: {}", event.getId(), e.getMessage());
@@ -437,7 +435,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                             userId
                         );
                         
-                        log.info("Push notification sent to user {} for event {}", userId, event.getId());
+                        //log.info("Push notification sent to user {} for event {}", userId, event.getId());
                         pushSent = true;
                     } catch (Exception e) {
                         log.error("Failed to send push notification for event {}: {}", event.getId(), e.getMessage());
@@ -468,7 +466,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
      * Process additional reminders for deadline events
      */
     private void processAdditionalReminders() {
-        log.info("Processing additional reminders for deadline events");
+        //log.info("Processing additional reminders for deadline events");
         
         LocalDateTime now = LocalDateTime.now();
         
@@ -481,7 +479,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         for (CalendarEvent deadline : deadlinesWithAdditionalReminders) {
             // Skip if the deadline has already passed
             if (deadline.getStartTime().isBefore(now)) {
-                log.info("Skipping additional reminders for deadline {} - deadline already passed", deadline.getId());
+                //log.info("Skipping additional reminders for deadline {} - deadline already passed", deadline.getId());
                 continue;
             }
             
@@ -512,8 +510,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                 
                 // Check if it's time to send this reminder and it's within the processing window
                 if (reminderTime.isBefore(now) && reminderTime.isAfter(fiveMinutesAgo)) {
-                    log.info("Sending additional reminder ({} minutes) for deadline {}", 
-                        minutes, deadline.getId());
+                    //log.info("Sending additional reminder ({} minutes) for deadline {}",  minutes, deadline.getId());
                     
                     // Variables to track notification success
                     boolean emailSent = false;
@@ -537,8 +534,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                         minutes
                                     );
                                     
-                                    log.info("Additional email reminder sent to user {} for deadline {}", 
-                                        userId, deadline.getId());
+                                    //log.info("Additional email reminder sent to user {} for deadline {}", userId, deadline.getId());
                                     emailSent = true;
                                 } catch (Exception e) {
                                     log.error("Error sending additional email reminder: {}", e.getMessage());
@@ -548,7 +544,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                     deadline.getId(), userId);
                             }
                         } else {
-                            log.info("Email notifications disabled for deadline {}", deadline.getId());
+                           // log.info("Email notifications disabled for deadline {}", deadline.getId());
                         }
                         
                         // 2. Try to send push notification if push notification is enabled
@@ -561,8 +557,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                     userId
                                 );
                                 
-                                log.info("Additional push notification sent to user {} for deadline {}", 
-                                    userId, deadline.getId());
+                                //log.info("Additional push notification sent to user {} for deadline {}", userId, deadline.getId());
                                 pushSent = true;
                             } catch (Exception e) {
                                 log.error("Failed to send additional push notification for deadline {}: {}", 
@@ -587,8 +582,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                     remindersSentInThisRun = true;
                 } else if (reminderTime.isBefore(fiveMinutesAgo)) {
                     // If reminder time has passed the processing window, mark as sent without sending email
-                    log.info("Marking past reminder ({} minutes) as sent without notification for deadline {}", 
-                        minutes, deadline.getId());
+                    //log.info("Marking past reminder ({} minutes) as sent without notification for deadline {}",  minutes, deadline.getId());
                     remindersSent.add(minutes);
                     remindersSentInThisRun = true;
                 }
@@ -655,7 +649,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public String generateICalendarData(List<CalendarEventDTO> events) {
-        log.info("Generating iCalendar data for {} events", events.size());
+        //log.info("Generating iCalendar data for {} events", events.size());
         
         // Implement iCalendar format generation
         // This would generate an iCal (.ics) format string that can be
@@ -711,7 +705,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public void processReminderForEvent(Long eventId) {
-        log.info("Processing reminder for specific event ID: {}", eventId);
+        //log.info("Processing reminder for specific event ID: {}", eventId);
         
         CalendarEvent event = calendarEventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + eventId));
@@ -719,7 +713,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         // Check if event has already passed
         LocalDateTime now = LocalDateTime.now();
         if (event.getStartTime().isBefore(now)) {
-            log.info("Skipping reminder for event {} - event time already passed", eventId);
+            //log.info("Skipping reminder for event {} - event time already passed", eventId);
             return;
         }
         
@@ -756,8 +750,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                     continue;
                 }
                 
-                log.info("Sending test additional reminder ({} minutes) for deadline {}", 
-                    minutes, event.getId());
+                //log.info("Sending test additional reminder ({} minutes) for deadline {}", minutes, event.getId());
                 
                 // Variables to track notification success
                 boolean emailSent = false;
@@ -781,8 +774,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                     minutes
                                 );
                                 
-                                log.info("Additional email reminder sent to user {} for deadline {}", 
-                                    userId, event.getId());
+                                //log.info("Additional email reminder sent to user {} for deadline {}", userId, event.getId());
                                 emailSent = true;
                             } catch (Exception e) {
                                 log.error("Error sending additional email reminder: {}", e.getMessage());
@@ -805,8 +797,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                                 userId
                             );
                             
-                            log.info("Additional push notification sent to user {} for deadline {}", 
-                                userId, event.getId());
+                            //log.info("Additional push notification sent to user {} for deadline {}",  userId, event.getId());
                             pushSent = true;
                         } catch (Exception e) {
                             log.error("Failed to send additional push notification for deadline {}: {}", 
@@ -859,7 +850,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public Page<CalendarEventDTO> getEventsForCases(Set<Long> caseIds, int page, int size) {
-        log.info("Fetching calendar events for case IDs: {}", caseIds);
+        //log.info("Fetching calendar events for case IDs: {}", caseIds);
         
         if (caseIds == null || caseIds.isEmpty()) {
             return Page.empty(PageRequest.of(page, size));
@@ -877,7 +868,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
      * Get events filtered by user role and permissions
      */
     public Page<CalendarEventDTO> getEventsForUser(Long userId, int page, int size) {
-        log.info("Fetching calendar events for user: {}", userId);
+        //log.info("Fetching calendar events for user: {}", userId);
         
         // Get user to check their role
         UserDTO user = userService.getUserById(userId);
