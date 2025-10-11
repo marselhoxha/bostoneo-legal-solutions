@@ -10,6 +10,7 @@ export interface LegalSearchRequest {
   jurisdiction?: string;
   userId?: number;
   sessionId?: string;
+  caseId?: string;
   filters?: {
     dateFrom?: string;
     dateTo?: string;

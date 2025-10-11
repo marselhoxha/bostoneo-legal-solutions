@@ -1,0 +1,1622 @@
+// Root container must be visible
+:host {
+  display: block;
+  width: 100%;
+  visibility: visible;
+  opacity: 1;
+}
+
+.case-research-container {
+  height: auto;
+  display: block;
+  background: var(--vz-body-bg);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding: 1rem;
+  margin: 0;
+
+  .research-container {
+    height: auto;
+    display: block;
+    background: var(--vz-body-bg);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  // Conversation Switcher Header
+  .conversation-header {
+    background: var(--vz-card-bg);
+    border-bottom: 1px solid var(--vz-border-color);
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 11;
+
+    .conversation-dropdown {
+      position: relative;
+
+      .dropdown-toggle {
+        display: flex;
+        align-items: center;
+        min-width: 250px;
+        text-align: left;
+        border: 1px solid var(--vz-border-color);
+
+        &::after {
+          margin-left: auto;
+        }
+      }
+
+      .dropdown-menu {
+        width: 400px;
+        max-height: 400px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+        @media (max-width: 768px) {
+          width: 320px;
+        }
+      }
+
+      .conversation-list-scroll {
+        max-height: 380px;
+        overflow-y: auto;
+      }
+
+      .conversation-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--vz-border-color);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &.active {
+          background: rgba(var(--vz-primary-rgb), 0.1);
+          border-left: 3px solid var(--vz-primary);
+        }
+
+        &:hover {
+          background: var(--vz-light);
+        }
+
+        .conv-title {
+          font-weight: 500;
+          color: var(--vz-body-color);
+          margin-bottom: 0.25rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .conv-meta {
+          font-size: 0.75rem;
+          color: var(--vz-text-muted);
+        }
+      }
+    }
+  }
+
+  // Compact Search Header (Shows after first search)
+  .compact-search-header {
+    background: var(--vz-card-bg);
+    border-bottom: 1px solid var(--vz-border-color);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    .avatar-sm {
+      width: 38px;
+      height: 38px;
+
+      .avatar-title {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+          display: inline-block !important;
+          font-style: normal;
+          line-height: 1;
+          font-size: 1.25rem;
+        }
+      }
+    }
+
+    .form-control {
+      border: 1px solid var(--vz-border-color);
+
+      &:focus {
+        border-color: var(--vz-primary);
+        box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.1);
+      }
+    }
+
+    .btn-icon {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-soft-danger {
+      background: rgba(var(--vz-danger-rgb), 0.1);
+      color: var(--vz-danger);
+      border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+
+      &:hover:not(:disabled) {
+        background: var(--vz-danger);
+        color: white;
+        border-color: var(--vz-danger);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  // Hero Section - Velzon Theme
+  .ai-hero-section {
+    background: var(--vz-body-bg) !important;
+    min-height: auto;
+    padding: 2rem 1rem;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+
+    .hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-header {
+      i {
+        font-size: 1.25rem;
+        color: var(--vz-primary);
+      }
+    }
+
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      color: var(--vz-heading-color);
+
+      @media (max-width: 768px) {
+        font-size: 1.5rem;
+      }
+    }
+
+    // Action Cards - Case Specific
+    .action-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+
+      .action-card {
+        background: var(--vz-card-bg);
+        border: 1px solid var(--vz-border-color);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: var(--vz-primary);
+          box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.15);
+          transform: translateY(-2px);
+        }
+
+        &:first-child {
+          border-color: var(--vz-primary);
+          background: rgba(var(--vz-primary-rgb), 0.05);
+        }
+
+        i {
+          font-size: 1.5rem;
+          color: var(--vz-primary);
+        }
+
+        span {
+          color: var(--vz-body-color);
+          font-size: 0.9375rem;
+          font-weight: 500;
+        }
+      }
+    }
+
+    // Examples Section
+    .examples-section {
+      h6 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--vz-heading-color);
+      }
+
+      .example-questions {
+        p {
+          font-size: 0.875rem;
+          line-height: 1.6;
+          padding-left: 1rem;
+          position: relative;
+
+          &::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--vz-primary);
+          }
+        }
+      }
+
+      .includes-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 1rem;
+        font-size: 0.8125rem;
+
+        .tag {
+          background: var(--vz-light);
+          border: 1px solid var(--vz-border-color);
+          padding: 0.25rem 0.75rem;
+          border-radius: 1rem;
+          color: var(--vz-body-color);
+          font-size: 0.75rem;
+        }
+      }
+    }
+
+    // Search Form
+    .hero-search-form {
+      .search-wrapper {
+        display: flex;
+        gap: 0.75rem;
+        background: var(--vz-card-bg);
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--vz-border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+        @media (max-width: 768px) {
+          flex-direction: column;
+        }
+
+        .form-control {
+          flex: 1;
+          border: none;
+          background: transparent;
+          padding: 0.75rem 1rem;
+          font-size: 0.9375rem;
+          color: var(--vz-body-color);
+
+          &:focus {
+            box-shadow: none;
+            outline: none;
+          }
+
+          &::placeholder {
+            color: var(--vz-body-color);
+            opacity: 0.5;
+          }
+        }
+
+        .form-select {
+          width: 200px;
+          border: none;
+          background: transparent;
+          padding: 0.75rem 1rem;
+          font-size: 0.9375rem;
+          border-left: 1px solid var(--vz-border-color);
+          color: var(--vz-body-color);
+
+          @media (max-width: 768px) {
+            width: 100%;
+            border-left: none;
+            border-top: 1px solid var(--vz-border-color);
+          }
+
+          &:focus {
+            box-shadow: none;
+            outline: none;
+          }
+        }
+
+        .btn-primary {
+          padding: 0.75rem 1.5rem;
+          font-weight: 500;
+          white-space: nowrap;
+          border-radius: 0.375rem;
+
+          @media (max-width: 768px) {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+
+  // AI Thinking Status (like ChatGPT)
+  .ai-thinking-status {
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+
+    .thinking-bubble {
+      background: var(--vz-card-bg);
+      border: 1px solid var(--vz-border-color);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+    }
+  }
+
+  // Chat Conversation Area
+  .chat-conversation {
+    background: var(--vz-body-bg);
+    padding: 0.75rem;
+    max-width: 1200px; // Default for laptop
+    margin: 0 auto;
+    width: 100%;
+    overflow-x: hidden;
+
+    // Large desktop - more width for better readability
+    @media (min-width: 1920px) {
+      max-width: 1600px;
+    }
+
+    // Desktop - expanded width
+    @media (min-width: 1400px) and (max-width: 1919px) {
+      max-width: 1400px;
+    }
+
+    // Laptop - default width
+    @media (min-width: 992px) and (max-width: 1399px) {
+      max-width: 1200px;
+    }
+  }
+
+  // Chat Messages
+  .chat-conversation-list {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+
+    .chat-list {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+
+      &.left {
+        .conversation-list {
+          justify-content: flex-start;
+        }
+      }
+
+      &.right {
+        .conversation-list {
+          justify-content: flex-end;
+        }
+      }
+    }
+
+    .conversation-list {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    // Chat Avatar
+    .chat-avatar {
+      flex-shrink: 0;
+
+      .avatar-sm {
+        width: 36px;
+        height: 36px;
+
+        .avatar-title {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+
+          i {
+            display: inline-block !important;
+            font-style: normal;
+            line-height: 1;
+            font-size: 1.25rem;
+          }
+        }
+      }
+    }
+
+    .user-chat-content {
+      flex: 1;
+      max-width: 70%;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+
+    // AI Message Container (Full Width)
+    .ai-message-container {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    // Message Bubbles - Compact Design
+    .message-bubble {
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      max-width: 100%;
+      overflow-x: hidden;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+
+      &.user-message {
+        background: var(--vz-primary);
+        color: white;
+        border-bottom-right-radius: 0.25rem;
+        margin-left: auto;
+
+        .message-content {
+          p {
+            margin: 0;
+            line-height: 1.5;
+            font-size: 0.875rem;
+          }
+        }
+
+        .message-meta {
+          margin-top: 0.375rem;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 0.25rem;
+          opacity: 0.9;
+
+          small {
+            font-size: 0.7rem;
+          }
+
+          i {
+            font-size: 0.8rem;
+          }
+        }
+      }
+
+      &.ai-message {
+        background: var(--vz-card-bg);
+        border: 1px solid var(--vz-border-color);
+        border-bottom-left-radius: 0.25rem;
+
+        .ai-badge {
+          .badge {
+            font-weight: 500;
+            padding: 0.25rem 0.625rem;
+          }
+        }
+
+        .ai-answer-header {
+          h6 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--vz-heading-color);
+          }
+        }
+
+        // Collapsible Response Content
+        .ai-response-content {
+          transition: max-height 0.3s ease;
+
+          &.collapsed {
+            max-height: 300px;
+            overflow: hidden;
+            position: relative;
+
+            &::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 60px;
+              background: linear-gradient(to bottom, transparent, var(--vz-card-bg));
+            }
+          }
+        }
+
+        .ai-response-markdown {
+          // Attorney-like professional styling
+          font-family: 'Georgia', 'Times New Roman', 'Garamond', serif;
+          color: var(--vz-body-color);
+          line-height: 1.8;
+          font-size: 0.9375rem;
+          max-width: 100%;
+          overflow-x: hidden;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+
+          // Section Headings - Legal Document Style
+          h1, h2, h3, h4, h5, h6 {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--vz-heading-color);
+            margin-top: 1.5rem;
+            margin-bottom: 0.875rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            border-bottom: 2px solid var(--vz-border-color);
+            padding-bottom: 0.5rem;
+
+            &:first-child {
+              margin-top: 0;
+            }
+          }
+
+          h1 {
+            font-size: 1.375rem;
+            border-bottom-width: 3px;
+            border-bottom-color: var(--vz-primary);
+            color: var(--vz-primary);
+          }
+
+          h2 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.875rem;
+          }
+
+          h3 {
+            font-size: 1rem;
+            font-style: italic;
+          }
+
+          h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+          }
+
+          // Paragraphs - Legal Brief Style
+          p {
+            margin-bottom: 1rem;
+            text-align: justify;
+            text-indent: 2em;
+            color: var(--vz-body-color);
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+
+            &:first-of-type {
+              text-indent: 0;
+            }
+
+            strong {
+              font-weight: 700;
+              color: var(--vz-heading-color);
+              text-decoration: underline;
+              text-decoration-thickness: 1px;
+              text-underline-offset: 2px;
+            }
+
+            em {
+              font-style: italic;
+              color: var(--vz-body-color);
+              opacity: 0.9;
+            }
+          }
+
+          // Lists - Legal Formatting
+          ul, ol {
+            margin-bottom: 1rem;
+            padding-left: 2.5rem;
+            font-family: 'Georgia', serif;
+            color: var(--vz-body-color);
+
+            li {
+              margin-bottom: 0.625rem;
+              line-height: 1.8;
+              text-align: justify;
+              color: var(--vz-body-color);
+
+              strong {
+                font-weight: 700;
+                color: var(--vz-heading-color);
+              }
+            }
+          }
+
+          ol {
+            counter-reset: item;
+
+            > li {
+              display: block;
+              position: relative;
+
+              &:before {
+                content: counter(item) ". ";
+                counter-increment: item;
+                font-weight: 700;
+                color: var(--vz-primary);
+                margin-right: 0.5rem;
+              }
+            }
+          }
+
+          // Citations Section with Colored Icons (Perplexity Style)
+          .citations-section,
+          h2:contains("Citation"),
+          h3:contains("Citation"),
+          p:has(strong:contains("Citation")) {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--vz-border-color);
+          }
+
+          // Individual citation with colored icon
+          ul li,
+          ol li {
+            &:has(a),
+            &:has(strong) {
+              position: relative;
+              padding-left: 2rem;
+              margin-bottom: 1rem;
+
+              &::before {
+                content: '\F1A9'; // Remix icon bookmark
+                font-family: 'remixicon';
+                position: absolute;
+                left: 0;
+                top: 0.125rem;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                font-size: 12px;
+                color: white;
+              }
+
+              // Green icon for positive/primary citations
+              &:nth-child(odd)::before {
+                background: var(--vz-success);
+              }
+
+              // Blue icon for secondary citations
+              &:nth-child(even)::before {
+                background: var(--vz-info);
+              }
+            }
+          }
+
+          // Code - Legal Citations Style
+          code {
+            font-family: 'Courier New', Courier, monospace;
+            background: var(--vz-light);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--vz-body-color);
+            border: 1px solid var(--vz-border-color);
+            font-weight: 600;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+          }
+
+          pre {
+            background: var(--vz-light);
+            padding: 1rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            border: 2px solid var(--vz-border-color);
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            max-width: 100%;
+
+            code {
+              background: transparent;
+              padding: 0;
+              border: none;
+              color: var(--vz-body-color);
+              font-weight: normal;
+            }
+          }
+
+          // Blockquotes - Legal Citation Style
+          blockquote {
+            border-left: 4px solid var(--vz-primary);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            background: var(--vz-light);
+            font-style: italic;
+            color: var(--vz-body-color);
+            border-radius: 0 0.375rem 0.375rem 0;
+
+            p {
+              text-indent: 0;
+              margin-bottom: 0.5rem;
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+            }
+
+            cite {
+              display: block;
+              margin-top: 0.5rem;
+              font-size: 0.875rem;
+              color: var(--vz-primary);
+              font-weight: 600;
+              font-style: normal;
+            }
+          }
+
+          // Links - Legal Reference Style
+          a {
+            color: var(--vz-primary);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--vz-primary);
+            font-weight: 600;
+            transition: all 0.2s ease;
+
+            &:hover {
+              border-bottom-style: solid;
+              background: rgba(var(--vz-primary-rgb), 0.05);
+            }
+          }
+
+          // Tables - Legal Data Presentation
+          table {
+            width: 100%;
+            margin: 1.5rem 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 2px solid var(--vz-border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            table-layout: fixed;
+            overflow-x: auto;
+            display: block;
+
+            thead {
+              tr {
+                th {
+                  background: var(--vz-light);
+                  padding: 0.875rem;
+                  border-bottom: 2px solid var(--vz-border-color);
+                  font-weight: 700;
+                  text-align: left;
+                  color: var(--vz-heading-color);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                  font-size: 0.75rem;
+
+                  &:not(:last-child) {
+                    border-right: 1px solid var(--vz-border-color);
+                  }
+                }
+              }
+            }
+
+            tbody {
+              tr {
+                &:nth-child(even) {
+                  background: var(--vz-light);
+                  opacity: 0.5;
+                }
+
+                &:hover {
+                  background: rgba(var(--vz-primary-rgb), 0.05);
+                }
+
+                td {
+                  padding: 0.75rem 0.875rem;
+                  border-bottom: 1px solid var(--vz-border-color);
+                  color: var(--vz-body-color);
+
+                  &:not(:last-child) {
+                    border-right: 1px solid var(--vz-border-color);
+                  }
+
+                  strong {
+                    color: var(--vz-heading-color);
+                  }
+                }
+
+                &:last-child td {
+                  border-bottom: none;
+                }
+              }
+            }
+          }
+
+          // Horizontal Rules - Section Separators
+          hr {
+            margin: 2rem 0;
+            border: none;
+            border-top: 2px solid #dee2e6;
+            opacity: 1;
+          }
+
+          // Legal Term Highlighting Classes - Professional Attorney Style
+          ::ng-deep .legal-emphasis {
+            font-weight: 700;
+            color: #1a252f;
+            text-decoration: underline;
+            text-decoration-thickness: 1.5px;
+            text-underline-offset: 2px;
+          }
+
+          // Legal Citations - Using Velzon Primary Color
+          ::ng-deep .legal-citation {
+            font-family: 'Times New Roman', Times, serif;
+            color: var(--vz-primary) !important;
+            font-weight: 600;
+            font-style: normal;
+            background: rgba(var(--vz-primary-rgb), 0.08);
+            padding: 0.125rem 0.5rem;
+            border-radius: 2px;
+            letter-spacing: 0.01em;
+            position: relative;
+            border-left: 3px solid var(--vz-primary);
+          }
+
+          // Judge Names - Using Velzon Secondary/Purple
+          ::ng-deep .legal-judge {
+            color: var(--vz-heading-color) !important;
+            font-weight: 700;
+            font-variant: small-caps;
+            letter-spacing: 0.03em;
+            background: rgba(var(--vz-secondary-rgb), 0.1);
+            padding: 0.125rem 0.375rem;
+            border-radius: 2px;
+          }
+
+          // Legal Terms - Using Velzon Info Color
+          ::ng-deep .legal-term {
+            color: var(--vz-info) !important;
+            font-weight: 600;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 2px;
+          }
+
+          // Dollar Amounts - Using Velzon Success Color
+          ::ng-deep .legal-amount {
+            color: var(--vz-success) !important;
+            font-weight: 700;
+            font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace;
+            background: rgba(var(--vz-success-rgb), 0.1);
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            border: 1px solid rgba(var(--vz-success-rgb), 0.25);
+            letter-spacing: 0.02em;
+          }
+
+          // Dates - Using Velzon Warning Color
+          ::ng-deep .legal-date {
+            color: var(--vz-warning) !important;
+            font-weight: 600;
+            font-style: italic;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            letter-spacing: 0.01em;
+            padding: 0.125rem 0.375rem;
+            background: rgba(var(--vz-warning-rgb), 0.1);
+            border-radius: 2px;
+          }
+
+          // Legal Lists (from inline numbered format)
+          .legal-list {
+            margin: 1.25rem 0 1.25rem 2rem;
+            padding-left: 1.5rem;
+            counter-reset: legal-counter;
+            list-style: none;
+
+            .legal-list-item {
+              margin-bottom: 1rem;
+              line-height: 1.8;
+              text-align: justify;
+              position: relative;
+              padding-left: 0.5rem;
+
+              &:before {
+                counter-increment: legal-counter;
+                content: "(" counter(legal-counter) ") ";
+                font-weight: 700;
+                color: var(--vz-primary);
+                margin-right: 0.5rem;
+                position: absolute;
+                left: -2.5rem;
+              }
+            }
+          }
+        }
+
+
+        .message-meta {
+          margin-top: 0.75rem;
+          padding-top: 0.75rem;
+          border-top: 1px solid var(--vz-border-color);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          small {
+            font-size: 0.7rem;
+            color: var(--vz-body-color);
+            opacity: 0.6;
+          }
+
+          .message-actions {
+            display: flex;
+            gap: 0.25rem;
+
+            .btn {
+              padding: 0.25rem 0.5rem;
+              font-size: 0.75rem;
+              color: var(--vz-body-color);
+              opacity: 0.7;
+              transition: all 0.2s ease;
+              background: transparent;
+              border: none;
+
+              &:hover {
+                opacity: 1;
+                background: var(--vz-light);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Typing Indicator
+    .typing-dots {
+      display: flex;
+      gap: 0.375rem;
+      align-items: center;
+      padding: 0.5rem 0;
+
+      span {
+        width: 8px;
+        height: 8px;
+        background: var(--vz-body-color);
+        opacity: 0.4;
+        border-radius: 50%;
+        animation: typingDots 1.4s infinite;
+
+        &:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        &:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+      }
+    }
+
+    // AI Action Badges - Small inline badges after AI answer
+    .ai-action-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.75rem;
+      background: rgba(var(--vz-warning-rgb), 0.05);
+      border-left: 3px solid var(--vz-warning);
+      border-radius: 0.375rem;
+
+      .badge-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--vz-warning);
+        margin-right: 0.25rem;
+
+        i {
+          font-size: 0.875rem;
+        }
+      }
+
+      .action-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 0.25rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        opacity: 0.95;
+
+        i {
+          font-size: 0.875rem;
+          opacity: 0.9;
+        }
+
+        span {
+          line-height: 1;
+        }
+
+        .badge-count {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 16px;
+          height: 16px;
+          font-size: 0.625rem;
+          font-weight: 600;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.15);
+          margin-left: 0.25rem;
+        }
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+          opacity: 1;
+        }
+
+        // Primary (Draft Motion) - Lighter
+        &.action-primary {
+          background: rgba(var(--vz-primary-rgb), 0.85);
+          color: white;
+
+          &:hover {
+            background: var(--vz-primary);
+          }
+        }
+
+        // Danger (Create Deadline) - Lighter
+        &.action-danger {
+          background: rgba(var(--vz-danger-rgb), 0.85);
+          color: white;
+
+          &:hover {
+            background: var(--vz-danger);
+          }
+        }
+
+        // Warning (Create Task) - Lighter
+        &.action-warning {
+          background: rgba(var(--vz-warning-rgb), 0.85);
+          color: #000;
+
+          &:hover {
+            background: var(--vz-warning);
+          }
+        }
+
+        // Info (Add Note) - Lighter
+        &.action-info {
+          background: rgba(var(--vz-info-rgb), 0.85);
+          color: white;
+
+          &:hover {
+            background: var(--vz-info);
+          }
+        }
+
+        // Success (Attach Document) - Lighter
+        &.action-success {
+          background: rgba(var(--vz-success-rgb), 0.85);
+          color: white;
+
+          &:hover {
+            background: var(--vz-success);
+          }
+        }
+
+        // Secondary (Schedule Event) - Lighter
+        &.action-secondary {
+          background: rgba(var(--vz-secondary-rgb), 0.85);
+          color: white;
+
+          &:hover {
+            background: var(--vz-secondary);
+          }
+        }
+      }
+
+      // Skeleton loader for action badges
+      .action-badge-skeleton {
+        width: 120px;
+        height: 32px;
+        background: linear-gradient(90deg, rgba(var(--vz-primary-rgb), 0.1) 25%, rgba(var(--vz-primary-rgb), 0.2) 50%, rgba(var(--vz-primary-rgb), 0.1) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      .ri-spin {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+
+    // Follow-up Questions Section - Professional Style
+    .follow-up-questions-section {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      padding: 1rem;
+
+      p {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #495057;
+        font-weight: 600;
+      }
+
+      .btn-outline-secondary {
+        font-size: 0.8125rem;
+        padding: 0.5rem 0.875rem;
+        border-radius: 0.375rem;
+        text-align: left;
+        white-space: normal;
+        border-color: #ced4da;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        background: white;
+
+        &:hover {
+          background: white;
+          border-color: var(--vz-primary);
+          color: var(--vz-primary);
+          box-shadow: 0 2px 6px rgba(var(--vz-primary-rgb), 0.15);
+          transform: translateX(4px);
+        }
+      }
+    }
+
+    // List Item Spacing (Compact)
+    .chat-list {
+      margin-bottom: 1rem !important;
+    }
+  }
+}
+
+// ===== AI ACTIVITY LOADER (MINIMALISTIC) =====
+
+.ai-activity-loader {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+
+  // Header
+  .activity-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    background: transparent;
+    border-bottom: none;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vz-body-color);
+    opacity: 0.7;
+
+    i {
+      color: var(--vz-secondary);
+      font-size: 14px;
+    }
+  }
+
+  // Activity Steps List
+  .activity-steps {
+    padding: 0.25rem 0;
+
+    .activity-step {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      transition: all 0.15s ease;
+      background: transparent;
+
+      .step-icon {
+        font-size: 14px;
+        color: var(--vz-secondary);
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+        opacity: 0.3;
+      }
+
+      .step-text {
+        font-size: 12px;
+        color: var(--vz-body-color);
+        line-height: 1.4;
+        opacity: 0.5;
+        transition: all 0.15s ease;
+        font-weight: 400;
+      }
+
+      // Pending state (default - very subtle)
+      &.pending {
+        opacity: 1;
+      }
+
+      // Completed state
+      &.completed {
+        .step-icon {
+          color: var(--vz-success);
+          opacity: 0.6;
+        }
+
+        .step-text {
+          opacity: 0.6;
+        }
+      }
+
+      // Active state
+      &.active {
+        background: transparent;
+
+        .step-icon {
+          color: var(--vz-primary);
+          opacity: 1;
+          animation: minimal-pulse 2s ease-in-out infinite;
+        }
+
+        .step-text {
+          color: var(--vz-body-color);
+          opacity: 1;
+          font-weight: 400;
+        }
+      }
+
+      // Error state
+      &.error {
+        background: transparent;
+
+        .step-icon {
+          color: var(--vz-danger);
+          opacity: 1;
+        }
+
+        .step-text {
+          color: var(--vz-danger);
+          opacity: 1;
+          font-weight: 400;
+        }
+      }
+    }
+  }
+}
+
+// ===== MINIMALISTIC ANIMATIONS =====
+
+// Minimal pulse for active icon - barely noticeable
+@keyframes minimal-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+// Dark Theme Support - Attorney-like Professional Dark Mode
+[data-layout-mode="dark"] {
+  .case-research-container {
+    .ai-hero-section {
+      .action-cards-grid {
+        .action-card {
+          &:hover {
+            box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+          }
+        }
+      }
+
+      .hero-search-form {
+        .search-wrapper {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+
+    .message-bubble {
+      &.user-message {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      &.ai-message {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+        .ai-response-markdown {
+          // Force readable text color in dark mode
+          color: var(--vz-body-color) !important;
+
+          // Override ALL nested text to be readable
+          *, *::before, *::after {
+            color: var(--vz-body-color) !important;
+          }
+
+          // Ensure text elements are visible
+          p, span, div, li, td, th, label, a {
+            color: var(--vz-body-color) !important;
+          }
+
+          h1, h2, h3, h4, h5, h6 {
+            color: var(--vz-heading-color) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+          }
+
+          h1 {
+            border-bottom-color: rgba(var(--vz-primary-rgb), 0.5);
+          }
+
+          strong {
+            color: var(--vz-heading-color) !important;
+          }
+
+          code {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--vz-body-color) !important;
+            border-color: rgba(255, 255, 255, 0.1);
+          }
+
+          pre {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+
+            code {
+              color: var(--vz-body-color) !important;
+            }
+          }
+
+          blockquote {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--vz-body-color) !important;
+            border-left-color: rgba(var(--vz-primary-rgb), 0.7);
+
+            p {
+              color: var(--vz-body-color) !important;
+            }
+
+            cite {
+              color: var(--vz-primary) !important;
+            }
+          }
+
+          a {
+            color: var(--vz-primary) !important;
+            border-bottom-color: rgba(var(--vz-primary-rgb), 0.7);
+
+            &:hover {
+              background: rgba(var(--vz-primary-rgb), 0.1);
+            }
+          }
+
+          table {
+            border-color: rgba(255, 255, 255, 0.1);
+
+            thead {
+              tr th {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f0f2f5;
+              }
+            }
+
+            tbody {
+              tr {
+                &:nth-child(even) {
+                  background: rgba(255, 255, 255, 0.02);
+                }
+
+                &:hover {
+                  background: rgba(var(--vz-primary-rgb), 0.1);
+                }
+
+                td {
+                  border-color: rgba(255, 255, 255, 0.05);
+                  color: #e4e6eb;
+
+                  strong {
+                    color: #f0f2f5;
+                  }
+                }
+              }
+            }
+          }
+
+          hr {
+            border-top-color: rgba(255, 255, 255, 0.1);
+          }
+
+          // Legal highlighting in dark mode uses same Velzon variables - they auto-adapt
+          // No need for custom dark mode overrides since we're using CSS variables
+
+          .legal-list {
+            .legal-list-item {
+              color: #e4e6eb;
+
+              &:before {
+                color: rgba(var(--vz-primary-rgb), 0.9);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .ai-action-badges {
+      background: rgba(var(--vz-warning-rgb), 0.1);
+      border-left-color: rgba(var(--vz-warning-rgb), 0.7);
+
+      .badge-label {
+        color: rgba(var(--vz-warning-rgb), 0.9);
+      }
+    }
+
+    .follow-up-questions-section {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+
+      p {
+        color: #b0b3b8;
+      }
+
+      .btn-outline-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #e4e6eb;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(var(--vz-primary-rgb), 0.7);
+          color: rgba(var(--vz-primary-rgb), 0.9);
+        }
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 992px) {
+  .case-research-container {
+    padding: 0.5rem;
+
+    .ai-hero-section {
+      padding: 1rem;
+
+      .action-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .chat-conversation-list {
+      .user-chat-content {
+        max-width: 85%;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .case-research-container {
+    padding: 0.5rem;
+
+    .ai-hero-section {
+      padding: 1.5rem 1rem;
+
+      .action-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+    }
+
+    .chat-conversation {
+      padding: 0.5rem;
+      max-height: none;
+      overflow-x: hidden;
+      margin: 0;
+    }
+
+    .chat-conversation-list {
+      .user-chat-content {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+      }
+
+      .message-bubble {
+        max-width: 100%;
+        overflow-x: hidden;
+        word-break: break-word;
+      }
+
+      .ai-message-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      .message-content {
+        max-width: 100%;
+        overflow-x: hidden;
+        word-break: break-word;
+
+        * {
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+      }
+    }
+
+    .compact-search-header {
+      .avatar-sm {
+        display: none;
+      }
+
+      form {
+        width: 100%;
+      }
+
+      .d-flex {
+        flex-wrap: nowrap;
+      }
+
+      .form-control {
+        font-size: 14px;
+      }
+
+      .btn-icon {
+        width: 36px;
+        height: 36px;
+      }
+    }
+  }
+}

@@ -941,13 +941,13 @@ public class ClaudeSonnet4Service implements AIService {
 
     private AIRequest createRequest(String prompt, boolean useDeepThinking) {
         AIRequest request = new AIRequest();
-        request.setModel("claude-sonnet-4-20250514");
+        request.setModel("claude-sonnet-4-5-20250929");
         request.setMax_tokens(useDeepThinking ? 8000 : 4000);
-        
+
         AIRequest.Message message = new AIRequest.Message();
         message.setRole("user");
         message.setContent(prompt);
-        
+
         request.setMessages(new AIRequest.Message[]{message});
         return request;
     }

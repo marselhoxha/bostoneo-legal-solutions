@@ -1,16 +1,84 @@
-.card{
-  margin-bottom: 0px;
+// Global styles to prevent overflow
+* {
+  box-sizing: border-box;
 }
+
+// Prevent horizontal overflow throughout the component
+body, html {
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100vw;
+}
+
+.card {
+  margin-bottom: 0px;
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100%;
+}
+
+// Override Bootstrap tab-pane default styles
+.tab-pane {
+  // Remove Bootstrap's fade transition that causes display issues
+  &.fade {
+    transition: none !important;
+  }
+
+  &.fade:not(.show) {
+    display: none !important;
+  }
+
+  &.fade.show,
+  &.active.show,
+  &.active {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+
+// Research tab follows Bootstrap tab behavior
+#research.tab-pane.fade:not(.show) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+// Fix Bootstrap row/col overflow issues
+.row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
+  
+  > * {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+// Ensure all containers respect viewport width
+.container, .container-fluid {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  overflow-x: hidden;
+}
+
 .case-detail-container {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
+  overflow-x: hidden !important;
 
   .case-detail-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 1rem;
 
     h2 {
       margin: 0;
@@ -20,6 +88,7 @@
     .header-actions {
       display: flex;
       gap: 12px;
+      flex-wrap: wrap;
 
       button {
         min-width: 100px;
@@ -445,12 +514,708 @@
   .team-members-scrollable {
     max-height: 400px;
   }
-  
+
   .member-tasks-scrollable {
     max-height: 150px;
   }
-  
+
   .unassigned-tasks-scrollable {
     max-height: 300px;
+  }
+}
+
+// ========================================
+// Case Header - Clean Velzon Style
+// ========================================
+
+.case-header-premium {
+  position: relative;
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.25rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  overflow: hidden !important;
+  width: 100%;
+  max-width: 100%;
+
+  .card-body {
+    padding: 1.5rem;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100%;
+  }
+}
+
+// Simple top border accent
+.header-gradient-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--vz-primary);
+}
+
+// Icon Box - Standard Velzon Avatar Style
+.header-icon-wrapper {
+  flex-shrink: 0;
+}
+
+.icon-box {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background: var(--vz-primary);
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 2.25rem;
+    color: #ffffff;
+  }
+
+  .icon-verified {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 24px;
+    height: 24px;
+    background: var(--vz-card-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px var(--vz-card-bg);
+
+    i {
+      font-size: 16px;
+      color: var(--vz-success);
+    }
+  }
+}
+
+// Title Styling
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--vz-heading-color);
+  line-height: 1.4;
+  margin: 0;
+}
+
+// Meta Items
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--vz-light);
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--vz-body-color);
+  font-weight: 500;
+
+  i {
+    font-size: 0.875rem;
+    color: var(--vz-primary);
+  }
+
+  [data-layout-mode="dark"] & {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.meta-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--vz-border-color);
+  opacity: 0.3;
+}
+
+// Status Pills - Simple Velzon Badge Style
+.status-pill,
+.priority-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  .pill-text {
+    line-height: 1;
+  }
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
+// Status Pill Variants
+.status-pill {
+  .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &.status-open {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+
+    .pill-dot {
+      background: var(--vz-success);
+    }
+  }
+
+  &.status-in-progress {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+
+    .pill-dot {
+      background: var(--vz-warning);
+    }
+  }
+
+  &.status-pending {
+    background: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+
+    .pill-dot {
+      background: var(--vz-info);
+    }
+  }
+
+  &.status-closed {
+    background: rgba(var(--vz-danger-rgb), 0.1);
+    color: var(--vz-danger);
+
+    .pill-dot {
+      background: var(--vz-danger);
+    }
+  }
+
+  &.status-archived {
+    background: rgba(var(--vz-secondary-rgb), 0.1);
+    color: var(--vz-secondary);
+
+    .pill-dot {
+      background: var(--vz-secondary);
+    }
+  }
+}
+
+// Priority Pill Variants
+.priority-pill {
+  &.priority-low {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+  }
+
+  &.priority-medium {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+  }
+
+  &.priority-high {
+    background: rgba(var(--vz-danger-rgb), 0.1);
+    color: var(--vz-danger);
+  }
+}
+
+// Action Buttons
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-modern {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+// Info Cards - Standard Velzon Card Style
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.25rem;
+
+  .info-icon {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+
+  .info-content {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  .info-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--vz-body-color);
+    opacity: 0.7;
+    margin-bottom: 0.25rem;
+  }
+
+  .info-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.info-card-primary {
+    .info-icon {
+      background: rgba(var(--vz-primary-rgb), 0.1);
+      color: var(--vz-primary);
+    }
+  }
+
+  &.info-card-warning {
+    .info-icon {
+      background: rgba(var(--vz-warning-rgb), 0.1);
+      color: var(--vz-warning);
+    }
+  }
+
+  &.info-card-info {
+    .info-icon {
+      background: rgba(var(--vz-info-rgb), 0.1);
+      color: var(--vz-info);
+    }
+  }
+}
+
+// Responsive - Tablet
+@media (max-width: 991px) {
+  .case-header-premium {
+    .card-body {
+      padding: 1rem;
+    }
+    
+    .row {
+      > [class*='col-'] {
+        margin-bottom: 1rem;
+      }
+    }
+  }
+  
+  .header-title {
+    font-size: 1.25rem;
+  }
+
+  .icon-box {
+    width: 64px;
+    height: 64px;
+
+    i {
+      font-size: 1.75rem;
+    }
+
+    .icon-verified {
+      width: 20px;
+      height: 20px;
+
+      i {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .header-actions {
+    width: 100%;
+    margin-top: 1rem;
+    
+    button {
+      flex: 1;
+    }
+  }
+  
+  // Fix info cards on tablet
+  .info-card {
+    .info-value {
+      font-size: 0.8125rem;
+    }
+  }
+  
+  // Fix tab content padding
+  .tab-pane {
+    > div:first-child {
+      padding: 0.75rem !important;
+    }
+  }
+}
+
+// Responsive - Mobile
+@media (max-width: 575px) {
+  .case-header-premium {
+    .card-body {
+      padding: 0.75rem;
+    }
+    
+    // Stack elements vertically on mobile
+    .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 1rem;
+    }
+  }
+  
+  .header-title {
+    font-size: 1.125rem;
+    word-break: break-word;
+  }
+
+  .icon-box {
+    width: 56px;
+    height: 56px;
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+
+  .meta-item {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+  }
+  
+  // Stack header actions vertically
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+    
+    button {
+      width: 100%;
+    }
+  }
+  
+  // Fix tables on mobile
+  .table-responsive {
+    margin: 0 -0.75rem;
+    padding: 0 0.75rem;
+    
+    table {
+      font-size: 0.8125rem;
+      
+      th, td {
+        padding: 0.5rem;
+      }
+    }
+  }
+  
+  // Fix tab content padding on mobile
+  .tab-pane {
+    > div:first-child {
+      padding: 0.5rem !important;
+    }
+  }
+}
+
+// Enhanced Tab Navigation Styling
+.nav-pills {
+  .nav-link {
+    padding: 0.625rem 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #6c757d;
+    background-color: transparent;
+    border: 1px solid transparent;
+    position: relative;
+
+    i {
+      transition: transform 0.3s ease;
+    }
+
+    &:hover {
+      color: var(--vz-primary);
+      background-color: rgba(var(--vz-primary-rgb), 0.08);
+      border-color: rgba(var(--vz-primary-rgb), 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+
+      i {
+        transform: scale(1.1);
+      }
+    }
+
+    &.active {
+      color: var(--vz-primary);
+      background-color: rgba(var(--vz-primary-rgb), 0.08);
+      border-color: rgba(var(--vz-primary-rgb), 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+
+      i {
+        transform: scale(1.1);
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
+  }
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+// Ensure tab content is visible on all devices
+.tab-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  min-height: auto !important;
+
+  .tab-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    min-height: auto !important;
+    padding: 0 !important;
+
+    &.show,
+    &.active {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    // Add padding to inner content divs that need it (not research)
+    > div:first-child:not(app-case-research) {
+      padding: 1rem;
+    }
+  }
+}
+
+// Research tab - SPECIFIC FIX - ALWAYS SHOW
+#research {
+  display: block !important;
+  min-height: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  &.show,
+  &.active {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  // Override Bootstrap fade hiding
+  &.fade:not(.show) {
+    display: block !important;
+    opacity: 1 !important;
+  }
+
+  app-case-research {
+    display: block !important;
+    min-height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    visibility: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+
+    * {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    // Force the research container to be visible
+    .case-research-container {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: auto !important;
+      width: 100% !important;
+      background: var(--vz-body-bg) !important;
+    }
+
+    .user-chat {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .ai-hero-section {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: auto !important;
+    }
+  }
+}
+
+// Responsive tab styling
+@media (max-width: 991px) {
+  .tab-content, .tab-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  #research {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+
+    app-case-research {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  .nav-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    position: relative;
+    padding-bottom: 0.5rem !important; // Extra space for scrollbar
+
+    // Visible scrollbar for better UX
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(203, 213, 225, 0.2);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #94a3b8;
+      border-radius: 3px;
+
+      &:hover {
+        background-color: #64748b;
+      }
+    }
+
+    // Fade effect to indicate scrollable content
+    &::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 6px;
+      width: 40px;
+      background: linear-gradient(to right, transparent, var(--vz-card-bg));
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .nav-item {
+      flex-shrink: 0;
+    }
+
+    .nav-link {
+      white-space: nowrap;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+
+      span {
+        display: inline-block !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 575px) {
+  #research {
+    min-height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+
+    &.active, &.show {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    app-case-research {
+      width: 100% !important;
+      max-width: 100% !important;
+      display: block !important;
+      visibility: visible !important;
+      min-height: auto !important;
+    }
+  }
+
+  .nav-pills {
+    gap: 0.5rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+
+    // Even more visible scrollbar on mobile
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #64748b;
+    }
+
+    // Stronger fade hint
+    &::after {
+      width: 60px;
+      background: linear-gradient(to right, transparent 0%, var(--vz-card-bg) 80%);
+    }
+
+    .nav-link {
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+
+      i {
+        font-size: 0.875rem;
+        margin-right: 0.375rem !important;
+      }
+    }
   }
 } 

@@ -1,186 +1,228 @@
-<div class="row">
-  <nav aria-label="breadcrumb" style="margin-top: 100px;">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a [routerLink]="['/']">Home</a>
-      </li>
-      <li class="breadcrumb-item">
-        <a [routerLink]="['/legal/cases']">Legal Cases</a>
-      </li>
-      <li class="breadcrumb-item active">{{ isEditing ? 'Edit Case' : 'Case Details' }}</li>
-    </ol>
-  </nav>
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" style="margin-top: 100px;">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a [routerLink]="['/']">Home</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a [routerLink]="['/legal/cases']">Legal Cases</a>
+    </li>
+    <li class="breadcrumb-item active">{{ isEditing ? 'Edit Case' : 'Case Details' }}</li>
+  </ol>
+</nav>
 
-  <div class="row" style="margin-bottom:60px;">
-    <div class="col-xl-4">
-      <div class="card shadow-sm mb-4" style="width: 100%;">
-        <div class="card-body p-4">
-          <div class="d-flex align-items-start">
-            <div class="flex-shrink-0">
-              <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 p-2">
-                <div class="avatar-title text-primary rounded-circle bg-transparent">
-                  <i class="ri-briefcase-4-line fs-2"></i>
+<!-- Loading State -->
+<div class="text-center py-5" *ngIf="isLoading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+
+<!-- Error State -->
+<div class="alert alert-danger" *ngIf="error" role="alert">
+  <i class="ri-error-warning-line align-middle me-2"></i>
+  {{ error }}
+</div>
+
+<!-- Main Content -->
+<div *ngIf="!isLoading && !error && case" style="margin-bottom:60px;">
+
+  <!-- Premium Case Header Card -->
+  <div class="card case-header-premium border-0 overflow-hidden mb-4">
+    <!-- Animated Background Gradient -->
+    <div class="header-gradient-bg"></div>
+
+    <div class="card-body position-relative">
+      <div class="row g-0">
+        <!-- Left: Icon & Title Section -->
+        <div class="col-lg-9">
+          <div class="d-flex gap-4">
+            <!-- Premium Icon Box -->
+            <div class="header-icon-wrapper">
+              <div class="icon-box">
+                <i class="ri-briefcase-4-fill"></i>
+                <div class="icon-verified">
+                  <i class="ri-checkbox-circle-fill"></i>
                 </div>
               </div>
             </div>
-            <div class="flex-grow-1 ms-3">
-              <h4 class="my-0 fw-semibold">{{ case?.title }}</h4>
-              <p class="text-muted mb-2 font-monospace">{{ case?.caseNumber }}</p>
-              <div class="d-flex gap-2">
-                <span class="badge text-uppercase fw-semibold"
+
+            <!-- Title & Meta Information -->
+            <div class="flex-grow-1">
+              <h1 class="header-title mb-3">{{ case.title }}</h1>
+
+              <!-- Metadata Row with Status & Priority First -->
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <!-- Status Badge -->
+                <div class="status-pill"
                   [ngClass]="{
-                    'bg-success-subtle text-success': case?.status === 'OPEN',
-                    'bg-warning-subtle text-warning': case?.status === 'IN_PROGRESS',
-                    'bg-info-subtle text-info': case?.status === 'PENDING',
-                    'bg-danger-subtle text-danger': case?.status === 'CLOSED',
-                    'bg-secondary-subtle text-secondary': case?.status === 'ARCHIVED'
+                    'status-open': case.status === 'OPEN',
+                    'status-in-progress': case.status === 'IN_PROGRESS',
+                    'status-pending': case.status === 'PENDING',
+                    'status-closed': case.status === 'CLOSED',
+                    'status-archived': case.status === 'ARCHIVED'
                   }">
-                  {{ case?.status }}
-                </span>
-                <span class="badge text-uppercase fw-semibold"
+                  <span class="pill-dot"></span>
+                  <span class="pill-text">{{ case.status.replace('_', ' ') }}</span>
+                </div>
+
+                <!-- Priority Badge -->
+                <div class="priority-pill"
                   [ngClass]="{
-                    'bg-success-subtle text-success': case?.priority === 'LOW',
-                    'bg-warning-subtle text-warning': case?.priority === 'MEDIUM',
-                    'bg-danger-subtle text-danger': case?.priority === 'HIGH' || case?.priority === 'URGENT'
+                    'priority-low': case.priority === 'LOW',
+                    'priority-medium': case.priority === 'MEDIUM',
+                    'priority-high': case.priority === 'HIGH' || case.priority === 'URGENT'
                   }">
-                  {{ case?.priority }}
-                </span>
+                  <i class="ri-fire-fill"></i>
+                  <span class="pill-text">{{ case.priority }}</span>
+                </div>
+
+                <div class="meta-divider"></div>
+                <div class="meta-item">
+                  <i class="ri-hashtag"></i>
+                  <span>{{ case.caseNumber }}</span>
+                </div>
+                <div class="meta-divider"></div>
+                <div class="meta-item">
+                  <i class="ri-calendar-line"></i>
+                  <span>Filed: {{ case.filingDate | date:'MMM dd, yyyy' }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div class="card shadow-sm mb-4" style="width: 100%;">
-        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
-          <h5 class="card-title mb-0 text-white-dark">
-            <i class="ri-user-line align-middle me-2 text-primary"></i>
-            Client Information
-          </h5>
-        </div>
-        <div class="card-body p-4">
-          <div class="table-responsive">
-            <table class="table table-borderless mb-0">
-              <tbody>
-                <tr class="border-bottom">
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Client Name</th>
-                  <td class="text-end py-3 fw-semibold">{{ case?.clientName }}</td>
-                </tr>
-                <tr class="border-bottom">
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Email</th>
-                  <td class="text-end py-3 text-white-dark">{{ case?.clientEmail || 'N/A' }}</td>
-                </tr>
-                <tr class="border-bottom">
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Phone</th>
-                  <td class="text-end py-3 text-white-dark">{{ case?.clientPhone || 'N/A' }}</td>
-                </tr>
-                <tr>
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Address</th>
-                  <td class="text-end py-3 text-white-dark">{{ case?.clientAddress || 'N/A' }}</td>
-                </tr>
-              </tbody>
-            </table>
+
+        <!-- Right: Action Buttons -->
+        <div class="col-lg-3">
+          <div class="header-actions">
+            <button class="btn btn-primary btn-modern w-100 mb-2" (click)="toggleEdit()">
+              <i class="ri-edit-line me-2"></i>
+              {{ isEditing ? 'Cancel' : 'Edit Case' }}
+            </button>
+            <button class="btn btn-outline-danger btn-modern w-100" (click)="deleteCase()">
+              <i class="ri-delete-bin-line me-2"></i>
+              Delete
+            </button>
           </div>
         </div>
       </div>
-      
-      <div class="card shadow-sm" style="width: 100%;">
-        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
-          <h5 class="card-title mb-0 text-white-dark">
-            <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
-            Important Dates
-          </h5>
+
+      <!-- Bottom Info Cards -->
+      <div class="row g-3 mt-3 pt-4 border-top border-opacity-10">
+        <div class="col-md-4">
+          <div class="info-card info-card-primary">
+            <div class="info-icon">
+              <i class="ri-scales-line"></i>
+            </div>
+            <div class="info-content">
+              <div class="info-label">Court</div>
+              <div class="info-value">{{ case.courtInfo?.courtName || 'Not assigned' }}</div>
+            </div>
+          </div>
         </div>
-        <div class="card-body p-4">
-          <div class="table-responsive">
-            <table class="table table-borderless mb-0">
-              <tbody>
-                <tr class="border-bottom">
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark" style="width: 45%;">Filing Date</th>
-                  <td class="text-end py-3">
-                    <span class="badge bg-info-subtle text-info fw-semibold">
-                      {{ case?.importantDates?.filingDate | date:'mediumDate' }}
-                    </span>
-                  </td>
-                </tr>
-                <tr class="border-bottom">
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Next Hearing</th>
-                  <td class="text-end py-3">
-                    <span class="badge bg-warning-subtle text-warning fw-semibold">
-                      {{ case?.importantDates?.nextHearing | date:'mediumDate' }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row" class="ps-0 py-3 fw-semibold text-white-dark">Trial Date</th>
-                  <td class="text-end py-3">
-                    <span class="badge bg-danger-subtle text-danger fw-semibold">
-                      {{ case?.importantDates?.trialDate | date:'mediumDate' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+        <div class="col-md-4">
+          <div class="info-card info-card-warning">
+            <div class="info-icon">
+              <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="info-content">
+              <div class="info-label">Next Hearing</div>
+              <div class="info-value">{{ case.nextHearing ? (case.nextHearing | date:'MMM dd, yyyy') : 'Not scheduled' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4" *ngIf="case.courtInfo?.judgeName">
+          <div class="info-card info-card-info">
+            <div class="info-icon">
+              <i class="ri-user-star-line"></i>
+            </div>
+            <div class="info-content">
+              <div class="info-label">Judge</div>
+              <div class="info-value">{{ case.courtInfo.judgeName }}</div>
+            </div>
           </div>
         </div>
       </div>
-      
     </div>
-    
-    <div class="col-xl-8">
-      <div class="card h-100 shadow-sm" style="height: 95%; width: 100%;">
-        <div class="card-header border-bottom-dashed bg-light-subtle py-3">
-          <div class="d-flex flex-wrap align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-              <h5 class="card-title mb-0 text-white-dark fs-4 fw-bold">
-                <i class="ri-file-list-3-line align-middle me-2 text-primary fs-4"></i>
-                Case Details
-              </h5>
-            </div>
-            <div class="d-flex flex-wrap align-items-center gap-2">
-              <button class="btn btn-soft-info btn-animation waves-effect waves-light" 
-                      (click)="navigateToTasks()">
-                <i class="ri-task-line align-bottom me-1"></i>
-                Tasks
-                <span class="badge bg-info ms-2" *ngIf="activeTasksCount > 0">{{ activeTasksCount }}</span>
-              </button>
-              <button class="btn btn-soft-success btn-animation waves-effect waves-light" 
-                      (click)="navigateToAssignments()">
-                <i class="ri-user-add-line align-bottom me-1"></i>
-                Assignments
-                <span class="badge bg-success ms-2" *ngIf="teamSummary?.total > 0">{{ teamSummary.total }}</span>
-              </button>
-              <button class="btn btn-soft-primary btn-animation waves-effect waves-light" 
-                      (click)="quickCreateTask()"
-                      *ngIf="canManageAssignments">
-                <i class="ri-add-line align-bottom me-1"></i>
-                Quick Task
-              </button>
-              <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="toggleEdit()">
-                <i class="ri-edit-line align-bottom me-1"></i>
-                {{ isEditing ? 'Cancel' : 'Edit' }}
-              </button>
-              <button class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="deleteCase()">
-                <i class="ri-delete-bin-line align-bottom me-1"></i>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card-body p-4">
-          <div class="text-center py-5" *ngIf="isLoading">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-          </div>
+  </div>
 
-          <div class="alert alert-danger" *ngIf="error" role="alert">
-            <i class="ri-error-warning-line align-middle me-2"></i>
-            {{ error }}
-          </div>
+  <!-- Tabs Card -->
+  <div class="card shadow-lg border-0">
+    <div class="card-header p-0 bg-white border-0" style="background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);">
+      <!-- Mobile scroll hint -->
+      <div class="d-md-none alert alert-info mb-0 py-2 px-3 border-0 rounded-0" style="font-size: 0.75rem;">
+        <i class="ri-arrow-left-right-line me-1"></i>
+        Swipe left/right to see all tabs
+      </div>
+      <ul class="nav nav-pills nav-custom nav-custom-light mb-0 gap-2 p-3" role="tablist" style="border-bottom: 2px solid #e9ecef;">
+        <li class="nav-item">
+          <a class="nav-link active rounded-pill fw-semibold shadow-sm" data-bs-toggle="tab" href="#case-details-tab" role="tab" aria-selected="true">
+            <i class="ri-file-list-3-line me-2 align-middle fs-16"></i>
+            <span>Case Details</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#notes" role="tab" aria-selected="false">
+            <i class="ri-sticky-note-line me-2 align-middle fs-16"></i>
+            <span>Notes</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#documents" role="tab" aria-selected="false">
+            <i class="ri-folder-3-line me-2 align-middle fs-16"></i>
+            <span>Documents</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#timeline" role="tab" aria-selected="false">
+            <i class="ri-timeline-view me-2 align-middle fs-16"></i>
+            <span>Timeline</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#events" role="tab" aria-selected="false">
+            <i class="ri-calendar-event-line me-2 align-middle fs-16"></i>
+            <span>Events</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#timeentries" role="tab" aria-selected="false">
+            <i class="ri-time-line me-2 align-middle fs-16"></i>
+            <span>Time Entries</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#team" role="tab" aria-selected="false" (click)="onTeamTabClick()">
+            <i class="ri-team-line me-2 align-middle fs-16"></i>
+            <span>Team</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#research" role="tab" aria-selected="false">
+            <i class="ri-search-2-line me-2 align-middle fs-16"></i>
+            <span>Research</span>
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="canViewBilling">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#billing" role="tab" aria-selected="false">
+            <i class="ri-money-dollar-circle-line me-2 align-middle fs-16"></i>
+            <span>Billing</span>
+          </a>
+        </li>
+      </ul>
+    </div>
 
-          <div *ngIf="!isLoading && !error && case && !isEditing" class="case-details-view">
+    <div class="card-body p-0">
+      <div class="tab-content">
+
+        <!-- Case Details Tab (NEW - FIRST TAB) -->
+        <div class="tab-pane fade show active" id="case-details-tab" role="tabpanel">
+          <div class="p-4">
+
+            <!-- View Mode: Case Information Grid -->
+            <div *ngIf="!isEditing">
             <div class="row g-4">
               <div class="col-md-6">
                 <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
@@ -282,8 +324,102 @@
                 </div>
               </div>
             </div>
+
+            <!-- Client Information Section -->
+            <div class="row mt-4">
+              <div class="col-lg-6">
+                <div class="card border shadow-none h-100">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-user-line align-middle me-2 text-primary"></i>
+                      Client Information
+                    </h5>
+                  </div>
+                  <div class="card-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-borderless mb-0">
+                        <tbody>
+                          <tr class="border-bottom">
+                            <th scope="row" style="width: 140px;" class="ps-4 py-3 fw-semibold text-white-dark">Name</th>
+                            <td class="py-3 fw-semibold">{{ case.clientName }}</td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Email</th>
+                            <td class="py-3">
+                              <a href="mailto:{{ case.clientEmail }}" class="text-primary">
+                                <i class="ri-mail-line me-1"></i>{{ case.clientEmail || 'N/A' }}
+                              </a>
+                            </td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Phone</th>
+                            <td class="py-3">
+                              <a href="tel:{{ case.clientPhone }}" class="text-primary">
+                                <i class="ri-phone-line me-1"></i>{{ case.clientPhone || 'N/A' }}
+                              </a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Address</th>
+                            <td class="py-3">{{ case.clientAddress || 'N/A' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Important Dates Section -->
+              <div class="col-lg-6">
+                <div class="card border shadow-none h-100">
+                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
+                    <h5 class="card-title mb-0 text-white-dark">
+                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
+                      Important Dates
+                    </h5>
+                  </div>
+                  <div class="card-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-borderless mb-0">
+                        <tbody>
+                          <tr class="border-bottom">
+                            <th scope="row" style="width: 140px;" class="ps-4 py-3 fw-semibold text-white-dark">Filing Date</th>
+                            <td class="py-3">
+                              <span class="badge bg-info-subtle text-info fw-semibold px-3 py-2">
+                                <i class="ri-calendar-check-line me-1"></i>
+                                {{ case.filingDate | date:'mediumDate' || 'Not set' }}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr class="border-bottom">
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Next Hearing</th>
+                            <td class="py-3">
+                              <span class="badge bg-warning-subtle text-warning fw-semibold px-3 py-2">
+                                <i class="ri-calendar-2-line me-1"></i>
+                                {{ case.nextHearing | date:'mediumDate' || 'Not scheduled' }}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Trial Date</th>
+                            <td class="py-3">
+                              <span class="badge bg-danger-subtle text-danger fw-semibold px-3 py-2">
+                                <i class="ri-calendar-event-fill me-1"></i>
+                                {{ case.trialDate | date:'mediumDate' || 'Not scheduled' }}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
+          <!-- Edit Mode -->
           <form [formGroup]="editForm" (ngSubmit)="saveCase()" *ngIf="isEditing" class="case-details-edit">
             <div class="row g-4">
               <div class="col-md-6">
@@ -450,63 +586,10 @@
           </form>
         </div>
       </div>
-    </div>
-  </div>
-</div>
+      <!-- End of Case Details Tab -->
 
-<div class="row">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-header border-bottom-dashed bg-light-subtle">
-        <ul class="nav nav-tabs-custom card-header-tabs border-0 fs-14" role="tablist">
-          <li class="nav-item">
-            <a class="nav-link" [class.active]="!isClient" data-bs-toggle="tab" href="#notes" role="tab">
-              <i class="ri-sticky-note-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Notes</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" [class.active]="isClient" data-bs-toggle="tab" href="#documents" role="tab">
-              <i class="ri-file-list-3-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Documents</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#timeline" role="tab">
-              <i class="ri-time-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Timeline</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#events" role="tab">
-              <i class="ri-calendar-event-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Events</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#timeentries" role="tab">
-              <i class="ri-time-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Time Entries</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#team" role="tab" (click)="onTeamTabClick()">
-              <i class="ri-team-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Team & Assignments</span>
-            </a>
-          </li>
-          <li class="nav-item" *ngIf="canViewBilling">
-            <a class="nav-link" data-bs-toggle="tab" href="#billing" role="tab">
-              <i class="ri-money-dollar-circle-line me-1 align-bottom"></i>
-              <span class="d-none d-sm-inline">Billing</span>
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="card-body p-0">
-        <div class="tab-content">
-          <!-- Notes Tab -->
-          <div class="tab-pane fade" [class.show]="!isClient" [class.active]="!isClient" id="notes" role="tabpanel">
+      <!-- Notes Tab -->
+          <div class="tab-pane fade" id="notes" role="tabpanel">
             <div class="p-4">
               <app-case-notes [caseId]="case?.id" *ngIf="canViewInternalNotes"></app-case-notes>
               <div *ngIf="!canViewInternalNotes" class="text-center py-5">
@@ -522,7 +605,7 @@
           </div>
 
           <!-- Documents Tab -->
-          <div class="tab-pane fade" [class.show]="isClient" [class.active]="isClient" id="documents" role="tabpanel">
+          <div class="tab-pane fade" id="documents" role="tabpanel">
             <div class="p-4">
               <app-case-documents [caseId]="caseId"></app-case-documents>
             </div>
@@ -1188,6 +1271,11 @@
             </div>
           </div>
 
+          <!-- Legal Research Tab -->
+          <div class="tab-pane fade" id="research" role="tabpanel">
+            <app-case-research [caseId]="caseId"></app-case-research>
+          </div>
+
           <!-- Billing Tab -->
           <div class="tab-pane fade" id="billing" role="tabpanel" *ngIf="canViewBilling">
             <div class="p-4">
@@ -1425,4 +1513,3 @@
       </div>
     </div>
   </div>
-</div> 

@@ -35,12 +35,14 @@ public class AILegalResearchService {
     private final SearchHistoryRepository searchHistoryRepository;
     private final ResearchSessionRepository sessionRepository;
     private final ResearchAnnotationRepository annotationRepository;
+    private final LegalCaseRepository legalCaseRepository;
     private final ClaudeSonnet4Service claudeService;
     private final CourtListenerService courtListenerService;
     private final FederalRegisterService federalRegisterService;
     private final MassachusettsLegalService massachusettsLegalService;
     private final ImmigrationKnowledgeService immigrationKnowledgeService;
     private final MassachusettsCivilProcedureService massachusettsCivilProcedureService;
+    private final ResearchProgressPublisher progressPublisher;
     private final ObjectMapper objectMapper;
 
     public Map<String, Object> performSearch(Map<String, Object> searchRequest) {
@@ -51,20 +53,35 @@ public class AILegalResearchService {
         String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "massachusetts");
         Long userId = searchRequest.containsKey("userId") ? Long.valueOf(searchRequest.get("userId").toString()) : null;
         String sessionId = (String) searchRequest.get("sessionId");
+        // CRITICAL: Extract caseId to ensure cache differentiation between different cases
+        // Without this, same query for different cases would return cached results from wrong case
+        String caseId = (String) searchRequest.get("caseId");
 
-        log.info("Parsed search parameters - query: '{}', searchType: '{}', jurisdiction: '{}'", query, searchType, jurisdiction);
+        log.info("Parsed search parameters - query: '{}', searchType: '{}', jurisdiction: '{}', caseId: '{}'",
+                 query, searchType, jurisdiction, caseId != null ? caseId : "general");
 
         long startTime = System.currentTimeMillis();
 
         try {
+            // Step 1: Understanding the query (10% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "query_analysis",
+                    "Understanding your legal question",
+                    query,
+                    "ri-file-search-line",
+                    10);
+            }
+
             // Check if we have a cached result
-            String queryHash = generateQueryHash(query, searchType, jurisdiction);
+            // IMPORTANT: Include caseId in hash so different cases don't share cached responses
+            String queryHash = generateQueryHash(query, searchType, jurisdiction, caseId);
             Optional<AIResearchCache> cachedResult = cacheRepository.findByQueryHash(queryHash);
 
             if (cachedResult.isPresent() && cachedResult.get().getIsValid() &&
                 cachedResult.get().getExpiresAt().isAfter(LocalDateTime.now())) {
 
-                log.info("Returning cached result for query: {}", query);
+                log.info("✓ CACHE HIT - Returning cached result for query: '{}', caseId: '{}', hash: {}",
+                         query, caseId != null ? caseId : "general", queryHash.substring(0, 16) + "...");
 
                 // Update cache usage
                 AIResearchCache cache = cachedResult.get();
@@ -76,21 +93,55 @@ public class AILegalResearchService {
                 saveSearchHistory(userId, sessionId, query, searchType, 0,
                                 System.currentTimeMillis() - startTime);
 
+                // Complete immediately for cached results
+                if (sessionId != null) {
+                    progressPublisher.publishComplete(sessionId, "Research completed (cached result)");
+                }
+
                 return parseAIResponse(cache.getAiResponse());
             }
 
+            // Step 2: Searching legal databases (30% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "database_search",
+                    "Searching Massachusetts statutes and regulations",
+                    "Querying legal databases...",
+                    "ri-search-line",
+                    30);
+            }
+
             // Perform new search
+            log.info("✗ CACHE MISS - Performing new search for query: '{}', caseId: '{}'",
+                     query, caseId != null ? caseId : "general");
             Map<String, Object> searchResults = executeSearch(query, searchType, jurisdiction);
+
+            // Step 3: AI Analysis (60% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "ai_analysis",
+                    "Analyzing legal sources with Claude AI",
+                    "Processing " + searchResults.getOrDefault("totalResults", 0) + " legal sources...",
+                    "ri-brain-line",
+                    60);
+            }
 
             // Generate AI analysis
             CompletableFuture<String> aiAnalysis = generateAIAnalysis(query, searchResults,
-                                                                    QueryType.valueOf(searchType.toUpperCase()));
+                                                                    QueryType.valueOf(searchType.toUpperCase()), caseId);
 
             // Wait for AI analysis
             String analysis = aiAnalysis.join();
 
-            // Cache the result
-            cacheAIResult(queryHash, query, searchType, jurisdiction, analysis);
+            // Step 4: Preparing response (90% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "response_generation",
+                    "Preparing comprehensive answer",
+                    "Formatting legal analysis...",
+                    "ri-quill-pen-line",
+                    90);
+            }
+
+            // Cache the result with case-specific hash
+            cacheAIResult(queryHash, query, searchType, jurisdiction, caseId, analysis);
 
             // Combine results with AI analysis
             Map<String, Object> finalResults = combineResultsWithAI(searchResults, analysis);
@@ -100,10 +151,21 @@ public class AILegalResearchService {
                             (Integer) finalResults.getOrDefault("totalResults", 0),
                             System.currentTimeMillis() - startTime);
 
+            // Step 5: Complete (100% progress)
+            if (sessionId != null) {
+                progressPublisher.publishComplete(sessionId, "Research completed successfully");
+            }
+
             return finalResults;
 
         } catch (Exception e) {
             log.error("Error performing search: ", e);
+
+            // Publish error event
+            if (sessionId != null) {
+                progressPublisher.publishError(sessionId, "Search failed: " + e.getMessage());
+            }
+
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
             errorResult.put("error", "Search failed: " + e.getMessage());
@@ -279,20 +341,8 @@ public class AILegalResearchService {
                 }
             }
 
-            // === AUTONOMOUS WEB SEARCH ENHANCEMENT ===
-            // Check if we need to enhance results with autonomous web search
-            log.info("Checking if autonomous web search is needed for query: {}", query);
-            try {
-                CompletableFuture<List<Map<String, Object>>> webEnhancedResults =
-                    claudeService.enhanceWithWebSearch(query, jurisdiction, allResults);
-
-                allResults = webEnhancedResults.get(); // Wait for web search completion
-                totalCount = allResults.size(); // Update count after web enhancement
-
-                log.info("Web search enhancement completed. Final result count: {}", totalCount);
-            } catch (Exception e) {
-                log.warn("Web search enhancement failed, continuing with existing results: ", e);
-            }
+            // Web search enhancement removed - consolidated into single AI call
+            log.info("Skipping separate web search enhancement - will be handled in comprehensive AI analysis");
 
             // Sort results by relevance (this is simplified - could be more sophisticated)
 
@@ -399,47 +449,8 @@ public class AILegalResearchService {
             });
 
 
-            // AI Autonomous Research Integration
-            log.info("Starting AI autonomous research for query: {}", query);
-
-            try {
-                // Step 1: Identify knowledge gaps in the current results
-                CompletableFuture<List<String>> knowledgeGapsFuture = claudeService.identifyKnowledgeGaps(query, allResults);
-                List<String> knowledgeGaps = knowledgeGapsFuture.get();
-                log.info("AI identified {} knowledge gaps", knowledgeGaps.size());
-
-                // Step 2: Perform autonomous research if gaps are identified
-                Map<String, Object> autonomousFindings = new HashMap<>();
-                if (!knowledgeGaps.isEmpty()) {
-                    CompletableFuture<Map<String, Object>> autonomousResearchFuture =
-                        claudeService.autonomousLegalResearch(query, jurisdiction, allResults);
-                    autonomousFindings = autonomousResearchFuture.get();
-                    log.info("Autonomous research completed with {} findings", autonomousFindings.size());
-                }
-
-                // Step 3: Synthesize comprehensive analysis
-                CompletableFuture<String> synthesisFuture = claudeService.synthesizeComprehensiveAnalysis(
-                    query, allResults, autonomousFindings);
-                String comprehensiveAnalysis = synthesisFuture.get();
-
-                // Add AI enhancement metadata to results
-                Map<String, Object> aiEnhancement = new HashMap<>();
-                aiEnhancement.put("knowledgeGaps", knowledgeGaps);
-                aiEnhancement.put("autonomousFindings", autonomousFindings);
-                aiEnhancement.put("comprehensiveAnalysis", comprehensiveAnalysis);
-                aiEnhancement.put("enhanced", true);
-
-                results.put("aiEnhancement", aiEnhancement);
-                log.info("AI autonomous research integration completed successfully");
-
-            } catch (Exception e) {
-                log.warn("AI autonomous research failed, continuing with basic results: ", e);
-                // Add fallback indicator
-                Map<String, Object> aiEnhancement = new HashMap<>();
-                aiEnhancement.put("enhanced", false);
-                aiEnhancement.put("error", e.getMessage());
-                results.put("aiEnhancement", aiEnhancement);
-            }
+            // Autonomous research removed - consolidated into single comprehensive AI call
+            log.info("Autonomous research will be handled in single comprehensive AI analysis");
 
             // Debug logging to see what results are being returned
             log.info("executeSearch complete - Total results: {}", totalCount);
@@ -480,7 +491,7 @@ public class AILegalResearchService {
 
 
 
-    private CompletableFuture<String> generateAIAnalysis(String query, Map<String, Object> searchResults, QueryType queryType) {
+    private CompletableFuture<String> generateAIAnalysis(String query, Map<String, Object> searchResults, QueryType queryType, String caseId) {
         // Debug logging for AI input
         log.info("generateAIAnalysis called with query: '{}'", query);
         log.info("searchResults totalResults: {}", searchResults.get("totalResults"));
@@ -509,7 +520,7 @@ public class AILegalResearchService {
             log.warn("AI is receiving NULL results list!");
         }
 
-        String prompt = buildAIPrompt(query, searchResults, queryType);
+        String prompt = buildAIPrompt(query, searchResults, queryType, caseId);
 
         return claudeService.generateCompletion(prompt, false)
             .exceptionally(throwable -> {
@@ -518,7 +529,7 @@ public class AILegalResearchService {
             });
     }
 
-    private String buildAIPrompt(String query, Map<String, Object> searchResults, QueryType queryType) {
+    private String buildAIPrompt(String query, Map<String, Object> searchResults, QueryType queryType, String caseId) {
         StringBuilder prompt = new StringBuilder();
 
         // Detect query type for specialized prompt
@@ -529,90 +540,235 @@ public class AILegalResearchService {
         String jurisdiction = isImmigrationQuery ? "Federal/Immigration" :
                             (isStateLawQuery(query) ? "Massachusetts State" : "General");
 
-        prompt.append("📊 COMPREHENSIVE LEGAL ANALYSIS\n\n");
         prompt.append("You are an expert legal research assistant specializing in ").append(jurisdiction).append(" law.\n\n");
 
-        prompt.append("**AUTONOMOUS RESEARCH INSTRUCTION**: You have access to both legal database results AND autonomous web research capabilities. Your task is to provide comprehensive legal guidance:\n");
-        prompt.append("- **When database results are sufficient**: Use them as primary sources with confident analysis\n");
-        prompt.append("- **When results include AI Web Research**: This contains autonomous research findings - use this to fill knowledge gaps and provide substantive guidance\n");
-        prompt.append("- **For state law queries (Mass. R. Civ. P., etc.)**: Prioritize web research findings over federal databases\n");
-        prompt.append("- **Never default to generic disclaimers**: Always provide specific, actionable guidance based on available research\n\n");
+        prompt.append("**IMPORTANT - CONCISE RESPONSE FORMAT**:\n");
+        prompt.append("- Provide a brief, direct answer (2-3 paragraphs maximum)\n");
+        prompt.append("- Focus on the most relevant information for the specific query\n");
+        prompt.append("- Use clear, confident language based on your legal knowledge\n");
+        prompt.append("- Even if no documents were retrieved, provide substantive legal guidance based on your knowledge of ").append(jurisdiction).append(" law\n");
+        prompt.append("- DO NOT apologize for lack of documents - just provide the best answer you can\n");
+        prompt.append("- After your answer, suggest 3-5 relevant follow-up questions the user might ask\n");
+        prompt.append("- Keep the total response concise and actionable\n\n");
 
-        prompt.append("**AUTONOMOUS RESEARCH REQUIREMENTS**:\n");
-        prompt.append("- Synthesize information from ALL sources: database results + autonomous web research\n");
-        prompt.append("- Provide specific citations, forms, procedures, and deadlines found through research\n");
-        prompt.append("- Use confident language when research supports findings ('the rule states', 'the procedure requires')\n");
-        prompt.append("- Give practical, step-by-step guidance that attorneys can immediately implement\n");
-        prompt.append("- Include procedural details, filing requirements, and strategic considerations\n");
-        prompt.append("- Minimize disclaimers - focus on substantive legal analysis\n\n");
+        // Add comprehensive case context if available
+        if (caseId != null && !caseId.isEmpty()) {
+            try {
+                Long caseIdLong = Long.parseLong(caseId);
+                legalCaseRepository.findById(caseIdLong).ifPresent(legalCase -> {
+                    prompt.append("**CRITICAL - CASE-SPECIFIC CONTEXT**:\n");
+                    prompt.append("This research is for a SPECIFIC active case. Your response MUST be tailored to this case's details.\n\n");
 
+                    // Basic Case Information
+                    prompt.append("**Case Identification:**\n");
+                    prompt.append("- Case Number: ").append(legalCase.getCaseNumber()).append("\n");
+                    prompt.append("- Case Title: ").append(legalCase.getTitle()).append("\n");
+                    prompt.append("- Case Type: ").append(legalCase.getType() != null ? legalCase.getType() : "General").append("\n");
+
+                    // Full description (not truncated)
+                    if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
+                        prompt.append("- Case Description: ").append(legalCase.getDescription()).append("\n");
+                    }
+
+                    // Court and Jurisdiction Information
+                    String courtName = legalCase.getCourtName();
+                    String jurisdictionType = "UNKNOWN";
+                    String applicableRules = "applicable procedural rules";
+
+                    if (courtName != null && !courtName.isEmpty()) {
+                        prompt.append("- Court: ").append(courtName).append("\n");
+
+                        // Determine jurisdiction from court name
+                        String courtLower = courtName.toLowerCase();
+                        if (courtLower.contains("u.s. district") || courtLower.contains("federal") ||
+                            courtLower.contains("usdc") || courtLower.contains("united states district")) {
+                            jurisdictionType = "FEDERAL";
+                            applicableRules = "Federal Rules of Civil Procedure (FRCP)";
+                        } else if (courtLower.contains("superior") || courtLower.contains("massachusetts") ||
+                                   courtLower.contains("district court") || courtLower.contains("ma ")) {
+                            jurisdictionType = "STATE";
+                            applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
+                        }
+
+                        if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
+                            prompt.append("- Courtroom: ").append(legalCase.getCourtroom()).append("\n");
+                        }
+                        if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
+                            prompt.append("- Judge: ").append(legalCase.getJudgeName()).append("\n");
+                        }
+                    }
+
+                    // Case Status and Priority
+                    if (legalCase.getStatus() != null) {
+                        prompt.append("- Status: ").append(legalCase.getStatus()).append("\n");
+                    }
+                    if (legalCase.getPriority() != null) {
+                        prompt.append("- Priority: ").append(legalCase.getPriority()).append("\n");
+                    }
+
+                    // Important Dates and Procedural Posture
+                    prompt.append("\n**Procedural Timeline:**\n");
+                    String proceduralStage = "Unknown stage";
+
+                    if (legalCase.getFilingDate() != null) {
+                        prompt.append("- Filing Date: ").append(legalCase.getFilingDate()).append("\n");
+
+                        // Calculate days since filing
+                        long daysSinceFiling = (new Date().getTime() - legalCase.getFilingDate().getTime()) / (1000 * 60 * 60 * 24);
+
+                        if (daysSinceFiling < 90) {
+                            proceduralStage = "Early litigation (within 90 days of filing)";
+                        } else if (daysSinceFiling < 180) {
+                            proceduralStage = "Active discovery phase";
+                        } else {
+                            proceduralStage = "Advanced litigation";
+                        }
+                    } else {
+                        proceduralStage = "Pre-filing stage (case not yet filed)";
+                    }
+
+                    if (legalCase.getNextHearing() != null) {
+                        prompt.append("- Next Hearing: ").append(legalCase.getNextHearing()).append("\n");
+                        proceduralStage = "Active litigation with upcoming hearing";
+                    }
+                    if (legalCase.getTrialDate() != null) {
+                        prompt.append("- Trial Date: ").append(legalCase.getTrialDate()).append("\n");
+                        proceduralStage = "Trial preparation phase";
+                    }
+
+                    prompt.append("- Current Procedural Stage: ").append(proceduralStage).append("\n");
+
+                    // Client Information
+                    prompt.append("\n**Client Information:**\n");
+                    prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
+
+                    // CRITICAL INSTRUCTIONS FOR AI
+                    prompt.append("\n**CRITICAL INSTRUCTIONS - READ CAREFULLY**:\n");
+                    prompt.append("1. JURISDICTION: This case is in ").append(jurisdictionType).append(" court.\n");
+                    prompt.append("   - You MUST use ONLY ").append(applicableRules).append("\n");
+                    prompt.append("   - DO NOT mix federal and state procedural rules\n");
+                    prompt.append("   - DO NOT contradict yourself about which court system applies\n\n");
+
+                    prompt.append("2. PROCEDURAL POSTURE: This case is in the \"").append(proceduralStage).append("\" stage.\n");
+                    prompt.append("   - Tailor your recommendations to what is appropriate at THIS specific stage\n");
+                    prompt.append("   - If suggesting motions, specify deadlines based on the filing date and procedural rules\n\n");
+
+                    // Case-type-specific instructions
+                    String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
+                    if (caseType.contains("data breach") || caseType.contains("privacy")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a DATA BREACH/PRIVACY case.\n");
+                        prompt.append("   - Address Article III standing issues (injury-in-fact requirements for data breach)\n");
+                        prompt.append("   - Consider credit monitoring, identity theft concerns, and notification obligations\n");
+                        prompt.append("   - Reference applicable consumer protection statutes (e.g., state data breach laws, FCRA)\n");
+                        prompt.append("   - If class action, address data breach-specific class certification challenges\n\n");
+                    } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a MEDICAL MALPRACTICE case.\n");
+                        prompt.append("   - **Massachusetts Requirements**: Expert testimony REQUIRED to establish standard of care and causation (Mass. G.L. c. 231, §60B)\n");
+                        prompt.append("   - **Tribunal Requirement**: If in state court, must go through medical malpractice tribunal first; if in FEDERAL court, tribunal MAY NOT apply under Erie doctrine\n");
+                        prompt.append("   - **Res Ipsa Loquitur**: Rarely applies in Massachusetts medical malpractice - expert testimony generally required even for obvious errors\n");
+                        prompt.append("   - **Statute of Limitations**: 3 years from date of injury or discovery of injury (Mass. G.L. c. 260, §2A), but not more than 7 years from act/omission\n");
+                        prompt.append("   - **Expert Disclosure**: Critical to retain board-certified experts early - deadline typically 90-120 days before trial or per scheduling order\n");
+                        prompt.append("   - **Informed Consent**: Consider separate informed consent claims under Massachusetts common law if applicable\n");
+                        prompt.append("   - **Damages Cap**: Massachusetts has NO cap on medical malpractice damages (unlike many states)\n\n");
+                    } else if (caseType.contains("class action")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a CLASS ACTION.\n");
+                        prompt.append("   - Address Rule 23 requirements (numerosity, commonality, typicality, adequacy)\n");
+                        prompt.append("   - Consider class certification timing and strategy\n");
+                        prompt.append("   - Address notice requirements and settlement approval procedures\n\n");
+                    } else if (caseType.contains("employment")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an EMPLOYMENT case.\n");
+                        prompt.append("   - Address applicable employment laws and administrative exhaustion requirements\n");
+                        prompt.append("   - Consider discovery of personnel files and employment records\n\n");
+                    } else if (caseType.contains("trade secret") || caseType.contains("misappropriation")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a TRADE SECRETS case.\n");
+                        prompt.append("   - Address Defend Trade Secrets Act (DTSA) federal claims and/or state trade secret law\n");
+                        prompt.append("   - **Identification Requirement**: Must identify trade secrets with reasonable particularity\n");
+                        prompt.append("   - **Protection Measures**: Show reasonable steps taken to maintain secrecy (NDAs, access controls, etc.)\n");
+                        prompt.append("   - **Preliminary Injunction**: Consider immediate injunctive relief to prevent ongoing misappropriation\n");
+                        prompt.append("   - **Irreparable Harm**: Trade secrets lose value once disclosed - emphasize cannot be \"un-rung\"\n\n");
+                    } else if (caseType.contains("immigration") || caseType.contains("removal") || caseType.contains("asylum")) {
+                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an IMMIGRATION case.\n");
+                        prompt.append("   - **Dual Proceedings**: If criminal charges exist, coordinate immigration and criminal defense strategy carefully\n");
+                        prompt.append("   - **Aggravated Felony**: Any aggravated felony conviction = mandatory removal with no relief\n");
+                        prompt.append("   - **Asylum Requirements**: Must show past persecution or well-founded fear on account of protected ground\n");
+                        prompt.append("   - **Country Conditions**: Expert testimony on home country conditions often critical\n");
+                        prompt.append("   - **Padilla Warning**: Criminal defense counsel MUST advise on immigration consequences of pleas\n\n");
+                    }
+
+                    prompt.append("4. PRACTICAL FOCUS: Provide SPECIFIC, ACTIONABLE guidance for THIS case.\n");
+                    prompt.append("   - Base your answer on the case facts and procedural posture provided above\n");
+                    prompt.append("   - Do NOT give generic legal education; give specific next steps\n");
+                    prompt.append("   - If the user's question doesn't make sense at this procedural stage, explain why\n\n");
+
+                    // Judge personalization
+                    if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
+                        prompt.append("5. PERSONALIZATION: Reference the assigned judge by name when discussing hearings, motions, or rulings.\n");
+                        prompt.append("   - The judge assigned to this case is: ").append(legalCase.getJudgeName()).append("\n");
+                        prompt.append("   - Example: \"").append(legalCase.getJudgeName()).append(" will hear the motion on...\"\n");
+                        prompt.append("   - Example: \"You should file with ").append(legalCase.getJudgeName()).append("'s courtroom procedures in mind\"\n\n");
+                    }
+
+                    // Deadline urgency calculation
+                    if (legalCase.getNextHearing() != null) {
+                        long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysToHearing > 0 && daysToHearing < 45) {
+                            String urgencyLevel = daysToHearing < 15 ? "CRITICAL URGENCY" :
+                                                 daysToHearing < 30 ? "URGENT" : "TIME-SENSITIVE";
+                            prompt.append("6. ").append(urgencyLevel).append(" - UPCOMING DEADLINE:\n");
+                            prompt.append("   - Next hearing/deadline: ").append(legalCase.getNextHearing()).append(" (").append(daysToHearing).append(" days from now)\n");
+                            if (daysToHearing < 30 && legalCase.getPriority() != null &&
+                                (legalCase.getPriority().toString().equals("URGENT") || legalCase.getPriority().toString().equals("HIGH"))) {
+                                prompt.append("   - **EMPHASIZE IMMEDIATE ACTION REQUIRED** - This is a high-priority case with imminent deadline\n");
+                                prompt.append("   - User needs to act NOW to meet this deadline\n");
+                            }
+                            prompt.append("\n");
+                        }
+                    }
+
+                    // Legal citation disclaimer
+                    prompt.append("**CRITICAL - LEGAL CITATION DISCLAIMER**:\n");
+                    prompt.append("⚠️ IMPORTANT: If you cite any cases, statutes, or legal authorities in your response:\n");
+                    prompt.append("   - Include this disclaimer: \"⚠️ VERIFY ALL CASE CITATIONS: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always independently verify any cases, statutes, or legal authorities cited before relying on them in court filings or legal advice.\"\n");
+                    prompt.append("   - Use phrases like: \"Research cases such as [Case Name]\" or \"Cases addressing this issue include...\" rather than stating holdings as definitive facts\n");
+                    prompt.append("   - If uncertain about a citation, say: \"Consult Westlaw/Lexis to find controlling authority on [issue]\"\n");
+                    prompt.append("   - NEVER invent case names, citations, or holdings\n\n");
+
+                    // Document drafting expectations
+                    prompt.append("**DOCUMENT DRAFTING LIMITATIONS**:\n");
+                    prompt.append("   - If user requests you to \"draft\" a legal document (motion, brief, complaint, contract):\n");
+                    prompt.append("   - Clarify: \"I can provide a detailed outline and key arguments, but cannot generate a complete, court-ready legal document\"\n");
+                    prompt.append("   - Provide: Structure, legal standards, key arguments, case theories, and strategic considerations\n");
+                    prompt.append("   - Advise: \"You'll need to draft the formal document with proper formatting, caption, signature blocks, and certificates\"\n\n");
+                });
+            } catch (NumberFormatException e) {
+                log.warn("Invalid caseId format: {}", caseId);
+            }
+        }
+
+        // Simplified - no special warnings or jurisdictional notices
         if (isImmigrationQuery) {
-            prompt.append("**IMMIGRATION LAW QUERY - USE STRUCTURED DATA**:\n\n");
-
-            // Include structured immigration data if available
             @SuppressWarnings("unchecked")
             Map<String, Object> structuredData = (Map<String, Object>) searchResults.get("structuredImmigrationData");
             if (structuredData != null) {
-                prompt.append("**AUTHORITATIVE IMMIGRATION PROCEDURES PROVIDED:**\n");
-                prompt.append("You have been provided with structured, accurate immigration law data.\n");
-                prompt.append("USE THIS DATA DIRECTLY for forms, deadlines, and procedures.\n\n");
-
-                // Include the actual structured data in the prompt
                 try {
                     String structuredJson = objectMapper.writeValueAsString(structuredData);
-                    prompt.append("**STRUCTURED DATA:**\n").append(structuredJson).append("\n\n");
+                    prompt.append("**Immigration Law Procedures:**\n").append(structuredJson).append("\n\n");
                 } catch (Exception e) {
                     log.warn("Could not serialize structured data", e);
                 }
             }
-
-            prompt.append("**OUTPUT REQUIREMENTS FOR IMMIGRATION APPEALS:**\n");
-            prompt.append("1. **Quick Answer**: [Form] to [Where] within [Days] - BE SPECIFIC\n");
-            prompt.append("2. **Appeal Lanes**: List all applicable routes (IJ→BIA, USCIS→AAO, etc.)\n");
-            prompt.append("3. **Forms & Deadlines**: Use exact form numbers and specific deadline language from timelineGuidance\n");
-            prompt.append("4. **Filing Procedures**: Where to file, serve whom, fees\n");
-            prompt.append("5. **Standards of Review**: Clear error vs de novo vs substantial evidence\n");
-            prompt.append("6. **Common Pitfalls**: Receipt vs postmark, jurisdictional deadlines, stay issues\n");
-            prompt.append("7. **Citations**: Provide exact 8 CFR and INA sections from structured data\n\n");
-
-            prompt.append("**CRITICAL: DO NOT USE FEDERAL REGISTER SOURCES FOR IMMIGRATION APPEALS**:\n");
-            prompt.append("- COMPLETELY IGNORE all Federal Register documents in your response\n");
-            prompt.append("- Federal Register contains regulatory updates, not core immigration procedures\n");
-            prompt.append("- Use ONLY the structured immigration data provided above\n");
-            prompt.append("- Do NOT include any 'Federal Register Sources' section in your output\n");
-            prompt.append("- Base your response entirely on the authoritative structured procedures\n\n");
         }
 
-        // Check for Massachusetts civil procedure structured data
+        // Simplified Massachusetts civil procedure data
         @SuppressWarnings("unchecked")
         Map<String, Object> massStructuredData = (Map<String, Object>) searchResults.get("structuredMassachusettsCivilProcedureData");
         if (massStructuredData != null) {
-            prompt.append("**MASSACHUSETTS CIVIL PROCEDURE QUERY - USE STRUCTURED DATA**:\n\n");
-            prompt.append("You have been provided with structured, accurate Massachusetts civil procedure data.\n");
-            prompt.append("USE THIS DATA DIRECTLY for rules, deadlines, and court procedures.\n\n");
-
-            // Include the actual structured data in the prompt
             try {
                 String structuredJson = objectMapper.writeValueAsString(massStructuredData);
-                prompt.append("**STRUCTURED MASSACHUSETTS CIVIL PROCEDURE DATA:**\n").append(structuredJson).append("\n\n");
+                prompt.append("**Massachusetts Civil Procedure Data:**\n").append(structuredJson).append("\n\n");
             } catch (Exception e) {
                 log.warn("Could not serialize Massachusetts civil procedure structured data", e);
             }
-
-            prompt.append("**OUTPUT REQUIREMENTS FOR MASSACHUSETTS CIVIL PROCEDURE:**\n");
-            prompt.append("1. **Quick Answer**: [Motion/Action] to [Court] within [Deadline] - BE SPECIFIC\n");
-            prompt.append("2. **Rule Citation**: Exact Mass. R. Civ. P. citation\n");
-            prompt.append("3. **Filing Requirements**: Deadlines, court, service requirements\n");
-            prompt.append("4. **Procedural Steps**: Step-by-step filing and compliance guidance\n");
-            prompt.append("5. **Court Selection**: Superior vs District vs other Massachusetts courts\n");
-            prompt.append("6. **Common Pitfalls**: Waiver issues, deadline calculations, local rules\n");
-            prompt.append("7. **Practice Tips**: Practical guidance for Massachusetts practitioners\n\n");
-
-            prompt.append("**CRITICAL: PRIORITIZE MASSACHUSETTS STRUCTURED DATA**:\n");
-            prompt.append("- Use the authoritative Massachusetts civil procedure data provided above\n");
-            prompt.append("- Provide specific Mass. R. Civ. P. citations and court-specific guidance\n");
-            prompt.append("- Include exact deadlines and filing requirements\n");
-            prompt.append("- Base your response on Massachusetts state court practice\n\n");
         }
 
         prompt.append("**Legal Query:** ").append(query).append("\n");
@@ -733,52 +889,28 @@ public class AILegalResearchService {
             if (resultsIncluded >= 20) break;
         }
 
-        // Add comprehensive analysis structure
-        prompt.append("\n=== COMPREHENSIVE ANALYSIS REQUIREMENTS ===\n\n");
-        prompt.append("Create a comprehensive, attorney-ready legal analysis following this structure:\n\n");
+        // Add concise analysis structure
+        prompt.append("\n=== RESPONSE FORMAT ===\n\n");
+        prompt.append("Structure your response as follows:\n\n");
 
-        prompt.append("## 📋 EXECUTIVE SUMMARY\n");
-        prompt.append("- **Legal Situation:** Clear, concise description of the issue\n");
-        prompt.append("- **Primary Findings:** Top 3-5 most critical legal points\n");
-        prompt.append("- **Bottom Line:** Direct answer to the legal query with confidence level\n");
-        prompt.append("- **Jurisdiction:** Clearly state if this is federal, state, or immigration law\n\n");
+        prompt.append("## Quick Answer\n");
+        prompt.append("Provide a direct, concise answer to the query (2-3 paragraphs). Include:\n");
+        prompt.append("- The most relevant legal framework and authorities\n");
+        prompt.append("- Key points specific to ").append(jurisdiction).append(" law\n");
+        prompt.append("- Any critical deadlines, procedures, or requirements\n\n");
 
-        prompt.append("## ⚖️ LEGAL FRAMEWORK & AUTHORITIES\n");
-        prompt.append("- **Controlling Statutes:** Specific citations with relevant sections");
-        if (isImmigrationQuery) {
-            prompt.append(" (INA sections for immigration)");
-        }
-        prompt.append("\n");
-        prompt.append("- **Binding Precedents:** Key cases with holdings and relevance\n");
-        prompt.append("- **Regulatory Requirements:** Administrative rules and compliance requirements");
-        if (isImmigrationQuery) {
-            prompt.append(" (8 CFR for immigration)");
-        }
-        prompt.append("\n");
-        prompt.append("- **Jurisdictional Considerations:** State vs federal law interactions\n");
-        if (isImmigrationQuery) {
-            prompt.append("- **Immigration-Specific:** BIA precedents, AAO decisions, USCIS Policy Manual references\n");
-        }
-        prompt.append("\n");
+        prompt.append("## Key Points\n");
+        prompt.append("List 3-5 essential points as bullet items:\n");
+        prompt.append("- Most important statutes, rules, or regulations\n");
+        prompt.append("- Critical procedural requirements or deadlines\n");
+        prompt.append("- Practical considerations for practitioners\n\n");
 
-        prompt.append("## 🎯 ACTIONABLE GUIDANCE\n");
-        prompt.append("- **Immediate Steps:** Prioritized action items with deadlines\n");
-        prompt.append("- **Required Procedures:** Step-by-step compliance requirements\n");
-        prompt.append("- **Forms & Documentation:** Specific forms needed with filing locations\n");
-        prompt.append("- **Timeline Management:** Critical deadlines and time-sensitive actions\n");
-        if (isImmigrationQuery) {
-            prompt.append("- **Immigration Appeals:** Specify BIA 30-day deadline, EOIR-26/29 forms, or Circuit Court 30-day petition deadline\n");
-        }
-        prompt.append("\n");
-
-        prompt.append("## 🚨 RISK ASSESSMENT & STRATEGY\n");
-        prompt.append("- **Primary Risks:** Legal exposure and potential complications\n");
-        prompt.append("- **Mitigation Strategies:** Specific approaches to minimize risks\n");
-        prompt.append("- **Alternative Approaches:** Different strategic options with pros/cons\n\n");
-
-        prompt.append("## 📞 PRACTICAL IMPLEMENTATION\n");
-        prompt.append("- **Next Steps:** Concrete actions the user should take immediately\n");
-        prompt.append("- **Resources Needed:** Forms, documents, or professional help required\n\n");
+        prompt.append("## Follow-up Questions\n");
+        prompt.append("Suggest 3-5 relevant follow-up questions the user might want to explore, such as:\n");
+        prompt.append("- Specific procedural steps or filing requirements\n");
+        prompt.append("- Related legal issues or considerations\n");
+        prompt.append("- Jurisdictional variations or exceptions\n");
+        prompt.append("Format each as a clear, clickable question.\n\n");
 
         // Add category-specific additions
         String categorySpecific = buildCategorySpecificPrompt(category, query);
@@ -787,13 +919,17 @@ public class AILegalResearchService {
             prompt.append(categorySpecific).append("\n");
         }
 
-        prompt.append("\n**ANALYSIS APPROACH**:\n");
-        prompt.append("- Base your analysis on the ").append(results.size()).append(" search results provided\n");
-        prompt.append("- Provide specific guidance when you have substantial data\n");
-        prompt.append("- Use confident language when citing available sources\n");
-        prompt.append("- Focus on actionable, attorney-ready guidance\n\n");
-
-        prompt.append("**STANDARD DISCLAIMER** (include at end): This analysis is based on available federal sources and regulations. For case-specific legal advice, consult with a qualified immigration attorney.\n\n");
+        prompt.append("\n**IMPORTANT REMINDERS**:\n");
+        if (results.size() > 0) {
+            prompt.append("- Base your analysis on the ").append(results.size()).append(" search results provided\n");
+            prompt.append("- Include specific citations from the documents when available\n");
+        } else {
+            prompt.append("- Provide answers based on your comprehensive knowledge of ").append(jurisdiction).append(" law\n");
+            prompt.append("- Include general statutory references and legal principles\n");
+        }
+        prompt.append("- Keep your response concise and focused on the specific query\n");
+        prompt.append("- Format follow-up questions clearly so they can be clicked\n");
+        prompt.append("- Provide actionable guidance that attorneys can use immediately\n\n");
 
         return prompt.toString();
     }
@@ -943,7 +1079,7 @@ public class AILegalResearchService {
         return combined;
     }
 
-    private void cacheAIResult(String queryHash, String query, String searchType, String jurisdiction, String aiResponse) {
+    private void cacheAIResult(String queryHash, String query, String searchType, String jurisdiction, String caseId, String aiResponse) {
         try {
             QueryType queryTypeEnum = QueryType.valueOf(searchType.toUpperCase());
 
@@ -961,7 +1097,7 @@ public class AILegalResearchService {
                 .build();
 
             cacheRepository.save(cache);
-            log.info("Cached AI result for query hash: {}", queryHash);
+            log.info("Cached AI result for query hash: {} (caseId: {})", queryHash, caseId != null ? caseId : "general");
 
         } catch (Exception e) {
             log.error("Failed to cache AI result: ", e);
@@ -994,9 +1130,12 @@ public class AILegalResearchService {
 
 
     // Utility methods
-    private String generateQueryHash(String query, String searchType, String jurisdiction) {
+    private String generateQueryHash(String query, String searchType, String jurisdiction, String caseId) {
         try {
-            String combined = query + "|" + searchType + "|" + jurisdiction;
+            // Include caseId in hash to ensure different cases get different cached responses
+            // Use "general" for queries not tied to a specific case
+            String caseIdentifier = (caseId != null && !caseId.isEmpty()) ? caseId : "general";
+            String combined = query + "|" + searchType + "|" + jurisdiction + "|" + caseIdentifier;
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(combined.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);

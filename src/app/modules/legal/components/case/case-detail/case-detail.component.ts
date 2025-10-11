@@ -13,6 +13,7 @@ import { CaseNotesComponent } from '../case-notes/case-notes.component';
 import { CaseDocumentsComponent } from '../case-documents/case-documents.component';
 import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
 import { CaseTimeEntriesComponent } from '../case-time-entries/case-time-entries.component';
+import { CaseResearchComponent } from '../case-research/case-research.component';
 import { CalendarService } from '../../../services/calendar.service';
 import { CalendarEvent } from '../../../interfaces/calendar-event.interface';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -42,7 +43,7 @@ import { NotificationManagerService, NotificationCategory, NotificationPriority 
 @Component({
   selector: 'app-case-detail',
   templateUrl: './case-detail.component.html',
-  styleUrls: ['./case-detail.component.scss'],
+  styleUrls: ['./case-detail.component.scss', './case-detail-tab-fix.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -52,7 +53,8 @@ import { NotificationManagerService, NotificationCategory, NotificationPriority 
     CaseNotesComponent,
     CaseDocumentsComponent,
     CaseTimelineComponent,
-    CaseTimeEntriesComponent
+    CaseTimeEntriesComponent,
+    CaseResearchComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {

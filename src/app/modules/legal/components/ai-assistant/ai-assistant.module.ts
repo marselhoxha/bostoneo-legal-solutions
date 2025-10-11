@@ -9,10 +9,13 @@ import { AiAssistantService } from '../../../../service/ai-assistant.service';
 import { AIDocumentService } from './services/ai-document.service';
 import { AITemplateService } from './services/ai-template.service';
 import { AICollaborationService } from './services/ai-collaboration.service';
+import { AiDraftingComponent } from './ai-drafting/ai-drafting.component';
 
 @NgModule({
   declarations: [
     // Standalone components will be loaded lazily
+  
+    AiDraftingComponent
   ],
   imports: [
     CommonModule,

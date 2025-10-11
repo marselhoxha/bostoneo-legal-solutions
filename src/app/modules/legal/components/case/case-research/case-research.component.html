@@ -1,0 +1,352 @@
+<div class="case-research-container">
+  <div class="research-container">
+
+          <!-- Conversation Switcher Header -->
+          <div class="conversation-header" *ngIf="conversations.length > 0">
+            <div class="d-flex align-items-center justify-content-between">
+              <!-- Conversation Dropdown -->
+              <div class="dropdown conversation-dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" (click)="toggleConversationList()">
+                  <i class="ri-message-3-line me-2"></i>
+                  {{ getActiveConversationTitle() }}
+                  <span class="badge bg-primary ms-2">{{ conversations.length }}</span>
+                </button>
+                <div class="dropdown-menu" [class.show]="showConversationList">
+                  <div class="conversation-list-scroll">
+                    <a class="dropdown-item conversation-item"
+                       *ngFor="let conv of conversations"
+                       [class.active]="conv.id === activeConversationId"
+                       (click)="switchConversation(conv.id)">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                          <div class="conv-title">{{ conv.title }}</div>
+                          <div class="conv-meta">
+                            <small class="text-muted">
+                              <i class="ri-message-2-line"></i> {{ conv.messages.length }} messages
+                              • {{ conv.lastUpdated | date:'short' }}
+                            </small>
+                          </div>
+                        </div>
+                        <button class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                (click)="$event.stopPropagation(); deleteConversation(conv.id)"
+                                title="Delete conversation">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- New Conversation Button -->
+              <button class="btn btn-primary btn-sm" (click)="createNewConversation()">
+                <i class="ri-add-line me-1"></i>New Conversation
+              </button>
+            </div>
+          </div>
+
+          <!-- Top Search Bar (Always Visible After First Search) -->
+          <div class="compact-search-header" *ngIf="showChat">
+            <form (ngSubmit)="performSearch()">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar-sm flex-shrink-0">
+                  <div class="avatar-title bg-soft-primary text-primary rounded">
+                    <i class="ri-robot-line"></i>
+                  </div>
+                </div>
+                <input type="text"
+                       class="form-control"
+                       [(ngModel)]="searchQuery"
+                       name="searchQuery"
+                       placeholder="Ask a follow-up question..."
+                       autocomplete="off"
+                       [disabled]="isSearching">
+                <button type="submit" class="btn btn-primary btn-icon" [disabled]="isSearching || !searchQuery.trim()">
+                  <i class="ri-send-plane-fill"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Hero Section (First Time Only) -->
+          <div class="ai-hero-section" *ngIf="!showChat && !isSearching">
+            <div class="hero-content">
+              <div class="hero-header mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <i class="ri-robot-line"></i>
+                  <span class="text-muted fs-13">AI Assistant</span>
+                </div>
+                <h2 class="hero-title mb-0">Which legal task can AI accelerate for you today?</h2>
+              </div>
+
+              <!-- Case-Specific Action Cards -->
+              <div class="action-cards-grid mb-5">
+                <div class="action-card" (click)="searchQuery = 'Research relevant case law and statutes for this case'; performSearch()">
+                  <i class="ri-search-line"></i>
+                  <span>Research case law for this case</span>
+                </div>
+                <div class="action-card" (click)="searchQuery = 'Help me draft a motion for this case'; performSearch()">
+                  <i class="ri-file-edit-line"></i>
+                  <span>Draft motion for this case</span>
+                </div>
+                <div class="action-card" (click)="searchQuery = 'What are the key deadlines and next steps for this case?'; performSearch()">
+                  <i class="ri-calendar-check-line"></i>
+                  <span>Analyze deadlines and next steps</span>
+                </div>
+                <div class="action-card" (click)="searchQuery = 'Suggest strategy and arguments for this case'; performSearch()">
+                  <i class="ri-lightbulb-line"></i>
+                  <span>Get case strategy suggestions</span>
+                </div>
+              </div>
+
+              <!-- Examples Section -->
+              <div class="examples-section mb-4">
+                <h6 class="mb-3">Examples of legal questions to ask:</h6>
+                <div class="example-questions">
+                  <p class="text-muted mb-2">What is considered an act of moral turpitude in Massachusetts?</p>
+                  <p class="text-muted mb-2">What is the procedure for amending or supplementing a pleading in a civil action in Massachusetts?</p>
+                  <p class="text-muted mb-2">What is the process for filing a motion to dismiss in a criminal case in Massachusetts?</p>
+                </div>
+                <div class="includes-tags">
+                  <span class="text-muted me-2 fs-13">Includes:</span>
+                  <span class="tag">Case Law</span>
+                  <span class="tag">Codes, Rules & Constitutions</span>
+                  <span class="tag">Practical Guidance</span>
+                  <span class="tag">Treatises</span>
+                </div>
+              </div>
+
+              <!-- Search Input -->
+              <form (ngSubmit)="performSearch()" class="hero-search-form">
+                <div class="search-wrapper">
+                  <input type="text"
+                         class="form-control"
+                         [(ngModel)]="searchQuery"
+                         name="searchQuery"
+                         placeholder="Ask a legal question"
+                         autocomplete="off"
+                         [disabled]="isSearching">
+                  <select class="form-select" [(ngModel)]="searchType" name="searchType">
+                    <option value="all">Select Jurisdiction</option>
+                    <option value="statutes">Massachusetts</option>
+                    <option value="rules">Federal</option>
+                  </select>
+                  <button type="submit" class="btn btn-primary" [disabled]="isSearching || !searchQuery.trim()">
+                    <i class="ri-search-line me-1"></i> Search
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Chat Conversation -->
+          <div class="position-relative" id="users-chat" *ngIf="showChat || isSearching">
+            <div class="chat-conversation" style="min-height: calc(100vh - 120px); max-height: calc(100vh - 120px); overflow-y: auto;">
+
+              <!-- Error Message -->
+              <div class="alert alert-danger alert-dismissible fade show" *ngIf="searchError">
+                <i class="ri-error-warning-line me-2"></i>{{ searchError }}
+                <button type="button" class="btn-close" (click)="searchError = ''"></button>
+              </div>
+
+              <!-- Chat Conversation List -->
+              <ul class="list-unstyled chat-conversation-list" id="users-conversation" *ngIf="showChat">
+                <li *ngFor="let message of chatMessages; let i = index; let isLast = last"
+                    class="chat-list mb-4"
+                    [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
+
+                  <!-- User Message Row -->
+                  <div class="conversation-list" *ngIf="message.role === 'user'">
+                    <div class="user-chat-content">
+                      <div class="message-bubble user-message">
+                        <div class="message-content">
+                          <p class="mb-0">{{message.content}}</p>
+                        </div>
+                        <div class="message-meta">
+                          <small>{{message.timestamp | date:'short'}}</small>
+                          <i class="ri-check-double-line ms-1"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- User Avatar (right side) -->
+                    <div class="chat-avatar ms-3">
+                      <div class="avatar-sm">
+                        <div class="avatar-title bg-primary text-white rounded-circle">
+                          <i class="ri-user-3-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- AI Message (Full Width) -->
+                  <div *ngIf="message.role === 'assistant'" class="ai-message-container">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                      <!-- AI Avatar -->
+                      <div class="chat-avatar flex-shrink-0">
+                        <div class="avatar-sm">
+                          <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                            <i class="ri-robot-line"></i>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- AI Message Bubble (Full Width) -->
+                      <div class="message-bubble ai-message flex-grow-1">
+                        <!-- AI Activity Loading (Perplexity Style) -->
+                        <div *ngIf="message.isTyping" class="ai-activity-loader">
+                          <!-- Header -->
+                          <div class="activity-header">
+                            <span>Generating Response</span>
+                            <i class="ri-arrow-up-s-line"></i>
+                          </div>
+
+                          <!-- Activity Steps -->
+                          <div class="activity-steps">
+                            <div *ngFor="let step of workflowSteps; let i = index"
+                                 class="activity-step"
+                                 [class.active]="step.status === 'active'"
+                                 [class.completed]="step.status === 'completed'"
+                                 [class.pending]="step.status === 'pending'"
+                                 [class.error]="step.status === 'error'">
+                              <i [class]="step.icon" class="step-icon"></i>
+                              <span class="step-text">{{ step.description }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- AI Response -->
+                        <div *ngIf="!message.isTyping">
+                          <div class="d-flex align-items-center mb-3">
+                            <div class="ai-badge">
+                              <span class="badge bg-soft-success text-success fs-11">
+                                <i class="ri-sparkling-line me-1"></i>Legience
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- Collapsible AI Response -->
+                          <div class="ai-response-content" [class.collapsed]="message.collapsed" #responseContent>
+                            <div [innerHTML]="message.content | markdownToHtml" class="ai-response-markdown"></div>
+                          </div>
+
+                          <!-- AI Action Badges Loading State -->
+                          <div *ngIf="isLast && loadingActions && !message.isTyping" class="ai-action-badges mt-3">
+                            <span class="badge-label">
+                              <i class="ri-loader-4-line ri-spin"></i> Generating Actions...
+                            </span>
+                            <div class="d-flex gap-2">
+                              <div class="action-badge-skeleton"></div>
+                              <div class="action-badge-skeleton"></div>
+                              <div class="action-badge-skeleton"></div>
+                            </div>
+                          </div>
+
+                          <!-- AI Action Badges (Right after answer) -->
+                          <div *ngIf="isLast && actionSuggestions.length > 0 && !message.isTyping && !loadingActions" class="ai-action-badges mt-3">
+                            <span class="badge-label">
+                              <i class="ri-lightbulb-flash-line"></i> Quick Actions:
+                            </span>
+                            <button *ngFor="let action of actionSuggestions; let idx = index"
+                                    class="action-badge"
+                                    [ngClass]="getActionBadgeClass(action.actionType)"
+                                    (click)="openActionModal(action)"
+                                    [title]="action.taskDescription || getActionLabel(action.actionType)">
+                              <i class="ri-{{ getActionIcon(action.actionType) }}"></i>
+                              <span>{{ getActionLabel(action.actionType) }}</span>
+                              <span class="badge-count" *ngIf="getActionCount(action.actionType) > 1">
+                                {{ getActionIndex(action, idx) + 1 }}
+                              </span>
+                            </button>
+                          </div>
+
+                          <!-- Read More Button (if content is long) -->
+                          <button *ngIf="isResponseLong(message.content) && message.collapsed !== false"
+                                  class="btn btn-sm btn-link text-primary p-0 mt-2"
+                                  (click)="toggleResponse(message)">
+                            <i class="ri-arrow-down-s-line me-1"></i>Read more
+                          </button>
+                          <button *ngIf="message.collapsed === false"
+                                  class="btn btn-sm btn-link text-primary p-0 mt-2"
+                                  (click)="toggleResponse(message)">
+                            <i class="ri-arrow-up-s-line me-1"></i>Read less
+                          </button>
+
+                          <div class="message-meta">
+                            <small class="text-muted">{{message.timestamp | date:'short'}}</small>
+                            <div class="message-actions">
+                              <button class="btn btn-sm" title="Copy">
+                                <i class="ri-file-copy-line"></i>
+                              </button>
+                              <button class="btn btn-sm" title="Helpful">
+                                <i class="ri-thumb-up-line"></i>
+                              </button>
+                              <button class="btn btn-sm" title="Not Helpful">
+                                <i class="ri-thumb-down-line"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Follow-up Questions (Below Actions) -->
+                    <div *ngIf="message.role === 'assistant' && !message.isTyping && isLast && followUpQuestions.length > 0"
+                         class="follow-up-questions-section mt-3">
+                      <p class="text-muted mb-2 fs-13 fw-semibold">
+                        <i class="ri-questionnaire-line me-1"></i>Suggested follow-up questions:
+                      </p>
+                      <div class="d-flex flex-wrap gap-2">
+                        <button *ngFor="let question of followUpQuestions"
+                                class="btn btn-sm btn-outline-secondary"
+                                (click)="askFollowUpQuestion(question)"
+                                [disabled]="isSearching">
+                          {{ question }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- AI Activity Thinking State (during conversation) -->
+                <li class="chat-list left mb-3" *ngIf="aiThinking && showChat && chatMessages[chatMessages.length - 1]?.role === 'user'">
+                  <div class="conversation-list">
+                    <div class="chat-avatar">
+                      <div class="avatar-sm">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                          <i class="ri-robot-line"></i>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="user-chat-content">
+                      <div class="message-bubble ai-message">
+                        <!-- AI Activity Loading (Perplexity Style) -->
+                        <div class="ai-activity-loader">
+                          <!-- Header -->
+                          <div class="activity-header">
+                            <span>Generating Response</span>
+                            <i class="ri-arrow-up-s-line"></i>
+                          </div>
+
+                          <!-- Activity Steps -->
+                          <div class="activity-steps">
+                            <div *ngFor="let step of workflowSteps; let i = index"
+                                 class="activity-step"
+                                 [class.active]="step.status === 'active'"
+                                 [class.completed]="step.status === 'completed'"
+                                 [class.pending]="step.status === 'pending'"
+                                 [class.error]="step.status === 'error'">
+                              <i [class]="step.icon" class="step-icon"></i>
+                              <span class="step-text">{{ step.description }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+  </div>
+</div>

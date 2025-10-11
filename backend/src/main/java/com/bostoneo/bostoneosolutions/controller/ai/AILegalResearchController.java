@@ -1,12 +1,15 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.service.AILegalResearchService;
+import com.bostoneo.bostoneosolutions.service.ResearchProgressPublisher;
 import com.bostoneo.bostoneosolutions.model.SearchHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +23,16 @@ import java.util.Map;
 public class AILegalResearchController {
 
     private final AILegalResearchService legalResearchService;
+    private final ResearchProgressPublisher progressPublisher;
+
+    /**
+     * Server-Sent Events endpoint for real-time research progress
+     */
+    @GetMapping(value = "/progress-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamResearchProgress(@RequestParam String sessionId) {
+        log.info("Creating SSE stream for session: {}", sessionId);
+        return progressPublisher.createEmitter(sessionId);
+    }
 
     @PostMapping("/search")
     public ResponseEntity<Map<String, Object>> performSearch(@RequestBody Map<String, Object> searchRequest) {
