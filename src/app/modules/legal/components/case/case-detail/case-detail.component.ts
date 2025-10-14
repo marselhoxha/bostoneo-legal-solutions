@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, ViewChild, QueryList, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -43,7 +43,7 @@ import { NotificationManagerService, NotificationCategory, NotificationPriority 
 @Component({
   selector: 'app-case-detail',
   templateUrl: './case-detail.component.html',
-  styleUrls: ['./case-detail.component.scss', './case-detail-tab-fix.scss'],
+  styleUrls: ['./case-detail.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -72,6 +72,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoadingEvents = false;
 
   @ViewChildren('filingDate, nextHearing, trialDate') dateInputs: QueryList<ElementRef>;
+  @ViewChild(CaseNotesComponent) caseNotesComponent?: CaseNotesComponent;
 
   // Status and priority values for dropdowns
   caseStatuses = Object.values(CaseStatus);
@@ -1595,6 +1596,22 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.caseId && (!this.recentTasks || this.recentTasks.length === 0)) {
       this.loadAllCaseTasks(this.caseId);
+    }
+  }
+
+  /**
+   * Handle task created from research tab - refresh team tasks, notes, and events
+   */
+  onTaskCreated(): void {
+    console.log('✅ Task/Note/Deadline created, refreshing data');
+    if (this.caseId) {
+      this.loadAllCaseTasks(this.caseId);
+      this.loadCaseEvents(this.caseId);
+
+      // Reload notes component
+      if (this.caseNotesComponent) {
+        this.caseNotesComponent.loadNotes();
+      }
     }
   }
   

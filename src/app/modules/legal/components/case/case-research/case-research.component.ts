@@ -1,8 +1,8 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, throwError, TimeoutError } from 'rxjs';
+import { takeUntil, timeout, catchError } from 'rxjs/operators';
 import {
   LegalResearchService,
   LegalSearchRequest,
@@ -43,6 +43,7 @@ import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 export class CaseResearchComponent implements OnInit, OnDestroy {
   @Input() caseId!: string;
   @Input() userId: number = 1; // TODO: Get from auth service
+  @Output() taskCreated = new EventEmitter<void>();
 
   private destroy$ = new Subject<void>();
 
@@ -79,6 +80,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   // Research Actions
   actionSuggestions: ResearchActionItem[] = [];
   loadingActions: boolean = false;
+  actionLoadingAttempted: boolean = false; // Track if we attempted to load actions
   currentSessionId: number = 1; // TODO: Get from actual session
 
   // SSE for real-time progress
@@ -232,17 +234,44 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     console.log('🔄 Loading action suggestions from backend for session:', this.currentSessionId);
 
     this.loadingActions = true;
-    this.researchActionService.getSessionActions(this.currentSessionId).subscribe({
+    this.actionLoadingAttempted = true; // Mark that we attempted to load
+
+    this.researchActionService.getSessionActions(this.currentSessionId).pipe(
+      timeout(10000), // 10 second timeout for loading existing actions
+      catchError(error => {
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Loading actions timed out after 10 seconds');
+        }
+        return throwError(() => error);
+      })
+    ).subscribe({
       next: (actions) => {
         console.log('✅ Loaded actions from backend:', actions);
-        this.actionSuggestions = actions;
+        console.log('📊 Number of loaded actions:', actions?.length || 0);
+
+        // Filter to only show PENDING actions (exclude COMPLETED and DISMISSED)
+        const pendingActions = (actions || []).filter(a => a.actionStatus === 'PENDING');
+        console.log('📊 Pending actions after filtering:', pendingActions.length);
+
+        this.actionSuggestions = pendingActions;
         this.loadingActions = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('❌ Error loading actions from backend:', error);
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Request timed out loading existing actions');
+        } else {
+          console.error('Error details:', {
+            message: error.message,
+            status: error.status,
+            statusText: error.statusText,
+            url: error.url
+          });
+        }
         this.loadingActions = false;
         this.actionSuggestions = [];
+        this.cdr.detectChanges(); // CRITICAL: Force UI update
       }
     });
   }
@@ -386,6 +415,18 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     return activeConv?.title || 'Select Conversation';
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const dropdown = target.closest('.conversation-dropdown');
+
+    // Close dropdown if clicking outside and it's currently open
+    if (!dropdown && this.showConversationList) {
+      this.showConversationList = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   performSearch(): void {
     if (!this.searchQuery.trim()) {
       return;
@@ -398,6 +439,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     // Clear action suggestions for new search to prevent duplicates
     this.actionSuggestions = [];
     this.followUpQuestions = [];
+    this.actionLoadingAttempted = false; // Reset for new search
 
     // Show chat immediately
     this.showChat = true;
@@ -450,9 +492,18 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
               if (response.results && response.results.length > 0) {
                 const firstResult = response.results[0];
                 this.generateActionSuggestions(firstResult);
+              } else if (response.aiAnalysis && response.aiAnalysis.trim().length > 0) {
+                // Generate actions based on the query and AI analysis only if we have content
+                this.generateActionSuggestionsFromAnalysis(this.searchQuery, response.aiAnalysis);
               } else {
-                // Generate actions based on the query and AI analysis
-                this.generateActionSuggestionsFromAnalysis(this.searchQuery, response.aiAnalysis || '');
+                // No results and no AI analysis - mark as attempted but don't call API
+                console.warn('⚠️ No search results and no AI analysis - skipping action generation');
+                this.actionSuggestions = [];
+                this.loadingActions = false;
+                this.aiThinking = false;
+                this.isSearching = false;
+                this.actionLoadingAttempted = true;
+                this.cdr.detectChanges();
               }
             } else {
               this.aiThinking = false;
@@ -575,6 +626,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     });
 
     this.loadingActions = true;
+    this.actionLoadingAttempted = true; // Mark that we attempted to load
     this.cdr.detectChanges();
 
     this.researchActionService.suggestActions(
@@ -583,30 +635,76 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       finding,
       citation,
       parseInt(this.caseId, 10)
+    ).pipe(
+      timeout(30000), // 30 second timeout
+      catchError(error => {
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Action suggestions timed out after 30 seconds');
+        }
+        return throwError(() => error);
+      })
     ).subscribe({
       next: (suggestions) => {
         console.log('✅ Action suggestions received:', suggestions);
         console.log('📊 Number of suggestions:', suggestions?.length || 0);
+        console.log('🔍 Raw suggestions data:', JSON.stringify(suggestions, null, 2));
+
         // Replace with new suggestions (already cleared in performSearch)
-        this.actionSuggestions = suggestions;
+        this.actionSuggestions = suggestions || [];
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
+
+        console.log('🔄 State after setting suggestions:', {
+          actionSuggestions: this.actionSuggestions,
+          length: this.actionSuggestions.length,
+          loadingActions: this.loadingActions,
+          aiThinking: this.aiThinking,
+          isSearching: this.isSearching,
+          actionLoadingAttempted: this.actionLoadingAttempted,
+          chatMessages: this.chatMessages.length,
+          lastMessage: this.chatMessages[this.chatMessages.length - 1],
+          'lastMessage.role': this.chatMessages[this.chatMessages.length - 1]?.role,
+          'lastMessage.isTyping': this.chatMessages[this.chatMessages.length - 1]?.isTyping
+        });
+
+        // Force UI update with a slight delay to ensure all state is updated
         this.cdr.detectChanges();
-        console.log('🔄 actionSuggestions after set:', this.actionSuggestions);
+        setTimeout(() => {
+          console.log('🔄 State 100ms after setting suggestions:', {
+            actionSuggestions: this.actionSuggestions,
+            length: this.actionSuggestions.length,
+            loadingActions: this.loadingActions,
+            lastMessageRole: this.chatMessages[this.chatMessages.length - 1]?.role,
+            lastMessageIsTyping: this.chatMessages[this.chatMessages.length - 1]?.isTyping
+          });
+          this.cdr.detectChanges();
+        }, 100);
       },
       error: (error) => {
         console.error('❌ Error generating action suggestions:', error);
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Request timed out - backend may be slow or unresponsive');
+        } else {
+          console.error('Error details:', {
+            message: error.message,
+            status: error.status,
+            statusText: error.statusText,
+            url: error.url
+          });
+        }
+        this.actionSuggestions = []; // Ensure empty array on error
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
+        this.cdr.detectChanges(); // CRITICAL: Force UI update
       }
     });
   }
 
   generateActionSuggestionsFromAnalysis(query: string, aiAnalysis: string): void {
     // Extract a summary from the AI analysis to use as finding
-    const finding = aiAnalysis.substring(0, 500); // First 500 chars
+    const finding = aiAnalysis.substring(0, 500).trim(); // First 500 chars
     const citation = `Research Query: ${query}`;
 
     console.log('🎯 generateActionSuggestionsFromAnalysis called with:', {
@@ -615,10 +713,26 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       caseId: this.caseId,
       query,
       finding: finding?.substring(0, 100),
-      citation
+      citation,
+      findingLength: finding?.length,
+      findingEmpty: !finding,
+      citationEmpty: !citation
     });
 
+    // Validate finding and citation
+    if (!finding || finding.length === 0) {
+      console.error('❌ Cannot generate actions: finding is empty');
+      this.actionSuggestions = [];
+      this.loadingActions = false;
+      this.aiThinking = false;
+      this.isSearching = false;
+      this.actionLoadingAttempted = true;
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.loadingActions = true;
+    this.actionLoadingAttempted = true; // Mark that we attempted to load
     this.cdr.detectChanges();
 
     this.researchActionService.suggestActions(
@@ -627,12 +741,20 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       finding,
       citation,
       parseInt(this.caseId, 10)
+    ).pipe(
+      timeout(30000), // 30 second timeout
+      catchError(error => {
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Action suggestions from analysis timed out after 30 seconds');
+        }
+        return throwError(() => error);
+      })
     ).subscribe({
       next: (suggestions) => {
         console.log('✅ Action suggestions from analysis received:', suggestions);
         console.log('📊 Number of suggestions:', suggestions?.length || 0);
         // Replace with new suggestions (already cleared in performSearch)
-        this.actionSuggestions = suggestions;
+        this.actionSuggestions = suggestions || [];
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
@@ -641,9 +763,32 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('❌ Error generating action suggestions from analysis:', error);
+        if (error instanceof TimeoutError) {
+          console.error('⏱️ Request timed out - backend may be slow or unresponsive');
+        } else {
+          console.error('Error details:', {
+            message: error.message,
+            status: error.status,
+            statusText: error.statusText,
+            url: error.url,
+            errorBody: error.error,
+            fullError: JSON.stringify(error, null, 2)
+          });
+
+          // If it's a 400 error, the backend is rejecting our request
+          if (error.status === 400) {
+            console.error('🚨 400 Bad Request - Backend validation failed');
+            console.error('Request was likely invalid. Check:');
+            console.error('- finding/citation are not empty');
+            console.error('- sessionId, userId, caseId are valid numbers');
+            console.error('Backend error message:', error.error);
+          }
+        }
+        this.actionSuggestions = []; // Ensure empty array on error
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
+        this.cdr.detectChanges(); // CRITICAL: Force UI update
       }
     });
   }
@@ -683,23 +828,129 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   }
 
   private createTask(action: ResearchActionItem): void {
+    console.log('🎯 createTask() called for action:', action.id);
+    console.log('📋 Action has caseId:', action.caseId);
+
+    // Use simple fallback title immediately to show modal fast
+    const fallbackTitle = this.generateShortTitle(action.taskDescription);
+
     Swal.fire({
-      title: 'Create Task',
+      title: '<span class="text-primary"><i class="ri-task-line me-2"></i>Create Task</span>',
       html: `
-        <p class="text-muted mb-3">${action.taskDescription}</p>
         <div class="text-start">
-          <label class="form-label">Task Title</label>
-          <input id="taskTitle" class="swal2-input" value="${action.taskDescription}" style="width: 90%;">
-          <label class="form-label mt-2">Due Date</label>
-          <input id="taskDueDate" type="date" class="swal2-input" style="width: 90%;">
+          <div class="alert alert-info border-0 mb-3" role="alert">
+            <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                <i class="ri-information-line fs-16"></i>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="alert-heading fs-14 mb-1">AI Suggestion</h5>
+                <p class="mb-0">${action.taskDescription}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              Task Title <span class="text-danger">*</span>
+              <span id="titleLoadingIndicator" class="ms-2" style="display: inline;">
+                <span class="spinner-border spinner-border-sm text-primary" role="status">
+                  <span class="visually-hidden">Generating...</span>
+                </span>
+                <small class="text-muted ms-1">AI generating...</small>
+              </span>
+            </label>
+            <input id="taskTitle" class="form-control" value="${fallbackTitle}" placeholder="Enter task title">
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Task Type <span class="text-danger">*</span></label>
+                <select id="taskType" class="form-select">
+                  <option value="RESEARCH">Research</option>
+                  <option value="DOCUMENT_REVIEW">Document Review</option>
+                  <option value="COURT_APPEARANCE">Court Appearance</option>
+                  <option value="CLIENT_MEETING">Client Meeting</option>
+                  <option value="FILING">Filing</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                <select id="taskPriority" class="form-select">
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM" selected>Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Due Date</label>
+            <input id="taskDueDate" type="text" class="form-control" placeholder="Select date">
+          </div>
         </div>
       `,
+      width: '600px',
       showCancelButton: true,
-      confirmButtonText: 'Create Task',
+      confirmButtonText: '<i class="ri-check-line me-1"></i> Create Task',
+      cancelButtonText: '<i class="ri-close-line me-1"></i> Cancel',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        cancelButton: 'btn btn-soft-secondary'
+      },
+      buttonsStyling: false,
+      didOpen: async () => {
+        // Initialize flatpickr for due date
+        const dateInput = document.getElementById('taskDueDate') as HTMLInputElement;
+        if (dateInput) {
+          (window as any).flatpickr(dateInput, {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'F j, Y',
+            allowInput: true
+          });
+        }
+
+        // Generate AI title in background after modal opens
+        const titleInput = document.getElementById('taskTitle') as HTMLInputElement;
+        const loadingIndicator = document.getElementById('titleLoadingIndicator');
+
+        if (titleInput && loadingIndicator) {
+          try {
+            const aiTitle = await this.generateAITitle(action.taskDescription);
+            titleInput.value = aiTitle;
+
+            // Show success indicator
+            loadingIndicator.innerHTML = '<i class="ri-check-line text-success"></i><small class="text-success ms-1">Generated</small>';
+
+            // Hide after 2 seconds
+            setTimeout(() => {
+              loadingIndicator.style.display = 'none';
+            }, 2000);
+          } catch (error) {
+            console.error('Failed to generate AI title:', error);
+            loadingIndicator.innerHTML = '<i class="ri-error-warning-line text-warning"></i><small class="text-warning ms-1">Manual entry</small>';
+          }
+        }
+      },
       preConfirm: () => {
         const title = (document.getElementById('taskTitle') as HTMLInputElement).value;
+        const taskType = (document.getElementById('taskType') as HTMLSelectElement).value;
+        const priority = (document.getElementById('taskPriority') as HTMLSelectElement).value;
         const dueDate = (document.getElementById('taskDueDate') as HTMLInputElement).value;
-        return { title, dueDate };
+
+        if (!title.trim()) {
+          Swal.showValidationMessage('Task title is required');
+          return false;
+        }
+
+        return { title, taskType, priority, dueDate };
       }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
@@ -707,64 +958,275 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
           caseId: parseInt(this.caseId),
           title: result.value.title,
           description: action.sourceFinding,
-          taskType: TaskType.RESEARCH,
-          priority: (action.taskPriority as TaskPriority) || TaskPriority.MEDIUM,
+          taskType: result.value.taskType as TaskType,
+          priority: result.value.priority as TaskPriority,
           dueDate: result.value.dueDate ? new Date(result.value.dueDate) : undefined
         };
 
-        this.caseTaskService.createTask(taskData).subscribe({
-          next: () => {
-            this.markActionCompleted(action);
-            Swal.fire('Success!', 'Task created successfully', 'success');
+        const executeData = {
+          actionType: 'CREATE_TASK',
+          title: result.value.title,
+          description: this.stripMarkdown(action.taskDescription),
+          taskType: result.value.taskType,
+          priority: result.value.priority,
+          dueDate: result.value.dueDate || null,
+          assignedToId: null
+        };
+
+        console.log('⚡ Executing action atomically');
+        console.log('📋 Action details:', {
+          id: action.id,
+          caseId: action.caseId,
+          type: action.actionType
+        });
+        console.log('📋 Execute data:', executeData);
+
+        this.researchActionService.executeAction(action.id, executeData).subscribe({
+          next: (response) => {
+            console.log('✅ Action executed successfully:', response);
+
+            const createdTask = response.data.result;
+            console.log('✅ Task created with ID:', createdTask.id);
+            console.log('✅ Action', response.data.actionId, 'marked as completed');
+
+            // Show success message immediately
+            Swal.fire({
+              title: 'Success!',
+              html: `Task "${createdTask.title}" created!<br><small class="text-muted">ID: ${createdTask.id} | Check Team tab</small>`,
+              icon: 'success',
+              timer: 2500,
+              showConfirmButton: false
+            });
+
+            // Remove from UI immediately (already completed on backend)
+            this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
+            this.cdr.detectChanges();
+
+            // Notify parent to refresh tasks (non-blocking)
+            setTimeout(() => this.taskCreated.emit(), 0);
           },
           error: (error) => {
-            console.error('Error creating task:', error);
-            Swal.fire('Error', 'Failed to create task', 'error');
+            console.error('❌ Action execution failed:', error);
+            console.error('❌ Error details:', {
+              status: error.status,
+              message: error.error?.message || error.message,
+              error: error.error
+            });
+            Swal.fire({
+              title: 'Failed',
+              html: `<div class="text-start">
+                <p class="mb-2">${error.error?.message || 'Failed to create task. Please try again.'}</p>
+                <small class="text-muted">Status: ${error.status || 'Unknown'}</small>
+              </div>`,
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
           }
         });
       }
     });
   }
 
+  private stripMarkdown(text: string): string {
+    if (!text) return '';
+
+    return text
+      // Remove headers (##, ###, etc.)
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove bold/italic (**text**, *text*)
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      // Remove links [text](url)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Remove code blocks ```
+      .replace(/```[\s\S]*?```/g, '')
+      // Remove inline code `text`
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove extra whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private generateShortTitle(description: string): string {
+    // Strip markdown first
+    const cleaned = this.stripMarkdown(description);
+
+    if (cleaned.length <= 60) {
+      return cleaned;
+    }
+
+    // Try to extract first sentence
+    const firstSentence = cleaned.split(/[.!?]/)[0];
+    if (firstSentence.length <= 60 && firstSentence.length > 10) {
+      return firstSentence;
+    }
+
+    // Truncate at word boundary
+    const truncated = cleaned.substring(0, 60);
+    const lastSpace = truncated.lastIndexOf(' ');
+
+    if (lastSpace > 40) {
+      return truncated.substring(0, lastSpace) + '...';
+    }
+
+    return truncated + '...';
+  }
+
+  private async generateAITitle(description: string): Promise<string> {
+    try {
+      const response = await this.researchActionService.generateTitle(description).toPromise();
+      return response.title || this.generateShortTitle(description);
+    } catch (error) {
+      console.error('Failed to generate AI title:', error);
+      return this.generateShortTitle(description);
+    }
+  }
+
   private createDeadline(action: ResearchActionItem): void {
+    console.log('🎯 createDeadline() called for action:', action.id);
+
+    // Use simple fallback title immediately to show modal fast
+    const fallbackTitle = this.generateShortTitle(action.taskDescription);
+
     Swal.fire({
-      title: 'Create Deadline',
+      title: '<span class="text-danger"><i class="ri-calendar-event-line me-2"></i>Create Deadline</span>',
       html: `
-        <p class="text-muted mb-3">${action.taskDescription}</p>
         <div class="text-start">
-          <label class="form-label">Deadline Title</label>
-          <input id="deadlineTitle" class="swal2-input" value="${action.taskDescription}" style="width: 90%;">
-          <label class="form-label mt-2">Date</label>
-          <input id="deadlineDate" type="datetime-local" class="swal2-input" style="width: 90%;">
+          <div class="alert alert-danger border-0 mb-3" role="alert">
+            <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                <i class="ri-alarm-warning-line fs-16"></i>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="alert-heading fs-14 mb-1">AI Suggestion</h5>
+                <p class="mb-0">${action.taskDescription}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              Deadline Title <span class="text-danger">*</span>
+              <span id="deadlineTitleLoadingIndicator" class="ms-2" style="display: inline;">
+                <span class="spinner-border spinner-border-sm text-danger" role="status">
+                  <span class="visually-hidden">Generating...</span>
+                </span>
+                <small class="text-muted ms-1">AI generating...</small>
+              </span>
+            </label>
+            <input id="deadlineTitle" class="form-control" value="${fallbackTitle}" placeholder="Enter deadline title">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Date & Time <span class="text-danger">*</span></label>
+            <input id="deadlineDate" type="text" class="form-control" placeholder="Select date and time">
+          </div>
         </div>
       `,
+      width: '600px',
       showCancelButton: true,
-      confirmButtonText: 'Create Deadline',
+      confirmButtonText: '<i class="ri-check-line me-1"></i> Create Deadline',
+      cancelButtonText: '<i class="ri-close-line me-1"></i> Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-soft-secondary'
+      },
+      buttonsStyling: false,
+      didOpen: async () => {
+        // Initialize flatpickr for deadline date with time
+        const dateInput = document.getElementById('deadlineDate') as HTMLInputElement;
+        if (dateInput) {
+          (window as any).flatpickr(dateInput, {
+            enableTime: true,
+            dateFormat: 'Y-m-d\\TH:i:S',
+            altInput: true,
+            altFormat: 'F j, Y at h:i K',
+            time_24hr: false,
+            allowInput: true
+          });
+        }
+
+        // Generate AI title in background after modal opens
+        const titleInput = document.getElementById('deadlineTitle') as HTMLInputElement;
+        const loadingIndicator = document.getElementById('deadlineTitleLoadingIndicator');
+
+        if (titleInput && loadingIndicator) {
+          try {
+            const aiTitle = await this.generateAITitle(action.taskDescription);
+            titleInput.value = aiTitle;
+
+            // Show success indicator
+            loadingIndicator.innerHTML = '<i class="ri-check-line text-success"></i><small class="text-success ms-1">Generated</small>';
+
+            // Hide after 2 seconds
+            setTimeout(() => {
+              loadingIndicator.style.display = 'none';
+            }, 2000);
+          } catch (error) {
+            console.error('Failed to generate AI title:', error);
+            loadingIndicator.innerHTML = '<i class="ri-error-warning-line text-warning"></i><small class="text-warning ms-1">Manual entry</small>';
+          }
+        }
+      },
       preConfirm: () => {
         const title = (document.getElementById('deadlineTitle') as HTMLInputElement).value;
         const date = (document.getElementById('deadlineDate') as HTMLInputElement).value;
+
+        if (!title.trim()) {
+          Swal.showValidationMessage('Deadline title is required');
+          return false;
+        }
+
+        if (!date) {
+          Swal.showValidationMessage('Date and time are required');
+          return false;
+        }
+
         return { title, date };
       }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
-        const eventData = {
+        const executeData = {
+          actionType: 'CREATE_DEADLINE',
           title: result.value.title,
-          start: new Date(result.value.date),
-          end: new Date(result.value.date),
-          description: action.sourceFinding,
-          caseId: parseInt(this.caseId, 10),
-          eventType: 'DEADLINE' as const,
-          allDay: false
+          description: this.stripMarkdown(action.taskDescription),
+          eventDate: result.value.date,
+          eventType: 'DEADLINE'
         };
 
-        this.calendarService.createEvent(eventData).subscribe({
-          next: () => {
-            this.markActionCompleted(action);
-            Swal.fire('Success!', 'Deadline created successfully', 'success');
+        const deadlineTitle = executeData.title;
+
+        // Show success message IMMEDIATELY (before API call)
+        Swal.fire({
+          title: 'Success!',
+          html: `Deadline "${deadlineTitle}" created!<br><small class="text-muted">Check Events tab</small>`,
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false
+        });
+
+        console.log('⚡ Executing deadline creation atomically:', executeData);
+
+        // Execute API call in background
+        this.researchActionService.executeAction(action.id, executeData).subscribe({
+          next: (response) => {
+            console.log('✅ Deadline created successfully:', response);
+
+            // Remove from UI
+            this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
+            this.cdr.detectChanges();
+
+            // Notify parent to refresh events (non-blocking)
+            setTimeout(() => this.taskCreated.emit(), 0);
           },
           error: (error) => {
-            console.error('Error creating deadline:', error);
-            Swal.fire('Error', 'Failed to create deadline', 'error');
+            console.error('❌ Deadline creation failed:', error);
+            Swal.fire({
+              title: 'Failed',
+              text: error.error?.message || 'Failed to create deadline. Please try again.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
           }
         });
       }
@@ -783,13 +1245,117 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   }
 
   private addNote(action: ResearchActionItem): void {
+    const fallbackTitle = this.generateShortTitle(action.taskDescription);
+
     Swal.fire({
-      title: 'Add Case Note',
-      text: 'Case notes feature coming soon. For now, this action will be marked as completed.',
-      icon: 'info',
-      confirmButtonText: 'OK'
-    }).then(() => {
-      this.markActionCompleted(action);
+      title: '<span class="text-primary"><i class="ri-sticky-note-line me-2"></i>Add Case Note</span>',
+      html: `
+        <div class="text-start">
+          <div class="alert alert-info border-0 mb-3" role="alert">
+            <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                <i class="ri-information-line fs-16"></i>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="alert-heading fs-14 mb-1">AI Suggestion</h5>
+                <p class="mb-0">${action.taskDescription}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              Note Title <span class="text-danger">*</span>
+              <span id="noteTitleLoadingIndicator" class="ms-2" style="display: inline;">
+                <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                <small class="text-muted ms-1">AI generating...</small>
+              </span>
+            </label>
+            <input id="noteTitle" class="form-control" value="${fallbackTitle}" placeholder="Enter note title">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Note Content <span class="text-danger">*</span></label>
+            <textarea id="noteContent" class="form-control" rows="4" placeholder="Enter note content">${this.stripMarkdown(action.taskDescription)}</textarea>
+          </div>
+        </div>
+      `,
+      width: '600px',
+      showCancelButton: true,
+      confirmButtonText: '<i class="ri-check-line me-1"></i> Create Note',
+      cancelButtonText: '<i class="ri-close-line me-1"></i> Cancel',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        cancelButton: 'btn btn-soft-secondary'
+      },
+      buttonsStyling: false,
+      didOpen: async () => {
+        const titleInput = document.getElementById('noteTitle') as HTMLInputElement;
+        const loadingIndicator = document.getElementById('noteTitleLoadingIndicator');
+
+        if (titleInput && loadingIndicator) {
+          try {
+            const aiTitle = await this.generateAITitle(action.taskDescription);
+            titleInput.value = aiTitle;
+            loadingIndicator.innerHTML = '<i class="ri-check-line text-success"></i><small class="text-success ms-1">Generated</small>';
+            setTimeout(() => loadingIndicator.style.display = 'none', 2000);
+          } catch (error) {
+            loadingIndicator.innerHTML = '<i class="ri-error-warning-line text-warning"></i><small class="text-warning ms-1">Manual entry</small>';
+          }
+        }
+      },
+      preConfirm: () => {
+        const title = (document.getElementById('noteTitle') as HTMLInputElement).value;
+        const content = (document.getElementById('noteContent') as HTMLTextAreaElement).value;
+
+        if (!title.trim()) {
+          Swal.showValidationMessage('Note title is required');
+          return false;
+        }
+
+        if (!content.trim()) {
+          Swal.showValidationMessage('Note content is required');
+          return false;
+        }
+
+        return { title, content };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const executeData = {
+          actionType: 'ADD_NOTE',
+          title: result.value.title,
+          description: result.value.content
+        };
+
+        // Show success immediately
+        Swal.fire({
+          title: 'Success!',
+          html: `Note "${result.value.title}" created!<br><small class="text-muted">Check Notes tab</small>`,
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false
+        });
+
+        // Execute API call in background
+        this.researchActionService.executeAction(action.id, executeData).subscribe({
+          next: (response) => {
+            console.log('✅ Note created successfully:', response);
+            this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
+            this.cdr.detectChanges();
+            setTimeout(() => this.taskCreated.emit(), 0);
+          },
+          error: (error) => {
+            console.error('❌ Note creation failed:', error);
+            Swal.fire({
+              title: 'Failed',
+              text: error.error?.message || 'Failed to create note. Please try again.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
+        });
+      }
     });
   }
 
@@ -798,13 +1364,22 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   }
 
   private markActionCompleted(action: ResearchActionItem): void {
+    console.log('🎯 Marking action as completed:', action.id);
+
     this.researchActionService.completeAction(action.id).subscribe({
       next: () => {
+        console.log('✅ Action marked as completed on backend, removing from UI');
         this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
+        console.log('📊 Remaining actions:', this.actionSuggestions.length);
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error completing action:', error);
+        console.error('❌ Error marking action as completed:', error);
+        console.error('❌ Action will remain visible. Error details:', {
+          actionId: action.id,
+          status: error.status,
+          message: error.error?.message || error.message
+        });
       }
     });
   }
@@ -898,112 +1473,166 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     const confidenceScore = action.aiConfidenceScore || 0;
     const confidencePercent = confidenceScore > 1 ? confidenceScore : confidenceScore * 100;
     const confidenceColor = confidencePercent >= 80 ? 'success' : confidencePercent >= 60 ? 'info' : 'warning';
-    const confidenceIcon = confidencePercent >= 80 ? 'checkbox-circle-fill' : confidencePercent >= 60 ? 'information-fill' : 'alert-fill';
+    const confidenceIcon = confidencePercent >= 80 ? 'check-double-line' : confidencePercent >= 60 ? 'information-line' : 'alert-line';
 
-    // Build priority badge
+    // Build priority badge with proper Velzon colors
     let prioritySection = '';
     if (action.taskPriority) {
-      const priorityClass = action.taskPriority === 'URGENT' ? 'danger' :
-                            action.taskPriority === 'HIGH' ? 'warning' :
-                            action.taskPriority === 'MEDIUM' ? 'info' : 'secondary';
-      const priorityIcon = action.taskPriority === 'URGENT' ? 'alarm-warning-fill' :
-                           action.taskPriority === 'HIGH' ? 'error-warning-fill' :
-                           action.taskPriority === 'MEDIUM' ? 'information-fill' : 'checkbox-circle-fill';
+      let priorityClass = '';
+      let priorityIcon = '';
+
+      switch (action.taskPriority) {
+        case 'URGENT':
+          priorityClass = 'danger';
+          priorityIcon = 'alarm-warning-line';
+          break;
+        case 'HIGH':
+          priorityClass = 'warning';
+          priorityIcon = 'error-warning-line';
+          break;
+        case 'MEDIUM':
+          priorityClass = 'info';
+          priorityIcon = 'information-line';
+          break;
+        case 'LOW':
+          priorityClass = 'success';
+          priorityIcon = 'checkbox-circle-line';
+          break;
+        default:
+          priorityClass = 'secondary';
+          priorityIcon = 'information-line';
+      }
+
       prioritySection = `
-        <div class="alert alert-${priorityClass} border-0 mb-3 py-2 px-3 d-flex align-items-center" style="background: rgba(var(--vz-${priorityClass}-rgb), 0.1);">
-          <i class="ri-${priorityIcon} fs-18 me-2"></i>
-          <span class="fw-semibold">${action.taskPriority} Priority</span>
+        <div class="text-center mb-3">
+          <span class="badge bg-${priorityClass}-subtle text-${priorityClass} fs-13 px-3 py-2">
+            <i class="ri-${priorityIcon} align-middle me-1"></i>
+            ${action.taskPriority} PRIORITY
+          </span>
         </div>
       `;
     }
 
-    // Build HTML content with improved design
+    // Get action-specific colors
+    const actionColors = this.getActionColors(action.actionType);
+
+    // Build simple Velzon-themed HTML content
     const htmlContent = `
-      <div class="text-start" style="padding: 0 0.5rem;">
+      <div class="text-start">
         ${prioritySection}
 
         ${action.taskDescription ? `
-          <div class="mb-4 p-3 rounded" style="background: #f8f9fa; border-left: 3px solid var(--vz-primary);">
-            <div class="d-flex align-items-center mb-2">
-              <i class="ri-file-list-3-line text-primary me-2 fs-18"></i>
-              <label class="fw-bold mb-0" style="color: #1a252f;">Task Description</label>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-muted">Task Description</label>
+            <div class="border rounded p-3 bg-light">
+              <p class="mb-0">${action.taskDescription}</p>
             </div>
-            <p class="mb-0" style="color: #2c3e50; line-height: 1.6;">${action.taskDescription}</p>
-          </div>
-        ` : ''}
-
-        ${action.sourceCitation ? `
-          <div class="mb-4 p-3 rounded" style="background: #fff3e0; border-left: 3px solid #ff9800;">
-            <div class="d-flex align-items-center mb-2">
-              <i class="ri-book-open-line me-2 fs-18" style="color: #ff9800;"></i>
-              <label class="fw-bold mb-0" style="color: #e65100;">Source Citation</label>
-            </div>
-            <p class="mb-0 fst-italic" style="color: #ef6c00; font-size: 0.9rem;">${action.sourceCitation}</p>
           </div>
         ` : ''}
 
         ${action.aiConfidenceScore ? `
-          <div class="p-3 rounded" style="background: rgba(var(--vz-${confidenceColor}-rgb), 0.05); border: 1px solid rgba(var(--vz-${confidenceColor}-rgb), 0.2);">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center">
-                <i class="ri-${confidenceIcon} text-${confidenceColor} me-2 fs-18"></i>
-                <label class="fw-bold mb-0" style="color: var(--vz-${confidenceColor});">AI Confidence Score</label>
-              </div>
-              <span class="badge bg-${confidenceColor} fs-13">${confidencePercent.toFixed(0)}%</span>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label fw-semibold text-muted mb-0">AI Confidence</label>
+              <span class="badge bg-${confidenceColor}">${confidencePercent.toFixed(0)}%</span>
             </div>
-            <div class="progress" style="height: 12px; border-radius: 6px; background: rgba(0,0,0,0.05);">
-              <div class="progress-bar bg-${confidenceColor}"
-                   role="progressbar"
-                   style="width: ${confidencePercent}%; border-radius: 6px;"
-                   aria-valuenow="${confidencePercent}"
-                   aria-valuemin="0"
-                   aria-valuemax="100">
-              </div>
+            <div class="progress">
+              <div class="progress-bar bg-${confidenceColor}" role="progressbar" style="width: ${confidencePercent}%;"
+                   aria-valuenow="${confidencePercent}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
         ` : ''}
       </div>
     `;
 
-    // Show SweetAlert modal with improved styling
+    // Show SweetAlert modal following app's standard style
     Swal.fire({
-      title: `
-        <div class="d-flex align-items-center justify-content-center" style="gap: 0.75rem; margin: 0;">
-          <div class="avatar-sm" style="background: rgba(var(--vz-primary-rgb), 0.1); border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
-            <i class="ri-${this.getActionIcon(action.actionType)} text-primary fs-18"></i>
-          </div>
-          <span style="color: #1a252f; font-weight: 600; font-size: 1.125rem;">${this.getActionLabel(action.actionType)}</span>
-        </div>
-      `,
+      title: this.getActionLabel(action.actionType),
       html: htmlContent,
-      width: '650px',
-      padding: '1.5rem',
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: '<i class="ri-check-line me-2"></i>Accept & Create',
-      cancelButtonText: '<i class="ri-close-line me-2"></i>Dismiss',
-      customClass: {
-        confirmButton: 'btn btn-primary px-4',
-        cancelButton: 'btn btn-outline-secondary px-4',
-        actions: 'gap-3 mt-3',
-        title: 'mb-3'
-      },
-      buttonsStyling: false,
-      showClass: {
-        popup: 'animate__animated animate__fadeInDown animate__faster'
-      },
-      hideClass: {
-        popup: 'animate__animated animate__fadeOutUp animate__faster'
-      }
+      confirmButtonText: 'Accept & Create',
+      cancelButtonText: 'Dismiss',
+      reverseButtons: true
     }).then((result) => {
       if (result.isConfirmed) {
+        // Just open the form modal - success will be shown after task is created
         this.acceptAction(action);
       }
     });
   }
 
+  getActionColors(actionType: string): { main: string; light: string; lighter: string; dark: string; shadow: string } {
+    switch (actionType) {
+      case 'DRAFT_MOTION':
+        return {
+          main: '#405189',
+          light: 'rgba(64, 81, 137, 0.1)',
+          lighter: 'rgba(64, 81, 137, 0.05)',
+          dark: '#2a3557',
+          shadow: 'rgba(64, 81, 137, 0.15)'
+        };
+      case 'CREATE_DEADLINE':
+        return {
+          main: '#f06548',
+          light: 'rgba(240, 101, 72, 0.1)',
+          lighter: 'rgba(240, 101, 72, 0.05)',
+          dark: '#c54e38',
+          shadow: 'rgba(240, 101, 72, 0.15)'
+        };
+      case 'CREATE_TASK':
+        return {
+          main: '#0ab39c',
+          light: 'rgba(10, 179, 156, 0.1)',
+          lighter: 'rgba(10, 179, 156, 0.05)',
+          dark: '#088f7c',
+          shadow: 'rgba(10, 179, 156, 0.15)'
+        };
+      case 'ADD_NOTE':
+        return {
+          main: '#f7b84b',
+          light: 'rgba(247, 184, 75, 0.1)',
+          lighter: 'rgba(247, 184, 75, 0.05)',
+          dark: '#c6933c',
+          shadow: 'rgba(247, 184, 75, 0.15)'
+        };
+      default:
+        return {
+          main: '#878a99',
+          light: 'rgba(135, 138, 153, 0.1)',
+          lighter: 'rgba(135, 138, 153, 0.05)',
+          dark: '#6c6e7a',
+          shadow: 'rgba(135, 138, 153, 0.15)'
+        };
+    }
+  }
+
   // Accept action and create task/deadline/etc
   acceptAction(action: ResearchActionItem): void {
     this.executeAction(action);
+  }
+
+  // Debug helper to log template conditions
+  shouldShowActions(isLast: boolean, messageRole: string, messageIsTyping: boolean): boolean {
+    const result = isLast &&
+                   messageRole === 'assistant' &&
+                   this.actionSuggestions.length > 0 &&
+                   !messageIsTyping &&
+                   !this.loadingActions;
+
+    console.log('🔍 shouldShowActions check:', {
+      isLast,
+      messageRole,
+      'messageRole === assistant': messageRole === 'assistant',
+      messageIsTyping,
+      'actionSuggestions.length': this.actionSuggestions.length,
+      'actionSuggestions.length > 0': this.actionSuggestions.length > 0,
+      loadingActions: this.loadingActions,
+      result,
+      actionSuggestions: this.actionSuggestions
+    });
+
+    return result;
   }
 
   // SSE Methods for real-time progress updates

@@ -62,10 +62,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         
         // Get entities
         LegalCase legalCase = legalCaseRepository.findById(request.getCaseId())
-            .orElseThrow(() -> new ApiException("Case not found"));
+            .orElseThrow(() -> new ApiException(String.format("Legal case not found with ID: %d. Please verify the case exists.", request.getCaseId())));
         User assignedTo = userRepository.get(request.getUserId());
         if (assignedTo == null) {
-            throw new ApiException("User not found");
+            throw new ApiException(String.format("User not found with ID: %d", request.getUserId()));
         }
         User currentUser = getSystemUser(); // Temporarily use system user for testing
         
@@ -330,12 +330,32 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Get active assignments
         List<CaseAssignment> activeAssignments = assignmentRepository
             .findActiveAssignmentsByUserId(userId);
-        
-        // Calculate workload points
-        BigDecimal totalPoints = activeAssignments.stream()
+
+        // Filter out assignments with missing/deleted cases
+        List<CaseAssignment> validAssignments = activeAssignments.stream()
+            .filter(assignment -> {
+                try {
+                    // Check if the case exists before calculating points
+                    if (assignment.getLegalCase() == null || assignment.getLegalCase().getId() == null) {
+                        log.warn("Skipping assignment {} - case is null", assignment.getId());
+                        return false;
+                    }
+                    // Try to access case ID to trigger lazy loading
+                    Long caseId = assignment.getLegalCase().getId();
+                    return true;
+                } catch (Exception e) {
+                    log.warn("Skipping assignment {} - case no longer exists: {}",
+                        assignment.getId(), e.getMessage());
+                    return false;
+                }
+            })
+            .collect(Collectors.toList());
+
+        // Calculate workload points from valid assignments
+        BigDecimal totalPoints = validAssignments.stream()
             .map(this::calculateAssignmentPoints)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         // Get or create workload record
         UserWorkload workload = workloadRepository
             .findByUserIdAndCalculationDate(userId, LocalDate.now())
@@ -344,9 +364,9 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                 .calculationDate(LocalDate.now())
                 .maxCapacityPoints(new BigDecimal("40.00")) // Default capacity
                 .build());
-        
-        // Update workload metrics
-        workload.setActiveCasesCount(activeAssignments.size());
+
+        // Update workload metrics (use only valid assignments count)
+        workload.setActiveCasesCount(validAssignments.size());
         workload.setTotalWorkloadPoints(totalPoints);
         
         // Calculate capacity percentage (avoid division by zero)

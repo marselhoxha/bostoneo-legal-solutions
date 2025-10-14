@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "legaldocument")
+@Table(name = "documents")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,47 +28,48 @@ public class LegalDocument {
     private String title;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "document_type", nullable = false)
     private DocumentType type;
-    
+
     @Enumerated(EnumType.STRING)
-    @Column
+    @Column(name = "document_category")
     private DocumentCategory category;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+
+    @Transient // Not persisted in database - computed field
     private DocumentStatus status;
     
-    @Column(name = "caseId")
+    @Column(name = "case_id")
     private Long caseId;
-    
+
     @Column(length = 1000)
     private String description;
-    
-    @Column(nullable = false)
+
+    @Column(name = "file_path", nullable = false)
     private String url;
-    
+
     @ElementCollection
+    @CollectionTable(name = "LegalDocument_tags", joinColumns = @JoinColumn(name = "legal_document_id"))
+    @Column(name = "tags")
     private List<String> tags = new ArrayList<>();
-    
+
     @CreationTimestamp
-    @Column(name = "uploadedAt")
+    @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
-    
+
     @UpdateTimestamp
-    @Column(name = "updatedAt")
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    @Column(name = "fileName", nullable = false)
+
+    @Column(name = "file_name", nullable = false)
     private String fileName;
-    
-    @Column(name = "fileType")
+
+    @Column(name = "mime_type")
     private String fileType;
-    
-    @Column(name = "fileSize")
+
+    @Column(name = "file_size")
     private Long fileSize;
-    
-    @Column(name = "uploadedBy")
+
+    @Column(name = "uploaded_by")
     private Long uploadedBy;
 } 
 

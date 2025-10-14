@@ -65,4 +65,18 @@ export class ResearchActionService {
   completeAction(actionId: number): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${actionId}/complete`, {});
   }
+
+  /**
+   * Execute action (create task/deadline) and mark as completed in single atomic operation
+   */
+  executeAction(actionId: number, actionData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${actionId}/execute`, actionData);
+  }
+
+  /**
+   * Generate smart AI-powered title from description
+   */
+  generateTitle(description: string): Observable<{ title: string }> {
+    return this.http.post<{ title: string }>(`${this.apiUrl}/generate-title`, { description });
+  }
 }

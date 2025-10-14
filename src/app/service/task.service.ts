@@ -20,7 +20,7 @@ export interface Task {
   providedIn: 'root'
 })
 export class TaskService {
-  private apiUrl = `${environment.apiUrl}/api/tasks`;
+  private apiUrl = `${environment.apiUrl}/api/legal/tasks`;
 
   constructor(private http: HttpClient) { }
 

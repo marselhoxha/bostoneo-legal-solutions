@@ -1,8 +1,15 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.dto.ai.ExecuteActionRequest;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
+import com.bostoneo.bostoneosolutions.dto.CaseTaskDTO;
+import com.bostoneo.bostoneosolutions.dto.CreateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.CreateTaskRequest;
 import com.bostoneo.bostoneosolutions.model.ResearchActionItem;
 import com.bostoneo.bostoneosolutions.model.ResearchActionItem.*;
+import com.bostoneo.bostoneosolutions.model.ResearchSession;
 import com.bostoneo.bostoneosolutions.repository.ResearchActionItemRepository;
+import com.bostoneo.bostoneosolutions.repository.ResearchSessionRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,8 +31,12 @@ import java.util.concurrent.ExecutionException;
 public class ResearchActionService {
 
     private final ResearchActionItemRepository actionRepository;
+    private final ResearchSessionRepository sessionRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final TaskManagementService taskManagementService;
+    private final CalendarEventService calendarEventService;
+    private final CaseNoteService caseNoteService;
 
     /**
      * Generate action suggestions from research findings
@@ -33,6 +44,9 @@ public class ResearchActionService {
     @Transactional
     public List<ResearchActionItem> suggestActions(Long sessionId, Long userId, Long caseId, String finding, String citation) {
         List<ResearchActionItem> suggestions = new ArrayList<>();
+
+        // Ensure session exists before creating action items
+        ensureSessionExists(sessionId, userId);
 
         try {
             // Use Claude to analyze the finding and suggest actions
@@ -164,11 +178,204 @@ public class ResearchActionService {
      */
     @Transactional
     public void completeAction(Long actionId) {
+        log.info("🎯 Completing action with ID: {}", actionId);
+
         ResearchActionItem action = actionRepository.findById(actionId)
             .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
 
+        log.info("📋 Found action: {} - Current status: {}", action.getActionType(), action.getActionStatus());
+
+        action.setActionStatus(ActionStatus.COMPLETED);
+        action.setCompletedAt(LocalDateTime.now());
+        ResearchActionItem saved = actionRepository.save(action);
+
+        log.info("✅ Action {} marked as COMPLETED and saved", saved.getId());
+    }
+
+    /**
+     * Execute action (create task/deadline/note) AND mark as completed in single transaction
+     * This ensures atomicity - both operations succeed or both fail
+     */
+    @Transactional
+    public Object executeAction(Long actionId, ExecuteActionRequest request) {
+        log.info("⚡ Executing action {} of type {}", actionId, request.getActionType());
+
+        // Get the action
+        ResearchActionItem action = actionRepository.findById(actionId)
+            .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
+
+        Object result = null;
+
+        // Execute based on action type
+        switch (request.getActionType()) {
+            case "CREATE_TASK":
+                result = executeCreateTask(action, request);
+                break;
+            case "CREATE_DEADLINE":
+                result = executeCreateDeadline(action, request);
+                break;
+            case "ADD_NOTE":
+                result = executeCreateNote(action, request);
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported action type: " + request.getActionType());
+        }
+
+        // Mark action as completed (in same transaction)
         action.setActionStatus(ActionStatus.COMPLETED);
         action.setCompletedAt(LocalDateTime.now());
         actionRepository.save(action);
+
+        log.info("✅ Action {} executed and marked as COMPLETED", actionId);
+
+        return result;
+    }
+
+    private CaseTaskDTO executeCreateTask(ResearchActionItem action, ExecuteActionRequest request) {
+        CreateTaskRequest taskRequest = CreateTaskRequest.builder()
+            .caseId(action.getCaseId())
+            .title(request.getTitle())
+            .description(request.getDescription()) // Use description from request, not sourceFinding
+            .taskType(request.getTaskType())
+            .priority(request.getPriority())
+            .dueDate(request.getDueDate() != null ? request.getDueDate().atStartOfDay() : null)
+            .assignedToId(request.getAssignedToId())
+            .build();
+
+        return taskManagementService.createTask(taskRequest);
+    }
+
+    private Object executeCreateDeadline(ResearchActionItem action, ExecuteActionRequest request) {
+        log.info("📅 Creating deadline/event for action: {}", action.getId());
+
+        CalendarEventDTO eventDTO = CalendarEventDTO.builder()
+            .title(request.getTitle())
+            .description(request.getDescription()) // Use description from request, not sourceFinding
+            .startTime(request.getEventDate())
+            .eventType(request.getEventType())
+            .caseId(action.getCaseId())
+            .userId(action.getUserId())
+            .status("PENDING")
+            .highPriority(true)
+            .emailNotification(true)
+            .reminderMinutes(60) // 1 hour before
+            .build();
+
+        return calendarEventService.createEvent(eventDTO);
+    }
+
+    private Object executeCreateNote(ResearchActionItem action, ExecuteActionRequest request) {
+        log.info("📝 Creating note for action: {}", action.getId());
+
+        CreateCaseNoteRequest noteRequest = new CreateCaseNoteRequest();
+        noteRequest.setCaseId(action.getCaseId());
+        noteRequest.setUserId(action.getUserId());
+        noteRequest.setTitle(request.getTitle());
+        noteRequest.setContent(request.getDescription());
+        noteRequest.setPrivateNote(false);
+
+        return caseNoteService.createNote(noteRequest);
+    }
+
+    /**
+     * Generate a smart, concise title from a description using AI
+     */
+    public String generateSmartTitle(String description) {
+        try {
+            String prompt = String.format("""
+                Create a concise, professional title (max 60 characters) for this legal task/deadline:
+
+                Description: %s
+
+                Requirements:
+                - Use clear, actionable language
+                - Start with a verb when possible (Research, Review, File, Draft, etc.)
+                - Include key legal terms
+                - Professional tone
+                - Maximum 60 characters
+
+                Return ONLY the title, nothing else.
+                """, description);
+
+            String response = claudeService.generateCompletion(prompt, false).get();
+
+            // Clean up the response
+            String title = response.trim()
+                .replaceAll("^[\"']|[\"']$", "") // Remove quotes
+                .replaceAll("\\n.*", ""); // Take only first line
+
+            // Ensure max length
+            if (title.length() > 60) {
+                title = title.substring(0, 57) + "...";
+            }
+
+            log.info("Generated title: {} from description: {}", title,
+                description.substring(0, Math.min(50, description.length())));
+
+            return title;
+        } catch (Exception e) {
+            log.error("Error generating title: {}", e.getMessage());
+            // Fallback to simple extraction
+            return extractSimpleTitle(description);
+        }
+    }
+
+    /**
+     * Fallback method for title generation
+     */
+    private String extractSimpleTitle(String description) {
+        // Remove extra whitespace
+        String cleaned = description.replaceAll("\\s+", " ").trim();
+
+        // If short enough, return as-is
+        if (cleaned.length() <= 60) {
+            return cleaned;
+        }
+
+        // Try to extract first sentence
+        String firstSentence = cleaned.split("[.!?]")[0];
+        if (firstSentence.length() <= 60 && firstSentence.length() > 10) {
+            return firstSentence;
+        }
+
+        // Truncate at word boundary
+        String truncated = cleaned.substring(0, 60);
+        int lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > 40) {
+            return truncated.substring(0, lastSpace) + "...";
+        }
+
+        return truncated + "...";
+    }
+
+    /**
+     * Ensure a conversation session exists for the given session ID
+     * Creates one in ai_conversation_sessions table if it doesn't exist
+     * This is needed because research_action_items has a foreign key to ai_conversation_sessions
+     */
+    private void ensureSessionExists(Long sessionId, Long userId) {
+        try {
+            // Check if session exists in ai_conversation_sessions using native query
+            Long count = actionRepository.countSessionsById(sessionId);
+
+            if (count == null || count == 0) {
+                log.info("Creating new conversation session with ID: {} for user: {}", sessionId, userId);
+
+                // Insert into ai_conversation_sessions table using native query
+                actionRepository.createConversationSession(
+                    sessionId,
+                    userId,
+                    "Legal Research Session",
+                    "legal_research"
+                );
+
+                log.info("Successfully created conversation session: {}", sessionId);
+            } else {
+                log.debug("Conversation session already exists: {}", sessionId);
+            }
+        } catch (Exception e) {
+            log.warn("Could not ensure session exists (this may be OK if session already exists): {}", e.getMessage());
+            // Continue anyway - if session doesn't exist, the FK constraint will catch it
+        }
     }
 }

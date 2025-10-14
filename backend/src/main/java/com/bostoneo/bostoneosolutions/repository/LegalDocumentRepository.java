@@ -14,10 +14,10 @@ import java.util.List;
 public interface LegalDocumentRepository extends JpaRepository<LegalDocument, Long> {
     
     // Use native query to handle naming strategy issues
-    @Query(value = "SELECT * FROM legaldocument WHERE caseId = :caseId ORDER BY updatedAt DESC", nativeQuery = true)
+    @Query(value = "SELECT * FROM documents WHERE case_id = :caseId ORDER BY updated_at DESC", nativeQuery = true)
     List<LegalDocument> findByCaseId(@Param("caseId") Long caseId);
-    
-    @Query(value = "SELECT * FROM legaldocument WHERE caseId = :caseId ORDER BY updatedAt DESC", nativeQuery = true)
+
+    @Query(value = "SELECT * FROM documents WHERE case_id = :caseId ORDER BY updated_at DESC", nativeQuery = true)
     Page<LegalDocument> findByCaseId(@Param("caseId") Long caseId, Pageable pageable);
 } 
  

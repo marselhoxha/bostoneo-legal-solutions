@@ -98,15 +98,22 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         
         // Save the task
         CaseTask savedTask = caseTaskRepository.save(task);
-        
+        log.info("✅ Successfully saved task with ID: {} for case: {}", savedTask.getId(), legalCase.getId());
+
+        // Verify the task was actually saved
+        if (savedTask.getId() == null) {
+            log.error("❌ Task save failed - ID is null!");
+            throw new IllegalStateException("Failed to save task - no ID generated");
+        }
+
         // Send notifications to case assignees
         try {
             String title = "New Task Created";
-            String message = String.format("New task \"%s\" has been created for case \"%s\"", 
+            String message = String.format("New task \"%s\" has been created for case \"%s\"",
                 savedTask.getTitle(), legalCase.getTitle());
-            
+
             Set<Long> notificationUserIds = new HashSet<>();
-            
+
             // Get users assigned to the case
             List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedTask.getLegalCase().getId());
             for (CaseAssignment assignment : caseAssignments) {
@@ -114,24 +121,25 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                     notificationUserIds.add(assignment.getAssignedTo().getId());
                 }
             }
-            
+
             // Also notify the assigned user if different from case assignees
             if (savedTask.getAssignedTo() != null) {
                 notificationUserIds.add(savedTask.getAssignedTo().getId());
             }
-            
+
             for (Long userId : notificationUserIds) {
-                notificationService.sendCrmNotification(title, message, userId, 
+                notificationService.sendCrmNotification(title, message, userId,
                     "TASK_CREATED", Map.of("taskId", savedTask.getId(), "caseId", legalCase.getId()));
             }
-            
+
             log.info("Task creation notifications sent to {} users", notificationUserIds.size());
         } catch (Exception e) {
             log.error("Failed to send task creation notifications: {}", e.getMessage());
         }
-        
-       // log.info("Created task with ID: {}", savedTask.getId());
-        return convertToDTO(savedTask);
+
+        CaseTaskDTO dto = convertToDTO(savedTask);
+        log.info("✅ Returning task DTO with ID: {}", dto.getId());
+        return dto;
     }
 
     @Override

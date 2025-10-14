@@ -13,8 +13,8 @@
         <i class="ri-information-line me-2 mt-1"></i>
         <div>
           <h6 class="mb-1">{{ data.task.title }}</h6>
-          <p class="mb-0 text-muted fs-13" *ngIf="data.task.description">
-            {{ data.task.description | slice:0:100 }}{{ data.task.description.length > 100 ? '...' : '' }}
+          <p class="mb-0 text-muted fs-13" *ngIf="data.task.description" style="max-height: 80px; overflow-y: auto;">
+            {{ data.task.description }}
           </p>
           <div class="mt-2">
             <span class="badge fs-11" [ngClass]="{

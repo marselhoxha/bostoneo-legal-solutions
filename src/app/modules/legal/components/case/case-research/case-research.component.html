@@ -5,9 +5,9 @@
           <div class="conversation-header" *ngIf="conversations.length > 0">
             <div class="d-flex align-items-center justify-content-between">
               <!-- Conversation Dropdown -->
-              <div class="dropdown conversation-dropdown">
-                <button class="btn btn-light dropdown-toggle" type="button" (click)="toggleConversationList()">
-                  <i class="ri-message-3-line me-2"></i>
+              <div class="dropdown conversation-dropdown" (click)="$event.stopPropagation()">
+                <button class="btn btn-soft-primary rounded-pill dropdown-toggle waves-effect waves-light" type="button" (click)="toggleConversationList()">
+                  <i class="ri-message-3-line me-2 fs-16"></i>
                   {{ getActiveConversationTitle() }}
                   <span class="badge bg-primary ms-2">{{ conversations.length }}</span>
                 </button>
@@ -39,31 +39,33 @@
               </div>
 
               <!-- New Conversation Button -->
-              <button class="btn btn-primary btn-sm" (click)="createNewConversation()">
-                <i class="ri-add-line me-1"></i>New Conversation
+              <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light" (click)="createNewConversation()">
+                <i class="ri-add-line fs-16 me-2"></i>New Conversation
               </button>
             </div>
           </div>
 
-          <!-- Top Search Bar (Always Visible After First Search) -->
+          <!-- Enhanced Top Search Bar (Always Visible After First Search) -->
           <div class="compact-search-header" *ngIf="showChat">
             <form (ngSubmit)="performSearch()">
-              <div class="d-flex align-items-center gap-2">
-                <div class="avatar-sm flex-shrink-0">
-                  <div class="avatar-title bg-soft-primary text-primary rounded">
-                    <i class="ri-robot-line"></i>
+              <div class="search-input-group">
+                <div class="search-input-wrapper">
+                  <div class="search-icon">
+                    <img src="/assets/images/new-legal-ai.gif" alt="AI" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                   </div>
+                  <input type="text"
+                         class="form-control search-input"
+                         [(ngModel)]="searchQuery"
+                         name="searchQuery"
+                         placeholder="Ask a follow-up legal question..."
+                         autocomplete="off"
+                         [disabled]="isSearching">
+                  <button type="submit"
+                          class="btn btn-soft-primary rounded-pill waves-effect waves-light"
+                          [disabled]="isSearching || !searchQuery.trim()">
+                    <i class="ri-send-plane-2-fill fs-16 me-2"></i>Send
+                  </button>
                 </div>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="searchQuery"
-                       name="searchQuery"
-                       placeholder="Ask a follow-up question..."
-                       autocomplete="off"
-                       [disabled]="isSearching">
-                <button type="submit" class="btn btn-primary btn-icon" [disabled]="isSearching || !searchQuery.trim()">
-                  <i class="ri-send-plane-fill"></i>
-                </button>
               </div>
             </form>
           </div>
@@ -158,21 +160,21 @@
                   <!-- User Message Row -->
                   <div class="conversation-list" *ngIf="message.role === 'user'">
                     <div class="user-chat-content">
-                      <div class="message-bubble user-message">
+                      <div class="message-bubble bg-soft-info text-info">
                         <div class="message-content">
                           <p class="mb-0">{{message.content}}</p>
                         </div>
                         <div class="message-meta">
-                          <small>{{message.timestamp | date:'short'}}</small>
-                          <i class="ri-check-double-line ms-1"></i>
+                          <small class="text-muted">{{message.timestamp | date:'short'}}</small>
+                          <i class="ri-check-double-line ms-1 text-success"></i>
                         </div>
                       </div>
                     </div>
                     <!-- User Avatar (right side) -->
                     <div class="chat-avatar ms-3">
                       <div class="avatar-sm">
-                        <div class="avatar-title bg-primary text-white rounded-circle">
-                          <i class="ri-user-3-line"></i>
+                        <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                          <i class="ri-user-3-fill"></i>
                         </div>
                       </div>
                     </div>
@@ -183,11 +185,7 @@
                     <div class="d-flex align-items-start gap-3 mb-3">
                       <!-- AI Avatar -->
                       <div class="chat-avatar flex-shrink-0">
-                        <div class="avatar-sm">
-                          <div class="avatar-title bg-soft-primary text-primary rounded-circle">
-                            <i class="ri-robot-line"></i>
-                          </div>
-                        </div>
+                        <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                       </div>
 
                       <!-- AI Message Bubble (Full Width) -->
@@ -230,8 +228,8 @@
                           </div>
 
                           <!-- AI Action Badges Loading State -->
-                          <div *ngIf="isLast && loadingActions && !message.isTyping" class="ai-action-badges mt-3">
-                            <span class="badge-label">
+                          <div *ngIf="isLast && message.role === 'assistant' && loadingActions && !message.isTyping" class="ai-action-badges mt-3">
+                            <span>
                               <i class="ri-loader-4-line ri-spin"></i> Generating Actions...
                             </span>
                             <div class="d-flex gap-2">
@@ -241,11 +239,16 @@
                             </div>
                           </div>
 
-                          <!-- AI Action Badges (Right after answer) -->
-                          <div *ngIf="isLast && actionSuggestions.length > 0 && !message.isTyping && !loadingActions" class="ai-action-badges mt-3">
-                            <span class="badge-label">
-                              <i class="ri-lightbulb-flash-line"></i> Quick Actions:
+                          <!-- No Actions Available State -->
+                          <div *ngIf="isLast && message.role === 'assistant' && actionSuggestions.length === 0 && !loadingActions && !message.isTyping && actionLoadingAttempted"
+                               class="ai-action-badges mt-3">
+                            <span>
+                              <i class="ri-information-line"></i> No action suggestions available
                             </span>
+                          </div>
+
+                          <!-- AI Action Badges (Right after answer) -->
+                          <div *ngIf="shouldShowActions(isLast, message.role, message.isTyping || false)" class="ai-action-badges mt-3">
                             <button *ngFor="let action of actionSuggestions; let idx = index"
                                     class="action-badge"
                                     [ngClass]="getActionBadgeClass(action.actionType)"
@@ -311,11 +314,7 @@
                 <li class="chat-list left mb-3" *ngIf="aiThinking && showChat && chatMessages[chatMessages.length - 1]?.role === 'user'">
                   <div class="conversation-list">
                     <div class="chat-avatar">
-                      <div class="avatar-sm">
-                        <div class="avatar-title bg-soft-primary text-primary rounded-circle">
-                          <i class="ri-robot-line"></i>
-                        </div>
-                      </div>
+                      <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="user-chat-content">
                       <div class="message-bubble ai-message">
