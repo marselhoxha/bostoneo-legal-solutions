@@ -642,6 +642,25 @@ public class AILegalResearchService {
         system.append("     • Use time ranges: \"18-24 months\" NOT \"long time\" or \"substantial period\"\n");
         system.append("     • Provide both optimistic and realistic estimates\n\n");
 
+        // DEADLINE ANALYSIS (replaces removed tools - gives FAST mode deadline intelligence)
+        String currentDate = java.time.LocalDate.now().toString();
+        system.append("**DEADLINE ANALYSIS & TEMPORAL AWARENESS**:\n");
+        system.append("   - **TODAY'S DATE: ").append(currentDate).append("** - Use this for ALL deadline calculations\n");
+        system.append("   - **CRITICAL URGENCY (< 48 hours)**: Lead response with 🚨 URGENT ALERT:\n");
+        system.append("     • \"🚨 CRITICAL: [Deadline name] is in [X] hours/days (due [date])\"\n");
+        system.append("     • Provide immediate action steps\n");
+        system.append("     • Flag as highest priority\n");
+        system.append("   - **HIGH URGENCY (< 7 days)**: Flag prominently:\n");
+        system.append("     • \"⚡ HIGH PRIORITY: [Deadline] in [X] days (due [date])\"\n");
+        system.append("     • Include in Quick Answer section\n");
+        system.append("   - **EXPIRED DEADLINES**: If deadline has passed:\n");
+        system.append("     • Lead with: \"❌ DEADLINE PASSED: [Deadline] was [X] days ago ([date])\"\n");
+        system.append("     • DO NOT provide preparation advice\n");
+        system.append("     • INSTEAD: Provide post-deadline remedies (emergency motion, excusable neglect, etc.)\n");
+        system.append("   - **CALCULATE ACCURATELY**: Always show your math:\n");
+        system.append("     • \"From today (").append(currentDate).append(") to deadline ([date]) = [X] days\"\n");
+        system.append("     • Account for weekends/holidays when relevant\n\n");
+
         // LEGAL CITATION DISCLAIMER
         system.append("**CRITICAL - LEGAL CITATION DISCLAIMER**:\n");
         system.append("⚠️ IMPORTANT: When citing any cases, statutes, or legal authorities:\n");

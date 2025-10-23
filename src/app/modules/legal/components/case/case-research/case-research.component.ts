@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, throwError, TimeoutError } from 'rxjs';
@@ -40,7 +40,7 @@ import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
     '[style.min-height]': '"600px"'
   }
 })
-export class CaseResearchComponent implements OnInit, OnDestroy {
+export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() caseId!: string;
   @Input() userId: number = 1; // TODO: Get from auth service
   @Output() taskCreated = new EventEmitter<void>();
@@ -49,7 +49,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
 
   searchQuery = '';
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines' = 'all';
-  researchMode: 'fast' | 'auto' | 'thorough' = 'fast';  // NEW: Fast (15s), Auto (AI selects), or Thorough (2-3min)
+  researchMode: 'fast' | 'auto' | 'thorough' = 'auto';  // NEW: Auto (Recommended), Fast (15s), or Thorough (2-3min)
   isSearching = false;
   searchError = '';
 
@@ -92,12 +92,21 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   // Tool execution tracking (for THOROUGH mode visibility)
   toolsUsed: Array<{name: string, message: string, icon: string}> = [];
 
+  // Scroll tracking for bottom search bar
+  showBottomSearchBar: boolean = false;
+  private scrollThreshold: number = 100; // Show after scrolling 100px
+  isConversationInView: boolean = false; // Track if conversation is visible in viewport
+  private conversationObserver?: IntersectionObserver;
+  private conversationScrollListener?: () => void;
+  private observersSetup: boolean = false; // Prevent duplicate setup
+
   constructor(
     private legalResearchService: LegalResearchService,
     private researchActionService: ResearchActionService,
     private caseTaskService: CaseTaskService,
     private calendarService: CalendarService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private elementRef: ElementRef
   ) {}
 
   ngOnInit(): void {
@@ -135,10 +144,80 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
+  ngAfterViewInit(): void {
+    // Try to set up observers (may not exist yet if showChat is false)
+    this.setupScrollObservers();
+  }
+
+  setupScrollObservers(): void {
+    // Prevent duplicate setup
+    if (this.observersSetup) {
+      return;
+    }
+
+    // Find conversation element (only exists when showChat = true)
+    const conversationElement = this.elementRef.nativeElement.querySelector('.chat-conversation');
+
+    if (!conversationElement) {
+      console.log('Conversation element not found yet, will retry later');
+      return;
+    }
+
+    console.log('Setting up scroll observers for conversation');
+    this.observersSetup = true;
+
+    // IntersectionObserver for viewport visibility
+    this.conversationObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          this.isConversationInView = entry.isIntersecting;
+          console.log('Conversation in view:', entry.isIntersecting);
+          this.cdr.detectChanges();
+        });
+      },
+      {
+        root: null, // viewport
+        threshold: 0.9 // Trigger when at least 10% of conversation is visible
+      }
+    );
+
+    this.conversationObserver.observe(conversationElement);
+
+    // Scroll listener for the conversation element's internal scroll
+    this.conversationScrollListener = () => {
+      const scrollTop = conversationElement.scrollTop;
+      const shouldShow = scrollTop > this.scrollThreshold;
+
+      console.log('Conversation scroll:', {
+        scrollTop,
+        threshold: this.scrollThreshold,
+        shouldShow,
+        currentShow: this.showBottomSearchBar
+      });
+
+      this.showBottomSearchBar = shouldShow;
+      this.cdr.detectChanges();
+    };
+
+    conversationElement.addEventListener('scroll', this.conversationScrollListener);
+    console.log('Scroll observers setup complete');
+  }
+
   ngOnDestroy(): void {
     this.closeSSEConnection();
     this.destroy$.next();
     this.destroy$.complete();
+
+    // Disconnect IntersectionObserver
+    if (this.conversationObserver) {
+      this.conversationObserver.disconnect();
+    }
+
+    // Remove conversation scroll listener
+    const conversationElement = this.elementRef.nativeElement.querySelector('.chat-conversation');
+    if (conversationElement && this.conversationScrollListener) {
+      conversationElement.removeEventListener('scroll', this.conversationScrollListener);
+    }
   }
 
   loadPendingActions(): void {
@@ -232,6 +311,13 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       this.loadActionSuggestionsFromBackend();
 
       this.cdr.detectChanges();
+
+      // Set up scroll observers if chat is showing
+      if (this.showChat) {
+        setTimeout(() => {
+          this.setupScrollObservers();
+        }, 100);
+      }
     }
   }
 
@@ -449,6 +535,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     // Show chat immediately
     this.showChat = true;
 
+    // Set up scroll observers after DOM updates
+    setTimeout(() => {
+      this.setupScrollObservers();
+    }, 100);
+
     // Reset workflow steps and tool tracking
     this.currentWorkflowStep = 0;
     this.workflowSteps.forEach(step => step.status = 'pending');
@@ -482,6 +573,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       researchMode: this.researchMode.toUpperCase() as 'FAST' | 'THOROUGH',
       conversationHistory: this.getRecentConversationHistory()  // NEW: Include conversation context
     };
+
+    // Clear search input after submitting
+    this.searchQuery = '';
 
     this.legalResearchService.performSearch(searchRequest)
       .pipe(takeUntil(this.destroy$))
