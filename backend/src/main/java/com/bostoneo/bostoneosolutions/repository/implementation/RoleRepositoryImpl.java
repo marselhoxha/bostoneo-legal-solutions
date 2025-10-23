@@ -46,7 +46,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Role create(Role data) {
-        log.info("Creating new role: {}", data.getName());
         try {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             MapSqlParameterSource parameters = new MapSqlParameterSource()
@@ -66,7 +65,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Collection<Role> list() {
-        log.info("Fetching all roles from the database");
         try{
             return jdbc.query(SELECT_ROLES_QUERY,  new RoleRowMapper());
         }catch (Exception exception) {
@@ -76,7 +74,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Role get(Long id) {
-        log.info("Fetching role by id: {}", id);
         try {
             return jdbc.queryForObject(SELECT_ROLE_BY_ID_QUERY, of("id", id), new RoleRowMapper());
         } catch (EmptyResultDataAccessException exception) {
@@ -89,7 +86,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Role update(Role data) {
-        log.info("Updating role: {}", data.getName());
         try {
             MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("id", data.getId())
@@ -108,7 +104,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Boolean delete(Long id) {
-        log.info("Deleting role with id: {}", id);
         try {
             int result = jdbc.update(DELETE_ROLE_QUERY, of("id", id));
             return result > 0;
@@ -120,7 +115,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void addRoleToUser(Long userId, String roleName) {
-        log.info("Adding role {} to user id: {}",roleName, userId);
         try{
             Role role =jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, Map.of("name", roleName), new RoleRowMapper());
             jdbc.update(INSERT_ROLE_TO_USER_QUERY, Map.of("userId", userId, "roleId", requireNonNull(role).getId()));
@@ -137,7 +131,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Role getRoleByUserId(Long userId) {
-        log.info("Fetching role for user id: {}", userId);
         try {
             return jdbc.queryForObject(SELECT_ROLE_BY_USER_ID_QUERY, of("id", userId), new RoleRowMapper());
         } catch (EmptyResultDataAccessException exception) {
@@ -155,7 +148,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void updateUserRole(Long userId, String roleName) {
-        log.info("Updating role for user id: {}", userId);
         try {
             Role role = jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, of("name", roleName), new RoleRowMapper());
             jdbc.update(UPDATE_USER_ROLE_QUERY, of("userId", userId, "roleId",role.getId()));
@@ -170,7 +162,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     // Implementing the missing methods
     @Override
     public Role getRoleById(Long id) {
-        log.info("Fetching role by id: {}", id);
         try {
             return jdbc.queryForObject(SELECT_ROLE_BY_ID_QUERY, of("id", id), new RoleRowMapper());
         } catch (EmptyResultDataAccessException exception) {
@@ -183,7 +174,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Role getRoleByName(String name) {
-        log.info("Fetching role by name: {}", name);
         try {
             return jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, of("name", name), new RoleRowMapper());
         } catch (EmptyResultDataAccessException exception) {
@@ -196,7 +186,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Set<Role> getRolesByUserId(Long userId) {
-        log.info("Fetching roles for user id: {}", userId);
         try {
             List<Role> roles = jdbc.query(SELECT_ROLES_BY_USER_ID_QUERY, of("userId", userId), new RoleRowMapper());
             return new HashSet<>(roles);
@@ -208,7 +197,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void removeRoleFromUser(Long userId, Long roleId) {
-        log.info("Removing role id: {} from user id: {}", roleId, userId);
         try {
             jdbc.update(REMOVE_ROLE_FROM_USER_QUERY, of("userId", userId, "roleId", roleId));
         } catch (Exception exception) {
@@ -219,7 +207,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public Set<Permission> getPermissionsByRoleId(Long roleId) {
-        log.info("Fetching permissions for role id: {}", roleId);
         try {
             List<Permission> permissions = jdbc.query(SELECT_PERMISSIONS_BY_ROLE_ID_QUERY, of("roleId", roleId), new PermissionRowMapper());
             return new HashSet<>(permissions);
@@ -231,7 +218,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void assignPermissionsToRole(Long roleId, List<Long> permissionIds) {
-        log.info("Assigning permissions to role id: {}", roleId);
         try {
             // First, remove all existing permissions for this role
             jdbc.update(REMOVE_ALL_PERMISSIONS_FROM_ROLE_QUERY, of("roleId", roleId));
@@ -248,7 +234,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void removePermissionFromRole(Long roleId, Long permissionId) {
-        log.info("Removing permission id: {} from role id: {}", permissionId, roleId);
         try {
             jdbc.update(REMOVE_PERMISSION_FROM_ROLE_QUERY, of("roleId", roleId, "permissionId", permissionId));
         } catch (Exception exception) {
@@ -259,7 +244,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
 
     @Override
     public void setPrimaryRole(Long userId, Long roleId) {
-        log.info("Setting role id: {} as primary for user id: {}", roleId, userId);
         try {
             jdbc.update(SET_PRIMARY_ROLE_QUERY, of("userId", userId, "roleId", roleId));
         } catch (Exception exception) {
@@ -270,7 +254,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     
     @Override
     public void setRoleExpiration(Long userId, Long roleId, LocalDateTime expiresAt) {
-        log.info("Setting expiration for role id: {} for user id: {}", roleId, userId);
         try {
             jdbc.update(SET_ROLE_EXPIRATION_QUERY, of("userId", userId, "roleId", roleId, "expiresAt", expiresAt));
         } catch (Exception exception) {
@@ -281,7 +264,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     
     @Override
     public Set<String> getUserPermissions(Long userId) {
-        log.info("Fetching permissions for user id: {}", userId);
         try {
             List<String> permissionNames = jdbc.queryForList(
                 GET_USER_PERMISSIONS_QUERY, 
@@ -297,7 +279,6 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     
     // Add missing method for getting users by role ID
     public List<com.bostoneo.bostoneosolutions.model.User> getUsersByRoleId(Long roleId) {
-        log.info("Fetching users for role id: {}", roleId);
         try {
             return jdbc.query(SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper());
         } catch (Exception exception) {

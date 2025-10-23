@@ -20,8 +20,7 @@ public class SecurityAuditEventListener {
         String details = event.getAuthentication().getDetails() != null ? 
             event.getAuthentication().getDetails().toString() : "No details";
         
-        log.info("SECURITY_AUDIT: Authentication successful - User: {}, Time: {}, Details: {}", 
-            username, LocalDateTime.now(), details);
+        
     }
     
     @EventListener
@@ -41,8 +40,7 @@ public class SecurityAuditEventListener {
             event.getAuthentication().get().getName() : "Anonymous";
         String decision = event.getAuthorizationDecision().toString();
         
-        log.info("SECURITY_AUDIT: Authorization granted - User: {}, Decision: {}, Time: {}", 
-            username, decision, LocalDateTime.now());
+        
     }
     
     @EventListener

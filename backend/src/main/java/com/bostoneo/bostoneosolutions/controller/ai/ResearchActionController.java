@@ -44,6 +44,15 @@ public class ResearchActionController {
             request.getCitation()
         );
 
+        log.info("📤 Controller returning {} suggestions to frontend", suggestions != null ? suggestions.size() : 0);
+        if (suggestions == null || suggestions.isEmpty()) {
+            log.warn("⚠️ No suggestions generated - frontend will show 'No action suggestions available'");
+        } else {
+            log.info("✅ Suggestions: {}", suggestions.stream()
+                .map(s -> s.getActionType().toString())
+                .collect(java.util.stream.Collectors.joining(", ")));
+        }
+
         return ResponseEntity.ok(suggestions);
     }
 

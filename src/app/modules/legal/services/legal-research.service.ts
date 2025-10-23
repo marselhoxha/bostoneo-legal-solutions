@@ -4,6 +4,12 @@ import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
 export interface LegalSearchRequest {
   query: string;
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines';
@@ -11,6 +17,8 @@ export interface LegalSearchRequest {
   userId?: number;
   sessionId?: string;
   caseId?: string;
+  researchMode?: 'FAST' | 'AUTO' | 'THOROUGH';  // FAST = 15s pre-fetch, AUTO = AI selects, THOROUGH = 2-3min agentic
+  conversationHistory?: ConversationMessage[];  // NEW: For context-aware follow-up responses
   filters?: {
     dateFrom?: string;
     dateTo?: string;

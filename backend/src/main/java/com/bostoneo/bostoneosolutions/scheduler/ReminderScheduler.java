@@ -33,15 +33,12 @@ public class ReminderScheduler {
             return;
         }
         
-        log.debug("Processing reminder queue");
         try {
             // Process reminder queue items
             reminderQueueService.processReminderQueue();
-            log.debug("Reminder queue processing completed successfully");
             
             // Process calendar event reminders
             calendarEventService.processEventReminders();
-            log.debug("Calendar event reminders processing completed successfully");
             
         } catch (InvalidDataAccessResourceUsageException e) {
             // This is likely due to the reminder_queue table not existing yet or column mismatch

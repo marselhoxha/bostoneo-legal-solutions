@@ -35,7 +35,6 @@ public class InvoiceWorkflowScheduler {
     @Scheduled(fixedDelay = 3600000) // 1 hour
     @Transactional
     public void runScheduledWorkflows() {
-        log.info("Running scheduled invoice workflows...");
         
         try {
             // Process scheduled workflow rules
@@ -52,7 +51,7 @@ public class InvoiceWorkflowScheduler {
             // Process pending reminders
             processPendingReminders();
             
-            log.info("Scheduled workflows completed successfully");
+           
             
         } catch (Exception e) {
             log.error("Error running scheduled workflows", e);
@@ -152,8 +151,6 @@ public class InvoiceWorkflowScheduler {
     
     private void processReminder(InvoiceReminder reminder) {
         try {
-            log.info("Processing reminder {} for invoice {}", 
-                    reminder.getId(), reminder.getInvoice().getId());
             
             // Send reminder via workflow service
             Invoice invoice = invoiceRepository.findById(reminder.getInvoice().getId())

@@ -603,18 +603,24 @@
           color: var(--vz-body-color);
           line-height: 1.8;
           font-size: 0.9375rem;
+          letter-spacing: 0.01em;  // Subtle letter spacing for readability
           max-width: 100%;
           overflow-x: hidden;
           overflow-wrap: break-word;
           word-wrap: break-word;
           word-break: break-word;
 
+          // Enhanced text rendering for professional look
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+
           // Section Headings - Legal Document Style
           h1, h2, h3, h4, h5, h6 {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--vz-heading-color);
-            margin-top: 1.5rem;
-            margin-bottom: 0.875rem;
+            margin-top: 2.5rem;  // Increased from 1.5rem for proper visual separation
+            margin-bottom: 1rem;  // Increased from 0.875rem for better breathing room
             font-weight: 600;
             letter-spacing: -0.02em;
             border-bottom: 2px solid var(--vz-border-color);
@@ -637,12 +643,24 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-size: 0.875rem;
+            margin-top: 3.5rem;  // Increased: Major sections need more breathing room
+            margin-bottom: 1.5rem;  // Increased: Better spacing before content
+            padding-top: 0.75rem;  // Add top padding for additional visual separation
+            padding-bottom: 0.75rem;  // Better bottom padding
           }
 
           h3 {
             font-size: 1rem;
-            font-style: italic;
+            font-style: normal;  // Remove italic for section labels
+            font-weight: 700;    // Make bolder for emphasis
+            color: var(--vz-primary);
+            background: rgba(var(--vz-primary-rgb), 0.05);
+            padding: 0.75rem 1.25rem;  // Increased padding for better prominence
+            border-radius: 0.375rem;  // Slightly larger radius
+            border-left: 4px solid var(--vz-primary);
+            border-bottom: none;  // Remove underline for this accent style
+            margin-top: 2.5rem;  // Increased: More space before subsections
+            margin-bottom: 1.25rem;  // Increased: Better spacing after
           }
 
           h4 {
@@ -681,20 +699,49 @@
 
           // Lists - Legal Formatting
           ul, ol {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;  // Increased: Better separation from next element
+            margin-top: 1rem;  // Added: Better separation from previous element
             padding-left: 2.5rem;
             font-family: 'Georgia', serif;
             color: var(--vz-body-color);
 
             li {
-              margin-bottom: 0.625rem;
-              line-height: 1.8;
+              margin-bottom: 0.75rem;  // Increased: Better readability with more spacing
+              line-height: 1.9;  // Slightly increased line height
               text-align: justify;
               color: var(--vz-body-color);
+
+              &:last-child {
+                margin-bottom: 0;  // Remove margin from last item for cleaner spacing
+              }
+
+              // Nested lists - compact, professional style
+              ul, ol {
+                margin-top: 0.25rem;     // Small gap before sub-list starts
+                margin-bottom: 0.25rem;  // Small gap after sub-list ends
+                padding-left: 1.5rem;    // Less indentation for nested lists
+
+                li {
+                  margin-bottom: 0.375rem;  // Tighter spacing in nested lists
+                  font-size: 0.9rem;        // Slightly smaller for visual hierarchy
+                  line-height: 1.6;         // Adjusted line height for smaller font
+
+                  &:last-child {
+                    margin-bottom: 0;  // No margin on last nested item
+                  }
+                }
+              }
 
               strong {
                 font-weight: 700;
                 color: var(--vz-heading-color);
+
+                // Strong labels at start of list items (e.g., "Strength:", "Action:")
+                &:first-child {
+                  color: var(--vz-primary);
+                  font-variant: small-caps;
+                  letter-spacing: 0.02em;
+                }
               }
             }
           }
@@ -797,30 +844,38 @@
             }
           }
 
-          // Blockquotes - Legal Citation Style
+          // Blockquotes - Simple Legal Citation Style (No complex :has() selectors)
           blockquote {
-            border-left: 4px solid var(--vz-primary);
+            border-left: 4px solid var(--vz-secondary);
             padding: 1rem 1.5rem;
             margin: 1.5rem 0;
-            background: var(--vz-light);
+            background: rgba(var(--vz-secondary-rgb), 0.05);
             font-style: italic;
             color: var(--vz-body-color);
             border-radius: 0 0.375rem 0.375rem 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
 
             p {
               text-indent: 0;
               margin-bottom: 0.5rem;
+              font-style: italic;
 
               &:last-child {
                 margin-bottom: 0;
               }
             }
 
+            strong {
+              font-weight: 600;
+              color: var(--vz-secondary);
+            }
+
             cite {
               display: block;
               margin-top: 0.5rem;
               font-size: 0.875rem;
-              color: var(--vz-primary);
+              color: var(--vz-secondary);
               font-weight: 600;
               font-style: normal;
             }
@@ -980,6 +1035,84 @@
             padding: 0.125rem 0.375rem;
             background: rgba(var(--vz-warning-rgb), 0.1);
             border-radius: 2px;
+          }
+
+          // Federal Treasury Regulations - Using Velzon Secondary/Purple
+          ::ng-deep .legal-regulation {
+            font-family: 'Courier New', 'Monaco', monospace;
+            color: var(--vz-secondary) !important;
+            font-weight: 600;
+            background: rgba(var(--vz-secondary-rgb), 0.1);
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            border-left: 3px solid var(--vz-secondary);
+            letter-spacing: 0.01em;
+          }
+
+          // IRC & U.S.S.G. Statutes - Using Velzon Info Color
+          ::ng-deep .legal-statute {
+            color: var(--vz-info) !important;
+            font-weight: 700;
+            background: rgba(var(--vz-info-rgb), 0.12);
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.01em;
+          }
+
+          // Court Rules (Tax Court, Fed. R. Civ. P., etc.) - Using Velzon Warning Color
+          ::ng-deep .legal-court-rule {
+            color: var(--vz-warning) !important;
+            font-weight: 600;
+            background: rgba(var(--vz-warning-rgb), 0.12);
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Georgia', serif;
+            letter-spacing: 0.01em;
+          }
+
+          // Verified Citations with Checkmark (✓ Treas. Reg. §...)
+          ::ng-deep .citation-verified {
+            display: inline-block;
+            color: var(--vz-primary) !important;
+            font-weight: 600;
+            background: rgba(var(--vz-primary-rgb), 0.08);
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--vz-primary);
+            margin: 0.125rem 0.25rem 0.125rem 0;
+            white-space: nowrap;
+          }
+
+          // Assumption Warning Badges (⚠️ Assumption:)
+          ::ng-deep .assumption-badge {
+            display: inline-block;
+            background: rgba(var(--vz-danger-rgb), 0.12);
+            color: var(--vz-danger) !important;
+            font-weight: 700;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--vz-danger);
+            margin: 0.5rem 0 0.25rem 0;
+          }
+
+          // Legal Links Created by Frontend (emergency fix)
+          ::ng-deep a.legal-link {
+            display: inline-block;
+            color: var(--vz-primary) !important;
+            font-weight: 600;
+            background: rgba(var(--vz-primary-rgb), 0.08);
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--vz-primary);
+            text-decoration: none;
+            transition: background 0.2s ease;
+            cursor: pointer;
+
+            &:hover {
+              background: rgba(var(--vz-primary-rgb), 0.15);
+              text-decoration: underline;
+            }
           }
 
           // Legal Lists (from inline numbered format)
@@ -1230,6 +1363,43 @@
       }
     }
 
+    // Timeline Section Styling (within markdown content)
+    .ai-response-markdown {
+      h2:has(+ ul li:first-child:has([class*="emoji"])),
+      h2:contains("Timeline") {
+        + ul {
+          list-style: none;
+          padding-left: 0;
+          margin: 1rem 0;
+
+          li {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--vz-border-color);
+            background: rgba(var(--vz-primary-rgb), 0.02);
+            border-radius: 0.25rem;
+
+            // Urgent items (⚠️)
+            &:contains("URGENT") {
+              border-left-color: rgba(var(--vz-danger-rgb), 0.8);
+              background: rgba(var(--vz-danger-rgb), 0.05);
+            }
+
+            // Today items (🔔)
+            &:contains("TODAY") {
+              border-left-color: rgba(var(--vz-warning-rgb), 0.8);
+              background: rgba(var(--vz-warning-rgb), 0.05);
+            }
+
+            strong {
+              color: var(--vz-body-color);
+              font-weight: 600;
+            }
+          }
+        }
+      }
+    }
+
     // Follow-up Questions Section - Professional Style
     .follow-up-questions-section {
       border-radius: 0.375rem;
@@ -1452,15 +1622,25 @@
           blockquote {
             background: rgba(255, 255, 255, 0.03);
             color: var(--vz-body-color) !important;
-            border-left-color: rgba(var(--vz-primary-rgb), 0.7);
+            border-left-color: rgba(var(--vz-secondary-rgb), 0.7);
 
             p {
               color: var(--vz-body-color) !important;
             }
 
-            cite {
-              color: var(--vz-primary) !important;
+            strong {
+              color: rgba(var(--vz-secondary-rgb), 0.9);
             }
+
+            cite {
+              color: rgba(var(--vz-secondary-rgb), 0.9);
+            }
+          }
+
+          // H3 Section Labels - Dark Mode
+          h3 {
+            background: rgba(var(--vz-primary-rgb), 0.1);
+            color: rgba(var(--vz-primary-rgb), 0.95);
           }
 
           a {

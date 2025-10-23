@@ -20,7 +20,7 @@ public class ResearchProgressPublisher {
      * Register a new SSE emitter for a session
      */
     public SseEmitter createEmitter(String sessionId) {
-        SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
+        SseEmitter emitter = new SseEmitter(600000L); // 10 minute timeout (for thorough research with multiple tools)
 
         emitter.onCompletion(() -> {
             log.info("SSE completed for session: {}", sessionId);

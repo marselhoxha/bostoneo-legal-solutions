@@ -31,7 +31,22 @@ public class AILegalResearchController {
     @GetMapping(value = "/progress-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamResearchProgress(@RequestParam String sessionId) {
         log.info("Creating SSE stream for session: {}", sessionId);
-        return progressPublisher.createEmitter(sessionId);
+        try {
+            return progressPublisher.createEmitter(sessionId);
+        } catch (Exception e) {
+            log.error("Error creating SSE emitter for session {}: {}", sessionId, e.getMessage());
+            // Return a basic emitter that will immediately send an error and complete
+            SseEmitter errorEmitter = new SseEmitter(60000L);
+            try {
+                errorEmitter.send(SseEmitter.event()
+                    .name("error")
+                    .data("{\"message\":\"Failed to create progress stream\"}"));
+                errorEmitter.complete();
+            } catch (Exception ignored) {
+                // If we can't even send an error, just return the emitter
+            }
+            return errorEmitter;
+        }
     }
 
     @PostMapping("/search")

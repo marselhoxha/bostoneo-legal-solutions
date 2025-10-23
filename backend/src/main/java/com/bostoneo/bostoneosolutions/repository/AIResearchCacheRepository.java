@@ -27,4 +27,20 @@ public interface AIResearchCacheRepository extends JpaRepository<AIResearchCache
     List<AIResearchCache> findMostUsedCaches(@Param("minUsage") Integer minUsage);
 
     void deleteByExpiresAtBefore(LocalDateTime cutoffDate);
+
+    // Cache statistics queries
+    @Query("SELECT COUNT(c) FROM AIResearchCache c WHERE c.isValid = true")
+    long countValidCaches();
+
+    @Query("SELECT COUNT(c) FROM AIResearchCache c WHERE c.expiresAt < :now")
+    long countExpiredCaches(@Param("now") LocalDateTime now);
+
+    @Query("SELECT SUM(c.usageCount) FROM AIResearchCache c WHERE c.isValid = true")
+    Long getTotalCacheHits();
+
+    @Query("SELECT AVG(c.usageCount) FROM AIResearchCache c WHERE c.isValid = true")
+    Double getAverageCacheHits();
+
+    @Query("SELECT c.queryType, COUNT(c) FROM AIResearchCache c WHERE c.isValid = true GROUP BY c.queryType")
+    List<Object[]> getCacheCountByQueryType();
 }

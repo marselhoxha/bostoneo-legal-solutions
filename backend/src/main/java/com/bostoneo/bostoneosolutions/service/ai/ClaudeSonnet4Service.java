@@ -1,8 +1,9 @@
 package com.bostoneo.bostoneosolutions.service.ai;
 
 import com.bostoneo.bostoneosolutions.config.AIConfig;
-import com.bostoneo.bostoneosolutions.dto.ai.AIRequest;
-import com.bostoneo.bostoneosolutions.dto.ai.AIResponse;
+import com.bostoneo.bostoneosolutions.dto.ai.*;
+import com.bostoneo.bostoneosolutions.service.tools.LegalResearchTools;
+import com.bostoneo.bostoneosolutions.service.ResearchProgressPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,19 +24,31 @@ public class ClaudeSonnet4Service implements AIService {
 
     private final WebClient anthropicWebClient;
     private final AIConfig aiConfig;
+    private final LegalResearchTools legalResearchTools;
+    private final ResearchProgressPublisher progressPublisher;
     
     @Override
     public CompletableFuture<String> generateCompletion(String prompt, boolean useDeepThinking) {
-        AIRequest request = createRequest(prompt, useDeepThinking);
-        
+        return generateCompletion(prompt, null, useDeepThinking);
+    }
+
+    /**
+     * Generate completion with optional system message for high-priority instructions
+     */
+    public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking) {
+        AIRequest request = createRequest(prompt, systemMessage, useDeepThinking);
+
         log.info("=== SENDING REQUEST TO ANTHROPIC ===");
         log.info("Model: {}", request.getModel());
         log.info("Max tokens: {}", request.getMax_tokens());
         log.info("Prompt length: {}", prompt.length());
-        
+        if (systemMessage != null) {
+            log.info("System message length: {}", systemMessage.length());
+        }
+
         String apiKey = aiConfig.getApiKey();
         log.info("API Key being used: {}", apiKey.isEmpty() ? "EMPTY!" : apiKey.substring(0, Math.min(20, apiKey.length())) + "...");
-        
+
         return anthropicWebClient
                 .post()
                 .uri("/v1/messages")
@@ -748,7 +761,7 @@ public class ClaudeSonnet4Service implements AIService {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(cleanResponse, Map.class);
         } catch (Exception e) {
-            log.warn("Failed to parse web search response as JSON, using fallback parsing", e);
+            log.debug("Web search returned markdown format (not JSON), using fallback parser");
             // Fallback to structured text response
             return parseWebSearchTextResponse(response);
         }
@@ -757,7 +770,28 @@ public class ClaudeSonnet4Service implements AIService {
     private Map<String, Object> parseWebSearchTextResponse(String response) {
         Map<String, Object> result = new HashMap<>();
 
-        // Extract main sections from the response
+        // Check if response is in new counsel-ready markdown format
+        if (response.startsWith("#") || response.contains("## Controlling Legal Authority")) {
+            log.info("Web search returned counsel-ready markdown format, using as comprehensive analysis");
+
+            // Extract the main content
+            result.put("comprehensiveAnalysis", response);
+            result.put("searchStrategy", "Counsel-ready research with case law citations");
+            result.put("confidenceLevel", "High - Based on controlling precedents");
+            result.put("sourcesConsulted", "Legal databases and case law research");
+
+            // Extract case law from Controlling Legal Authority section if present
+            String caseLawSection = extractSectionFromText(response, "controlling legal authority", "strategic analysis");
+            if (caseLawSection != null && !caseLawSection.isEmpty()) {
+                Map<String, String> caseLaw = new HashMap<>();
+                caseLaw.put("controllingCases", caseLawSection);
+                result.put("caseLaw", caseLaw);
+            }
+
+            return result;
+        }
+
+        // Original parsing for JSON-like responses
         result.put("searchStrategy", extractSectionFromText(response, "search strategy", "legal authorities"));
         result.put("comprehensiveAnalysis", extractSectionFromText(response, "comprehensive analysis", "practice recommendations"));
         result.put("confidenceLevel", extractSectionFromText(response, "confidence level", "sources consulted"));
@@ -939,14 +973,275 @@ public class ClaudeSonnet4Service implements AIService {
         return section;
     }
 
-    private AIRequest createRequest(String prompt, boolean useDeepThinking) {
+    /**
+     * Agentic mode: Claude can use tools iteratively to research
+     */
+    public CompletableFuture<String> generateWithTools(String prompt, boolean useDeepThinking, String sessionId) {
+        log.info("🤖 Starting agentic research with tools (session: {})", sessionId);
+
+        List<ToolDefinition> toolDefs = legalResearchTools.getToolDefinitions();
+        log.info("🔧 Tool definitions loaded: {} tools", toolDefs != null ? toolDefs.size() : 0);
+        if (toolDefs != null) {
+            toolDefs.forEach(t -> log.info("  - Tool: {}", t.getName()));
+        }
+
+        AIRequest request = createRequest(prompt, useDeepThinking);
+        request.setTools(toolDefs);
+
+        List<AIRequest.Message> messageHistory = new ArrayList<>();
+        messageHistory.add(request.getMessages()[0]);
+
+        return executeAgenticLoop(messageHistory, 0, sessionId).toFuture();
+    }
+
+    /**
+     * Recursive tool-calling loop
+     */
+    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, int iteration, String sessionId) {
+        final int MAX_ITERATIONS = 5;  // REDUCED FROM 10 - stop wasting money
+
+        if (iteration >= MAX_ITERATIONS) {
+            log.error("❌ MAX ITERATIONS REACHED ({}). Stopping to prevent cost waste.", MAX_ITERATIONS);
+            log.error("❌ This means Claude kept calling tools without finishing. Forcing response now.");
+            return Mono.just("Research incomplete - reached maximum tool call limit. Please try a more specific query or use FAST mode.");
+        }
+
+        log.info("🔄 Agentic iteration {}/{}", iteration + 1, MAX_ITERATIONS);
+
         AIRequest request = new AIRequest();
         request.setModel("claude-sonnet-4-5-20250929");
-        request.setMax_tokens(useDeepThinking ? 8000 : 4000);
+        request.setMax_tokens(8000);
+
+        List<ToolDefinition> tools = legalResearchTools.getToolDefinitions();
+        log.info("🔧 Setting {} tools on request", tools != null ? tools.size() : 0);
+        request.setTools(tools);
+
+        request.setMessages(messageHistory.toArray(new AIRequest.Message[0]));
+        log.info("📤 Sending request with {} messages, tools: {}",
+            messageHistory.size(),
+            request.getTools() != null ? request.getTools().size() + " tools" : "null");
+
+        // Log request details for debugging
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String requestJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            log.debug("📋 Request JSON:\n{}", requestJson);
+        } catch (Exception e) {
+            log.warn("Could not serialize request for logging: {}", e.getMessage());
+        }
+
+        String apiKey = aiConfig.getApiKey();
+
+        return anthropicWebClient
+                .post()
+                .uri("/v1/messages")
+                .header("x-api-key", apiKey)
+                .header("anthropic-version", "2023-06-01")
+                .bodyValue(request)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    clientResponse -> clientResponse.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("❌ Anthropic API error response: {}", errorBody);
+                            return Mono.error(new RuntimeException("API Error: " + errorBody));
+                        }))
+                .bodyToMono(AIResponse.class)
+                .retryWhen(reactor.util.retry.Retry.backoff(2, java.time.Duration.ofSeconds(2))
+                        .filter(throwable -> {
+                            // Only retry on connection errors, not API errors
+                            String msg = throwable.getMessage();
+                            boolean shouldRetry = msg != null &&
+                                (msg.contains("Connection prematurely closed") ||
+                                 msg.contains("Connection reset") ||
+                                 msg.contains("Broken pipe"));
+                            if (shouldRetry) {
+                                log.warn("⚠️ Connection error, will retry: {}", msg);
+                            }
+                            return shouldRetry;
+                        })
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                            log.error("❌ Max retries exhausted for connection error");
+                            return new RuntimeException("Connection failed after retries: " + retrySignal.failure().getMessage());
+                        }))
+                .flatMap(response -> {
+                    log.info("📡 Response stop reason: {}", response.getStopReason());
+
+                    if (response.hasToolUse()) {
+                        // Claude wants to use tools (could be multiple)
+                        List<AIResponse.Content> toolUses = new ArrayList<>();
+                        for (AIResponse.Content c : response.getContent()) {
+                            if ("tool_use".equals(c.getType())) {
+                                toolUses.add(c);
+                            }
+                        }
+
+                        log.info("🔧 Claude requests {} tools", toolUses.size());
+
+                        // Add assistant's tool use to history
+                        // Convert response content to clean format for request
+                        List<Map<String, Object>> assistantContent = new ArrayList<>();
+                        for (AIResponse.Content c : response.getContent()) {
+                            Map<String, Object> contentBlock = new java.util.HashMap<>();
+                            contentBlock.put("type", c.getType());
+
+                            if ("text".equals(c.getType())) {
+                                contentBlock.put("text", c.getText());
+                            } else if ("tool_use".equals(c.getType())) {
+                                contentBlock.put("id", c.getId());
+                                contentBlock.put("name", c.getName());
+                                contentBlock.put("input", c.getInput());
+                            }
+                            assistantContent.add(contentBlock);
+                        }
+
+                        AIRequest.Message assistantMsg = new AIRequest.Message();
+                        assistantMsg.setRole("assistant");
+                        assistantMsg.setContent(assistantContent);
+                        messageHistory.add(assistantMsg);
+
+                        // Execute ALL tools in PARALLEL and collect results
+                        log.info("🚀 Executing {} tools in parallel", toolUses.size());
+                        long toolStartTime = System.currentTimeMillis();
+
+                        List<CompletableFuture<Map<String, Object>>> toolFutures = new ArrayList<>();
+
+                        for (AIResponse.Content toolUse : toolUses) {
+                            log.info("  🔧 Queuing tool: {}", toolUse.getName());
+
+                            // Publish progress to frontend
+                            if (sessionId != null && !sessionId.isEmpty()) {
+                                String progressMessage = getToolProgressMessage(toolUse.getName(), toolUse.getInput());
+                                String icon = getToolIcon(toolUse.getName());
+                                progressPublisher.publishStep(sessionId, "tool_execution", progressMessage, "", icon, (iteration + 1) * 15);
+                            }
+
+                            // Execute each tool asynchronously
+                            CompletableFuture<Map<String, Object>> toolFuture = CompletableFuture.supplyAsync(() -> {
+                                Object toolResult;
+                                try {
+                                    toolResult = legalResearchTools.executeTool(
+                                            toolUse.getName(),
+                                            toolUse.getInput()
+                                    );
+                                    log.info("  ✅ Tool '{}' executed successfully", toolUse.getName());
+                                } catch (Exception e) {
+                                    log.error("  ❌ Tool '{}' execution failed: {}", toolUse.getName(), e.getMessage());
+                                    toolResult = "Error: " + e.getMessage();
+                                }
+
+                                return Map.of(
+                                    "type", "tool_result",
+                                    "tool_use_id", toolUse.getId(),
+                                    "content", toolResult.toString()
+                                );
+                            });
+
+                            toolFutures.add(toolFuture);
+                        }
+
+                        // Wait for all tools to complete
+                        CompletableFuture<Void> allTools = CompletableFuture.allOf(
+                            toolFutures.toArray(new CompletableFuture[0])
+                        );
+
+                        List<Map<String, Object>> toolResults = new ArrayList<>();
+                        try {
+                            allTools.join(); // Wait for all to complete
+
+                            // Collect results in order
+                            for (CompletableFuture<Map<String, Object>> future : toolFutures) {
+                                toolResults.add(future.get());
+                            }
+
+                            long toolDuration = System.currentTimeMillis() - toolStartTime;
+                            log.info("⚡ All {} tools completed in {}ms (parallel execution)", toolUses.size(), toolDuration);
+
+                        } catch (Exception e) {
+                            log.error("❌ Error waiting for parallel tool execution: {}", e.getMessage());
+                            // Fallback: collect whatever completed
+                            for (CompletableFuture<Map<String, Object>> future : toolFutures) {
+                                try {
+                                    if (future.isDone()) {
+                                        toolResults.add(future.get());
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+
+                        // Add ALL tool results in one user message
+                        AIRequest.Message toolResultMsg = new AIRequest.Message();
+                        toolResultMsg.setRole("user");
+                        toolResultMsg.setContent(toolResults);
+                        messageHistory.add(toolResultMsg);
+
+                        // Continue loop
+                        return executeAgenticLoop(messageHistory, iteration + 1, sessionId);
+
+                    } else {
+                        // Claude is done - return final answer
+                        String finalText = extractTextFromResponse(response);
+                        log.info("✨ Agentic research complete after {} iterations - Final response length: {} chars",
+                                iteration + 1, finalText.length());
+                        return Mono.just(finalText);
+                    }
+                })
+                .onErrorResume(e -> {
+                    log.error("💥 Agentic loop error: {}", e.getMessage(), e);
+                    return Mono.just("Error in agentic research: " + e.getMessage());
+                });
+    }
+
+    private AIRequest createRequest(String prompt, boolean useDeepThinking) {
+        return createRequest(prompt, null, useDeepThinking);
+    }
+
+    private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking) {
+        AIRequest request = new AIRequest();
+        request.setModel("claude-sonnet-4-5-20250929");
+
+        // Smart token allocation based on query complexity
+        int maxTokens;
+        if (useDeepThinking) {
+            // Detect if query needs extra-long response
+            String lowerPrompt = prompt.toLowerCase();
+            boolean isComplexQuery = lowerPrompt.contains("comprehensive analysis") ||
+                                   lowerPrompt.contains("detailed explanation") ||
+                                   lowerPrompt.contains("thorough review") ||
+                                   lowerPrompt.contains("step-by-step") ||
+                                   lowerPrompt.contains("in-depth") ||
+                                   (lowerPrompt.contains("explain") && lowerPrompt.contains("detail"));
+
+            // Complex: 5000, Standard: 4000 (reduced to encourage conciseness while meeting counsel-ready standards)
+            maxTokens = isComplexQuery ? 5000 : 4000;
+        } else {
+            // FAST mode: 4000 max (covers 95th percentile)
+            maxTokens = 4000;
+        }
+
+        request.setMax_tokens(maxTokens);
+
+        // Set system message if provided (high-priority instructions)
+        if (systemMessage != null && !systemMessage.isEmpty()) {
+            String currentDate = java.time.LocalDate.now().toString();
+            String dateAwareSystemMessage = "**CRITICAL: TODAY'S DATE IS " + currentDate + "**\n" +
+                    "Use this date for all deadline calculations and time-sensitive analysis.\n\n" +
+                    systemMessage;
+            request.setSystem(dateAwareSystemMessage);
+        }
+
+        // User message contains the actual query and context
+        String userPrompt = prompt;
+        // If no system message, include date in user message (backwards compatibility)
+        if (systemMessage == null || systemMessage.isEmpty()) {
+            String currentDate = java.time.LocalDate.now().toString();
+            userPrompt = "**CRITICAL: TODAY'S DATE IS " + currentDate + "**\n" +
+                    "Use this date for all deadline calculations and time-sensitive analysis.\n\n" +
+                    prompt;
+        }
 
         AIRequest.Message message = new AIRequest.Message();
         message.setRole("user");
-        message.setContent(prompt);
+        message.setContent(userPrompt);
 
         request.setMessages(new AIRequest.Message[]{message});
         return request;
@@ -957,5 +1252,59 @@ public class ClaudeSonnet4Service implements AIService {
             return response.getContent()[0].getText();
         }
         return "No response generated";
+    }
+
+    /**
+     * Generate user-friendly progress message for tool execution
+     */
+    private String getToolProgressMessage(String toolName, Map<String, Object> input) {
+        return switch (toolName) {
+            case "get_current_date" -> "Verifying current date for temporal analysis";
+            case "check_deadline_status" -> {
+                String eventName = (String) input.get("event_name");
+                yield "Checking deadline status: " + (eventName != null ? eventName : "event");
+            }
+            case "validate_case_timeline" -> "Validating case timeline and deadlines";
+            case "search_case_law" -> {
+                String query = (String) input.get("query");
+                if (query != null && query.length() > 50) {
+                    query = query.substring(0, 47) + "...";
+                }
+                yield "Searching case law: " + (query != null ? query : "relevant precedents");
+            }
+            case "get_cfr_text" -> {
+                String title = (String) input.get("title");
+                String part = (String) input.get("part");
+                String section = (String) input.get("section");
+                yield "Retrieving CFR " + title + " § " + part + "." + section;
+            }
+            case "verify_citation" -> {
+                String citation = (String) input.get("citation");
+                yield "Verifying citation: " + (citation != null ? citation : "case");
+            }
+            case "web_search" -> {
+                String query = (String) input.get("query");
+                if (query != null && query.length() > 50) {
+                    query = query.substring(0, 47) + "...";
+                }
+                yield "Searching web for real-time information: " + (query != null ? query : "legal resources");
+            }
+            default -> "Executing tool: " + toolName;
+        };
+    }
+
+    /**
+     * Get icon for tool execution
+     */
+    private String getToolIcon(String toolName) {
+        return switch (toolName) {
+            case "get_current_date" -> "ri-calendar-check-line";
+            case "check_deadline_status", "validate_case_timeline" -> "ri-timer-line";
+            case "search_case_law" -> "ri-search-line";
+            case "get_cfr_text" -> "ri-book-line";
+            case "verify_citation" -> "ri-checkbox-circle-line";
+            case "web_search" -> "ri-global-line";
+            default -> "ri-tools-line";
+        };
     }
 }

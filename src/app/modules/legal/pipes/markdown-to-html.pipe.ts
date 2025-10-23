@@ -13,10 +13,37 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       return '';
     }
 
-    // Step 1: Convert markdown to HTML first
-    let html = this.convertMarkdownToHtml(value);
+    // DEBUG: Check what we're receiving for links
+    if (value.includes('[IRC') || value.includes('[USC') || value.includes('[26 U.S.C')) {
+      console.log('📝 Markdown input contains citations:', value.substring(0, 300));
+      // Log specific citation patterns
+      const citationMatch = value.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (citationMatch) {
+        console.log('🔗 Found markdown link:', citationMatch[0]);
+      }
+    }
 
-    // Step 2: Apply legal highlighting to the HTML output
+    // STEP 1: Process checkmark citations BEFORE markdown conversion (while still markdown syntax)
+    let markdown = this.processCheckmarkCitations(value);
+
+    // STEP 2: Convert markdown to HTML
+    let html = this.convertMarkdownToHtml(markdown);
+
+    // DEBUG: Check conversion result
+    if (value.includes('[IRC') || value.includes('[USC')) {
+      console.log('🔄 After markdown conversion:', html.substring(0, 500));
+      // Check if links were converted
+      if (html.includes('<a href=')) {
+        console.log('✅ Links converted to HTML');
+      } else {
+        console.log('❌ Links NOT converted to HTML');
+      }
+    }
+
+    // STEP 3: CREATE LINKS DIRECTLY (emergency fix - backend not injecting URLs)
+    html = this.createCitationLinks(html);
+
+    // STEP 4: Apply legal highlighting to the HTML output (NOT checkmarks - already processed)
     html = this.highlightLegalTerms(html);
 
     // DEBUG: Log a sample of the output to verify highlighting is applied
@@ -26,6 +53,146 @@ export class MarkdownToHtmlPipe implements PipeTransform {
 
     // IMPORTANT: Use bypassSecurityTrustHtml to allow our custom HTML/CSS classes
     return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  /**
+   * Process checkmark citations BEFORE markdown-to-HTML conversion
+   * This ensures the checkmark and link stay together in one HTML element
+   */
+  private processCheckmarkCitations(markdown: string): string {
+    // Match ✓ followed by markdown link: ✓ [citation](url) or ✓ [citation - View →](url)
+    // Handles BOTH old format (no " - View →") and new format (with " - View →")
+    // This runs BEFORE markdown conversion, so we're matching markdown syntax
+    return markdown.replace(/✓\s*\[([^\]]+?)\]\(([^)]+)\)/gi,
+      (match, linkText, url) => {
+        // Remove " - View →" suffix if present (for consistency)
+        const cleanText = linkText.replace(/\s*-\s*View\s*→\s*$/i, '').trim();
+        // Create complete HTML badge with link inside
+        // Return HTML directly (will NOT be processed by markdown converter since it's already HTML)
+        return `<span class="citation-verified">✓ <a href="${url}" target="_blank" rel="noopener noreferrer">${cleanText}</a></span>`;
+      });
+  }
+
+  /**
+   * EMERGENCY FIX: Create links directly in frontend since backend isn't injecting them
+   * This runs AFTER markdown conversion but BEFORE other highlighting
+   * Creates SPECIFIC URLs with section/rule numbers when possible
+   */
+  private createCitationLinks(html: string): string {
+    // IRC citations - extract section number for specific URL with subsection anchor
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses to handle spaces, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bIRC\s*§\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
+      (match, section) => {
+        let url = `https://www.law.cornell.edu/uscode/text/26/${section}`;
+        // Extract first subsection: (h), (h)(3), etc. → h
+        const firstSubsection = match.match(/\(([a-zA-Z0-9]+)\)/);
+        if (firstSubsection) {
+          url += `#${firstSubsection[1]}`;
+        }
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // Treasury Regulations - use Cornell CFR with specific regulation number
+    // Supports "Treas. Reg.", "Treasury Reg.", "Treas. Regulation", "Treasury Regulation"
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\b(?:Treas(?:ury)?\.?\s*(?:Reg\.|Regulation))\s*§\s*[\d.]+[A-Za-z]*(?:-[\d]+[A-Za-z]*)*(?:\s*\([^)]+\))*(?![<\w])/gi,
+      (match) => {
+        // Extract base regulation number (everything up to first opening parenthesis or end)
+        const regMatch = match.match(/§\s*([\d.]+[A-Za-z]*(?:-[\d]+[A-Za-z]*)*)/);
+        const regNumber = regMatch ? regMatch[1].trim() : '';
+        return `<a href="https://www.law.cornell.edu/cfr/text/26/${regNumber}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // Tax Court Rules - no specific URL pattern available
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bTax Court Rule\s*\d+(?:\s*\([^)]+\))*(?![<\w])/gi,
+      (match) => {
+        return `<a href="https://www.ustaxcourt.gov/rules.html" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // M.G.L. citations - extract chapter and section for specific URL
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bM\.G\.L\.\s*c\.\s*(\d+[AB]?)(?:,?\s*§\s*(\w+(?:\s*\([^)]+\))*))?(?![<\w])/gi,
+      (match, chapter, section) => {
+        if (section) {
+          // Both chapter and section - create full URL
+          return `<a href="https://malegislature.gov/Laws/GeneralLaws/Chapter${chapter}/Section${section}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+        } else {
+          // Just chapter - link to chapter page
+          return `<a href="https://malegislature.gov/Laws/GeneralLaws/Chapter${chapter}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+        }
+      });
+
+    // Mass. R. Crim. P. - link to specific rule pages with descriptive titles
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bMass\.\s*R\.\s*Crim\.\s*P\.(?:\s*(\d+(?:\.\d+)?)(?:\s*\([^)]+\))*)?(?![<\w])/gi,
+      (match, ruleNum) => {
+        // Mapping of common rule numbers to their URL slugs
+        const ruleUrlMap: {[key: string]: string} = {
+          '3': 'criminal-procedure-rule-3-the-complaint',
+          '4': 'criminal-procedure-rule-4-arrest-warrant-or-summons-on-a-complaint',
+          '7': 'criminal-procedure-rule-7-other-pleas',
+          '12': 'criminal-procedure-rule-12-pleas-and-pretrial-motions',
+          '14': 'criminal-procedure-rule-14-pretrial-discovery-from-the-prosecution',
+          '14.1': 'criminal-procedure-rule-141-pretrial-reciprocal-discovery-from-the-defense',
+          '14.2': 'criminal-procedure-rule-142-pretrial-discovery-procedures',
+          '17': 'criminal-procedure-rule-17-subpoena',
+          '30': 'criminal-procedure-rule-30-instructions',
+          '36': 'criminal-procedure-rule-36-stay-of-execution-bail-after-conviction'
+        };
+
+        if (ruleNum && ruleUrlMap[ruleNum]) {
+          return `<a href="https://www.mass.gov/rules-of-criminal-procedure/${ruleUrlMap[ruleNum]}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+        } else {
+          // Fall back to general page for unmapped rules
+          return `<a href="https://www.mass.gov/law-library/massachusetts-rules-of-criminal-procedure" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+        }
+      });
+
+    // Mass. R. Civ. P. - link to general page (specific URLs require rule titles we don't have)
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bMass\.\s*R\.\s*Civ\.\s*P\.(?:\s*\d+(?:\s*\([^)]+\))*)?(?![<\w])/gi,
+      (match) => {
+        return `<a href="https://www.mass.gov/law-library/massachusetts-rules-of-civil-procedure" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // BMC Standing Orders - general page (no specific URLs available)
+    // Supports optional checkmark prefix
+    html = html.replace(/(?:✓\s*)?\bBMC\s+Standing\s+Order\s+\d+-\d+(?![<\w])/gi,
+      (match) => {
+        return `<a href="https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // BMC Local Rules - general page (no specific URLs available)
+    // Supports optional checkmark prefix
+    html = html.replace(/(?:✓\s*)?\bBMC\s+Local\s+Rule\s+\d+(?![<\w])/gi,
+      (match) => {
+        return `<a href="https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // Fed. R. Civ. P. - extract rule number for specific URL
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bFed\.\s*R\.\s*Civ\.\s*P\.\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
+      (match, rule) => {
+        return `<a href="https://www.law.cornell.edu/rules/frcp/rule_${rule}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    // Fed. R. Crim. P. - extract rule number for specific URL
+    // Supports optional checkmark prefix
+    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
+    html = html.replace(/(?:✓\s*)?\bFed\.\s*R\.\s*Crim\.\s*P\.\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
+      (match, rule) => {
+        return `<a href="https://www.law.cornell.edu/rules/frcrmp/rule_${rule}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+      });
+
+    return html;
   }
 
   private highlightLegalTerms(html: string): string {
@@ -41,18 +208,30 @@ export class MarkdownToHtmlPipe implements PipeTransform {
 
       let text = parts[i];
 
-      // 1. Legal citations - specific patterns that appear in legal text
-      text = text.replace(/Mass\.\s+R\.\s+Civ\.\s+P\.\s+\d+(?:\([a-z]\))?/gi, (match) =>
-        `<span class="legal-citation">${match}</span>`);
-      text = text.replace(/M\.G\.L\.\s+c\.\s+\d+B?/gi, (match) =>
-        `<span class="legal-citation">${match}</span>`);
+      // NOTE: Checkmark badges are now processed BEFORE markdown conversion
+      // in the processCheckmarkCitations() method above
+      // This section only handles other legal term highlighting
 
-      // 2. Judge and doctor names (Hon., Dr., Judge, Justice + Name)
+      // Warning assumption badges (⚠️ **Assumption**:)
+      text = text.replace(/⚠️\s*\*\*Assumption\*\*:/g,
+        `<span class="assumption-badge">⚠️ <strong>Assumption</strong>:</span>`);
+
+      // REMOVED: Citation highlighting (redundant - citations are now clickable links)
+      // The following citation types are now handled by createCitationLinks() and styled as links:
+      // - Mass. R. Civ. P., Mass. R. Crim. P., M.G.L.
+      // - Treasury Regulations
+      // - IRC provisions
+      // - Tax Court Rules
+      // - Federal Rules (Civ. P. and Crim. P.)
+      // - U.S. Sentencing Guidelines
+      // - D. Mass. Local Rules
+
+      // Judge and doctor names (Hon., Dr., Judge, Justice + Name)
       text = text.replace(/\b((?:Hon\.|Dr\.|Judge|Justice)\s+[A-Z][a-z]+(?:\s+[A-Z]'?[A-Z]?[a-z]+)*(?:'s)?)\b/g, (match) =>
         `<span class="legal-judge">${match}</span>`);
 
-      // 3. Dollar amounts with K suffix
-      text = text.replace(/\$(\d{1,3}(?:,\d{3})*|\d+)K?\b/g, (match) =>
+      // 3. Dollar amounts with K/M/B suffix, decimals, and ranges (e.g., $5K, $2-3M, $4.2M, $10-20K)
+      text = text.replace(/\$\d+(?:\.\d+)?(?:,\d{3})*(?:K|M|B)?(?:\s*-\s*\$?\d+(?:\.\d+)?(?:,\d{3})*(?:K|M|B)?)?/gi, (match) =>
         `<span class="legal-amount">${match}</span>`);
 
       // 4. Dates - month name + day + year
@@ -99,8 +278,9 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     // Inline code
     text = text.replace(/`(.*?)`/g, '<code>$1</code>');
 
-    // Links
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    // Links (with target="_blank" to open in new tab)
+    // Using .+? for lazy matching to handle complex link text (e.g., with dashes or special chars)
+    text = text.replace(/\[(.+?)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
     // Horizontal rules
     text = text.replace(/^\-\-\-$/gim, '<hr>');

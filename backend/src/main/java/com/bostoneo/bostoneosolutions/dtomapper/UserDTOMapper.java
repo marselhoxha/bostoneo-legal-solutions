@@ -33,9 +33,7 @@ public class UserDTOMapper {
                 .map(Role::getName)
                 .collect(Collectors.toList()));
             
-            // Log the roles being added
-            log.info("Setting roles for user {}: {}", user.getEmail(), 
-                userDTO.getRoles());
+            
         }
         
         // Set permissions

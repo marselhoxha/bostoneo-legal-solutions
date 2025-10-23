@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.reactive.function.client.WebClient;
+import io.netty.channel.ChannelOption;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
+import java.time.Duration;
 
 @Configuration
 @Slf4j
@@ -60,12 +64,21 @@ public class AIConfig {
     public WebClient anthropicWebClient() {
         log.info("=== CREATING ANTHROPIC WEBCLIENT ===");
         log.info("Base URL: {}", anthropicBaseUrl);
-        
+
+        // Configure HTTP client with timeouts for agentic mode
+        // Use only responseTimeout - simpler and avoids conflicts with read/write handlers
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000) // 30 seconds to connect
+                .responseTimeout(Duration.ofMinutes(10)); // 10 minutes max for agentic mode with multiple tool calls
+
+        log.info("WebClient configured with timeouts: connect=30s, response=600s");
+
         // Don't set API key here - we'll inject it per request
         return WebClient.builder()
                 .baseUrl(anthropicBaseUrl)
                 .defaultHeader("Content-Type", "application/json")
                 .defaultHeader("anthropic-version", "2023-06-01")
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
     

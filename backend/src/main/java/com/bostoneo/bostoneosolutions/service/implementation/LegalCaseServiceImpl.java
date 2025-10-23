@@ -217,7 +217,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public Page<LegalCaseDTO> getAllCases(int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findAll(PageRequest.of(page, size));
+        // Sort by created_at descending to show newest cases first
+        Page<LegalCase> cases = legalCaseRepository.findAll(
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
@@ -263,8 +266,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                 return Page.empty(PageRequest.of(page, size));
             }
             
-            // Get cases by IDs with pagination
-            Page<LegalCase> cases = legalCaseRepository.findByIdIn(caseIds, PageRequest.of(page, size));
+            // Get cases by IDs with pagination, sorted by newest first
+            Page<LegalCase> cases = legalCaseRepository.findByIdIn(
+                caseIds,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+            );
             return cases.map(legalCaseDTOMapper::toDTO);
         }
         
@@ -292,10 +298,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             }
             
             log.info("Found {} active case assignments for user ID: {}, case IDs: {}", caseIds.size(), userId, caseIds);
-            
-            // Get cases by IDs with pagination
-            Page<LegalCase> cases = legalCaseRepository.findByIdIn(caseIds, PageRequest.of(page, size));
-            
+
+            // Get cases by IDs with pagination, sorted by newest first
+            Page<LegalCase> cases = legalCaseRepository.findByIdIn(
+                caseIds,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+            );
+
             // Map to DTOs with client-specific filtering
             return cases.map(legalCase -> {
                 LegalCaseDTO dto = legalCaseDTOMapper.toDTO(legalCase);
@@ -313,8 +322,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         
         // SECRETARY: See case list with limited details
         if ("ROLE_SECRETARY".equals(userRole)) {
-            Page<LegalCase> allCases = legalCaseRepository.findAll(PageRequest.of(page, size));
-            
+            Page<LegalCase> allCases = legalCaseRepository.findAll(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+            );
+
             // Map to DTOs with limited information
             return allCases.map(legalCase -> {
                 LegalCaseDTO dto = new LegalCaseDTO();
@@ -345,25 +356,37 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public Page<LegalCaseDTO> searchCasesByTitle(String title, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByTitleContainingIgnoreCase(title, PageRequest.of(page, size));
+        Page<LegalCase> cases = legalCaseRepository.findByTitleContainingIgnoreCase(
+            title,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
     @Override
     public Page<LegalCaseDTO> searchCasesByClientName(String clientName, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(clientName, PageRequest.of(page, size));
+        Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
+            clientName,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
     @Override
     public Page<LegalCaseDTO> getCasesByStatus(CaseStatus status, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByStatus(status, PageRequest.of(page, size));
+        Page<LegalCase> cases = legalCaseRepository.findByStatus(
+            status,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
     @Override
     public Page<LegalCaseDTO> getCasesByType(String type, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByType(type, PageRequest.of(page, size));
+        Page<LegalCase> cases = legalCaseRepository.findByType(
+            type,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
@@ -377,8 +400,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         
         // Search cases by client name since LegalCase uses clientName field
         Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
-            client.getName(), PageRequest.of(page, size));
-        
+            client.getName(),
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 

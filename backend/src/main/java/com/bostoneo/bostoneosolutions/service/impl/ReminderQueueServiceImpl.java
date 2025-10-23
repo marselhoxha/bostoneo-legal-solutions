@@ -114,7 +114,6 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
         List<ReminderQueueItem> pendingReminders = 
                 reminderQueueRepository.findPendingRemindersReadyToSend(LocalDateTime.now());
         
-        log.info("Processing {} pending reminders", pendingReminders.size());
         
         for (ReminderQueueItem reminder : pendingReminders) {
             try {
@@ -130,7 +129,6 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
                 
                 // Skip if the event has already passed
                 if (event.getStartTime().isBefore(LocalDateTime.now())) {
-                    log.info("Skipping reminder for past event: {}", event.getId());
                     markReminderAsFailed(reminder.getId(), "Event already passed");
                     continue;
                 }

@@ -37,8 +37,14 @@ public class AIResearchCache {
     @Column(length = 100)
     private String jurisdiction;
 
+    @Column(name = "research_mode", length = 20)
+    private String researchMode;
+
     @Column(name = "practice_area", length = 100)
     private String practiceArea;
+
+    @Column(name = "case_id", length = 50)
+    private String caseId;
 
     @Column(name = "ai_response", nullable = false, columnDefinition = "LONGTEXT")
     private String aiResponse;

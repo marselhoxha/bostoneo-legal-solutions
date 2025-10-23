@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.time.LocalDateTime.now;
-import static java.util.Map.of;
 import static org.springframework.http.HttpStatus.*;
 @RestControllerAdvice
 @Slf4j
@@ -112,13 +111,22 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<HttpResponse> runtimeException(RuntimeException exception) {
+    public ResponseEntity<HttpResponse> runtimeException(RuntimeException exception, WebRequest request) {
         log.error("Runtime exception: ", exception);
+
+        // CRITICAL FIX: Don't handle SSE (Server-Sent Events) exceptions here
+        // Let SSE endpoints handle their own errors gracefully
+        String requestUri = request.getDescription(false);
+        if (requestUri != null && requestUri.contains("/progress-stream")) {
+            log.warn("SSE endpoint runtime exception - letting endpoint handle it: {}", exception.getMessage());
+            return null;
+        }
+
         String reason = exception.getMessage();
         if (reason == null || reason.isEmpty()) {
             reason = "An error occurred while processing your request";
         }
-        
+
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
@@ -130,16 +138,27 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
     }
     
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<HttpResponse> exception(Exception exception) {
+    public ResponseEntity<HttpResponse> exception(Exception exception, WebRequest request) {
         log.error("Unhandled exception: ", exception);
         System.out.println(exception);
+
+        // CRITICAL FIX: Don't handle SSE (Server-Sent Events) exceptions here
+        // SSE endpoints have Content-Type: text/event-stream and can't return JSON
+        // Let SSE endpoints handle their own errors gracefully
+        String requestUri = request.getDescription(false);
+        if (requestUri != null && requestUri.contains("/progress-stream")) {
+            log.warn("SSE endpoint exception - letting endpoint handle it: {}", exception.getMessage());
+            // Return minimal response - SSE connection will close naturally
+            return null;
+        }
+
         String reason = exception.getMessage();
         if (reason == null || reason.isEmpty()) {
             reason = exception.getClass().getSimpleName() + " occurred";
         } else if (reason.contains("expected 1, actual 0")) {
             reason = "Record not found";
         }
-        
+
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())

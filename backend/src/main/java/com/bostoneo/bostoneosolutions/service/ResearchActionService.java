@@ -85,6 +85,7 @@ public class ResearchActionService {
 
             // Parse the JSON response
             List<Map<String, Object>> parsedSuggestions = parseSuggestions(response);
+            log.info("📊 Parsed {} suggestions from Claude response", parsedSuggestions.size());
 
             for (Map<String, Object> suggestion : parsedSuggestions) {
                 ResearchActionItem item = new ResearchActionItem();
@@ -114,34 +115,59 @@ public class ResearchActionService {
                     item.setTaskDescription((String) suggestion.get("reason"));
                 }
 
-                suggestions.add(actionRepository.save(item));
+                ResearchActionItem saved = actionRepository.save(item);
+                suggestions.add(saved);
+                log.debug("💾 Saved action: {} (ID: {})", saved.getActionType(), saved.getId());
             }
 
+            log.info("✅ Successfully created and saved {} action items to database", suggestions.size());
+
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Error generating action suggestions", e);
+            log.error("❌ Error generating action suggestions", e);
             Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.error("❌ Unexpected error in suggestActions", e);
         }
 
+        log.info("🔄 Returning {} suggestions to controller", suggestions.size());
         return suggestions;
     }
 
     /**
-     * Parse Claude's JSON response
+     * Parse Claude's JSON response (handles markdown code blocks)
      */
     private List<Map<String, Object>> parseSuggestions(String response) {
         try {
-            // Extract JSON from response (Claude might add text before/after)
-            String jsonPart = response;
-            int startIdx = response.indexOf('[');
-            int endIdx = response.lastIndexOf(']');
+            log.debug("Raw Claude response for parsing: {}", response);
 
-            if (startIdx >= 0 && endIdx > startIdx) {
-                jsonPart = response.substring(startIdx, endIdx + 1);
+            // Remove markdown code block wrappers (```json ... ``` or ``` ... ```)
+            String cleaned = response;
+            if (cleaned.contains("```")) {
+                // Remove opening ```json or ```
+                cleaned = cleaned.replaceAll("```json\\s*", "");
+                cleaned = cleaned.replaceAll("```\\s*", "");
+                log.debug("After removing code blocks: {}", cleaned);
             }
 
-            return objectMapper.readValue(jsonPart, new TypeReference<List<Map<String, Object>>>() {});
+            // Extract JSON array from response
+            String jsonPart = cleaned;
+            int startIdx = cleaned.indexOf('[');
+            int endIdx = cleaned.lastIndexOf(']');
+
+            if (startIdx >= 0 && endIdx > startIdx) {
+                jsonPart = cleaned.substring(startIdx, endIdx + 1);
+                log.debug("Extracted JSON: {}", jsonPart);
+            } else {
+                log.error("❌ Could not find JSON array brackets in response: {}", response);
+                return new ArrayList<>();
+            }
+
+            List<Map<String, Object>> parsed = objectMapper.readValue(jsonPart, new TypeReference<List<Map<String, Object>>>() {});
+            log.info("✅ Successfully parsed {} action suggestions", parsed.size());
+            return parsed;
         } catch (Exception e) {
-            log.error("Error parsing suggestions JSON: {}", response, e);
+            log.error("❌ Error parsing suggestions JSON. Response was: {}", response, e);
+            log.error("Exception type: {}, Message: {}", e.getClass().getSimpleName(), e.getMessage());
             return new ArrayList<>();
         }
     }

@@ -27,16 +27,14 @@ public class PermissionRowMapper implements RowMapper<Permission> {
             try {
                 resourceType = ResourceType.valueOf(resourceTypeStr);
             } catch (IllegalArgumentException e) {
-                log.warn("Invalid ResourceType '{}' in permission ID: {}, name: {}. Using ADMINISTRATIVE as fallback.", 
-                         resourceTypeStr, resultSet.getLong("id"), resultSet.getString("name"));
+                
                 resourceType = ResourceType.ADMINISTRATIVE;
             }
             
             try {
                 actionType = ActionType.valueOf(actionTypeStr);
             } catch (IllegalArgumentException e) {
-                log.warn("Invalid ActionType '{}' in permission ID: {}, name: {}. Using VIEW as fallback.", 
-                         actionTypeStr, resultSet.getLong("id"), resultSet.getString("name"));
+                
                 actionType = ActionType.VIEW;
             }
             

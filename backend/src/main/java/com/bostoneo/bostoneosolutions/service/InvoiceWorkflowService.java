@@ -76,7 +76,6 @@ public class InvoiceWorkflowService {
      */
     @Scheduled(cron = "0 0 * * * *") // Every hour
     public void processScheduledWorkflows() {
-        log.info("Processing scheduled workflows");
         
         List<InvoiceWorkflowRule> scheduledRules = workflowRuleRepository
             .findByTriggerEventAndIsActiveTrue(InvoiceWorkflowRule.TriggerEvent.SCHEDULED);
@@ -127,7 +126,6 @@ public class InvoiceWorkflowService {
     }
     
     private void executeWorkflow(InvoiceWorkflowRule rule, Invoice invoice) {
-        log.info("Executing workflow {} for invoice {}", rule.getName(), invoice.getInvoiceNumber());
         
         try {
             switch (rule.getActionType()) {

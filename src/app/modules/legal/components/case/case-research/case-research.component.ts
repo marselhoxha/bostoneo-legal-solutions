@@ -49,6 +49,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
 
   searchQuery = '';
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines' = 'all';
+  researchMode: 'fast' | 'auto' | 'thorough' = 'fast';  // NEW: Fast (15s), Auto (AI selects), or Thorough (2-3min)
   isSearching = false;
   searchError = '';
 
@@ -86,6 +87,10 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
   // SSE for real-time progress
   private eventSource?: EventSource;
   private searchSessionId: string = '';
+  private searchConversationId: string = ''; // Track which conversation initiated the search
+
+  // Tool execution tracking (for THOROUGH mode visibility)
+  toolsUsed: Array<{name: string, message: string, icon: string}> = [];
 
   constructor(
     private legalResearchService: LegalResearchService,
@@ -444,13 +449,16 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     // Show chat immediately
     this.showChat = true;
 
-    // Reset workflow steps
+    // Reset workflow steps and tool tracking
     this.currentWorkflowStep = 0;
     this.workflowSteps.forEach(step => step.status = 'pending');
+    this.toolsUsed = []; // Clear tools list for new search
 
     // Generate unique session ID for SSE tracking
     this.searchSessionId = this.generateSessionId();
-    console.log('🔍 Starting search with session ID:', this.searchSessionId);
+    // CRITICAL: Capture which conversation initiated this search
+    this.searchConversationId = this.activeConversationId;
+    console.log('🔍 Starting search with session ID:', this.searchSessionId, 'for conversation:', this.searchConversationId);
 
     // Connect to SSE for real-time progress updates
     this.connectToSSE(this.searchSessionId);
@@ -470,7 +478,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       searchType: this.searchType,
       jurisdiction: 'MASSACHUSETTS',
       caseId: this.caseId,
-      sessionId: this.searchSessionId
+      sessionId: this.searchSessionId,
+      researchMode: this.researchMode.toUpperCase() as 'FAST' | 'THOROUGH',
+      conversationHistory: this.getRecentConversationHistory()  // NEW: Include conversation context
     };
 
     this.legalResearchService.performSearch(searchRequest)
@@ -539,7 +549,29 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
       isTyping: false,
       collapsed: false
     };
-    this.chatMessages.push(message);
+
+    // CRITICAL FIX: Add response to the conversation that initiated the search,
+    // not the currently active conversation (user may have switched)
+    const targetConversation = this.conversations.find(c => c.id === this.searchConversationId);
+    if (targetConversation) {
+      targetConversation.messages.push(message);
+      targetConversation.lastUpdated = new Date();
+      console.log('✅ Added AI response to conversation:', this.searchConversationId);
+
+      // Update view reference if we're viewing the same conversation
+      // IMPORTANT: Don't push again! chatMessages is a reference to the same array
+      if (this.activeConversationId === this.searchConversationId) {
+        // Just trigger change detection - message already added to the array
+        this.cdr.detectChanges();
+      } else {
+        console.log('⚠️ User switched conversations - response added to', this.searchConversationId, 'but viewing', this.activeConversationId);
+      }
+    } else {
+      // Fallback: add to current messages (shouldn't happen, but prevents lost responses)
+      console.warn('⚠️ Could not find target conversation, adding to current view');
+      this.chatMessages.push(message);
+    }
+
     this.aiThinking = false;
     this.isSearching = false;
     this.cdr.detectChanges();
@@ -1640,6 +1672,42 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
     return `search_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   }
 
+  /**
+   * Get recent conversation history to send as context with search request.
+   * Returns the last 10 messages (5 user+assistant pairs) to avoid token bloat.
+   */
+  private getRecentConversationHistory(): any[] {
+    // CRITICAL FIX: Get messages from active conversation (source of truth)
+    // instead of relying on this.chatMessages reference which can be stale
+    const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+
+    if (!activeConv || !activeConv.messages) {
+      console.warn('⚠️ No active conversation found for history - sending empty history');
+      return [];
+    }
+
+    // Get only the last 10 messages (excluding the current user message being sent)
+    // The current user message is at the end, so we get messages from -11 to -1
+    const recentMessages = activeConv.messages.slice(-11, -1);
+
+    console.log('📤 Sending conversation history:', {
+      activeConvId: this.activeConversationId,
+      totalMessagesInConv: activeConv.messages.length,
+      historyMessageCount: recentMessages.length,
+      historyPreview: recentMessages.slice(0, 2).map(m => ({
+        role: m.role,
+        contentPreview: m.content.substring(0, 50) + '...'
+      }))
+    });
+
+    // Convert to format expected by backend
+    return recentMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp.toISOString()
+    }));
+  }
+
   private connectToSSE(sessionId: string): void {
     this.closeSSEConnection(); // Close any existing connection
 
@@ -1737,6 +1805,15 @@ export class CaseResearchComponent implements OnInit, OnDestroy {
         this.workflowSteps[stepIndex].description = event.message;
       }
       this.currentWorkflowStep = stepIndex;
+      this.cdr.detectChanges();
+    } else if (event.stepType === 'tool_execution') {
+      // Capture tool execution details for THOROUGH mode
+      this.toolsUsed.push({
+        name: event.message || 'Tool',
+        message: event.detail || event.message || 'Executing tool',
+        icon: event.icon || 'ri-tools-line'
+      });
+      console.log('🔧 Tool captured:', this.toolsUsed[this.toolsUsed.length - 1]);
       this.cdr.detectChanges();
     }
   }
