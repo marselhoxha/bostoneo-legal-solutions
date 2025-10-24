@@ -406,8 +406,8 @@
                 </li>
               </ul>
 
-              <!-- Bottom Search Bar (Fixed to viewport bottom - only visible when conversation in view) -->
-              <div class="bottom-search-bar" *ngIf="showChat && showBottomSearchBar && isConversationInView">
+              <!-- Bottom Search Bar (Fixed to viewport bottom) -->
+              <div class="bottom-search-bar" *ngIf="showChat && showBottomSearchBar">
                 <form (ngSubmit)="performSearch()">
                   <div class="search-input-wrapper">
                     <div class="search-icon">

@@ -502,7 +502,6 @@
   .chat-conversation {
     background: var(--vz-body-bg);
     padding: 0.75rem;
-    padding-bottom: 180px; // Space for fixed bottom search bar
     max-width: 1200px; // Default for laptop
     margin: 0 auto;
     width: 100%;
@@ -1471,8 +1470,10 @@
         white-space: normal;
         font-weight: 500;
         transition: all 0.2s ease;
-
-       
+        max-width: 100%;
+        word-break: break-word;
+        hyphens: auto;
+        line-height: 1.4;
       }
     }
 

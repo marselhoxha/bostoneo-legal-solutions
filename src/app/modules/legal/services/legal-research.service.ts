@@ -10,6 +10,47 @@ export interface ConversationMessage {
   timestamp: Date;
 }
 
+// Backend conversation interfaces
+export interface AiConversationSession {
+  id?: number;
+  userId: number;
+  sessionName?: string;
+  sessionType?: string;
+  caseId?: number;
+  practiceArea?: string;
+  contextSummary?: string;
+  primaryTopic?: string;
+  keyEntities?: any;
+  isActive?: boolean;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  messageCount?: number;
+  totalTokensUsed?: number;
+  totalCostUsd?: number;
+  createdAt?: Date;
+  lastInteractionAt?: Date;
+  archivedAt?: Date;
+  messages?: AiConversationMessage[];
+}
+
+export interface AiConversationMessage {
+  id?: number;
+  role: string;
+  content: string;
+  modelUsed?: string;
+  tokensUsed?: number;
+  costUsd?: number;
+  metadata?: any;
+  ragContextUsed?: boolean;
+  temperature?: number;
+  userRating?: number;
+  userFeedback?: string;
+  wasHelpful?: boolean;
+  createdAt?: Date;
+  isTyping?: boolean;
+  collapsed?: boolean;
+}
+
 export interface LegalSearchRequest {
   query: string;
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines';
@@ -118,6 +159,7 @@ export interface SearchSuggestion {
 })
 export class LegalResearchService {
   private apiUrl = `${environment.apiUrl}/api/ai/legal-research`;
+  private conversationApiUrl = `${environment.apiUrl}/api/legal/research/conversations`;
 
   private searchStatusSubject = new BehaviorSubject<string>('idle');
   public searchStatus$ = this.searchStatusSubject.asObservable();
@@ -418,5 +460,133 @@ export class LegalResearchService {
   // Health check
   healthCheck(): Observable<any> {
     return this.http.get(`${this.apiUrl}/health`, { withCredentials: true });
+  }
+
+  // ============================================
+  // Conversation Persistence Methods
+  // ============================================
+
+  /**
+   * Get or create a conversation session
+   */
+  getOrCreateConversationSession(
+    sessionId: number | null,
+    userId: number,
+    caseId: number,
+    title: string
+  ): Observable<AiConversationSession> {
+    return this.http.post<any>(
+      `${this.conversationApiUrl}/session`,
+      { sessionId, userId, caseId, title },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.data.session),
+      catchError(error => {
+        console.error('Failed to get/create conversation session:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Add a message to a conversation session
+   */
+  addMessageToSession(
+    sessionId: number,
+    userId: number,
+    role: 'user' | 'assistant',
+    content: string
+  ): Observable<AiConversationMessage> {
+    return this.http.post<any>(
+      `${this.conversationApiUrl}/${sessionId}/messages`,
+      { userId, role, content },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.data.message),
+      catchError(error => {
+        console.error('Failed to add message to session:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get all conversations for a case
+   */
+  getConversationsForCase(caseId: number, userId: number): Observable<AiConversationSession[]> {
+    return this.http.get<any>(
+      `${this.conversationApiUrl}/case/${caseId}`,
+      {
+        params: { userId: userId.toString() },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => response.data.conversations || []),
+      catchError(error => {
+        console.error('Failed to get conversations for case:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get a specific conversation with all messages
+   */
+  getConversation(sessionId: number, userId: number): Observable<{
+    conversation: AiConversationSession;
+    messages: AiConversationMessage[];
+  }> {
+    return this.http.get<any>(
+      `${this.conversationApiUrl}/${sessionId}`,
+      {
+        params: { userId: userId.toString() },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => ({
+        conversation: response.data.conversation,
+        messages: response.data.messages || []
+      })),
+      catchError(error => {
+        console.error('Failed to get conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Delete a conversation
+   */
+  deleteConversation(sessionId: number, userId: number): Observable<boolean> {
+    return this.http.delete<any>(
+      `${this.conversationApiUrl}/${sessionId}`,
+      {
+        params: { userId: userId.toString() },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => response.statusCode === 200),
+      catchError(error => {
+        console.error('Failed to delete conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Update conversation title
+   */
+  updateConversationTitle(sessionId: number, userId: number, title: string): Observable<boolean> {
+    return this.http.put<any>(
+      `${this.conversationApiUrl}/${sessionId}/title`,
+      { userId, title },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.statusCode === 200),
+      catchError(error => {
+        console.error('Failed to update conversation title:', error);
+        return throwError(() => error);
+      })
+    );
   }
 }

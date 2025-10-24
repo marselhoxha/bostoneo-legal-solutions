@@ -1,0 +1,43 @@
+package com.bostoneo.bostoneosolutions.repository;
+
+import com.bostoneo.bostoneosolutions.model.AiConversationSession;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface AiConversationSessionRepository extends JpaRepository<AiConversationSession, Long> {
+
+    /**
+     * Find all sessions for a specific case and user
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.sessionType = 'legal_research' ORDER BY s.lastInteractionAt DESC")
+    List<AiConversationSession> findByCaseIdAndUserIdAndSessionType(
+            @Param("caseId") Long caseId,
+            @Param("userId") Long userId
+    );
+
+    /**
+     * Find all active sessions for a user
+     */
+    List<AiConversationSession> findByUserIdAndIsActiveTrue(Long userId);
+
+    /**
+     * Find all pinned sessions for a user
+     */
+    List<AiConversationSession> findByUserIdAndIsPinnedTrue(Long userId);
+
+    /**
+     * Find session by ID and user (for security)
+     */
+    Optional<AiConversationSession> findByIdAndUserId(Long id, Long userId);
+
+    /**
+     * Check if session exists for user (for security)
+     */
+    boolean existsByIdAndUserId(Long id, Long userId);
+}

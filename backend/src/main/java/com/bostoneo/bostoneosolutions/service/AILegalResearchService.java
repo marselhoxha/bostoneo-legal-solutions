@@ -32,6 +32,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -1611,12 +1612,18 @@ public class AILegalResearchService {
             prompt.append("4. End with 2-3 brief follow-up questions in this EXACT format:\n");
             prompt.append("   ## Follow-up Questions\n");
             prompt.append("   \n");
-            prompt.append("   ⚠️ CRITICAL: Questions must be LEGAL RESEARCH REQUESTS the user would ask the AI.\n");
-            prompt.append("   ✅ CORRECT: \"What case law supports [legal issue]?\" or \"What are the requirements for [procedure]?\"\n");
-            prompt.append("   ❌ WRONG: \"What documents do you have?\" or \"What did the opposing party say?\"\n");
+            prompt.append("   ⚠️ CRITICAL: Questions must be:\n");
+            prompt.append("   - MAXIMUM 80 CHARACTERS (strict limit for UI display)\n");
+            prompt.append("   - LEGAL RESEARCH REQUESTS the user would ask the AI\n");
+            prompt.append("   - Focus on ONE specific aspect per question\n");
             prompt.append("   \n");
-            prompt.append("   1. [legal research question user would ask]\n");
-            prompt.append("   2. [legal research question user would ask]\n\n");
+            prompt.append("   ✅ GOOD: \"What case law supports qualified immunity defense?\" (52 chars)\n");
+            prompt.append("   ✅ GOOD: \"How do courts interpret 8 CFR § 1003.38?\" (44 chars)\n");
+            prompt.append("   ❌ TOO LONG: \"What case law from the First Circuit supports qualified immunity defense in excessive force claims?\" (103 chars - VIOLATES LIMIT)\n");
+            prompt.append("   ❌ WRONG TYPE: \"What documents do you have?\" (asks user for info, not legal research)\n");
+            prompt.append("   \n");
+            prompt.append("   1. [legal research question - max 80 chars]\n");
+            prompt.append("   2. [legal research question - max 80 chars]\n\n");
 
         // NARROW_TECHNICAL: Simplified format (just answer + citation)
         } else if (questionType == QuestionType.NARROW_TECHNICAL) {
@@ -1634,11 +1641,16 @@ public class AILegalResearchService {
             prompt.append("- End with 2-3 follow-up questions in EXACT format:\n");
             prompt.append("  ## Follow-up Questions\n");
             prompt.append("  \n");
-            prompt.append("  ⚠️ Questions must be LEGAL RESEARCH REQUESTS (not factual questions about the case).\n");
-            prompt.append("  Example: \"What case law interprets [statute]?\" NOT \"What documents do you have?\"\n");
+            prompt.append("  ⚠️ CRITICAL: Questions must be:\n");
+            prompt.append("  - MAXIMUM 80 CHARACTERS (strict limit)\n");
+            prompt.append("  - LEGAL RESEARCH REQUESTS (not factual questions)\n");
             prompt.append("  \n");
-            prompt.append("  1. [legal research question]\n");
-            prompt.append("  2. [legal research question]\n\n");
+            prompt.append("  ✅ GOOD: \"What case law interprets Mass. R. Evid. 407?\" (49 chars)\n");
+            prompt.append("  ❌ TOO LONG: \"What case law from Massachusetts courts interprets the subsequent remedial measures rule?\" (93 chars)\n");
+            prompt.append("  ❌ WRONG: \"What documents do you have?\" (asks user for info)\n");
+            prompt.append("  \n");
+            prompt.append("  1. [legal research question - max 80 chars]\n");
+            prompt.append("  2. [legal research question - max 80 chars]\n\n");
 
             prompt.append("DO NOT provide full case analysis or multiple arguments - keep it focused.\n\n");
 
@@ -1673,17 +1685,20 @@ public class AILegalResearchService {
 
             prompt.append("## Follow-up Questions\n");
             prompt.append("Suggest 3-5 relevant follow-up questions that the USER would ask YOU (the AI) to research.\n\n");
-            prompt.append("⚠️ CRITICAL RULE: Questions must be LEGAL RESEARCH REQUESTS, not factual questions.\n\n");
-            prompt.append("✅ CORRECT FORMAT (user asking AI to research legal issues):\n");
-            prompt.append("- \"What case law supports [legal argument]?\"\n");
-            prompt.append("- \"What are the procedural requirements for [filing/motion]?\"\n");
-            prompt.append("- \"What legal standards apply to [issue]?\"\n");
-            prompt.append("- \"How do courts interpret [statute/rule]?\"\n\n");
-            prompt.append("❌ WRONG FORMAT (AI asking user for facts - DO NOT USE):\n");
+            prompt.append("⚠️ CRITICAL RULES:\n");
+            prompt.append("1. MAXIMUM 80 CHARACTERS per question (strict limit for UI display)\n");
+            prompt.append("2. Questions must be LEGAL RESEARCH REQUESTS, not factual questions\n");
+            prompt.append("3. Focus on ONE specific aspect per question\n\n");
+            prompt.append("✅ GOOD EXAMPLES (user asking AI to research legal issues):\n");
+            prompt.append("- \"What case law supports summary judgment on standing?\" (56 chars)\n");
+            prompt.append("- \"What are the requirements for Rule 23 class certification?\" (63 chars)\n");
+            prompt.append("- \"How do courts interpret the Daubert standard?\" (48 chars)\n\n");
+            prompt.append("❌ TOO LONG EXAMPLES (violate 80 char limit):\n");
+            prompt.append("- \"What case law from the First Circuit supports summary judgment on Article III standing issues?\" (96 chars - TOO LONG)\n");
+            prompt.append("- \"What are the procedural requirements for filing a motion for class certification under Rule 23?\" (98 chars - TOO LONG)\n\n");
+            prompt.append("❌ WRONG TYPE (AI asking user for facts - DO NOT USE):\n");
             prompt.append("- \"What documents do you have?\" (asking user for information)\n");
-            prompt.append("- \"What did opposing counsel say?\" (asking user for facts)\n");
-            prompt.append("- \"What is the value of the property?\" (asking user for data)\n\n");
-            prompt.append("Format each as a complete, specific question (10+ words) related to the case.\n\n");
+            prompt.append("- \"What did opposing counsel say?\" (asking user for facts)\n\n");
         }
 
         // Add category-specific additions
@@ -2316,7 +2331,7 @@ public class AILegalResearchService {
 
         // Simple relevance calculation - count query term occurrences
         long count = Arrays.stream(lowerQuery.split("\\s+"))
-            .mapToLong(term -> lowerText.split(term).length - 1)
+            .mapToLong(term -> lowerText.split(Pattern.quote(term)).length - 1)
             .sum();
 
         return (double) count;

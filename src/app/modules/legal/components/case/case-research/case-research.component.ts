@@ -16,9 +16,9 @@ import { CalendarService } from '../../../services/calendar.service';
 
 // Conversation interface for multi-conversation support
 interface Conversation {
-  id: string;
+  id: string; // Frontend UUID for local tracking
   title: string;
-  sessionId: number;
+  sessionId: number; // Backend session ID
   createdAt: Date;
   lastUpdated: Date;
   messages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean }[];
@@ -94,7 +94,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Scroll tracking for bottom search bar
   showBottomSearchBar: boolean = false;
-  private scrollThreshold: number = 100; // Show after scrolling 100px
+  private scrollThreshold: number = 0.99; // Show after scrolling 10% (percentage-based, like IntersectionObserver)
   isConversationInView: boolean = false; // Track if conversation is visible in viewport
   private conversationObserver?: IntersectionObserver;
   private conversationScrollListener?: () => void;
@@ -110,36 +110,16 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('===== RESEARCH COMPONENT INIT =====');
-    console.log('🔍 CaseResearchComponent initialized with caseId:', this.caseId);
-    console.log('📊 showChat:', this.showChat);
-    console.log('📊 isSearching:', this.isSearching);
-    console.log('📊 aiThinking:', this.aiThinking);
-    console.log('📊 chatMessages.length:', this.chatMessages.length);
-    console.log('📊 HERO SHOULD SHOW:', !this.showChat && !this.isSearching);
-    console.log('===================================');
-
-    // TEMPORARY: Clear chat history to test hero section
-    // localStorage.removeItem(this.getChatHistoryKey());
-
+   
     // Load conversations for this case
+    // Note: createNewConversation is called inside loadConversations if needed
     this.loadConversations();
-
-    // If no conversations exist, create first one
-    if (this.conversations.length === 0) {
-      this.createNewConversation();
-    }
 
     // Don't load pending actions on init to avoid duplicates
     // Actions will be generated fresh from each search
 
     // Force change detection to ensure component renders
     setTimeout(() => {
-      console.log('===== 1 SECOND AFTER INIT =====');
-      console.log('📊 showChat:', this.showChat);
-      console.log('📊 isSearching:', this.isSearching);
-      console.log('📊 HERO SHOULD SHOW:', !this.showChat && !this.isSearching);
-      console.log('================================');
       this.cdr.detectChanges();
     }, 1000);
   }
@@ -159,11 +139,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const conversationElement = this.elementRef.nativeElement.querySelector('.chat-conversation');
 
     if (!conversationElement) {
-      console.log('Conversation element not found yet, will retry later');
       return;
     }
 
-    console.log('Setting up scroll observers for conversation');
     this.observersSetup = true;
 
     // IntersectionObserver for viewport visibility
@@ -171,13 +149,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       (entries) => {
         entries.forEach((entry) => {
           this.isConversationInView = entry.isIntersecting;
-          console.log('Conversation in view:', entry.isIntersecting);
           this.cdr.detectChanges();
         });
       },
       {
         root: null, // viewport
-        threshold: 0.9 // Trigger when at least 10% of conversation is visible
+        threshold: 0.9 // Trigger when at least 90% of conversation is visible
       }
     );
 
@@ -186,21 +163,19 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     // Scroll listener for the conversation element's internal scroll
     this.conversationScrollListener = () => {
       const scrollTop = conversationElement.scrollTop;
-      const shouldShow = scrollTop > this.scrollThreshold;
+      const scrollHeight = conversationElement.scrollHeight;
+      const clientHeight = conversationElement.clientHeight;
 
-      console.log('Conversation scroll:', {
-        scrollTop,
-        threshold: this.scrollThreshold,
-        shouldShow,
-        currentShow: this.showBottomSearchBar
-      });
+      // Calculate scroll percentage (0.0 = top, 1.0 = bottom)
+      const maxScroll = scrollHeight - clientHeight;
+      const scrollPercentage = maxScroll > 0 ? scrollTop / maxScroll : 0;
 
-      this.showBottomSearchBar = shouldShow;
+      // Show bottom bar when scrolled past threshold (e.g., 10% down)
+      this.showBottomSearchBar = scrollPercentage > this.scrollThreshold;
       this.cdr.detectChanges();
     };
 
     conversationElement.addEventListener('scroll', this.conversationScrollListener);
-    console.log('Scroll observers setup complete');
   }
 
   ngOnDestroy(): void {
@@ -241,14 +216,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  // Chat History Management
-  private getConversationsKey(): string {
-    return `legal_research_conversations_${this.caseId}`;
-  }
-
-  private generateConversationId(): string {
-    return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+  // Chat History Management - now using backend persistence
 
   private generateConversationTitle(firstMessage: string): string {
     // Generate title from first 50 characters of first user message
@@ -262,62 +230,102 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   loadConversations(): void {
     if (!this.caseId) return;
 
-    try {
-      const conversationsKey = this.getConversationsKey();
-      const savedData = localStorage.getItem(conversationsKey);
+    console.log('💬 Loading conversations from backend for case:', this.caseId);
 
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
+    this.legalResearchService.getConversationsForCase(parseInt(this.caseId), this.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (sessions) => {
+          console.log('✅ Loaded sessions from backend:', sessions);
 
-        // Convert timestamps back to Date objects
-        this.conversations = parsed.conversations.map((conv: any) => ({
-          ...conv,
-          createdAt: new Date(conv.createdAt),
-          lastUpdated: new Date(conv.lastUpdated),
-          messages: conv.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }));
+          // Map backend sessions to frontend conversation format
+          this.conversations = sessions.map(session => ({
+            id: session.id!.toString(), // Use backend ID as string for frontend
+            title: session.sessionName || 'Untitled Conversation',
+            sessionId: session.id!,
+            createdAt: session.createdAt ? new Date(session.createdAt) : new Date(),
+            lastUpdated: session.lastInteractionAt ? new Date(session.lastInteractionAt) : new Date(),
+            messages: [], // Messages will be loaded when conversation is activated
+            followUpQuestions: []
+          }));
 
-        this.activeConversationId = parsed.activeConversationId;
+          // If no conversations exist after loading, create the first one
+          if (this.conversations.length === 0) {
+            console.log('📝 No conversations found, creating first conversation');
+            this.createNewConversation();
+          } else {
+            // Set active conversation to most recent if none set
+            if (!this.activeConversationId) {
+              this.activeConversationId = this.conversations[0].id;
+              this.loadActiveConversation();
+            } else if (this.activeConversationId) {
+              this.loadActiveConversation();
+            }
+          }
 
-        // Load active conversation
-        if (this.activeConversationId) {
-          this.loadActiveConversation();
+          console.log('💬 Loaded conversations:', this.conversations.length);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading conversations from backend:', error);
+          this.conversations = [];
+          this.activeConversationId = null;
+          // Create first conversation on error as fallback
+          this.createNewConversation();
         }
-
-        console.log('💬 Loaded conversations:', this.conversations.length);
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-      this.conversations = [];
-      this.activeConversationId = null;
-    }
+      });
   }
 
   loadActiveConversation(): void {
     const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
 
     if (activeConv) {
-      this.chatMessages = activeConv.messages;
-      this.followUpQuestions = activeConv.followUpQuestions;
-      this.currentSessionId = activeConv.sessionId;
-      this.showChat = activeConv.messages.length > 0;
+      console.log('🔄 Loading active conversation from backend:', activeConv.sessionId);
 
-      console.log('✅ Loaded active conversation:', activeConv.title);
+      // Load messages from backend
+      this.legalResearchService.getConversation(activeConv.sessionId, this.userId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (data) => {
+            console.log('✅ Loaded conversation messages:', data.messages.length);
 
-      // Load action suggestions from backend
-      this.loadActionSuggestionsFromBackend();
+            // Map backend messages to frontend format
+            this.chatMessages = data.messages.map(msg => ({
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+              timestamp: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+              isTyping: msg.isTyping,
+              collapsed: msg.collapsed
+            }));
 
-      this.cdr.detectChanges();
+            this.followUpQuestions = activeConv.followUpQuestions;
+            this.currentSessionId = activeConv.sessionId;
+            this.showChat = this.chatMessages.length > 0;
 
-      // Set up scroll observers if chat is showing
-      if (this.showChat) {
-        setTimeout(() => {
-          this.setupScrollObservers();
-        }, 100);
-      }
+            console.log('✅ Loaded active conversation:', activeConv.title);
+
+            // Load action suggestions from backend
+            this.loadActionSuggestionsFromBackend();
+
+            this.cdr.detectChanges();
+
+            // Set up scroll observers if chat is showing
+            if (this.showChat) {
+              setTimeout(() => {
+                this.setupScrollObservers();
+              }, 100);
+            }
+          },
+          error: (error) => {
+            console.error('Error loading conversation messages:', error);
+            // Fall back to empty state
+            this.chatMessages = [];
+            this.followUpQuestions = [];
+            this.currentSessionId = activeConv.sessionId;
+            this.showChat = false;
+            this.cdr.detectChanges();
+          }
+        });
     }
   }
 
@@ -368,73 +376,102 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   saveConversations(): void {
-    if (!this.caseId) return;
-
-    try {
-      // Update active conversation with current state
-      if (this.activeConversationId) {
-        const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
-        if (activeConv) {
-          activeConv.messages = this.chatMessages;
-          activeConv.followUpQuestions = this.followUpQuestions;
-          activeConv.lastUpdated = new Date();
-          activeConv.sessionId = this.currentSessionId;
-
-          // Update title from first user message if empty
-          if (!activeConv.title || activeConv.title === 'New Conversation') {
-            const firstUserMsg = this.chatMessages.find(m => m.role === 'user');
-            if (firstUserMsg) {
-              activeConv.title = this.generateConversationTitle(firstUserMsg.content);
-            }
-          }
+    // This method is now deprecated - messages are saved to backend as they're added
+    // Keeping this stub for compatibility with existing code
+    // Update title if needed
+    if (this.activeConversationId && this.caseId) {
+      const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+      if (activeConv && (!activeConv.title || activeConv.title === 'New Conversation')) {
+        const firstUserMsg = this.chatMessages.find(m => m.role === 'user');
+        if (firstUserMsg) {
+          const newTitle = this.generateConversationTitle(firstUserMsg.content);
+          this.legalResearchService.updateConversationTitle(activeConv.sessionId, this.userId, newTitle)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: () => {
+                activeConv.title = newTitle;
+                console.log('✅ Updated conversation title:', newTitle);
+              },
+              error: (error) => console.error('Error updating conversation title:', error)
+            });
         }
       }
-
-      const conversationsKey = this.getConversationsKey();
-      const data = {
-        conversations: this.conversations,
-        activeConversationId: this.activeConversationId
-      };
-
-      localStorage.setItem(conversationsKey, JSON.stringify(data));
-      console.log('💾 Saved conversations');
-    } catch (error) {
-      console.error('Error saving conversations:', error);
     }
   }
 
+  /**
+   * Save a single message to the backend
+   */
+  saveMessageToBackend(role: 'user' | 'assistant', content: string): void {
+    if (!this.activeConversationId) return;
+
+    const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+    if (!activeConv) return;
+
+    this.legalResearchService.addMessageToSession(activeConv.sessionId, this.userId, role, content)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (message) => {
+          console.log('✅ Saved message to backend:', message.id);
+        },
+        error: (error) => {
+          console.error('❌ Error saving message to backend:', error);
+        }
+      });
+  }
+
   createNewConversation(): void {
-    // Save current conversation before creating new one
-    if (this.activeConversationId) {
-      this.saveConversations();
-    }
+    if (!this.caseId) return;
 
-    // Create new conversation
-    const newConv: Conversation = {
-      id: this.generateConversationId(),
-      title: 'New Conversation',
-      sessionId: Date.now(), // Generate unique session ID
-      createdAt: new Date(),
-      lastUpdated: new Date(),
-      messages: [],
-      followUpQuestions: []
-    };
+    console.log('🆕 Creating new conversation on backend...');
 
-    this.conversations.unshift(newConv); // Add to beginning
-    this.activeConversationId = newConv.id;
-    this.currentSessionId = newConv.sessionId;
+    // Create new session on backend
+    this.legalResearchService.getOrCreateConversationSession(
+      null, // No existing session ID
+      this.userId,
+      parseInt(this.caseId),
+      'New Conversation'
+    ).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (session) => {
+          console.log('✅ Created new session on backend:', session.id);
 
-    // Reset UI state
-    this.chatMessages = [];
-    this.followUpQuestions = [];
-    this.actionSuggestions = [];
-    this.showChat = false;
-    this.searchQuery = '';
+          // Create frontend conversation object
+          const newConv: Conversation = {
+            id: session.id!.toString(),
+            title: session.sessionName || 'New Conversation',
+            sessionId: session.id!,
+            createdAt: session.createdAt ? new Date(session.createdAt) : new Date(),
+            lastUpdated: session.lastInteractionAt ? new Date(session.lastInteractionAt) : new Date(),
+            messages: [],
+            followUpQuestions: []
+          };
 
-    this.saveConversations();
-    this.cdr.detectChanges();
+          this.conversations.unshift(newConv); // Add to beginning
+          this.activeConversationId = newConv.id;
+          this.currentSessionId = newConv.sessionId;
 
-    console.log('🆕 Created new conversation:', newConv.id);
+          // Reset UI state
+          this.chatMessages = [];
+          this.followUpQuestions = [];
+          this.actionSuggestions = [];
+          this.showChat = false;
+          this.searchQuery = '';
+
+          this.cdr.detectChanges();
+
+          console.log('🆕 Created new conversation:', newConv.id);
+        },
+        error: (error) => {
+          console.error('❌ Error creating new conversation:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Failed to create new conversation',
+            icon: 'error',
+            timer: 3000
+          });
+        }
+      });
   }
 
   switchConversation(conversationId: string): void {
@@ -442,9 +479,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showConversationList = false;
       return;
     }
-
-    // Save current conversation
-    this.saveConversations();
 
     // Switch to new conversation
     this.activeConversationId = conversationId;
@@ -471,28 +505,47 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       buttonsStyling: false
     }).then((result) => {
       if (result.isConfirmed) {
-        // Remove conversation from list
-        this.conversations = this.conversations.filter(c => c.id !== conversationId);
+        const conv = this.conversations.find(c => c.id === conversationId);
+        if (!conv) return;
 
-        // If deleting active conversation, switch to another or create new
-        if (conversationId === this.activeConversationId) {
-          if (this.conversations.length > 0) {
-            this.activeConversationId = this.conversations[0].id;
-            this.loadActiveConversation();
-          } else {
-            this.createNewConversation();
-          }
-        }
+        // Delete from backend
+        this.legalResearchService.deleteConversation(conv.sessionId, this.userId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (success) => {
+              if (success) {
+                // Remove conversation from local list
+                this.conversations = this.conversations.filter(c => c.id !== conversationId);
 
-        this.saveConversations();
+                // If deleting active conversation, switch to another or create new
+                if (conversationId === this.activeConversationId) {
+                  if (this.conversations.length > 0) {
+                    this.activeConversationId = this.conversations[0].id;
+                    this.loadActiveConversation();
+                  } else {
+                    this.createNewConversation();
+                  }
+                }
 
-        Swal.fire({
-          title: 'Deleted!',
-          text: 'Conversation has been deleted.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+                Swal.fire({
+                  title: 'Deleted!',
+                  text: 'Conversation has been deleted.',
+                  icon: 'success',
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+              }
+            },
+            error: (error) => {
+              console.error('Error deleting conversation:', error);
+              Swal.fire({
+                title: 'Error',
+                text: 'Failed to delete conversation',
+                icon: 'error',
+                timer: 3000
+              });
+            }
+          });
       }
     });
   }
@@ -555,13 +608,17 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.connectToSSE(this.searchSessionId);
 
     // Add user message to chat
-    this.chatMessages.push({
-      role: 'user',
+    const userMessage = {
+      role: 'user' as const,
       content: this.searchQuery,
       timestamp: new Date()
-    });
+    };
+    this.chatMessages.push(userMessage);
 
-    // Save conversation after adding user message
+    // Save user message to backend
+    this.saveMessageToBackend('user', this.searchQuery);
+
+    // Update conversation title if needed
     this.saveConversations();
 
     const searchRequest: LegalSearchRequest = {
@@ -644,34 +701,28 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       collapsed: false
     };
 
-    // CRITICAL FIX: Add response to the conversation that initiated the search,
-    // not the currently active conversation (user may have switched)
+    // Add message to UI immediately if we're viewing the conversation that initiated the search
+    if (this.activeConversationId === this.searchConversationId) {
+      this.chatMessages.push(message);
+      console.log('✅ Added AI response to chatMessages for immediate display');
+      this.cdr.detectChanges();
+    } else {
+      console.log('⚠️ User switched conversations - response will be loaded when they switch back');
+    }
+
+    // Also keep conversation object in sync
     const targetConversation = this.conversations.find(c => c.id === this.searchConversationId);
     if (targetConversation) {
       targetConversation.messages.push(message);
       targetConversation.lastUpdated = new Date();
-      console.log('✅ Added AI response to conversation:', this.searchConversationId);
-
-      // Update view reference if we're viewing the same conversation
-      // IMPORTANT: Don't push again! chatMessages is a reference to the same array
-      if (this.activeConversationId === this.searchConversationId) {
-        // Just trigger change detection - message already added to the array
-        this.cdr.detectChanges();
-      } else {
-        console.log('⚠️ User switched conversations - response added to', this.searchConversationId, 'but viewing', this.activeConversationId);
-      }
-    } else {
-      // Fallback: add to current messages (shouldn't happen, but prevents lost responses)
-      console.warn('⚠️ Could not find target conversation, adding to current view');
-      this.chatMessages.push(message);
     }
 
     this.aiThinking = false;
     this.isSearching = false;
     this.cdr.detectChanges();
 
-    // Save conversation immediately
-    this.saveConversations();
+    // Save AI message to backend
+    this.saveMessageToBackend('assistant', cleanedMessage);
   }
 
   extractAndRemoveFollowUpQuestions(aiResponse: string): string {
@@ -688,6 +739,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         this.followUpQuestions = questionMatches
           .map(q => q.replace(/^[-•*]\s*/, '').trim())
           .map(q => q.replace(/\*\*/g, '')) // Remove all ** (bold markdown)
+          .map(q => q.length > 80 ? q.substring(0, 77) + '...' : q) // Truncate to 80 chars max
           .filter(q => q.length > 0)
           .slice(0, 5); // Limit to 5 questions
       }
