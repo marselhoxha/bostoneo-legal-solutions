@@ -8,8 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.*;
 import java.util.List;
@@ -67,7 +70,35 @@ public class ClaudeSonnet4Service implements AIService {
                     }
                 })
                 .map(this::extractTextFromResponse)
+                // Add retry logic with exponential backoff for transient failures
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))  // 3 retries: 2s, 4s, 8s
+                        .filter(e -> {
+                            // Only retry on connection/network errors, not API errors
+                            boolean shouldRetry = e instanceof WebClientRequestException ||
+                                    e.getMessage() != null && (
+                                            e.getMessage().contains("Connection reset") ||
+                                            e.getMessage().contains("Connection refused") ||
+                                            e.getMessage().contains("Connection closed") ||
+                                            e.getMessage().contains("Broken pipe"));
+                            if (shouldRetry) {
+                                log.warn("Transient error detected, will retry: {}", e.getMessage());
+                            }
+                            return shouldRetry;
+                        })
+                        .doAfterRetry(retrySignal -> {
+                            log.warn("Retry attempt {} after {}ms",
+                                    retrySignal.totalRetries() + 1,
+                                    retrySignal.totalRetriesInARow() * 2000);
+                        })
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                            log.error("Retry exhausted after {} attempts", retrySignal.totalRetries());
+                            Throwable lastError = retrySignal.failure();
+                            return new RuntimeException("AI service unavailable after " + retrySignal.totalRetries() + " retries: " + lastError.getMessage(), lastError);
+                        }))
                 .onErrorMap(e -> {
+                    if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("AI service unavailable after")) {
+                        return e;  // Already wrapped with retry info
+                    }
                     log.error("Error calling Claude API: {}", e.getMessage(), e);
                     return new RuntimeException("AI service unavailable: " + e.getMessage(), e);
                 })

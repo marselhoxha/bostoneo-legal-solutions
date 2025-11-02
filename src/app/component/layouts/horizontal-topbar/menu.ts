@@ -71,6 +71,12 @@ export const MENU: MenuItem[] = [
         parentId: 5
       },
       {
+        id: 'ai-workspace',
+        label: '✨ AI Workspace',
+        link: '/legal/ai-assistant/ai-workspace',
+        parentId: 5
+      },
+      {
         id: 'contract-risk-scanner',
         label: '🛡️ Contract Risk Scanner',
         link: '/legal/contract-risk-scanner',

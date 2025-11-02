@@ -26,11 +26,12 @@ interface Conversation {
 }
 import Swal from 'sweetalert2';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
+import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 
 @Component({
   selector: 'app-case-research',
   standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownToHtmlPipe],
+  imports: [CommonModule, FormsModule, MarkdownToHtmlPipe, ApexChartDirective],
   templateUrl: './case-research.component.html',
   styleUrls: ['./case-research.component.scss'],
   host: {
@@ -739,8 +740,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         this.followUpQuestions = questionMatches
           .map(q => q.replace(/^[-•*]\s*/, '').trim())
           .map(q => q.replace(/\*\*/g, '')) // Remove all ** (bold markdown)
-          .map(q => q.length > 80 ? q.substring(0, 77) + '...' : q) // Truncate to 80 chars max
           .filter(q => q.length > 0)
+          .filter(q => this.isValidFollowUpQuestion(q)) // Validate question quality
           .slice(0, 5); // Limit to 5 questions
       }
 
@@ -749,6 +750,31 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return aiResponse;
+  }
+
+  isValidFollowUpQuestion(question: string): boolean {
+    // Reject questions under 40 characters (likely fragments)
+    if (question.length < 40) {
+      console.log(`❌ Rejected follow-up question (too short): "${question}"`);
+      return false;
+    }
+
+    // Reject questions that are just punctuation or symbols
+    const onlyPunctuation = /^[\s\-\.\?\!,;:]+$/;
+    if (onlyPunctuation.test(question)) {
+      console.log(`❌ Rejected follow-up question (only punctuation): "${question}"`);
+      return false;
+    }
+
+    // Require questions to have action verbs or question words
+    const hasQuestionIndicators = /\b(find|does|what|how|can|should|is|are|will|would|could|may|might|has|have|when|where|which|who|why)\b/i;
+    if (!hasQuestionIndicators.test(question)) {
+      console.log(`❌ Rejected follow-up question (no question indicators): "${question}"`);
+      return false;
+    }
+
+    // Valid question
+    return true;
   }
 
   askFollowUpQuestion(question: string): void {

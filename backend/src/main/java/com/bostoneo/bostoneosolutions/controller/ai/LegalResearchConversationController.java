@@ -6,12 +6,14 @@ import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.service.LegalResearchConversationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static java.time.LocalDateTime.now;
 
@@ -279,8 +281,210 @@ public class LegalResearchConversationController {
         }
     }
 
+    /**
+     * Get all conversations for a user with pagination
+     * GET /api/legal/research/conversations?userId={userId}&page={page}&size={size}
+     */
+    @GetMapping
+    public ResponseEntity<HttpResponse> getAllUserConversations(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        try {
+            Page<AiConversationSession> conversations = conversationService.getAllUserConversations(userId, page, size);
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of(
+                                    "conversations", conversations.getContent(),
+                                    "totalPages", conversations.getTotalPages(),
+                                    "totalElements", conversations.getTotalElements(),
+                                    "currentPage", conversations.getNumber()
+                            ))
+                            .message("Conversations loaded successfully")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error loading conversations for user: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to load conversations: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    /**
+     * Get conversations filtered by task type
+     * GET /api/legal/research/conversations/task/{taskType}?userId={userId}&page={page}&size={size}
+     */
+    @GetMapping("/task/{taskType}")
+    public ResponseEntity<HttpResponse> getConversationsByTaskType(
+            @PathVariable String taskType,
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        try {
+            Page<AiConversationSession> conversations = conversationService.getConversationsByTaskType(taskType, userId, page, size);
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of(
+                                    "conversations", conversations.getContent(),
+                                    "totalPages", conversations.getTotalPages(),
+                                    "totalElements", conversations.getTotalElements(),
+                                    "currentPage", conversations.getNumber()
+                            ))
+                            .message("Conversations loaded successfully")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error loading conversations by task type {} for user: {}", taskType, userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to load conversations: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    /**
+     * Get ONLY general conversations (no caseId) filtered by task type
+     * GET /api/legal/research/conversations/general/task/{taskType}?userId={userId}&page={page}&size={size}
+     * Used by AI Workspace to exclude case-specific research conversations
+     */
+    @GetMapping("/general/task/{taskType}")
+    public ResponseEntity<HttpResponse> getGeneralConversationsByTaskType(
+            @PathVariable String taskType,
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        try {
+            Page<AiConversationSession> conversations = conversationService.getGeneralConversationsByTaskType(taskType, userId, page, size);
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of(
+                                    "conversations", conversations.getContent(),
+                                    "totalPages", conversations.getTotalPages(),
+                                    "totalElements", conversations.getTotalElements(),
+                                    "currentPage", conversations.getNumber()
+                            ))
+                            .message("General conversations loaded successfully")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error loading general conversations by task type {} for user: {}", taskType, userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to load general conversations: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    /**
+     * Create a new general conversation
+     * POST /api/legal/research/conversations
+     */
+    @PostMapping
+    public ResponseEntity<HttpResponse> createGeneralConversation(@RequestBody CreateConversationRequest request) {
+        try {
+            AiConversationSession session = conversationService.createGeneralConversation(
+                    request.userId(),
+                    request.title(),
+                    request.researchMode(),
+                    request.taskType()
+            );
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of("session", session))
+                            .message("Conversation created successfully")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error creating conversation", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to create conversation: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    /**
+     * Send query to conversation and get AI response
+     * POST /api/legal/research/conversations/{sessionId}/query
+     * Note: This is a synchronous endpoint to avoid async timeout issues with long AI responses
+     */
+    @PostMapping("/{sessionId}/query")
+    public ResponseEntity<HttpResponse> sendQuery(
+            @PathVariable Long sessionId,
+            @RequestBody QueryRequest request
+    ) {
+        try {
+            // Wait for the AI response synchronously to avoid async timeout
+            AiConversationMessage message = conversationService.sendMessageWithAIResponse(
+                    sessionId,
+                    request.userId(),
+                    request.query(),
+                    request.researchMode()
+            ).join(); // Block and wait for completion
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of("message", message))
+                            .message("Response generated successfully")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error sending query to session: {}", sessionId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to process query: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
     // Request DTOs
     record SessionRequest(Long sessionId, Long userId, Long caseId, String title) {}
     record MessageRequest(Long userId, String role, String content) {}
     record UpdateTitleRequest(Long userId, String title) {}
+    record CreateConversationRequest(Long userId, String title, String researchMode, String taskType) {}
+    record QueryRequest(Long userId, String query, String researchMode) {}
 }

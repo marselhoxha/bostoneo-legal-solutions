@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import io.netty.channel.ChannelOption;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 import java.time.Duration;
 
 @Configuration
@@ -65,13 +66,27 @@ public class AIConfig {
         log.info("=== CREATING ANTHROPIC WEBCLIENT ===");
         log.info("Base URL: {}", anthropicBaseUrl);
 
-        // Configure HTTP client with timeouts for agentic mode
-        // Use only responseTimeout - simpler and avoids conflicts with read/write handlers
-        HttpClient httpClient = HttpClient.create()
+        // Configure connection pool for production resilience
+        ConnectionProvider connectionProvider = ConnectionProvider.builder("anthropic-pool")
+                .maxConnections(50)  // Max 50 concurrent connections
+                .maxIdleTime(Duration.ofMinutes(5))  // Evict idle connections after 5 minutes
+                .maxLifeTime(Duration.ofMinutes(30)) // Force close connections after 30 minutes
+                .pendingAcquireTimeout(Duration.ofSeconds(60))  // Wait max 60s for connection from pool
+                .evictInBackground(Duration.ofMinutes(2))  // Check for idle connections every 2 minutes
+                .build();
+
+        // Configure HTTP client with timeouts + connection pool
+        HttpClient httpClient = HttpClient.create(connectionProvider)
+                // Connection timeouts
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000) // 30 seconds to connect
-                .responseTimeout(Duration.ofMinutes(10)); // 10 minutes max for agentic mode with multiple tool calls
+                .responseTimeout(Duration.ofMinutes(10)) // 10 minutes max for agentic mode with multiple tool calls
+
+                // Socket options for stability
+                .option(ChannelOption.SO_KEEPALIVE, true)  // Keep connections alive to detect broken connections
+                .option(ChannelOption.TCP_NODELAY, true);  // Disable Nagle algorithm for lower latency
 
         log.info("WebClient configured with timeouts: connect=30s, response=600s");
+        log.info("Connection pool: max=50, idle=5min, lifetime=30min, evict check=2min");
 
         // Don't set API key here - we'll inject it per request
         return WebClient.builder()

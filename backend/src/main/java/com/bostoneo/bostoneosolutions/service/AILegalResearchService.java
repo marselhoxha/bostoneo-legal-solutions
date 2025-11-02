@@ -628,6 +628,22 @@ public class AILegalResearchService {
 
         system.append("You are an expert legal research assistant providing counsel-ready analysis.\n\n");
 
+        // CRITICAL: Define audience - addressing attorney, not client
+        system.append("**CRITICAL - AUDIENCE**:\n");
+        system.append("You are addressing the ATTORNEY who represents the client in this case.\n");
+        system.append("- The attorney is your audience; the client is the subject of the case\n");
+        system.append("- Refer to the client in third person: \"your client\" or \"[client name]\" or \"the [party]\"\n");
+        system.append("- NEVER use \"you\" or \"your\" to address the client directly\n\n");
+        system.append("**CORRECT ATTORNEY PERSPECTIVE**:\n");
+        system.append("✅ \"Your client (the museum) faces a sophisticated dispute...\"\n");
+        system.append("✅ \"Advise the museum that it should consider filing...\"\n");
+        system.append("✅ \"The museum faces challenges in proving good faith purchase...\"\n");
+        system.append("✅ \"Counsel the defendant that they have strong suppression arguments...\"\n\n");
+        system.append("**INCORRECT CLIENT PERSPECTIVE** (NEVER USE):\n");
+        system.append("❌ \"Your museum faces a dispute...\" (addresses client directly)\n");
+        system.append("❌ \"You should file a motion...\" (addresses client, not attorney)\n");
+        system.append("❌ \"Your company violated regulations...\" (addresses client)\n\n");
+
         // COST & TIMELINE REQUIREMENTS (moved from user prompt for higher priority)
         system.append("**COST & TIMELINE REQUIREMENTS - HIGHEST PRIORITY**:\n");
         system.append("   - **MANDATORY**: Include practical cost estimates for ALL responses:\n");
@@ -929,6 +945,7 @@ public class AILegalResearchService {
 
                     // Client Information
                     prompt.append("\n**Client Information:**\n");
+                    prompt.append("(Remember: You are addressing the ATTORNEY representing this client, not the client themselves)\n");
                     prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
 
                     // CRITICAL INSTRUCTIONS FOR AI
@@ -1231,6 +1248,7 @@ public class AILegalResearchService {
                     prompt.append("- Current Procedural Stage: ").append(proceduralStage).append("\n");
 
                     prompt.append("\n**Client Information:**\n");
+                    prompt.append("(Remember: You are addressing the ATTORNEY representing this client, not the client themselves)\n");
                     prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
 
                     prompt.append("\n**CRITICAL INSTRUCTIONS - READ CAREFULLY**:\n");
@@ -1576,7 +1594,7 @@ public class AILegalResearchService {
             prompt.append("This is a multi-turn conversation. The following template format is DEFAULT ONLY.\n");
             prompt.append("**CONVERSATIONAL FLOW OVERRIDES TEMPLATE STRUCTURE.**\n");
             prompt.append("If this is a follow-up question:\n");
-            prompt.append("- Ignore rigid template formatting (Quick Answer / Key Points)\n");
+            prompt.append("- Ignore rigid template formatting (Strategic Analysis / Key Points)\n");
             prompt.append("- Use natural conversational language\n");
             prompt.append("- Reference prior messages with phrases like \"As we discussed...\" or \"Building on that...\"\n");
             prompt.append("- Focus ONLY on the new information being asked\n");
@@ -1589,7 +1607,7 @@ public class AILegalResearchService {
         // FOLLOW_UP_CLARIFICATION: Simplified conversational format (NO rigid template)
         if (questionType == QuestionType.FOLLOW_UP_CLARIFICATION) {
             prompt.append("**CONVERSATIONAL FORMAT** (Follow-Up Question):\n");
-            prompt.append("Since this is a follow-up, DO NOT use the \"Quick Answer / Key Points\" template structure.\n");
+            prompt.append("Since this is a follow-up, DO NOT use the \"Strategic Analysis / Key Points\" template structure.\n");
             prompt.append("Instead, provide a natural, conversational response:\n\n");
 
             prompt.append("1. Start with a conversational transition that EXPLICITLY references the prior discussion:\n");
@@ -1612,18 +1630,43 @@ public class AILegalResearchService {
             prompt.append("4. End with 2-3 brief follow-up questions in this EXACT format:\n");
             prompt.append("   ## Follow-up Questions\n");
             prompt.append("   \n");
-            prompt.append("   ⚠️ CRITICAL: Questions must be:\n");
-            prompt.append("   - MAXIMUM 80 CHARACTERS (strict limit for UI display)\n");
-            prompt.append("   - LEGAL RESEARCH REQUESTS the user would ask the AI\n");
-            prompt.append("   - Focus on ONE specific aspect per question\n");
+            prompt.append("   **ATTORNEY PSYCHOLOGY - How Attorneys Think About Follow-Ups**:\n");
+            prompt.append("   Attorneys ask follow-ups to:\n");
+            prompt.append("   • Hunt for PRECEDENT on specific scenarios (\"Find cases where...\")\n");
+            prompt.append("   • Identify EXCEPTIONS/COMPLICATIONS (\"What if defendant...\")\n");
+            prompt.append("   • Anticipate OPPOSITION's arguments (\"How will prosecution respond...\")\n");
+            prompt.append("   • Explore TACTICAL choices (\"Should I file X or Y first?\")\n");
+            prompt.append("   • Check JURISDICTION quirks (\"Does Mass. follow federal or differ?\")\n");
+            prompt.append("   • Address PROCEDURAL nuances (\"Does Local Rule apply here?\")\n");
             prompt.append("   \n");
-            prompt.append("   ✅ GOOD: \"What case law supports qualified immunity defense?\" (52 chars)\n");
-            prompt.append("   ✅ GOOD: \"How do courts interpret 8 CFR § 1003.38?\" (44 chars)\n");
-            prompt.append("   ❌ TOO LONG: \"What case law from the First Circuit supports qualified immunity defense in excessive force claims?\" (103 chars - VIOLATES LIMIT)\n");
-            prompt.append("   ❌ WRONG TYPE: \"What documents do you have?\" (asks user for info, not legal research)\n");
+            prompt.append("   Sound like experienced attorney planning next move, NOT law student learning concepts.\n");
             prompt.append("   \n");
-            prompt.append("   1. [legal research question - max 80 chars]\n");
-            prompt.append("   2. [legal research question - max 80 chars]\n\n");
+            prompt.append("   ⚠️ CRITICAL FORMAT RULES:\n");
+            prompt.append("   - MAXIMUM 80 CHARACTERS (strict UI limit)\n");
+            prompt.append("   - LEGAL RESEARCH REQUESTS (what attorney would ask AI)\n");
+            prompt.append("   - JURISDICTION-SPECIFIC (mention court/circuit/state)\n");
+            prompt.append("   - PRECEDENT-FOCUSED (\"Find cases...\", \"How does [court]...\")\n");
+            prompt.append("   - BUILD ON DISCUSSION (extend what was just covered)\n");
+            prompt.append("   \n");
+            prompt.append("   ✅ ATTORNEY-QUALITY (precedent-hunting, jurisdiction-specific):\n");
+            prompt.append("   - \"Find First Circuit cases denying qualified immunity for force\" (66 chars)\n");
+            prompt.append("   - \"Does exigent circumstances apply to welfare checks in Mass.?\" (63 chars)\n");
+            prompt.append("   - \"How does BIA interpret 'particular social group' for LGBTQ?\" (62 chars)\n");
+            prompt.append("   \n");
+            prompt.append("   ❌ LAW STUDENT QUALITY (conceptual, generic, not attorney-focused):\n");
+            prompt.append("   - \"What is qualified immunity?\" (too conceptual)\n");
+            prompt.append("   - \"What case law supports this?\" (too vague, no jurisdiction)\n");
+            prompt.append("   - \"How do courts interpret this?\" (generic, no specific court)\n");
+            prompt.append("   \n");
+            prompt.append("   ❌ TOO LONG (violates 80 char limit):\n");
+            prompt.append("   - \"What case law from First Circuit supports qualified immunity in excessive force?\" (83 chars)\n");
+            prompt.append("   \n");
+            prompt.append("   ❌ WRONG TYPE (asks user for info, not legal research):\n");
+            prompt.append("   - \"What documents do you have?\"\n");
+            prompt.append("   - \"What did opposing counsel say?\"\n");
+            prompt.append("   \n");
+            prompt.append("   1. [attorney-quality research question - max 80 chars]\n");
+            prompt.append("   2. [attorney-quality research question - max 80 chars]\n\n");
 
         // NARROW_TECHNICAL: Simplified format (just answer + citation)
         } else if (questionType == QuestionType.NARROW_TECHNICAL) {
@@ -1641,16 +1684,28 @@ public class AILegalResearchService {
             prompt.append("- End with 2-3 follow-up questions in EXACT format:\n");
             prompt.append("  ## Follow-up Questions\n");
             prompt.append("  \n");
-            prompt.append("  ⚠️ CRITICAL: Questions must be:\n");
+            prompt.append("  ⚠️ CRITICAL: Questions must be ATTORNEY-FOCUSED:\n");
             prompt.append("  - MAXIMUM 80 CHARACTERS (strict limit)\n");
-            prompt.append("  - LEGAL RESEARCH REQUESTS (not factual questions)\n");
+            prompt.append("  - PRECEDENT-HUNTING (\"Find cases\", \"How does [court] interpret\")\n");
+            prompt.append("  - JURISDICTION-SPECIFIC (mention specific court/state)\n");
+            prompt.append("  - EXCEPTION-FOCUSED (complications, not basic rules)\n");
             prompt.append("  \n");
-            prompt.append("  ✅ GOOD: \"What case law interprets Mass. R. Evid. 407?\" (49 chars)\n");
-            prompt.append("  ❌ TOO LONG: \"What case law from Massachusetts courts interprets the subsequent remedial measures rule?\" (93 chars)\n");
-            prompt.append("  ❌ WRONG: \"What documents do you have?\" (asks user for info)\n");
+            prompt.append("  ✅ ATTORNEY-QUALITY:\n");
+            prompt.append("  - \"Find Mass. cases on subsequent remedial measures exception\" (63 chars)\n");
+            prompt.append("  - \"How does First Circuit apply Daubert in fraud cases?\" (56 chars)\n");
+            prompt.append("  - \"Does Mass. R. Evid. 407 apply to strict liability claims?\" (62 chars)\n");
             prompt.append("  \n");
-            prompt.append("  1. [legal research question - max 80 chars]\n");
-            prompt.append("  2. [legal research question - max 80 chars]\n\n");
+            prompt.append("  ❌ LAW STUDENT QUALITY:\n");
+            prompt.append("  - \"What is the subsequent remedial measures rule?\" (too conceptual)\n");
+            prompt.append("  \n");
+            prompt.append("  ❌ TOO LONG:\n");
+            prompt.append("  - \"What case law from Massachusetts courts interprets subsequent remedial measures?\" (82 chars)\n");
+            prompt.append("  \n");
+            prompt.append("  ❌ WRONG TYPE:\n");
+            prompt.append("  - \"What documents do you have?\" (asks user for info)\n");
+            prompt.append("  \n");
+            prompt.append("  1. [attorney-quality research question - max 80 chars]\n");
+            prompt.append("  2. [attorney-quality research question - max 80 chars]\n\n");
 
             prompt.append("DO NOT provide full case analysis or multiple arguments - keep it focused.\n\n");
 
@@ -1665,7 +1720,7 @@ public class AILegalResearchService {
             prompt.append("- Avoid restating conclusions from earlier responses - reference and build on them\n");
             prompt.append("- Each answer should introduce new information, not repeat what was already said\n\n");
 
-            prompt.append("## Quick Answer\n");
+            prompt.append("## Strategic Analysis\n");
             prompt.append("Provide a direct, concise answer to the query (2-3 paragraphs). Include:\n");
             prompt.append("- The most relevant legal framework and authorities\n");
             prompt.append("- Key points specific to ").append(jurisdiction).append(" law\n");
@@ -1684,21 +1739,85 @@ public class AILegalResearchService {
             prompt.append("Only include if the response discusses outcomes or decisions the client must understand or choose between.\n\n");
 
             prompt.append("## Follow-up Questions\n");
-            prompt.append("Suggest 3-5 relevant follow-up questions that the USER would ask YOU (the AI) to research.\n\n");
-            prompt.append("⚠️ CRITICAL RULES:\n");
-            prompt.append("1. MAXIMUM 80 CHARACTERS per question (strict limit for UI display)\n");
-            prompt.append("2. Questions must be LEGAL RESEARCH REQUESTS, not factual questions\n");
-            prompt.append("3. Focus on ONE specific aspect per question\n\n");
-            prompt.append("✅ GOOD EXAMPLES (user asking AI to research legal issues):\n");
-            prompt.append("- \"What case law supports summary judgment on standing?\" (56 chars)\n");
-            prompt.append("- \"What are the requirements for Rule 23 class certification?\" (63 chars)\n");
-            prompt.append("- \"How do courts interpret the Daubert standard?\" (48 chars)\n\n");
-            prompt.append("❌ TOO LONG EXAMPLES (violate 80 char limit):\n");
-            prompt.append("- \"What case law from the First Circuit supports summary judgment on Article III standing issues?\" (96 chars - TOO LONG)\n");
-            prompt.append("- \"What are the procedural requirements for filing a motion for class certification under Rule 23?\" (98 chars - TOO LONG)\n\n");
-            prompt.append("❌ WRONG TYPE (AI asking user for facts - DO NOT USE):\n");
+            prompt.append("Suggest 3-5 relevant follow-up questions that the USER (attorney) would ask YOU (AI) to research.\n\n");
+            prompt.append("🚨 MANDATORY REQUIREMENT - COMPLETE QUESTIONS ONLY (STRICT ENFORCEMENT):\n");
+            prompt.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            prompt.append("EVERY question MUST be a COMPLETE, GRAMMATICALLY CORRECT SENTENCE.\n");
+            prompt.append("FRAGMENTS, KEYWORDS, and INCOMPLETE PHRASES WILL BE REJECTED.\n");
+            prompt.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+            prompt.append("❌ REJECTED PATTERNS (DO NOT GENERATE):\n");
+            prompt.append("• Single words: \"acquisition?\", \"waiver?\", \"jurisdiction?\"\n");
+            prompt.append("• Fragments: \"faith purchaser defense to art\", \"good faith defense\"\n");
+            prompt.append("• Keyword phrases: \"era Italian exports?\", \"Mass. expert requirements?\"\n");
+            prompt.append("• Missing context: \"appointed experts in civil?\", \"export laws?\"\n");
+            prompt.append("• Questions under 40 characters (likely incomplete)\n");
+            prompt.append("• Questions without verbs: \"Italian art laws?\", \"restitution precedent?\"\n\n");
+            prompt.append("✅ REQUIRED FORMAT (COMPLETE SENTENCES):\n");
+            prompt.append("• \"Find Mass. cases on good faith purchaser defense for art restitution\" ✓\n");
+            prompt.append("• \"Does D. Mass. require court-appointed experts in art disputes?\" ✓\n");
+            prompt.append("• \"What Italian export laws applied to Renaissance artwork in 1943?\" ✓\n");
+            prompt.append("• \"How does First Circuit define 'good faith' in acquisition cases?\" ✓\n\n");
+            prompt.append("⚠️ SELF-CHECK BEFORE GENERATING (validate each question):\n");
+            prompt.append("Before including ANY question, verify:\n");
+            prompt.append("☑ Has complete subject + verb + object structure?\n");
+            prompt.append("☑ Makes sense if read in isolation (without surrounding context)?\n");
+            prompt.append("☑ Contains at least 40 characters?\n");
+            prompt.append("☑ Is grammatically correct?\n");
+            prompt.append("☑ Could be understood by someone who didn't read the main response?\n");
+            prompt.append("☑ Under 80 characters total?\n\n");
+            prompt.append("If a complete question exceeds 80 characters, rephrase to be more concise WHILE KEEPING IT GRAMMATICAL.\n");
+            prompt.append("BETTER to have 2 complete questions than 5 fragments.\n\n");
+            prompt.append("**ATTORNEY PSYCHOLOGY - How Attorneys Think About Follow-Ups**:\n");
+            prompt.append("Attorneys ask follow-ups to:\n");
+            prompt.append("1. Hunt for PRECEDENT on specific fact patterns (\"Find [court] cases where...\")\n");
+            prompt.append("2. Identify EXCEPTIONS and COMPLICATIONS (\"What if defendant...\"  \"Does exception apply...\")\n");
+            prompt.append("3. Anticipate OPPOSITION's arguments (\"What's prosecution's strongest response...\")\n");
+            prompt.append("4. Explore TACTICAL choices (\"Should I file motion to dismiss or answer first?\")\n");
+            prompt.append("5. Check JURISDICTION-SPECIFIC quirks (\"Does Mass. follow federal standard or differ?\")\n");
+            prompt.append("6. Address PROCEDURAL nuances (\"Does Local Rule X.Y apply in this situation?\")\n\n");
+            prompt.append("Sound like an experienced attorney planning their next move, NOT a law student trying to understand concepts.\n\n");
+            prompt.append("⚠️ CRITICAL QUALITY RULES (ALL must be true):\n");
+            prompt.append("☑ MAXIMUM 80 CHARACTERS per question (strict UI limit)\n");
+            prompt.append("☑ JURISDICTION-SPECIFIC (mention specific court, circuit, state, or tribunal)\n");
+            prompt.append("☑ PRECEDENT-FOCUSED (\"Find cases\", \"How does [court] interpret\", \"Recent [court] guidance\")\n");
+            prompt.append("☑ EXCEPTION/COMPLICATION-FOCUSED (not basic rules)\n");
+            prompt.append("☑ BUILD ON DISCUSSION (extend what was just covered, don't repeat)\n");
+            prompt.append("☑ ACTIONABLE (attorney can immediately research this)\n");
+            prompt.append("☑ REFERENCES specific legal doctrine, test, rule, or case by name\n\n");
+            prompt.append("✅ ATTORNEY-QUALITY EXAMPLES (by practice area):\n\n");
+            prompt.append("**Criminal Defense**:\n");
+            prompt.append("- \"Does exigent circumstances apply to welfare checks in Mass.?\" (63 chars)\n");
+            prompt.append("- \"Find Mass. SJC cases on automobile exception for parked cars\" (64 chars)\n");
+            prompt.append("- \"Can I suppress if warrant lacked particularized probable cause?\" (67 chars)\n\n");
+            prompt.append("**Civil Litigation**:\n");
+            prompt.append("- \"Find D. Mass. cases granting summary judgment despite disputes\" (65 chars)\n");
+            prompt.append("- \"Does First Circuit follow heightened pleading for fraud claims?\" (67 chars)\n");
+            prompt.append("- \"Can I get prelim injunction without irreparable harm in Mass.?\" (66 chars)\n\n");
+            prompt.append("**Immigration**:\n");
+            prompt.append("- \"Find BIA precedent on 'particular social group' for LGBTQ asylum\" (68 chars)\n");
+            prompt.append("- \"How does Matter of A-B- affect domestic violence asylum claims?\" (67 chars)\n");
+            prompt.append("- \"Does INA § 212(h) waiver apply to aggravated felony convictions?\" (68 chars)\n\n");
+            prompt.append("**Employment**:\n");
+            prompt.append("- \"How does First Circuit apply McDonnell Douglas to age claims?\" (64 chars)\n");
+            prompt.append("- \"Find cases on adverse action for lateral transfers without pay cut\" (70 chars)\n");
+            prompt.append("- \"Does after-acquired evidence bar back pay in Mass. discrimination?\" (70 chars)\n\n");
+            prompt.append("❌ LAW STUDENT QUALITY (conceptual, generic - AVOID):\n");
+            prompt.append("- \"What is qualified immunity?\" (too conceptual, no jurisdiction)\n");
+            prompt.append("- \"What case law supports this?\" (too vague, no specific court)\n");
+            prompt.append("- \"How do courts interpret this statute?\" (generic, no specific court)\n");
+            prompt.append("- \"What are the requirements for summary judgment?\" (too broad, textbook)\n\n");
+            prompt.append("❌ TOO LONG (violate 80 char limit - SHORTEN):\n");
+            prompt.append("- \"What case law from First Circuit supports qualified immunity in excessive force?\" (83 chars)\n");
+            prompt.append("- \"What are procedural requirements for filing motion for class certification?\" (78 chars is OK, but could be more specific)\n\n");
+            prompt.append("❌ WRONG TYPE (asks user for facts - NEVER USE):\n");
             prompt.append("- \"What documents do you have?\" (asking user for information)\n");
-            prompt.append("- \"What did opposing counsel say?\" (asking user for facts)\n\n");
+            prompt.append("- \"What did opposing counsel say?\" (asking user for facts)\n");
+            prompt.append("- \"Can you tell me more about the case?\" (asking user, not legal research)\n\n");
+            prompt.append("**TRANSFORM WEAK TO STRONG** (fix before using):\n");
+            prompt.append("Weak: \"What is statute of limitations?\" → Strong: \"Does discovery rule extend Mass. contract SOL for fraud?\"\n");
+            prompt.append("Weak: \"How do I file a motion?\" → Strong: \"Does D. Mass. require meet-and-confer before Rule 12(b)?\"\n");
+            prompt.append("Weak: \"What case law supports my argument?\" → Strong: \"Find First Circuit cases applying Iqbal to conspiracy pleadings\"\n");
+            prompt.append("Weak: \"Can you explain the standard?\" → Strong: \"How does First Circuit apply this standard vs other circuits?\"\n\n");
         }
 
         // Add category-specific additions
@@ -1900,7 +2019,71 @@ public class AILegalResearchService {
             prompt.append(nudge).append("\n\n");
         }
 
+        // Add practice-area-specific follow-up templates
+        prompt.append(getFollowUpTemplatesByPracticeArea(query, questionType)).append("\n");
+
         return prompt.toString();
+    }
+
+    /**
+     * Generate practice-area-specific follow-up question templates
+     * to help AI create attorney-focused, tactical follow-up questions
+     */
+    private String getFollowUpTemplatesByPracticeArea(String query, QuestionType questionType) {
+        String queryLower = query.toLowerCase();
+
+        StringBuilder templates = new StringBuilder();
+        templates.append("\n**PRACTICE-AREA-SPECIFIC FOLLOW-UP TEMPLATES**:\n");
+        templates.append("Generate follow-ups using these templates for your practice area:\n\n");
+
+        // Immigration
+        if (isImmigrationQuery(queryLower)) {
+            templates.append("Immigration:\n");
+            templates.append("- \"Find [Circuit] precedent on [specific immigration issue]\"\n");
+            templates.append("- \"How does Matter of [X] affect [type of application]?\"\n");
+            templates.append("- \"Can I file [form] before/after [procedural step]?\"\n");
+            templates.append("- \"Does [INA section] exception apply to [scenario]?\"\n\n");
+        }
+
+        // Criminal Defense
+        if (queryLower.matches(".*(suppression|search|seizure|arrest|miranda|fourth amendment|criminal|defendant|motion to suppress|warrant|probable cause|exigent).*")) {
+            templates.append("Criminal Defense:\n");
+            templates.append("- \"Does [exception] apply to [specific scenario] in [jurisdiction]?\"\n");
+            templates.append("- \"Find [court] cases on [constitutional issue] for [fact pattern]\"\n");
+            templates.append("- \"Can I suppress evidence if [specific defect in procedure]?\"\n");
+            templates.append("- \"What's strongest response to [prosecution's anticipated argument]?\"\n\n");
+        }
+
+        // Civil Litigation
+        if (queryLower.matches(".*(summary judgment|motion to dismiss|pleading|discovery|trial|complaint|answer|rule 12|rule 56|class action).*")) {
+            templates.append("Civil Litigation:\n");
+            templates.append("- \"Find [court] cases [granting/denying] [motion] despite [complication]\"\n");
+            templates.append("- \"Does [local rule] apply to [specific situation] in [court]?\"\n");
+            templates.append("- \"How does [circuit] interpret [legal standard] differently?\"\n");
+            templates.append("- \"Can I get [relief] without showing [typical requirement]?\"\n\n");
+        }
+
+        // Employment Law
+        if (queryLower.matches(".*(employment|discrimination|retaliation|wrongful termination|title vii|eeoc|ada|fmla|flsa).*")) {
+            templates.append("Employment Law:\n");
+            templates.append("- \"Find [circuit] cases on [employment issue] for [scenario]\"\n");
+            templates.append("- \"How does [circuit] apply McDonnell Douglas to [claim type]?\"\n");
+            templates.append("- \"Does [statute] exception apply to [employee classification]?\"\n");
+            templates.append("- \"What temporal proximity standard applies in [circuit] for retaliation?\"\n\n");
+        }
+
+        // Medical Malpractice
+        if (queryLower.matches(".*(malpractice|medical negligence|standard of care|expert testimony|informed consent).*")) {
+            templates.append("Medical Malpractice:\n");
+            templates.append("- \"Find Mass. cases on [medical procedure] standard of care\"\n");
+            templates.append("- \"Does tribunal requirement apply in federal court for Mass. malpractice?\"\n");
+            templates.append("- \"What expert qualifications required for [specialty] in Massachusetts?\"\n");
+            templates.append("- \"How does res ipsa loquitur apply to [scenario] in Mass.?\"\n\n");
+        }
+
+        templates.append("**Use these templates to generate jurisdiction-specific, precedent-focused follow-ups.**\n");
+        templates.append("**Each follow-up MUST reference a specific court, statute, case, or procedural rule.**\n");
+        return templates.toString();
     }
 
     private enum QueryCategory {

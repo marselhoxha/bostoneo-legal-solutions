@@ -285,7 +285,7 @@
 
                           <!-- Collapsible AI Response -->
                           <div class="ai-response-content" [class.collapsed]="message.collapsed" #responseContent>
-                            <div [innerHTML]="message.content | markdownToHtml" class="ai-response-markdown"></div>
+                            <div [innerHTML]="message.content | markdownToHtml" class="ai-response-markdown" apexChartsContainer></div>
                           </div>
 
                           <!-- AI Action Badges Loading State -->

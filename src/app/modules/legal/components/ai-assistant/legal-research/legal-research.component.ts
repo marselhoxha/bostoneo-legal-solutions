@@ -13,11 +13,12 @@ import {
   SearchHistory
 } from '../../../services/legal-research.service';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
+import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 
 @Component({
   selector: 'app-legal-research',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './legal-research.component.html',
   styleUrls: ['./legal-research.component.scss']

@@ -48,6 +48,23 @@ public class AiConversationSession {
     @Column(name = "practice_area", length = 100)
     private String practiceArea;
 
+    @Column(name = "task_type", length = 50)
+    @Builder.Default
+    private String taskType = "LEGAL_QUESTION";
+
+    @Column(name = "research_mode", length = 20)
+    @Builder.Default
+    private String researchMode = "AUTO";
+
+    @Column(name = "document_id")
+    private Long documentId;
+
+    @Column(name = "related_draft_id", length = 255)
+    private String relatedDraftId;
+
+    @Column(name = "jurisdiction", length = 100)
+    private String jurisdiction;
+
     @Column(name = "context_summary", columnDefinition = "TEXT")
     private String contextSummary;
 

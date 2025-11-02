@@ -698,6 +698,10 @@
             margin-bottom: 1.5rem;  // Increased: Better spacing before content
             padding-top: 0.75rem;  // Add top padding for additional visual separation
             padding-bottom: 0.75rem;  // Better bottom padding
+
+            &:first-of-type {
+              margin-top: 1rem;  // Reduce margin for first h2 (Strategic Analysis) - appears right after AI badge
+            }
           }
 
           h3 {

@@ -4,13 +4,18 @@ import com.bostoneo.bostoneosolutions.model.AiConversationMessage;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.repository.AiConversationMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
+import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Service for managing legal research conversations
@@ -23,6 +28,7 @@ public class LegalResearchConversationService {
 
     private final AiConversationSessionRepository sessionRepository;
     private final AiConversationMessageRepository messageRepository;
+    private final ClaudeSonnet4Service claudeService;
 
     /**
      * Get or create a conversation session for legal research
@@ -154,5 +160,180 @@ public class LegalResearchConversationService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Get all conversations for a user with pagination
+     */
+    @Transactional(readOnly = true)
+    public Page<AiConversationSession> getAllUserConversations(Long userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return sessionRepository.findAllByUserId(userId, pageable);
+    }
+
+    /**
+     * Get conversations filtered by task type with pagination
+     */
+    @Transactional(readOnly = true)
+    public Page<AiConversationSession> getConversationsByTaskType(String taskType, Long userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return sessionRepository.findByUserIdAndTaskType(userId, taskType, pageable);
+    }
+
+    /**
+     * Get ONLY general conversations (no caseId) filtered by task type with pagination
+     * Used by AI Workspace to exclude case-specific research conversations
+     */
+    @Transactional(readOnly = true)
+    public Page<AiConversationSession> getGeneralConversationsByTaskType(String taskType, Long userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return sessionRepository.findGeneralConversationsByUserIdAndTaskType(userId, taskType, pageable);
+    }
+
+    /**
+     * Create a new general conversation with task type and research mode
+     */
+    @Transactional
+    public AiConversationSession createGeneralConversation(Long userId, String title, String researchMode, String taskType) {
+        AiConversationSession session = AiConversationSession.builder()
+                .userId(userId)
+                .sessionName(title != null ? title : "New Conversation")
+                .sessionType("general")
+                .taskType(taskType != null ? taskType : "LEGAL_QUESTION")
+                .researchMode(researchMode != null ? researchMode : "AUTO")
+                .isActive(true)
+                .isPinned(false)
+                .isArchived(false)
+                .messageCount(0)
+                .totalTokensUsed(0)
+                .build();
+
+        return sessionRepository.save(session);
+    }
+
+    /**
+     * Send message to conversation and get AI response
+     */
+    @Transactional
+    public CompletableFuture<AiConversationMessage> sendMessageWithAIResponse(
+            Long sessionId,
+            Long userId,
+            String query,
+            String researchMode
+    ) {
+        // Get the session
+        AiConversationSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found or access denied"));
+
+        // Save user message
+        AiConversationMessage userMessage = AiConversationMessage.builder()
+                .session(session)
+                .role("user")
+                .content(query)
+                .ragContextUsed(false)
+                .build();
+        messageRepository.save(userMessage);
+
+        // Update session message count
+        session.setMessageCount(session.getMessageCount() != null ? session.getMessageCount() + 1 : 1);
+        sessionRepository.save(session);
+
+        // Build conversation history from database messages
+        List<AiConversationMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        StringBuilder conversationHistory = new StringBuilder();
+
+        for (AiConversationMessage msg : messages) {
+            conversationHistory.append(msg.getRole().equals("user") ? "User: " : "Assistant: ")
+                    .append(msg.getContent())
+                    .append("\n\n");
+        }
+
+        // Determine if we should use deep thinking based on research mode
+        boolean useDeepThinking = "THOROUGH".equalsIgnoreCase(researchMode);
+
+        // Get AI response
+        String prompt = "You are a legal research assistant. Based on the following conversation history, "
+                + "provide a helpful response to the user's latest question.\n\n"
+                + "IMPORTANT FORMATTING GUIDELINES:\n"
+                + "When presenting timelines with dates, use this format:\n"
+                + "- **Date** (optional context): Description\n"
+                + "Example:\n"
+                + "- **November 9, 2025** (10 days): Defendant must be served\n"
+                + "- **December 30, 2025**: Discovery deadline\n\n"
+                + "🚨 WHEN TO USE CHARTS VS TABLES:\n\n"
+                + "Use CHARTS only for NUMERIC data:\n"
+                + "✅ BAR charts: Numeric comparisons (case counts: 450 vs 300, dollar amounts: $15000 vs $8000, scores: 8.5 vs 6.2)\n"
+                + "✅ PIE charts: Percentage breakdowns that sum to 100% (45% vs 30% vs 25%)\n"
+                + "✅ LINE charts: Numeric trends over time (1250 in 2020, 1420 in 2021)\n\n"
+                + "Use TABLES for CATEGORICAL/TEXT data:\n"
+                + "❌ DO NOT use charts for: Low/Medium/High, Yes/No, text descriptions, qualitative comparisons\n"
+                + "✅ Instead use markdown tables: | Circuit | Approach | for categorical comparisons\n\n"
+                + "Example WRONG (categorical data in chart):\n"
+                + "CHART:BAR\n"
+                + "| Circuit | Level |\n"
+                + "| 4th Cir | Low (narrow data sufficient) | ❌ TEXT, not a number!\n\n"
+                + "Example CORRECT (categorical data in table):\n"
+                + "| Circuit | Minimization Requirement |\n"
+                + "|---------|-------------------------|\n"
+                + "| 4th Cir | Low (narrow data sufficient) | ✅ Table for text data\n\n"
+                + "When presenting comparative NUMERIC data or statistics, use these chart formats:\n\n"
+                + "For bar charts (comparing NUMERIC values):\n"
+                + "CHART:BAR\n"
+                + "| Category | Value |\n"
+                + "|----------|-------|\n"
+                + "| Item 1   | 450   |\n"
+                + "| Item 2   | 300   |\n\n"
+                + "For percentage breakdowns:\n"
+                + "CHART:PIE\n"
+                + "- Category A: 45%\n"
+                + "- Category B: 30%\n"
+                + "- Category C: 25%\n\n"
+                + "For trends over time:\n"
+                + "CHART:LINE\n"
+                + "Title of Chart\n"
+                + "2020: 1250\n"
+                + "2021: 1420\n"
+                + "2022: 1580\n\n"
+                + "Use these formats whenever you're presenting timelines, comparisons, statistics, or trends. "
+                + "The system will automatically convert them into beautiful visual charts.\n\n"
+                + "## Follow-up Questions\n"
+                + "After your main response, include a \"## Follow-up Questions\" section with 3 attorney-quality follow-up questions.\n\n"
+                + "🚨 MANDATORY REQUIREMENT - COMPLETE QUESTIONS ONLY:\n"
+                + "Each question MUST be a COMPLETE, GRAMMATICALLY CORRECT SENTENCE (minimum 40 characters).\n"
+                + "❌ REJECTED: Single words (\"trial?\"), fragments (\"good faith defense\"), punctuation-only (\"---\")\n"
+                + "✅ REQUIRED: Must contain question indicators like: Find, Does, What, How, Can, Should, Is, Are, Will, When, Where\n\n"
+                + "Format:\n"
+                + "- Find [jurisdiction] cases on [specific legal issue] (40-80 chars)\n"
+                + "- Does [specific statute/rule] apply to [scenario]? (40-80 chars)\n"
+                + "- How does [court] typically handle [specific issue]? (40-80 chars)\n\n"
+                + "Example (GOOD):\n"
+                + "- Find Second Circuit cases on good faith purchaser defense for art restitution\n"
+                + "- Does Fed. R. Evid. 706 require court-appointed experts in complex cases?\n"
+                + "- What are the key differences between Mass. and federal summary judgment standards?\n\n"
+                + "Example (BAD - DO NOT USE):\n"
+                + "- trial? (too short, fragment)\n"
+                + "- good faith defense (not a question)\n"
+                + "- --- (punctuation only)\n\n"
+                + "Conversation History:\n" + conversationHistory.toString();
+
+        return claudeService.generateCompletion(prompt, useDeepThinking)
+                .thenApply(aiResponse -> {
+                    // Save AI response message
+                    AiConversationMessage assistantMessage = AiConversationMessage.builder()
+                            .session(session)
+                            .role("assistant")
+                            .content(aiResponse)
+                            .ragContextUsed(false)
+                            .modelUsed("claude-sonnet-4")
+                            .build();
+
+                    AiConversationMessage savedMessage = messageRepository.save(assistantMessage);
+
+                    // Update session message count again
+                    session.setMessageCount(session.getMessageCount() + 1);
+                    sessionRepository.save(session);
+
+                    return savedMessage;
+                });
     }
 }

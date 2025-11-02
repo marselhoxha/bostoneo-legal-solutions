@@ -1,0 +1,499 @@
+<!-- ============================================ -->
+<!-- DRAFTING PAGE - VELZON THEME DESIGN -->
+<!-- 3-Column Layout: Conversations | Main | Chat -->
+<!-- ============================================ -->
+
+<div class="drafting-container" style="margin-top: 100px; max-width: 100%;">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button class="mobile-menu-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+    <i class="ri-menu-line"></i>
+  </button>
+
+  <!-- Sidebar Backdrop Overlay (Mobile Only) -->
+  <div class="sidebar-backdrop" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
+
+  <!-- ========================================== -->
+  <!-- LEFT SIDEBAR: Conversation History -->
+  <!-- ========================================== -->
+  <aside class="card conversation-sidebar" [class.open]="sidebarOpen">
+    <div class="conversation-sidebar-header">
+      <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
+              (click)="startNewConversation()">
+        <i class="ri-add-line fs-16 me-2"></i>New Conversation
+      </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="conversation-search">
+      <div class="search-input-wrapper">
+        <i class="ri-search-line search-icon"></i>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Enter conversation terms"
+          [(ngModel)]="conversationSearchQuery">
+      </div>
+    </div>
+
+    <!-- Conversation List -->
+    <div class="conversation-list-container">
+      <!-- Loading State -->
+      <div class="conversation-loading" *ngIf="loadingDrafts">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading conversations...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="conversation-empty" *ngIf="!loadingDrafts && conversations.length === 0">
+        <i class="ri-chat-3-line empty-icon"></i>
+        <p class="empty-title">No conversations yet</p>
+        <p class="empty-description">Start a new conversation to see it here</p>
+      </div>
+
+      <!-- Conversations List -->
+      <div *ngIf="!loadingDrafts && conversations.length > 0">
+        <!-- Past 90 Days -->
+        <div class="conversation-group" *ngIf="groupedConversations.past90Days.length > 0">
+          <div class="conversation-group-header">
+            <span>Past 90 Days</span>
+            <button class="btn-delete-all" (click)="deleteAllConversations()">Delete all</button>
+          </div>
+
+          <div class="conversation-list">
+            <div
+              *ngFor="let conv of filteredConversations"
+              class="conversation-item"
+              [class.active]="activeConversationId === conv.id"
+              (click)="switchConversation(conv.id)">
+              <div class="conversation-title">{{conv.title}}</div>
+              <div class="conversation-meta">
+                <div class="conversation-date">
+                  <i class="ri-time-line"></i>
+                  <span>{{conv.date | date:'MMM d'}}</span>
+                </div>
+                <div class="conversation-count" *ngIf="(conv.messageCount || conv.messages.length) > 0">
+                  <i class="ri-message-3-line"></i>
+                  <span>{{conv.messageCount || conv.messages.length}}</span>
+                </div>
+              </div>
+              <div class="conversation-actions" (click)="$event.stopPropagation()">
+                <button class="action-btn" (click)="deleteConversation(conv.id)" title="Delete conversation">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  
+  </aside>
+
+  <!-- ========================================== -->
+  <!-- MAIN CONTENT AREA -->
+  <!-- ========================================== -->
+  <main class="main-content-area">
+
+    <!-- Welcome Screen (No active conversation) -->
+    <div class="welcome-screen" *ngIf="!showChat && !isGenerating">
+      <div class="welcome-header">
+
+        <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
+        <p class="welcome-subtitle">Which legal task can AI accelerate for you today?</p>
+      </div>
+
+      <!-- Action Cards Grid -->
+      <div class="action-cards-main mb-4">
+        <div
+          class="action-card"
+          [class.active]="selectedTask === 'question'"
+          (click)="selectTask('question')">
+          <div class="icon-box">
+            <i class="ri-question-answer-line"></i>
+          </div>
+          <div class="card-content">
+            <span>Ask a legal question</span>
+          </div>
+        </div>
+
+        <div
+          class="action-card"
+          [class.active]="selectedTask === 'draft'"
+          (click)="selectTask('draft')">
+          <div class="icon-box">
+            <i class="ri-file-edit-line"></i>
+          </div>
+          <div class="card-content">
+            <span>Generate a draft</span>
+          </div>
+        </div>
+
+        <div
+          class="action-card"
+          [class.active]="selectedTask === 'summarize'"
+          (click)="selectTask('summarize')">
+          <div class="icon-box">
+            <i class="ri-file-list-3-line"></i>
+          </div>
+          <div class="card-content">
+            <span>Summarize a case</span>
+          </div>
+        </div>
+
+        <div
+          class="action-card"
+          [class.active]="selectedTask === 'upload'"
+          (click)="selectTask('upload')">
+          <div class="icon-box">
+            <i class="ri-upload-cloud-line"></i>
+          </div>
+          <div class="card-content">
+            <span>Upload document</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Examples Section -->
+      <div class="examples-section card mb-4" *ngIf="selectedTask">
+        <div class="card-body">
+          <h6 class="mb-3">{{ getExamplesTitle() }}</h6>
+          <div class="example-list">
+            <p class="text-muted mb-2" *ngFor="let example of getExamples()">• {{ example }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Type Pills (when Generate a draft is selected) -->
+      <div class="document-type-pills" *ngIf="selectedTask === 'draft'">
+        <div class="pills-label">Draft:</div>
+        <div class="pills-container">
+          <button
+            class="pill-btn"
+            *ngFor="let pill of documentTypePills"
+            [class.active]="selectedDocTypePill === pill.id"
+            (click)="selectDocTypePill(pill.id)">
+            {{pill.name}}
+          </button>
+        </div>
+        <a href="javascript:void(0)" class="prompt-tips-link">
+          <i class="ri-lightbulb-line"></i>
+          Prompt Tips
+        </a>
+      </div>
+
+      <!-- Main Prompt Input -->
+      <div class="main-prompt-area">
+        <form (ngSubmit)="startCustomDraft()" class="prompt-form card">
+          <div class="card-body">
+            <textarea
+              class="form-control prompt-textarea"
+              [(ngModel)]="customPrompt"
+              name="customPrompt"
+              [placeholder]="promptPlaceholder"
+              rows="3"></textarea>
+            <div class="prompt-footer">
+              <div class="jurisdiction-selector">
+                <label>Jurisdiction:</label>
+                <select class="form-select" [(ngModel)]="selectedJurisdiction" name="jurisdiction">
+                  <option *ngFor="let jur of jurisdictions" [value]="jur">{{jur}}</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-submit">
+                <i class="ri-send-plane-fill"></i> Send
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Top Action Bar (when in drafting mode) -->
+    <div class="top-action-bar" *ngIf="draftingMode">
+      <div class="action-bar-left">
+        <div class="drafting-mode-indicator">
+          <i class="ri-file-edit-line"></i>
+          <span>Drafting Mode</span>
+        </div>
+        <div class="document-stats">
+          <span class="word-count">{{currentDocumentWordCount}}/500000</span>
+          <span class="date-stamp">{{currentDate | date:'MMM d, yyyy'}}</span>
+        </div>
+      </div>
+      <div class="action-bar-right">
+        <button class="btn btn-outline-primary btn-sm" (click)="downloadDocument('docx')">
+          <i class="ri-download-line"></i>
+          Download to Word
+        </button>
+        <button class="btn btn-primary btn-sm" (click)="saveAndExit()">
+          <i class="ri-save-line"></i>
+          Save and Exit
+        </button>
+        <a href="javascript:void(0)" class="help-link">
+          <i class="ri-question-line"></i>
+          How does it work?
+        </a>
+      </div>
+    </div>
+
+    <!-- Split View Container (when document is generated) -->
+    <div class="split-view-container" *ngIf="draftingMode && showChat">
+      <!-- Document Preview Panel (60%) -->
+      <div class="document-preview-panel">
+        <div class="document-preview-header">
+          <h3 class="document-title">{{activeDocumentTitle}}</h3>
+          <div class="preview-actions">
+            <button class="btn-icon" title="Zoom in">
+              <i class="ri-zoom-in-line"></i>
+            </button>
+            <button class="btn-icon" title="Zoom out">
+              <i class="ri-zoom-out-line"></i>
+            </button>
+            <button class="btn-icon" title="Full screen">
+              <i class="ri-fullscreen-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="document-preview-content">
+          <div class="document-rendered" [innerHTML]="activeDocumentContent | markdownToHtml" apexChartsContainer></div>
+        </div>
+
+        <!-- Drafting Tools Menu -->
+        <div class="drafting-tools-menu">
+          <button class="tool-btn" (click)="applyDraftingTool('simplify')">
+            <i class="ri-subtract-line"></i>
+            Simplify
+          </button>
+          <button class="tool-btn" (click)="applyDraftingTool('condense')">
+            <i class="ri-compress-line"></i>
+            Condense
+          </button>
+          <button class="tool-btn" (click)="applyDraftingTool('expand')">
+            <i class="ri-expand-line"></i>
+            Expand
+          </button>
+          <button class="tool-btn" (click)="applyDraftingTool('redraft')">
+            <i class="ri-refresh-line"></i>
+            Redraft entirely
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Panel (40%) -->
+      <div class="chat-panel-side">
+        <div class="chat-panel-header">
+          <h4>Conversation</h4>
+          <button class="btn-close-panel" (click)="closeDraftingMode()">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
+        <div class="chat-messages-area-side">
+          <ul class="message-list">
+            <!-- User & AI Messages -->
+            <ng-container *ngFor="let message of conversationMessages">
+              <li class="message-item" [ngClass]="message.role">
+                <!-- User Message -->
+                <div class="message-bubble user-message" *ngIf="message.role === 'user'">
+                  <div class="message-content">{{message.content}}</div>
+                </div>
+
+                <!-- AI Message -->
+                <div class="message-wrapper ai-wrapper" *ngIf="message.role === 'assistant'">
+                  <div class="ai-avatar">
+                    <i class="ri-robot-2-line"></i>
+                  </div>
+                  <div class="message-bubble ai-message">
+                    <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+                  </div>
+                </div>
+              </li>
+            </ng-container>
+          </ul>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-side">
+          <form (ngSubmit)="sendFollowUpMessage()">
+            <textarea
+              class="form-control"
+              [(ngModel)]="followUpMessage"
+              name="followUpMessage"
+              placeholder="Ask for revisions..."
+              rows="3"
+              (keydown.enter)="onEnterPress($event)"></textarea>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="!followUpMessage?.trim()">
+              <i class="ri-send-plane-fill"></i>
+              Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Container (Active conversation - full width when not in drafting mode) -->
+    <div class="chat-container-main" *ngIf="(showChat || isGenerating) && !draftingMode">
+      <div class="chat-messages-area">
+        <ul class="list-unstyled chat-conversation-list">
+
+          <!-- User & AI Messages -->
+          <ng-container *ngFor="let message of conversationMessages; let i = index">
+            <li class="chat-list" [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
+
+              <!-- User Message -->
+              <div class="conversation-list" *ngIf="message.role === 'user'">
+                <div class="user-chat-content mb-4">
+                  <div class="message-bubble bg-soft-info text-info">
+                    <div class="message-content">
+                      <p class="mb-0">{{message.content}}</p>
+                    </div>
+                    <div class="message-meta">
+                      <small class="text-muted">{{message.timestamp ? (message.timestamp | date:'short') : 'Just now'}}</small>
+                      <i class="ri-check-double-line ms-1 text-success"></i>
+                    </div>
+                  </div>
+                </div>
+                <!-- User Avatar (right side) -->
+                <div class="chat-avatar ms-3">
+                  <div class="avatar-sm">
+                    <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                      <i class="ri-user-3-fill"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Message -->
+              <div class="ai-message-container" *ngIf="message.role === 'assistant'">
+                <div class="d-flex align-items-start gap-3 mb-3">
+                  <div class="chat-avatar flex-shrink-0">
+                    <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                  </div>
+
+                  <div class="message-bubble ai-message flex-grow-1">
+                    <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+
+                    <!-- Suggested Actions -->
+                    <div class="suggested-actions" *ngIf="message.documentGenerated">
+                      <div class="actions-label">Suggested actions:</div>
+                      <div class="actions-buttons">
+                        <button class="action-btn" (click)="executeSuggestedAction('view-document', message.documentId)">
+                          <i class="ri-eye-line"></i>
+                          View Document
+                        </button>
+                        <button class="action-btn" (click)="executeSuggestedAction('export-pdf', message.documentId)">
+                          <i class="ri-file-pdf-line"></i>
+                          Export to PDF
+                        </button>
+                        <button class="action-btn" (click)="executeSuggestedAction('summarize-authority', message.documentId)">
+                          <i class="ri-file-text-line"></i>
+                          Summarize case authority
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Follow-up Questions -->
+                    <div class="follow-up-questions-section" *ngIf="followUpQuestions.length > 0 && i === conversationMessages.length - 1">
+                      <div class="follow-up-label">
+                        <i class="ri-question-line"></i>
+                        Suggested follow up questions:
+                      </div>
+                      <div class="follow-up-list">
+                        <button
+                          *ngFor="let question of followUpQuestions"
+                          class="follow-up-btn"
+                          (click)="askFollowUpQuestion(question)"
+                          [disabled]="isGenerating">
+                          <i class="ri-add-line"></i>
+                          <span>{{ question }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </li>
+          </ng-container>
+
+          <!-- AI Generating State -->
+          <li class="message-item assistant" *ngIf="isGenerating">
+            <div class="ai-message-container">
+              <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="chat-avatar flex-shrink-0">
+                  <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                </div>
+
+                <div class="message-bubble ai-message flex-grow-1">
+                  <!-- AI Activity Loading -->
+                  <div class="ai-activity-loader">
+                    <!-- Header -->
+                    <div class="activity-header">
+                      <span>Generating response</span>
+                      <i class="ri-arrow-up-s-line"></i>
+                    </div>
+
+                    <!-- Activity Steps -->
+                    <div class="activity-steps">
+                      <div *ngFor="let step of workflowSteps"
+                           class="activity-step"
+                           [class.active]="step.status === 'active'"
+                           [class.pending]="step.status === 'pending'"
+                           [class.completed]="step.status === 'completed'"
+                           [class.error]="step.status === 'error'">
+                        <i [class]="step.icon" class="step-icon" *ngIf="step.status !== 'completed'"></i>
+                        <i class="ri-check-line step-icon step-check" *ngIf="step.status === 'completed'"></i>
+                        <span class="step-text">{{ step.description }}</span>
+                      </div>
+                    </div>
+
+                    <button class="btn-stop-response" (click)="stopGeneration()">
+                      <i class="ri-stop-circle-line"></i>
+                      Stop response
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+
+      <!-- Bottom Input Bar (in chat mode) -->
+      <div class="chat-input-bar-bottom" *ngIf="showBottomSearchBar && !isGenerating">
+        <form (ngSubmit)="sendFollowUpMessage()" class="chat-input-form">
+          <textarea
+            class="form-control chat-input"
+            [(ngModel)]="followUpMessage"
+            name="followUpMessage"
+            [placeholder]="followUpPlaceholder"
+            rows="1"
+            (keydown.enter)="onEnterPress($event)"></textarea>
+
+          <div class="input-footer">
+            <div class="jurisdiction-selector-inline">
+              <label>Jurisdiction:</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedJurisdiction" name="jurisdictionInline">
+                <option *ngFor="let jur of jurisdictions" [value]="jur">{{jur}}</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-send" [disabled]="!followUpMessage?.trim()">
+              <i class="ri-send-plane-fill"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Document Editor Modal -->
+
+
+</div>

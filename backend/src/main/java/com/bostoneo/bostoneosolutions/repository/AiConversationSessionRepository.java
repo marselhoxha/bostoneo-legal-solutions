@@ -1,6 +1,8 @@
 package com.bostoneo.bostoneosolutions.repository;
 
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,4 +42,31 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
      * Check if session exists for user (for security)
      */
     boolean existsByIdAndUserId(Long id, Long userId);
+
+    /**
+     * Find all sessions for a user with pagination, ordered by last interaction
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Find sessions by task type for a user with pagination
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findByUserIdAndTaskType(
+            @Param("userId") Long userId,
+            @Param("taskType") String taskType,
+            Pageable pageable
+    );
+
+    /**
+     * Find ONLY general conversations (no caseId) by task type for a user with pagination
+     * Used by AI Workspace to exclude case-specific research
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findGeneralConversationsByUserIdAndTaskType(
+            @Param("userId") Long userId,
+            @Param("taskType") String taskType,
+            Pageable pageable
+    );
 }

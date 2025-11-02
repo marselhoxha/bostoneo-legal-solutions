@@ -18,6 +18,11 @@ export interface AiConversationSession {
   sessionType?: string;
   caseId?: number;
   practiceArea?: string;
+  taskType?: string; // LEGAL_QUESTION, GENERATE_DRAFT, SUMMARIZE_CASE, ANALYZE_DOCUMENT
+  researchMode?: string; // FAST, AUTO, THOROUGH
+  documentId?: number;
+  relatedDraftId?: string;
+  jurisdiction?: string;
   contextSummary?: string;
   primaryTopic?: string;
   keyEntities?: any;
@@ -414,7 +419,7 @@ export class LegalResearchService {
 
   // Session management
   generateSessionId(): string {
-    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
   }
 
   getCurrentSessionId(): string {
@@ -588,5 +593,185 @@ export class LegalResearchService {
         return throwError(() => error);
       })
     );
+  }
+
+  // ============================================
+  // AI Workspace Conversation Methods
+  // ============================================
+
+  /**
+   * Get all conversations for a user with pagination
+   */
+  getAllUserConversations(page: number = 0, size: number = 50): Observable<{
+    conversations: AiConversationSession[];
+    totalPages: number;
+    totalElements: number;
+    currentPage: number;
+  }> {
+    const userId = this.getUserId(); // You'll need to implement this or pass it as parameter
+    return this.http.get<any>(
+      `${this.conversationApiUrl}`,
+      {
+        params: {
+          userId: userId.toString(),
+          page: page.toString(),
+          size: size.toString()
+        },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => ({
+        conversations: response.data.conversations || [],
+        totalPages: response.data.totalPages || 0,
+        totalElements: response.data.totalElements || 0,
+        currentPage: response.data.currentPage || 0
+      })),
+      catchError(error => {
+        console.error('Failed to get all user conversations:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get conversations filtered by task type
+   */
+  getConversationsByTaskType(taskType: string, page: number = 0, size: number = 50): Observable<{
+    conversations: AiConversationSession[];
+    totalPages: number;
+    totalElements: number;
+    currentPage: number;
+  }> {
+    const userId = this.getUserId();
+    return this.http.get<any>(
+      `${this.conversationApiUrl}/task/${taskType}`,
+      {
+        params: {
+          userId: userId.toString(),
+          page: page.toString(),
+          size: size.toString()
+        },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => ({
+        conversations: response.data.conversations || [],
+        totalPages: response.data.totalPages || 0,
+        totalElements: response.data.totalElements || 0,
+        currentPage: response.data.currentPage || 0
+      })),
+      catchError(error => {
+        console.error('Failed to get conversations by task type:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get ONLY general conversations (no caseId) filtered by task type
+   * Used by AI Workspace to exclude case-specific research conversations
+   */
+  getGeneralConversationsByTaskType(taskType: string, page: number = 0, size: number = 50): Observable<{
+    conversations: AiConversationSession[];
+    totalPages: number;
+    totalElements: number;
+    currentPage: number;
+  }> {
+    const userId = this.getUserId();
+    return this.http.get<any>(
+      `${this.conversationApiUrl}/general/task/${taskType}`,
+      {
+        params: {
+          userId: userId.toString(),
+          page: page.toString(),
+          size: size.toString()
+        },
+        withCredentials: true
+      }
+    ).pipe(
+      map(response => ({
+        conversations: response.data.conversations || [],
+        totalPages: response.data.totalPages || 0,
+        totalElements: response.data.totalElements || 0,
+        currentPage: response.data.currentPage || 0
+      })),
+      catchError(error => {
+        console.error('Failed to get general conversations by task type:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Create a new general conversation
+   */
+  createGeneralConversation(
+    title: string,
+    researchMode: string,
+    taskType: string
+  ): Observable<AiConversationSession> {
+    const userId = this.getUserId();
+    return this.http.post<any>(
+      `${this.conversationApiUrl}`,
+      { userId, title, researchMode, taskType },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.data.session),
+      catchError(error => {
+        console.error('Failed to create general conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Send message to conversation and get AI response
+   */
+  sendMessageToConversation(
+    conversationId: number,
+    query: string,
+    researchMode: string
+  ): Observable<AiConversationMessage> {
+    const userId = this.getUserId();
+    return this.http.post<any>(
+      `${this.conversationApiUrl}/${conversationId}/query`,
+      { userId, query, researchMode },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.data.message),
+      catchError(error => {
+        console.error('Failed to send message to conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get a conversation by ID
+   */
+  getConversationById(conversationId: number): Observable<{
+    conversation: AiConversationSession;
+    messages: AiConversationMessage[];
+  }> {
+    const userId = this.getUserId();
+    return this.getConversation(conversationId, userId);
+  }
+
+  /**
+   * Delete a conversation by ID
+   */
+  deleteConversationById(conversationId: number): Observable<boolean> {
+    const userId = this.getUserId();
+    return this.deleteConversation(conversationId, userId);
+  }
+
+  /**
+   * Get user ID from local storage or authentication service
+   * TODO: Implement proper user ID retrieval from auth service
+   */
+  private getUserId(): number {
+    // Temporary implementation - replace with proper auth service
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.id || 1; // Default to 1 for testing
   }
 }

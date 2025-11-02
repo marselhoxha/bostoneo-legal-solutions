@@ -107,6 +107,7 @@ public class EnhancedSecurityConfig {
             .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
             .requestMatchers("/api/crm/**").permitAll()  // Temporarily allow public access to CRM for debugging
             .requestMatchers("/api/ai/**").permitAll()  // Allow public access to AI for testing
+            .requestMatchers("/api/legal/**").permitAll()  // Allow public access to legal research for testing
             .requestMatchers("/api/files/**").permitAll()  // Allow public access to file downloads for PDF viewing
             .anyRequest().authenticated()
         );

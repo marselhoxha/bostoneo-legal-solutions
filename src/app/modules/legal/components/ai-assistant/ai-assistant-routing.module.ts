@@ -75,6 +75,12 @@ const routes: Routes = [
     data: { title: 'Legal Research' }
   },
   {
+    path: 'ai-workspace',
+    loadComponent: () => import('./ai-workspace/ai-workspace.component').then(m => m.AiWorkspaceComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'AI Workspace' }
+  },
+  {
     path: 'collaboration',
     loadComponent: () => import('./collaboration/collaboration.component').then(m => m.CollaborationComponent),
     canActivate: [AuthenticationGuard],

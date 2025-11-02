@@ -211,6 +211,13 @@
 			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
 
+		<!-- Resilience4j Reactor (standalone, no Spring Cloud required) -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-reactor</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+
 		<!-- H2 Database for testing -->
 		<dependency>
 			<groupId>com.h2database</groupId>

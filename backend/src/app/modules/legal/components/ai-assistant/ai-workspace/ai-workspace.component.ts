@@ -1,0 +1,1735 @@
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { DraftingService } from '../../../services/drafting.service';
+import { LegalResearchService } from '../../../services/legal-research.service';
+import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
+import { DocumentEditorModalComponent } from '../../document-editor-modal/document-editor-modal.component';
+import { UserService } from '../../../../../service/user.service';
+import { environment } from '@environments/environment';
+import Swal from 'sweetalert2';
+
+@Component({
+  selector: 'app-ai-workspace',
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, DocumentEditorModalComponent],
+  templateUrl: './ai-workspace.component.html',
+  styleUrls: ['./ai-workspace.component.scss']
+})
+export class AiWorkspaceComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  // Timeout/Interval tracking for cleanup
+  private activeTimeouts: number[] = [];
+  private activeIntervals: number[] = [];
+
+  // Timing constants
+  private readonly STEP_DELAY = 2000;
+  private readonly TYPING_DELAY = 1500;
+  private readonly RESPONSE_DELAY = 3000;
+
+  // Conversation state
+  showChat = false;
+  showBottomSearchBar = false;
+  isGenerating = false;
+  currentStep = 1;
+  selectedDocumentType: 'interrogatories' | 'motion' | 'brief' | '' = '';
+  draftingMode = false; // Split-view mode when document is being edited
+
+  // Workflow steps with dynamic status tracking
+  workflowSteps: Array<{
+    id: number;
+    icon: string;
+    description: string;
+    status: 'pending' | 'active' | 'completed' | 'error';
+  }> = [
+    { id: 1, icon: 'ri-search-2-line', description: 'Detecting jurisdiction...', status: 'pending' },
+    { id: 2, icon: 'ri-file-search-line', description: 'Analyzing intent...', status: 'pending' },
+    { id: 3, icon: 'ri-search-line', description: 'Retrieving references...', status: 'pending' },
+    { id: 4, icon: 'ri-file-edit-line', description: 'Generating document...', status: 'pending' }
+  ];
+
+  // Conversation management - Load from backend
+  conversations: Array<{
+    id: string;
+    title: string;
+    date: Date;
+    type: 'question' | 'draft' | 'summarize' | 'upload';
+    messages: Array<{
+      role: 'user' | 'assistant';
+      content: string;
+      timestamp?: Date;
+      documentGenerated?: boolean;
+      documentId?: string; // Changed to string to match DocumentGeneration UUID
+    }>;
+    jurisdiction?: string;
+    documentType?: string;
+    sessionId?: number; // Link to DraftingSession
+    backendConversationId?: number; // Link to ResearchConversation (for Q&A)
+    researchMode?: string; // FAST, AUTO, THOROUGH
+    taskType?: string; // LEGAL_QUESTION, GENERATE_DRAFT, SUMMARIZE_CASE, ANALYZE_DOCUMENT
+    documentId?: number; // Document ID for ANALYZE_DOCUMENT tasks
+    relatedDraftId?: string; // Draft ID for related drafting tasks
+  }> = [];
+
+  activeConversationId: string | null = null;
+  conversationSearchQuery = '';
+
+  // Conversation messages (current active conversation)
+  conversationMessages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp?: Date;
+    documentGenerated?: boolean;
+    documentId?: string; // Changed to string to match DocumentGeneration UUID
+  }> = [];
+
+  // User input
+  customPrompt = '';
+  followUpMessage = '';
+
+  // Follow-up questions
+  followUpQuestions: string[] = [];
+
+  // Jurisdiction
+  selectedJurisdiction = 'Federal';
+  jurisdictions = ['Federal', 'Ontario', 'California', 'New York', 'Texas', 'Florida'];
+
+  // Document editor modal
+  editorModalOpen = false;
+  editorDocumentId = '';
+  editorDocumentTitle = '';
+  editorDocumentContent = '';
+
+  // Split-view drafting mode state
+  activeDocumentTitle = 'Generated Document';
+  activeDocumentContent = '';
+  currentDocumentWordCount = 0;
+  currentDate = new Date();
+
+  // Recent drafts
+  recentDrafts: any[] = [];
+  loadingDrafts = false;
+
+  // Current user from authentication service
+  currentUser: any = null;
+
+  // Mobile sidebar state
+  sidebarOpen = false;
+
+  // Practice areas for filtering
+  practiceAreas = [
+    { id: 'all', name: 'All Practice Areas', icon: 'ri-layout-grid-line' },
+    { id: 'civil', name: 'Civil Litigation', icon: 'ri-scales-3-line' },
+    { id: 'criminal', name: 'Criminal Defense', icon: 'ri-shield-star-line' },
+    { id: 'family', name: 'Family Law', icon: 'ri-team-line' },
+    { id: 'corporate', name: 'Corporate', icon: 'ri-building-line' },
+    { id: 'real-estate', name: 'Real Estate', icon: 'ri-home-4-line' },
+    { id: 'employment', name: 'Employment', icon: 'ri-briefcase-line' }
+  ];
+
+  selectedPracticeArea = 'all';
+  showTemplateFilters = false;
+
+  // Document types
+  documentTypes = [
+    // Discovery Documents
+    {
+      id: 'interrogatories',
+      name: 'Interrogatories',
+      description: 'Generate discovery interrogatories with AI assistance',
+      icon: 'ri-question-line',
+      color: 'primary',
+      category: 'Discovery',
+      practiceAreas: ['civil', 'criminal', 'employment'],
+      popular: true
+    },
+    {
+      id: 'requests-production',
+      name: 'Requests for Production',
+      description: 'Draft document production requests',
+      icon: 'ri-file-list-3-line',
+      color: 'primary',
+      category: 'Discovery',
+      practiceAreas: ['civil', 'employment'],
+      popular: false
+    },
+    {
+      id: 'requests-admission',
+      name: 'Requests for Admission',
+      description: 'Create requests for admission of facts',
+      icon: 'ri-checkbox-multiple-line',
+      color: 'primary',
+      category: 'Discovery',
+      practiceAreas: ['civil'],
+      popular: false
+    },
+    // Motions
+    {
+      id: 'motion-dismiss',
+      name: 'Motion to Dismiss',
+      description: 'Draft motions with legal research and precedents',
+      icon: 'ri-file-text-line',
+      color: 'success',
+      category: 'Motions',
+      practiceAreas: ['civil', 'criminal'],
+      popular: true
+    },
+    {
+      id: 'motion-summary-judgment',
+      name: 'Motion for Summary Judgment',
+      description: 'Prepare summary judgment motions',
+      icon: 'ri-gavel-line',
+      color: 'success',
+      category: 'Motions',
+      practiceAreas: ['civil'],
+      popular: true
+    },
+    {
+      id: 'motion-suppress',
+      name: 'Motion to Suppress',
+      description: 'Draft motions to suppress evidence',
+      icon: 'ri-file-shield-line',
+      color: 'success',
+      category: 'Motions',
+      practiceAreas: ['criminal'],
+      popular: false
+    },
+    // Pleadings
+    {
+      id: 'complaint',
+      name: 'Complaint',
+      description: 'Draft civil complaints with causes of action',
+      icon: 'ri-file-edit-line',
+      color: 'warning',
+      category: 'Pleadings',
+      practiceAreas: ['civil', 'employment'],
+      popular: true
+    },
+    {
+      id: 'answer',
+      name: 'Answer',
+      description: 'Prepare answers to complaints',
+      icon: 'ri-file-copy-2-line',
+      color: 'warning',
+      category: 'Pleadings',
+      practiceAreas: ['civil'],
+      popular: false
+    },
+    // Briefs
+    {
+      id: 'legal-brief',
+      name: 'Legal Brief',
+      description: 'Create comprehensive briefs with citations',
+      icon: 'ri-book-open-line',
+      color: 'info',
+      category: 'Briefs',
+      practiceAreas: ['civil', 'criminal'],
+      popular: true
+    },
+    {
+      id: 'appellate-brief',
+      name: 'Appellate Brief',
+      description: 'Draft appellate briefs for appeals',
+      icon: 'ri-booklet-line',
+      color: 'info',
+      category: 'Briefs',
+      practiceAreas: ['civil', 'criminal'],
+      popular: false
+    },
+    // Contracts
+    {
+      id: 'employment-agreement',
+      name: 'Employment Agreement',
+      description: 'Create employment contracts',
+      icon: 'ri-file-user-line',
+      color: 'purple',
+      category: 'Contracts',
+      practiceAreas: ['employment', 'corporate'],
+      popular: true
+    },
+    {
+      id: 'nda',
+      name: 'Non-Disclosure Agreement',
+      description: 'Draft confidentiality agreements',
+      icon: 'ri-file-lock-line',
+      color: 'purple',
+      category: 'Contracts',
+      practiceAreas: ['corporate'],
+      popular: true
+    },
+    {
+      id: 'purchase-agreement',
+      name: 'Purchase Agreement',
+      description: 'Create sale and purchase agreements',
+      icon: 'ri-shopping-bag-line',
+      color: 'purple',
+      category: 'Contracts',
+      practiceAreas: ['corporate', 'real-estate'],
+      popular: false
+    },
+    // Family Law
+    {
+      id: 'divorce-petition',
+      name: 'Divorce Petition',
+      description: 'Draft divorce/dissolution petitions',
+      icon: 'ri-parent-line',
+      color: 'danger',
+      category: 'Family Law',
+      practiceAreas: ['family'],
+      popular: true
+    },
+    {
+      id: 'custody-agreement',
+      name: 'Custody Agreement',
+      description: 'Create child custody agreements',
+      icon: 'ri-user-heart-line',
+      color: 'danger',
+      category: 'Family Law',
+      practiceAreas: ['family'],
+      popular: false
+    }
+  ];
+
+  constructor(
+    private draftingService: DraftingService,
+    private legalResearchService: LegalResearchService,
+    private userService: UserService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    // Subscribe to UserService userData$ observable for reactive updates
+    this.userService.userData$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+        console.log('Current user from UserService observable:', user);
+      });
+
+    // Load current user immediately from UserService
+    this.currentUser = this.userService.getCurrentUser();
+    console.log('Current user on init from UserService:', this.currentUser);
+
+    // If user is null but we have a token, fetch user profile from backend
+    if (!this.currentUser && this.userService.isAuthenticated()) {
+      console.log('User is null but authenticated - fetching profile from backend');
+      this.userService.profile$()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response && response.data && response.data.user) {
+              this.currentUser = response.data.user;
+              console.log('User profile loaded from backend:', this.currentUser);
+            }
+          },
+          error: (error) => {
+            console.error('Error loading user profile:', error);
+          }
+        });
+    }
+
+    // Load conversations for the default task type
+    const taskTypeMap = {
+      'question': 'LEGAL_QUESTION',
+      'draft': 'GENERATE_DRAFT',
+      'summarize': 'SUMMARIZE_CASE',
+      'upload': 'ANALYZE_DOCUMENT'
+    };
+    this.loadConversationsForTask(taskTypeMap[this.activeTask]);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+
+    // Clear all active timeouts
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts = [];
+
+    // Clear all active intervals
+    this.activeIntervals.forEach(id => clearInterval(id));
+    this.activeIntervals = [];
+  }
+
+  // Helper method to track setTimeout
+  private setTrackedTimeout(callback: () => void, delay: number): number {
+    const id = window.setTimeout(() => {
+      callback();
+      // Remove from tracking once executed
+      this.activeTimeouts = this.activeTimeouts.filter(timeoutId => timeoutId !== id);
+    }, delay);
+    this.activeTimeouts.push(id);
+    return id;
+  }
+
+  // Helper method to track setInterval
+  private setTrackedInterval(callback: () => void, delay: number): number {
+    const id = window.setInterval(callback, delay);
+    this.activeIntervals.push(id);
+    return id;
+  }
+
+  // Helper method to clear tracked interval
+  private clearTrackedInterval(id: number): void {
+    clearInterval(id);
+    this.activeIntervals = this.activeIntervals.filter(intervalId => intervalId !== id);
+  }
+
+  // Helper method to update workflow step status
+  private updateWorkflowStep(stepId: number, status: 'pending' | 'active' | 'completed' | 'error', description?: string): void {
+    const step = this.workflowSteps.find(s => s.id === stepId);
+    if (step) {
+      step.status = status;
+      if (description) {
+        step.description = description;
+      }
+    }
+  }
+
+  // Helper method to reset workflow steps
+  private resetWorkflowSteps(): void {
+    this.workflowSteps.forEach(step => {
+      step.status = 'pending';
+    });
+  }
+
+  // Stop generation
+  stopGeneration(): void {
+    // Clear all active timeouts and intervals
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts = [];
+    this.activeIntervals.forEach(id => clearInterval(id));
+    this.activeIntervals = [];
+
+    // Reset state
+    this.isGenerating = false;
+    this.resetWorkflowSteps();
+
+    // Add a cancelled message
+    this.conversationMessages.push({
+      role: 'assistant',
+      content: '_Generation stopped by user._'
+    });
+
+    this.showBottomSearchBar = true;
+  }
+
+  // ========================================
+  // MOBILE SIDEBAR TOGGLE
+  // ========================================
+
+  toggleSidebar(): void {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen = false;
+  }
+
+  // Load recent drafts and convert to conversations
+  loadRecentDrafts(): void {
+    // Get user ID with fallback to 1
+    const userId = this.userService.getCurrentUserId() || 1;
+
+    this.loadingDrafts = true;
+    this.draftingService.getRecentDrafts(userId, 0, 10)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          if (response && response.content) {
+            this.recentDrafts = response.content;
+            // Convert drafting sessions to conversations
+            this.conversations = this.convertSessionsToConversations(response.content);
+          } else if (response && Array.isArray(response)) {
+            this.recentDrafts = response;
+            this.conversations = this.convertSessionsToConversations(response);
+          }
+          this.loadingDrafts = false;
+        },
+        error: (error) => {
+          console.error('Error loading recent drafts:', error);
+          this.loadingDrafts = false;
+          this.recentDrafts = [];
+          this.conversations = [];
+        }
+      });
+  }
+
+  // Load conversations from backend (for general legal questions)
+  loadConversationsFromBackend(): void {
+    this.loadingDrafts = true;
+    this.legalResearchService.getAllUserConversations(0, 50)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (backendConversations: any[]) => {
+          // Convert backend conversations to local format
+          const convertedConversations = backendConversations.map(conv => ({
+            id: `conv-${conv.id}`, // Local UUID format
+            backendConversationId: conv.id, // Backend database ID
+            title: conv.title || 'Untitled Conversation',
+            date: new Date(conv.createdAt || conv.lastMessageAt),
+            type: 'question' as const,
+            messages: (conv.messages || []).map((msg: any) => ({
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.createdAt)
+            })),
+            jurisdiction: this.selectedJurisdiction,
+            researchMode: conv.researchMode || 'AUTO'
+          }));
+
+          // Merge with existing conversations (drafts from DraftingService)
+          this.conversations = [...convertedConversations, ...this.conversations];
+          this.loadingDrafts = false;
+        },
+        error: (error) => {
+          console.error('Error loading conversations from backend:', error);
+          this.loadingDrafts = false;
+        }
+      });
+  }
+
+  // Convert DraftingSession array to Conversation array
+  private convertSessionsToConversations(sessions: any[]): any[] {
+    return sessions.map(session => ({
+      id: session.id.toString(),
+      title: session.caseName || session.documentType || 'Untitled Draft',
+      date: new Date(session.createdAt),
+      type: 'draft' as 'draft',
+      sessionId: session.id,
+      documentType: session.documentType,
+      jurisdiction: 'Federal', // Could be from session if we add it
+      messages: session.generatedDocument ? [
+        {
+          role: 'user' as 'user',
+          content: session.wizardData || 'Generate document'
+        },
+        {
+          role: 'assistant' as 'assistant',
+          content: session.generatedDocument,
+          documentGenerated: true,
+          documentId: session.sessionId
+        }
+      ] : []
+    }));
+  }
+
+  // ========================================
+  // CONVERSATION MANAGEMENT (Protégé-style)
+  // ========================================
+
+  // Create new conversation
+  createNewConversation(): void {
+    const newId = (this.conversations.length + 1).toString();
+    const newConversation = {
+      id: newId,
+      title: 'New conversation',
+      date: new Date(),
+      type: 'question' as 'question' | 'draft' | 'summarize' | 'upload',
+      messages: [],
+      jurisdiction: this.selectedJurisdiction
+    };
+
+    this.conversations.unshift(newConversation);
+    this.activeConversationId = newId;
+    this.conversationMessages = [];
+    this.showChat = false;
+    this.draftingMode = false;
+  }
+
+  // Switch to different conversation
+  switchConversation(conversationId: string): void {
+    console.log('Switching to conversation:', conversationId);
+    const conversation = this.conversations.find(c => c.id === conversationId);
+    if (!conversation) {
+      console.error('Conversation not found:', conversationId);
+      return;
+    }
+
+    console.log('Found conversation:', conversation);
+
+    this.activeConversationId = conversationId;
+    this.selectedJurisdiction = conversation.jurisdiction || 'Federal';
+
+    // If this is a backend conversation (Q&A), load from backend
+    if (conversation.backendConversationId) {
+      console.log('Loading backend conversation:', conversation.backendConversationId);
+      this.loadConversationFromBackend(conversation.backendConversationId);
+    } else {
+      // Use local messages for drafting sessions
+      console.log('Using local messages:', conversation.messages.length);
+      this.conversationMessages = [...conversation.messages];
+      this.showChat = conversation.messages.length > 0;
+      this.showBottomSearchBar = this.showChat;
+      this.cdr.detectChanges();
+    }
+  }
+
+  // Load conversation messages from backend
+  loadConversationFromBackend(backendConversationId: number): void {
+    console.log('Loading conversation from backend:', backendConversationId);
+    this.legalResearchService.getConversationById(backendConversationId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (conversation) => {
+          console.log('Loaded conversation:', conversation);
+          // Convert backend messages to local format
+          this.conversationMessages = (conversation.messages || []).map((msg: any) => ({
+            role: msg.role.toLowerCase() === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.createdAt)
+          }));
+
+          console.log('Converted messages:', this.conversationMessages);
+
+          this.showChat = this.conversationMessages.length > 0;
+          this.showBottomSearchBar = this.showChat;
+
+          // Update local conversation's messages
+          const localConv = this.conversations.find(c => c.backendConversationId === backendConversationId);
+          if (localConv) {
+            localConv.messages = this.conversationMessages;
+          }
+
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading conversation from backend:', error);
+          // Fall back to local messages
+          const localConv = this.conversations.find(c => c.backendConversationId === backendConversationId);
+          if (localConv) {
+            this.conversationMessages = [...localConv.messages];
+            this.showChat = localConv.messages.length > 0;
+          }
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // Delete conversation
+  deleteConversation(conversationId: string): void {
+    console.log('Delete conversation clicked:', conversationId);
+    const conversation = this.conversations.find(c => c.id === conversationId);
+    if (!conversation) {
+      console.error('Conversation not found:', conversationId);
+      return;
+    }
+
+    console.log('Found conversation to delete:', conversation);
+
+    // Show SweetAlert confirmation
+    Swal.fire({
+      title: 'Delete Conversation?',
+      text: 'Are you sure you want to delete this conversation? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result: any) => {
+      if (result.isConfirmed) {
+        this.performDelete(conversationId, conversation);
+      }
+    });
+  }
+
+  // Perform the actual deletion
+  private performDelete(conversationId: string, conversation: any): void {
+    console.log('Performing delete for:', conversationId);
+
+    // If this is a backend conversation, delete from backend
+    if (conversation.backendConversationId) {
+      console.log('Deleting from backend:', conversation.backendConversationId);
+      this.legalResearchService.deleteConversationById(conversation.backendConversationId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            console.log('Conversation deleted from backend successfully');
+            this.removeConversationFromLocal(conversationId);
+
+            Swal.fire(
+              'Deleted!',
+              'Your conversation has been deleted.',
+              'success'
+            );
+          },
+          error: (error) => {
+            console.error('Error deleting conversation from backend:', error);
+
+            Swal.fire(
+              'Error!',
+              'Failed to delete conversation from server.',
+              'error'
+            );
+          }
+        });
+    } else {
+      // Just remove from local for drafting sessions
+      console.log('Removing local conversation');
+      this.removeConversationFromLocal(conversationId);
+
+      Swal.fire(
+        'Deleted!',
+        'Your conversation has been deleted.',
+        'success'
+      );
+    }
+  }
+
+  // Remove conversation from local state
+  private removeConversationFromLocal(conversationId: string): void {
+    const index = this.conversations.findIndex(c => c.id === conversationId);
+    if (index > -1) {
+      this.conversations.splice(index, 1);
+      if (this.activeConversationId === conversationId) {
+        this.activeConversationId = null;
+        this.conversationMessages = [];
+        this.showChat = false;
+        this.draftingMode = false;
+      }
+    }
+  }
+
+  // Get conversations grouped by date
+  get groupedConversations() {
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+
+    const past90Days = this.conversations.filter(c => c.date >= ninetyDaysAgo);
+    const older = this.conversations.filter(c => c.date < ninetyDaysAgo);
+
+    return {
+      past90Days,
+      older
+    };
+  }
+
+  // Get filtered conversations based on search
+  get filteredConversations() {
+    if (!this.conversationSearchQuery.trim()) {
+      return this.conversations;
+    }
+
+    const query = this.conversationSearchQuery.toLowerCase();
+    return this.conversations.filter(c =>
+      c.title.toLowerCase().includes(query) ||
+      c.messages.some(m => m.content.toLowerCase().includes(query))
+    );
+  }
+
+  // Delete all conversations
+  deleteAllConversations(): void {
+    if (confirm('Are you sure you want to delete all conversations?')) {
+      this.conversations = [];
+      this.activeConversationId = null;
+      this.conversationMessages = [];
+      this.showChat = false;
+      this.draftingMode = false;
+    }
+  }
+
+  // ========================================
+  // TEMPLATE/DOCUMENT TYPE FILTERING
+  // ========================================
+
+  // Get filtered document types
+  get filteredDocumentTypes() {
+    if (this.selectedPracticeArea === 'all') {
+      return this.documentTypes;
+    }
+    return this.documentTypes.filter(doc =>
+      doc.practiceAreas.includes(this.selectedPracticeArea)
+    );
+  }
+
+  // Get document types by category
+  getDocumentsByCategory(category: string) {
+    return this.filteredDocumentTypes.filter(doc => doc.category === category);
+  }
+
+  // Get unique categories from filtered documents
+  get availableCategories() {
+    const categories = new Set(this.filteredDocumentTypes.map(doc => doc.category));
+    return Array.from(categories);
+  }
+
+  // Toggle template filters
+  toggleFilters(): void {
+    this.showTemplateFilters = !this.showTemplateFilters;
+  }
+
+  // Select practice area
+  selectPracticeArea(areaId: string): void {
+    this.selectedPracticeArea = areaId;
+  }
+
+  // Select task (Protégé-style)
+  selectedTask: 'question' | 'draft' | 'summarize' | 'upload' = 'draft';
+  activeTask: 'question' | 'draft' | 'summarize' | 'upload' = 'draft';
+
+  selectTask(task: 'question' | 'draft' | 'summarize' | 'upload'): void {
+    this.selectedTask = task;
+    this.activeTask = task;
+    this.activeConversationId = null;
+    this.conversationMessages = [];
+
+    // Map frontend task to backend taskType
+    const taskTypeMap = {
+      'question': 'LEGAL_QUESTION',
+      'draft': 'GENERATE_DRAFT',
+      'summarize': 'SUMMARIZE_CASE',
+      'upload': 'ANALYZE_DOCUMENT'
+    };
+
+    // Load conversations for this task type
+    this.loadConversationsForTask(taskTypeMap[task]);
+  }
+
+  // Load conversations filtered by task type
+  loadConversationsForTask(taskType: string): void {
+    this.loadingDrafts = true;
+    this.cdr.detectChanges();
+
+    this.legalResearchService.getConversationsByTaskType(taskType, 0, 50)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (conversations) => {
+          console.log('Loaded conversations for task type:', taskType, conversations);
+          // Convert backend conversations to local format
+          this.conversations = conversations.map((conv: any) => ({
+            id: `conv-${conv.id}`,
+            backendConversationId: conv.id,
+            title: conv.title,
+            date: new Date(conv.createdAt),
+            type: this.activeTask,
+            messages: conv.messages || [],
+            taskType: conv.taskType,
+            documentId: conv.documentId,
+            relatedDraftId: conv.relatedDraftId,
+            researchMode: conv.researchMode
+          }));
+          this.loadingDrafts = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading conversations by task type:', error);
+          this.loadingDrafts = false;
+          this.conversations = [];
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // Protégé-style document type pills
+  documentTypePills = [
+    {
+      id: 'transactional',
+      name: 'Transactional Document',
+      placeholderExample: 'Draft a purchase agreement for a commercial property sale between ABC Corp and XYZ LLC...'
+    },
+    {
+      id: 'motion',
+      name: 'Motion',
+      placeholderExample: 'Draft a Motion to Dismiss the complaint for failure to state a claim...'
+    },
+    {
+      id: 'legal-argument',
+      name: 'Legal Argument',
+      placeholderExample: 'Draft a legal argument addressing the admissibility of hearsay evidence in this case...'
+    },
+    {
+      id: 'legal-memo',
+      name: 'Legal Memo',
+      placeholderExample: 'Draft a legal memorandum analyzing the liability issues in a slip and fall case...'
+    },
+    {
+      id: 'letter',
+      name: 'Letter',
+      placeholderExample: 'Draft a demand letter to the opposing party requesting payment of $50,000...'
+    },
+    {
+      id: 'email',
+      name: 'Email',
+      placeholderExample: 'Draft an email to the client explaining the next steps in their litigation matter...'
+    },
+    {
+      id: 'clause',
+      name: 'Clause',
+      placeholderExample: 'Draft an arbitration clause for a commercial services agreement...'
+    }
+  ];
+
+  selectedDocTypePill: string | null = null;
+
+  selectDocTypePill(pillId: string): void {
+    this.selectedDocTypePill = pillId;
+
+    // Update placeholder in the prompt textarea
+    const selectedPill = this.documentTypePills.find(p => p.id === pillId);
+    if (selectedPill) {
+      // You could optionally pre-fill or update a hint
+      console.log(`Selected document type: ${selectedPill.name}`);
+    }
+  }
+
+  // Get placeholder text based on selected task and document type
+  get promptPlaceholder(): string {
+    if (this.selectedTask === 'question') {
+      return 'Ask a legal question...';
+    }
+
+    if (this.selectedTask === 'summarize') {
+      return 'Enter case details to summarize...';
+    }
+
+    if (this.selectedTask === 'upload') {
+      return 'Describe what you want to do with your uploaded document...';
+    }
+
+    // For 'draft' task
+    if (this.selectedTask === 'draft') {
+      if (this.selectedDocTypePill) {
+        const selectedPill = this.documentTypePills.find(p => p.id === this.selectedDocTypePill);
+        return selectedPill?.placeholderExample || 'Describe the document you want to draft...';
+      }
+      return 'Describe the document you want to draft...';
+    }
+
+    return 'Ask a legal question...';
+  }
+
+  // Get follow-up placeholder for bottom input bar based on active task
+  get followUpPlaceholder(): string {
+    if (this.activeTask === 'question') {
+      return 'Ask a follow-up question...';
+    }
+
+    if (this.activeTask === 'summarize') {
+      return 'Request case summary changes...';
+    }
+
+    if (this.activeTask === 'upload') {
+      return 'Request document analysis changes...';
+    }
+
+    // For 'draft' task
+    return 'Enter drafting request here';
+  }
+
+  // Get user display name with proper fallbacks
+  getUserDisplayName(): string {
+    if (this.currentUser && this.currentUser.firstName && this.currentUser.firstName.trim()) {
+      return this.currentUser.firstName.trim();
+    }
+    return 'User';
+  }
+
+  // Start drafting with selected document type
+  startDrafting(documentTypeId: string): void {
+    this.selectedDocumentType = documentTypeId as any;
+    const type = this.documentTypes.find(t => t.id === documentTypeId);
+
+    if (type) {
+      // Add user message
+      this.conversationMessages.push({
+        role: 'user',
+        content: `I want to draft a ${type.name}`,
+        timestamp: new Date()
+      });
+
+      // Show chat and start generating
+      this.showChat = true;
+      this.showBottomSearchBar = false;
+      this.generateDocumentWithBackend(`I want to draft a ${type.name}`);
+    }
+  }
+
+  // Start custom draft with user's own prompt - REAL BACKEND CALL
+  startCustomDraft(): void {
+    if (!this.customPrompt.trim()) return;
+
+    const userPrompt = this.customPrompt;
+    this.customPrompt = '';
+
+    // Add user message
+    this.conversationMessages.push({
+      role: 'user',
+      content: userPrompt,
+      timestamp: new Date()
+    });
+
+    // Show chat and start generating
+    this.showChat = true;
+    this.showBottomSearchBar = false;
+
+    // Check if this is a legal question (not document generation)
+    if (this.selectedTask === 'question') {
+      // Create conversation and send message
+      this.createConversationAndSendMessage(userPrompt);
+    } else {
+      // Call backend to generate document
+      this.generateDocumentWithBackend(userPrompt);
+    }
+  }
+
+  // Create conversation and send first message for Q&A
+  createConversationAndSendMessage(query: string): void {
+    const title = query.length > 50 ? query.substring(0, 50) + '...' : query;
+    const researchMode = 'AUTO'; // Can be made selectable later
+
+    // Map frontend task to backend taskType
+    const taskTypeMap = {
+      'question': 'LEGAL_QUESTION',
+      'draft': 'GENERATE_DRAFT',
+      'summarize': 'SUMMARIZE_CASE',
+      'upload': 'ANALYZE_DOCUMENT'
+    };
+
+    const taskType = taskTypeMap[this.activeTask] || 'LEGAL_QUESTION';
+
+    // Ensure chat is shown and bottom bar is hidden during generation
+    this.showChat = true;
+    this.showBottomSearchBar = false;
+    this.isGenerating = true;
+    this.resetWorkflowSteps();
+    this.cdr.detectChanges();
+
+    // Create conversation via backend
+    this.legalResearchService.createGeneralConversation(title, researchMode, taskType)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (conversation) => {
+          console.log('Conversation created:', conversation);
+
+          // Add to local conversations list
+          const newConversation = {
+            id: `conv-${conversation.id}`,
+            backendConversationId: conversation.id,
+            title: conversation.title,
+            date: new Date(conversation.createdAt),
+            type: this.activeTask,
+            messages: [{
+              role: 'user' as const,
+              content: query,
+              timestamp: new Date()
+            }],
+            jurisdiction: this.selectedJurisdiction,
+            researchMode: conversation.researchMode,
+            taskType: conversation.taskType
+          };
+
+          this.conversations.unshift(newConversation);
+          this.activeConversationId = newConversation.id;
+
+          // Send message to conversation
+          this.sendMessageToActiveConversation(conversation.id, query, researchMode);
+        },
+        error: (error) => {
+          console.error('Error creating conversation:', error);
+          this.isGenerating = false;
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: 'Sorry, there was an error creating the conversation. Please try again.',
+            timestamp: new Date()
+          });
+        }
+      });
+  }
+
+  // Send message to active conversation and get AI response
+  sendMessageToActiveConversation(conversationId: number, query: string, researchMode: string): void {
+    console.log('=== SENDING MESSAGE TO CONVERSATION ===');
+    console.log('Conversation ID:', conversationId);
+    console.log('Query:', query);
+    console.log('Research Mode:', researchMode);
+
+    // Start workflow animation
+    this.isGenerating = true;
+    this.currentStep = 1;
+    this.resetWorkflowSteps();
+
+    // Animate through steps
+    this.updateWorkflowStep(1, 'active', 'Processing your question...');
+    this.cdr.detectChanges();
+
+    const stepTimer = this.setTrackedTimeout(() => {
+      this.updateWorkflowStep(1, 'completed');
+      this.updateWorkflowStep(2, 'active', 'Analyzing legal context...');
+      this.currentStep = 2;
+      this.cdr.detectChanges();
+    }, 800);
+
+    const stepTimer2 = this.setTrackedTimeout(() => {
+      this.updateWorkflowStep(2, 'completed');
+      this.updateWorkflowStep(3, 'active', 'Querying legal database...');
+      this.currentStep = 3;
+      this.cdr.detectChanges();
+    }, 1600);
+
+    const stepTimer3 = this.setTrackedTimeout(() => {
+      this.updateWorkflowStep(3, 'completed');
+      this.updateWorkflowStep(4, 'active', 'Generating response...');
+      this.currentStep = 4;
+      this.cdr.detectChanges();
+    }, 2400);
+
+    this.legalResearchService.sendMessageToConversation(conversationId, query, researchMode)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('=== RECEIVED AI RESPONSE ===');
+          console.log('Full response object:', response);
+          console.log('Response field:', response.response);
+          console.log('AI Response field:', response.aiResponse);
+
+          // Complete all steps
+          this.updateWorkflowStep(4, 'completed');
+          this.cdr.detectChanges();
+
+          // Add AI response to conversation messages
+          const aiResponse = response.response || response.aiResponse || 'Response received.';
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date()
+          });
+
+          // Extract follow-up questions from AI response
+          this.extractFollowUpQuestions(aiResponse);
+
+          // Update conversation in list
+          const conv = this.conversations.find(c => c.backendConversationId === conversationId);
+          if (conv) {
+            conv.messages.push({
+              role: 'assistant',
+              content: response.response || response.aiResponse,
+              timestamp: new Date()
+            });
+          }
+
+          this.isGenerating = false;
+          this.showChat = true; // Ensure chat stays visible
+          this.showBottomSearchBar = true;
+          this.resetWorkflowSteps();
+
+          console.log('=== UI STATE AFTER RESPONSE ===');
+          console.log('showChat:', this.showChat);
+          console.log('showBottomSearchBar:', this.showBottomSearchBar);
+          console.log('isGenerating:', this.isGenerating);
+
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('=== ERROR SENDING MESSAGE ===');
+          console.error('Error object:', error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+
+          // Mark current step as error
+          this.updateWorkflowStep(this.currentStep, 'error', 'Error processing request');
+          this.cdr.detectChanges();
+
+          this.isGenerating = false;
+          this.showChat = true; // Ensure chat stays visible
+          this.showBottomSearchBar = true;
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: 'Sorry, there was an error processing your question. Please try again.',
+            timestamp: new Date()
+          });
+          this.resetWorkflowSteps();
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // Generate document with REAL backend API call
+  generateDocumentWithBackend(prompt: string): void {
+    // Get user ID from user service with fallback
+    let userId = this.userService.getCurrentUserId();
+
+    // Fallback: Try to get from currentUser object
+    if (!userId && this.currentUser) {
+      userId = this.currentUser.id;
+    }
+
+    // Final fallback: Use ID 1 (default test user)
+    if (!userId) {
+      console.warn('No user ID from auth service, using default user ID 1');
+      userId = 1;
+    }
+
+    this.isGenerating = true;
+    this.currentStep = 1;
+
+    // Show workflow steps (simulate progress)
+    const stepInterval = setInterval(() => {
+      if (this.currentStep < 4) {
+        this.currentStep++;
+      } else {
+        clearInterval(stepInterval);
+      }
+    }, 2000);
+
+    // Determine document type from selected pill or task
+    let documentType = this.selectedDocTypePill || this.selectedTask || 'draft';
+    if (documentType === 'question') documentType = 'legal-memo';
+    if (documentType === 'summarize') documentType = 'case-summary';
+
+    // Call backend API
+    this.draftingService.generateDocumentDirect({
+      userId: userId,
+      documentType: documentType,
+      prompt: prompt,
+      jurisdiction: this.selectedJurisdiction,
+      practiceArea: 'General Practice'
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          clearInterval(stepInterval);
+          this.isGenerating = false;
+          this.currentStep = 1;
+
+          if (response.success && response.document) {
+            // Add AI response with generated document
+            this.conversationMessages.push({
+              role: 'assistant',
+              content: response.document,
+              documentGenerated: true,
+              documentId: response.documentId
+            });
+
+            this.showBottomSearchBar = true;
+
+            // Create a new conversation in the sidebar
+            const newConversation = {
+              id: response.documentId || Date.now().toString(),
+              title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+              date: new Date(),
+              type: 'draft' as 'draft',
+              documentType: documentType,
+              jurisdiction: this.selectedJurisdiction,
+              sessionId: response.sessionId,
+              messages: [...this.conversationMessages]
+            };
+
+            // Add to conversations array if not already present
+            if (!this.conversations.find(c => c.id === newConversation.id)) {
+              this.conversations.unshift(newConversation);
+              this.activeConversationId = newConversation.id;
+            }
+
+            // Enter drafting mode with the generated document
+            this.enterDraftingMode(response.document, prompt);
+          } else {
+            console.error('Document generation failed:', response.error);
+            this.conversationMessages.push({
+              role: 'assistant',
+              content: `I apologize, but I encountered an error while generating your document: ${response.error || 'Unknown error'}. Please try again.`
+            });
+            this.showBottomSearchBar = true;
+          }
+        },
+        error: (error) => {
+          clearInterval(stepInterval);
+          this.isGenerating = false;
+          this.currentStep = 1;
+          console.error('Error generating document:', error);
+
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: `I apologize, but I encountered a technical error while generating your document. Please try again in a moment.`
+          });
+          this.showBottomSearchBar = true;
+        }
+      });
+  }
+
+  // Enter drafting mode (split-view)
+  enterDraftingMode(documentContent: string, title: string): void {
+    this.draftingMode = true;
+    this.activeDocumentContent = documentContent;
+    this.activeDocumentTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
+    this.currentDocumentWordCount = this.countWords(documentContent);
+    this.showBottomSearchBar = false;
+  }
+
+  // Close drafting mode (back to full chat)
+  closeDraftingMode(): void {
+    this.draftingMode = false;
+    this.showBottomSearchBar = true;
+  }
+
+  // Count words in document
+  countWords(text: string): number {
+    // Remove markdown syntax and HTML tags for accurate count
+    const plainText = text
+      .replace(/#+\s/g, '') // Remove markdown headers
+      .replace(/\*\*/g, '') // Remove bold
+      .replace(/\*/g, '') // Remove italic
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove markdown links
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .trim();
+
+    if (!plainText) return 0;
+
+    return plainText.split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  // Apply drafting tool
+  applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
+    console.log(`Applying drafting tool: ${tool}`);
+
+    // Add user message requesting the tool
+    let toolPrompt = '';
+    switch (tool) {
+      case 'simplify':
+        toolPrompt = 'Please simplify the language in this document to make it more accessible.';
+        break;
+      case 'condense':
+        toolPrompt = 'Please condense this document to make it more concise.';
+        break;
+      case 'expand':
+        toolPrompt = 'Please expand this document with more detail and explanation.';
+        break;
+      case 'redraft':
+        toolPrompt = 'Please redraft this document entirely with a fresh approach.';
+        break;
+    }
+
+    this.conversationMessages.push({
+      role: 'user',
+      content: toolPrompt,
+      timestamp: new Date()
+    });
+
+    // Simulate AI processing
+    this.isGenerating = true;
+    setTimeout(() => {
+      this.conversationMessages.push({
+        role: 'assistant',
+        content: `I've applied the "${tool}" transformation to your document. The updated version is now displayed in the preview panel.`
+      });
+      this.isGenerating = false;
+
+      // Update document content (in real implementation, this would come from backend)
+      // For now, just add a note to the document
+      this.activeDocumentContent += `\n\n*[Document updated with ${tool} transformation]*`;
+      this.currentDocumentWordCount = this.countWords(this.activeDocumentContent);
+    }, 2000);
+  }
+
+  // Save and exit drafting mode
+  saveAndExit(): void {
+    console.log('Saving document and exiting drafting mode');
+    // TODO: Implement actual save to backend
+    this.draftingMode = false;
+    this.showBottomSearchBar = true;
+    alert('Document saved successfully!');
+  }
+
+  // Download document from split-view (drafting mode)
+  downloadDocument(format: 'docx' | 'pdf'): void {
+    // Get the current document ID from the last message
+    const lastMessage = this.conversationMessages[this.conversationMessages.length - 1];
+    if (!lastMessage || !lastMessage.documentId) {
+      console.error('No document ID available for download');
+      alert('Unable to download document. Please generate a document first.');
+      return;
+    }
+
+    this.downloadDocumentById(lastMessage.documentId.toString(), format);
+  }
+
+  // Download document by ID (shared method)
+  private downloadDocumentById(documentId: string, format: 'docx' | 'pdf'): void {
+    const url = `${environment.apiUrl}/api/document-generations/${documentId}/export?format=${format}`;
+
+    // Create a hidden link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `document.${format}`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    console.log(`Download initiated: ${format.toUpperCase()}`);
+  }
+
+  // Mock document generation (will be replaced with actual API call)
+  generateMockDocument(prompt: string): string {
+    const docType = this.selectedDocumentType;
+
+    if (docType === 'interrogatories' || prompt.toLowerCase().includes('interrogator')) {
+      return `# INTERROGATORIES TO DEFENDANT
+
+I've drafted comprehensive interrogatories based on your request. Here's the document:
+
+## DEFINITIONS
+
+1. "You" or "your" refers to the defendant and any agents, representatives, or employees acting on behalf of the defendant.
+2. "Document" includes writings, recordings, photographs, and any other data compilations.
+
+## INSTRUCTIONS
+
+These interrogatories are served pursuant to the applicable rules of civil procedure. Please answer fully and completely, under oath.
+
+## INTERROGATORIES
+
+1. State your full legal name, current address, and all addresses where you have resided during the past five years.
+
+2. Identify all persons who have knowledge of the facts underlying this litigation, including their names, addresses, and the nature of their knowledge.
+
+3. Describe in detail your version of the events that are the subject of this lawsuit, including dates, times, locations, and persons involved.
+
+4. List all documents in your possession, custody, or control that relate to this matter, including the date, author, and subject matter of each document.
+
+5. Identify all expert witnesses you intend to call at trial, including their qualifications and the substance of their expected testimony.
+
+---
+*Generated by AI Legal Assistant on ${new Date().toLocaleDateString()}*`;
+    }
+
+    if (docType === 'motion' || prompt.toLowerCase().includes('motion')) {
+      return `# MOTION TO DISMISS
+
+I've prepared a Motion to Dismiss based on your requirements:
+
+## MEMORANDUM IN SUPPORT OF MOTION TO DISMISS
+
+### INTRODUCTION
+
+The defendant respectfully moves this Court to dismiss the plaintiff's complaint pursuant to applicable rules of civil procedure for failure to state a claim upon which relief can be granted.
+
+### STATEMENT OF FACTS
+
+[This section will be customized based on the specific facts of your case]
+
+### ARGUMENT
+
+#### I. PLAINTIFF FAILS TO STATE A CLAIM
+
+The complaint fails to allege facts sufficient to support the elements of any recognized cause of action. Even accepting all allegations as true and drawing all reasonable inferences in the plaintiff's favor, the plaintiff has not demonstrated entitlement to relief.
+
+#### II. LEGAL STANDARD
+
+Under the applicable standard, a complaint must contain sufficient factual matter to state a claim for relief that is plausible on its face. The complaint here fails to meet this threshold.
+
+### CONCLUSION
+
+For the foregoing reasons, this Court should grant the defendant's motion to dismiss.
+
+---
+*Generated by AI Legal Assistant on ${new Date().toLocaleDateString()}*`;
+    }
+
+    // Brief or generic document
+    return `# LEGAL DOCUMENT
+
+I've created a legal document based on your request: "${prompt}"
+
+## OVERVIEW
+
+This document has been structured to address your legal needs with proper formatting and professional language.
+
+## CONTENT
+
+The document includes:
+- Clear headings and organization
+- Professional legal language
+- Proper citations (to be customized)
+- Standard legal formatting
+
+## NEXT STEPS
+
+You can:
+1. Review the document below
+2. Request specific revisions
+3. Export to PDF or DOCX format
+4. Add case-specific details
+
+---
+*Generated by AI Legal Assistant on ${new Date().toLocaleDateString()}*`;
+  }
+
+  // Send follow-up message
+  sendFollowUpMessage(): void {
+    if (!this.followUpMessage.trim()) return;
+
+    // Clear follow-up questions when sending new message
+    this.followUpQuestions = [];
+
+    // Add user message
+    this.conversationMessages.push({
+      role: 'user',
+      content: this.followUpMessage,
+      timestamp: new Date()
+    });
+
+    const userMessage = this.followUpMessage;
+    this.followUpMessage = '';
+    this.showBottomSearchBar = false;
+
+    // Get active conversation
+    const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+
+    if (!activeConv || !activeConv.backendConversationId) {
+      // No active conversation - this is likely a document drafting follow-up
+      // Keep original mock behavior for now
+      this.isGenerating = true;
+      setTimeout(() => {
+        this.conversationMessages.push({
+          role: 'assistant',
+          content: `I understand you'd like to: "${userMessage}". I'll help you with those revisions. This functionality will be connected to the backend API to provide real-time document editing and improvements.`,
+          timestamp: new Date()
+        });
+        this.isGenerating = false;
+        this.showBottomSearchBar = true;
+      }, 2000);
+      return;
+    }
+
+    // Send message to backend conversation
+    this.isGenerating = true;
+    const researchMode = activeConv.researchMode || 'AUTO';
+
+    this.sendMessageToActiveConversation(activeConv.backendConversationId, userMessage, researchMode);
+  }
+
+  // Handle Enter key press in textarea
+  onEnterPress(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendFollowUpMessage();
+    }
+  }
+
+  // View generated document
+  viewGeneratedDocument(documentId: string): void {
+    // Find the message with this document
+    const message = this.conversationMessages.find(
+      m => m.documentGenerated && m.documentId === documentId
+    );
+
+    if (message) {
+      // Open in view-only mode (can be extended later)
+      this.openEditorModal(documentId, 'Generated Document', message.content);
+    }
+  }
+
+  // Edit document
+  editDocument(documentId: string): void {
+    // Find the message with this document
+    const message = this.conversationMessages.find(
+      m => m.documentGenerated && m.documentId === documentId
+    );
+
+    if (message) {
+      this.openEditorModal(documentId, 'Edit Document', message.content);
+    }
+  }
+
+  // Open editor modal
+  openEditorModal(documentId: string, title: string, content: string): void {
+    this.editorDocumentId = documentId;
+    this.editorDocumentTitle = title;
+    this.editorDocumentContent = content;
+    this.editorModalOpen = true;
+  }
+
+  // Save document from editor
+  onEditorSave(updatedContent: string): void {
+    console.log('Saving document:', this.editorDocumentId);
+
+    // Update the message content
+    const message = this.conversationMessages.find(
+      m => m.documentId === this.editorDocumentId
+    );
+
+    if (message) {
+      message.content = updatedContent;
+    }
+
+    // TODO: Save to backend
+    this.editorModalOpen = false;
+    alert('Document saved successfully!');
+  }
+
+  // Cancel editor
+  onEditorCancel(): void {
+    this.editorModalOpen = false;
+  }
+
+  // Export document - Use real backend
+  exportDocument(documentId: number | string, format: 'pdf' | 'docx'): void {
+    this.downloadDocumentById(documentId.toString(), format);
+  }
+
+  // View draft
+  viewDraft(draft: any): void {
+    // TODO: Implement draft viewing
+    console.log('Viewing draft:', draft);
+  }
+
+  // Delete draft
+  deleteDraft(draft: any): void {
+    // TODO: Implement draft deletion
+    console.log('Deleting draft:', draft);
+  }
+
+  // Execute suggested action
+  executeSuggestedAction(action: string, documentId?: string | number): void {
+    console.log(`Executing suggested action: ${action} for document ${documentId}`);
+
+    switch (action) {
+      case 'view-document':
+        if (documentId) {
+          this.viewGeneratedDocument(documentId.toString());
+        }
+        break;
+
+      case 'export-pdf':
+        if (documentId) {
+          this.exportDocument(documentId.toString(), 'pdf');
+        }
+        break;
+
+      case 'summarize-authority':
+        // Add user message requesting case authority summary
+        this.conversationMessages.push({
+          role: 'user',
+          content: 'Please summarize the case authority used in this document.',
+          timestamp: new Date()
+        });
+
+        // Simulate AI response
+        this.isGenerating = true;
+        setTimeout(() => {
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: `I've analyzed the case authority in your document. Here's a summary:\n\n**Primary Cases Referenced:**\n\n1. *Smith v. Jones* (2020) - Established the legal standard for...\n2. *Doe v. Corporation* (2019) - Precedent for contract interpretation...\n\nThese cases support your main arguments regarding liability and damages.`
+          });
+          this.isGenerating = false;
+          this.showBottomSearchBar = true;
+        }, 2000);
+        break;
+
+      default:
+        console.warn(`Unknown action: ${action}`);
+    }
+  }
+
+  // Get examples title based on selected task
+  getExamplesTitle(): string {
+    switch (this.selectedTask) {
+      case 'question':
+        return 'Example questions you can ask:';
+      case 'draft':
+        return 'Example drafts you can generate:';
+      case 'summarize':
+        return 'Example cases you can summarize:';
+      case 'upload':
+        return 'Example document analysis tasks:';
+      default:
+        return 'Examples:';
+    }
+  }
+
+  // Get examples based on selected task
+  getExamples(): string[] {
+    switch (this.selectedTask) {
+      case 'question':
+        return [
+          'What are the elements required to prove negligence in a personal injury case?',
+          'How does the statute of limitations work for breach of contract claims?',
+          'What defenses are available in a wrongful termination lawsuit?'
+        ];
+      case 'draft':
+        return [
+          'Draft a Motion to Dismiss for lack of personal jurisdiction',
+          'Generate a comprehensive employment agreement with non-compete clause',
+          'Create interrogatories for a commercial breach of contract case'
+        ];
+      case 'summarize':
+        return [
+          'Summarize recent Supreme Court decisions on intellectual property',
+          'Provide an overview of landmark employment discrimination cases',
+          'Analyze trends in contract interpretation over the past 5 years'
+        ];
+      case 'upload':
+        return [
+          'Analyze the enforceability of non-compete clauses in this contract',
+          'Review this complaint and identify potential defenses',
+          'Extract key dates and obligations from this agreement'
+        ];
+      default:
+        return [];
+    }
+  }
+
+  // Get includes based on selected task
+  getIncludes(): string[] {
+    switch (this.selectedTask) {
+      case 'question':
+        return ['Cases', 'Legislation', 'Legal principles'];
+      case 'draft':
+        return ['Legal research', 'Case citations', 'Formatting'];
+      case 'summarize':
+        return ['Key holdings', 'Citations', 'Analysis'];
+      case 'upload':
+        return ['Document review', 'Risk assessment', 'Recommendations'];
+      default:
+        return [];
+    }
+  }
+
+  // Extract follow-up questions from AI response (matching case-research component)
+  extractFollowUpQuestions(response: string): void {
+    this.followUpQuestions = [];
+    console.log('=== EXTRACTING FOLLOW-UP QUESTIONS ===');
+    console.log('Response length:', response.length);
+
+    // Look for "## Follow-up Questions" markdown heading (like case-research component)
+    const followUpPattern = /##\s*Follow-up Questions\s*\n([\s\S]*?)(?=\n##|$)/i;
+    const match = response.match(followUpPattern);
+
+    if (match) {
+      console.log('Found Follow-up Questions section');
+      const questionsSection = match[1];
+      console.log('Questions section:', questionsSection);
+
+      // Extract questions from list items (- or • or * or numbered)
+      const questionMatches = questionsSection.match(/[-•*]\s*(.+?)(?=\n[-•*]|\n\d+\.|\n|$)/g) ||
+                             questionsSection.match(/\d+\.\s*(.+?)(?=\n\d+\.|\n|$)/g);
+
+      if (questionMatches) {
+        this.followUpQuestions = questionMatches
+          .map(q => q.replace(/^[-•*\d+\.]\s*/, '').trim())
+          .map(q => q.replace(/\*\*/g, '')) // Remove bold markdown
+          .filter(q => q.length > 0)
+          .slice(0, 3); // Limit to 3 questions
+
+        console.log('Extracted follow-up questions:', this.followUpQuestions);
+      } else {
+        console.log('No question matches found in section');
+      }
+    } else {
+      console.log('No "## Follow-up Questions" section found in response');
+    }
+  }
+
+  // Ask a follow-up question
+  askFollowUpQuestion(question: string): void {
+    if (!question || this.isGenerating) return;
+
+    // Set the follow-up message and send it
+    this.followUpMessage = question;
+    this.sendFollowUpMessage();
+  }
+}
