@@ -5,6 +5,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
+import { DocumentGenerationService } from '../../../services/document-generation.service';
+import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { UserService } from '../../../../../service/user.service';
@@ -152,7 +154,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   activeDocumentTitle = 'Generated Document';
   activeDocumentContent = '';
   currentDocumentWordCount = 0;
+  currentDocumentPageCount = 0;
   currentDate = new Date();
+  currentDocumentId: string | number | null = null;
+  documentMetadata: {
+    tokensUsed?: number;
+    costEstimate?: number;
+    generatedAt?: Date;
+    lastSaved?: Date;
+    version?: number;
+  } = {};
 
   // Recent drafts
   recentDrafts: any[] = [];
@@ -160,6 +171,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Current user from authentication service
   currentUser: any = null;
+
+  // MOCK MODE: Toggle to test UI without API calls
+  private USE_MOCK_DATA = true; // Set to false for real API calls
 
   // Mobile sidebar state
   sidebarOpen = false;
@@ -178,8 +192,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedPracticeArea = 'all';
   showTemplateFilters = false;
 
-  // Document types
-  documentTypes = [
+  // Document types - Enhanced with field configurations
+  documentTypes: DocumentTypeConfig[] = [
     // Discovery Documents
     {
       id: 'interrogatories',
@@ -189,7 +203,67 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'primary',
       category: 'Discovery',
       practiceAreas: ['civil', 'criminal', 'employment'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '3-5 minutes',
+      complexity: 'moderate',
+      templateId: 1,
+      requiredFields: [
+        {
+          id: 'case_name',
+          label: 'Case Name',
+          type: 'text',
+          placeholder: 'e.g., Smith v. Johnson',
+          validation: { required: true, minLength: 3 }
+        },
+        {
+          id: 'case_number',
+          label: 'Case Number',
+          type: 'text',
+          placeholder: 'e.g., CV-2024-12345',
+          validation: { required: true }
+        },
+        {
+          id: 'party_type',
+          label: 'Propounding Party',
+          type: 'select',
+          options: ['Plaintiff', 'Defendant', 'Cross-Complainant', 'Third-Party Defendant'],
+          validation: { required: true }
+        },
+        {
+          id: 'case_facts',
+          label: 'Brief Case Summary',
+          type: 'textarea',
+          placeholder: 'Summarize the key facts and issues in this case...',
+          rows: 4,
+          helperText: 'Provide context to generate relevant interrogatories',
+          validation: { required: true, minLength: 100, maxLength: 2000 }
+        },
+        {
+          id: 'discovery_focus',
+          label: 'Discovery Focus Areas',
+          type: 'multiselect',
+          options: ['Liability', 'Damages', 'Causation', 'Affirmative Defenses', 'Expert Witnesses', 'Document Production'],
+          validation: { required: true }
+        }
+      ],
+      optionalFields: [
+        {
+          id: 'number_of_interrogatories',
+          label: 'Number of Interrogatories',
+          type: 'number',
+          defaultValue: 25,
+          helperText: 'Maximum allowed by jurisdiction',
+          validation: { required: false, min: 1, max: 50 }
+        },
+        {
+          id: 'specific_issues',
+          label: 'Specific Issues to Address',
+          type: 'textarea',
+          placeholder: 'Any specific topics or questions you want included...',
+          rows: 3
+        }
+      ]
     },
     {
       id: 'requests-production',
@@ -199,7 +273,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'primary',
       category: 'Discovery',
       practiceAreas: ['civil', 'employment'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '2-4 minutes',
+      complexity: 'simple',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'requests-admission',
@@ -209,7 +288,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'primary',
       category: 'Discovery',
       practiceAreas: ['civil'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '2-4 minutes',
+      complexity: 'simple',
+      requiredFields: [],
+      optionalFields: []
     },
     // Motions
     {
@@ -220,7 +304,81 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'success',
       category: 'Motions',
       practiceAreas: ['civil', 'criminal'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '5-8 minutes',
+      complexity: 'complex',
+      templateId: 2,
+      requiredFields: [
+        {
+          id: 'case_name',
+          label: 'Case Name',
+          type: 'text',
+          placeholder: 'e.g., Smith v. Johnson',
+          validation: { required: true }
+        },
+        {
+          id: 'case_number',
+          label: 'Case Number',
+          type: 'text',
+          placeholder: 'e.g., CV-2024-12345',
+          validation: { required: true }
+        },
+        {
+          id: 'court',
+          label: 'Court',
+          type: 'text',
+          placeholder: 'e.g., United States District Court for the Southern District of New York',
+          validation: { required: true }
+        },
+        {
+          id: 'grounds',
+          label: 'Grounds for Dismissal',
+          type: 'multiselect',
+          options: [
+            'Lack of subject matter jurisdiction',
+            'Lack of personal jurisdiction',
+            'Improper venue',
+            'Failure to state a claim',
+            'Failure to join required party',
+            'Insufficient service of process'
+          ],
+          validation: { required: true }
+        },
+        {
+          id: 'facts',
+          label: 'Relevant Facts',
+          type: 'textarea',
+          placeholder: 'Describe the factual basis for the motion...',
+          rows: 5,
+          validation: { required: true, minLength: 200 }
+        },
+        {
+          id: 'legal_argument',
+          label: 'Legal Argument Summary',
+          type: 'textarea',
+          placeholder: 'Outline the key legal arguments supporting dismissal...',
+          rows: 5,
+          helperText: 'The AI will expand this with case law and statutory references',
+          validation: { required: true, minLength: 150 }
+        }
+      ],
+      optionalFields: [
+        {
+          id: 'key_precedents',
+          label: 'Key Precedent Cases (optional)',
+          type: 'textarea',
+          placeholder: 'List any specific cases you want cited...',
+          rows: 3
+        },
+        {
+          id: 'hearing_requested',
+          label: 'Request Oral Argument?',
+          type: 'select',
+          options: ['Yes', 'No'],
+          defaultValue: 'Yes'
+        }
+      ]
     },
     {
       id: 'motion-summary-judgment',
@@ -230,7 +388,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'success',
       category: 'Motions',
       practiceAreas: ['civil'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '6-10 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'motion-suppress',
@@ -240,7 +403,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'success',
       category: 'Motions',
       practiceAreas: ['criminal'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '5-8 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     // Pleadings
     {
@@ -251,7 +419,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'warning',
       category: 'Pleadings',
       practiceAreas: ['civil', 'employment'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '7-12 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'answer',
@@ -261,7 +434,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'warning',
       category: 'Pleadings',
       practiceAreas: ['civil'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '5-8 minutes',
+      complexity: 'moderate',
+      requiredFields: [],
+      optionalFields: []
     },
     // Briefs
     {
@@ -272,7 +450,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'info',
       category: 'Briefs',
       practiceAreas: ['civil', 'criminal'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '8-15 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'appellate-brief',
@@ -282,7 +465,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'info',
       category: 'Briefs',
       practiceAreas: ['civil', 'criminal'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '10-20 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     // Contracts
     {
@@ -293,7 +481,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'purple',
       category: 'Contracts',
       practiceAreas: ['employment', 'corporate'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '4-7 minutes',
+      complexity: 'moderate',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'nda',
@@ -303,7 +496,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'purple',
       category: 'Contracts',
       practiceAreas: ['corporate'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '3-5 minutes',
+      complexity: 'simple',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'purchase-agreement',
@@ -313,7 +511,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'purple',
       category: 'Contracts',
       practiceAreas: ['corporate', 'real-estate'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '5-8 minutes',
+      complexity: 'moderate',
+      requiredFields: [],
+      optionalFields: []
     },
     // Family Law
     {
@@ -324,7 +527,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'danger',
       category: 'Family Law',
       practiceAreas: ['family'],
-      popular: true
+      popular: true,
+      jurisdictionRequired: true,
+      estimatedTime: '6-10 minutes',
+      complexity: 'complex',
+      requiredFields: [],
+      optionalFields: []
     },
     {
       id: 'custody-agreement',
@@ -334,12 +542,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       color: 'danger',
       category: 'Family Law',
       practiceAreas: ['family'],
-      popular: false
+      popular: false,
+      jurisdictionRequired: true,
+      estimatedTime: '5-8 minutes',
+      complexity: 'moderate',
+      requiredFields: [],
+      optionalFields: []
     }
   ];
 
   constructor(
     private legalResearchService: LegalResearchService,
+    private documentGenerationService: DocumentGenerationService,
     private userService: UserService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -960,6 +1174,207 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.initializeWorkflowSteps(this.selectedTask);
     this.animateWorkflowSteps();
 
+    // FORK: Different logic for 'draft' task vs other tasks
+    if (this.selectedTask === 'draft') {
+      // DOCUMENT GENERATION FLOW - Use document generation service
+      this.generateDocumentFlow(userPrompt);
+    } else {
+      // Q&A CONVERSATION FLOW - Use existing conversation service
+      this.generateConversationFlow(userPrompt);
+    }
+  }
+
+  // MOCK METHOD: Generate document with mock data for UI testing
+  private generateDocumentFlowMock(userPrompt: string): void {
+    const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
+
+    // Complete workflow animation
+    this.completeAllWorkflowSteps();
+
+    // MOCK DOCUMENT DATA - Professional legal document
+    const mockDocumentContent = `# COMMONWEALTH OF MASSACHUSETTS
+
+## SUPERIOR COURT
+
+**CLIENT NAME**,
+*Plaintiff/Petitioner*
+
+v.
+
+**[OPPOSING PARTY]**,
+*Defendant/Respondent*
+
+**CASE NO.** CASE-NUMBER
+
+---
+
+## MOTION TO DISMISS FOR LACK OF PERSONAL JURISDICTION
+
+NOW COMES the Defendant, **[OPPOSING PARTY]**, by and through undersigned counsel, and respectfully moves this Honorable Court to dismiss the above-captioned matter for lack of personal jurisdiction pursuant to Mass. R. Civ. P. 12(b)(2).
+
+### I. INTRODUCTION
+
+This is a **mock document** generated for UI design testing purposes. No API calls were made to generate this content.
+
+### II. STATEMENT OF FACTS
+
+The relevant facts giving rise to this motion are as follows:
+
+1. **First Key Fact**: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+2. **Second Important Detail**: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+3. **Third Relevant Consideration**: Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+### III. LEGAL STANDARD
+
+Under Massachusetts law, a defendant may challenge personal jurisdiction through a motion to dismiss. The plaintiff bears the burden of demonstrating that jurisdiction is proper.
+
+### IV. ARGUMENT
+
+The Court should grant this motion for the following reasons:
+
+- **Insufficient Minimum Contacts**: The defendant lacks sufficient minimum contacts with Massachusetts to support the exercise of personal jurisdiction.
+
+- **Due Process Concerns**: Requiring the defendant to defend this action in Massachusetts would offend traditional notions of fair play and substantial justice.
+
+- **No Purposeful Availment**: The defendant did not purposefully avail itself of the privilege of conducting activities within Massachusetts.
+
+### V. CONCLUSION
+
+For the foregoing reasons, Defendant respectfully requests that this Honorable Court:
+
+1. Grant this Motion to Dismiss;
+2. Dismiss this action without prejudice; and
+3. Award such other relief as the Court deems just and proper.
+
+---
+
+**Respectfully submitted,**
+
+**CLIENT NAME**
+
+By counsel,
+
+_______________________
+Attorney Name
+Bar Number
+Law Firm Name
+Address
+Phone: (555) 123-4567
+Email: attorney@lawfirm.com
+
+**Dated**: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+    // Populate all state variables
+    this.currentDocumentId = 'mock-doc-' + Date.now();
+    this.activeDocumentTitle = title;
+    this.activeDocumentContent = mockDocumentContent;
+    this.currentDocumentWordCount = 602;
+    this.currentDocumentPageCount = 4;
+    this.documentMetadata = {
+      tokensUsed: 1500,
+      costEstimate: 0.0500,
+      generatedAt: new Date(),
+      version: 1
+    };
+
+    // Add mock assistant message
+    this.conversationMessages.push({
+      role: 'assistant',
+      content: `I've generated your ${this.selectedDocTypePill || 'document'}. You can view it in the document preview panel.`,
+      timestamp: new Date()
+    });
+
+    // ACTIVATE SPLIT-VIEW DRAFTING MODE
+    this.draftingMode = true;
+    this.isGenerating = false;
+    this.cdr.detectChanges();
+  }
+
+  // NEW METHOD: Document generation flow for 'draft' task
+  private generateDocumentFlow(userPrompt: string): void {
+    // CHECK MOCK MODE
+    if (this.USE_MOCK_DATA) {
+      console.log('[MOCK MODE] Generating document with mock data - no API call');
+      // Simulate brief loading delay
+      setTimeout(() => {
+        this.generateDocumentFlowMock(userPrompt);
+      }, 1500);
+      return;
+    }
+
+    const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
+
+    // Prepare document generation request
+    const documentRequest = {
+      documentType: this.selectedDocTypePill || 'general-draft',
+      jurisdiction: this.selectedJurisdiction,
+      variables: {
+        prompt: userPrompt
+      },
+      prompt: userPrompt
+    };
+
+    // Call document generation service
+    this.documentGenerationService.generateDocument(documentRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (generatedDoc) => {
+          console.log('Document generated:', generatedDoc);
+
+          // Complete workflow steps
+          this.completeAllWorkflowSteps();
+
+          // Store document metadata
+          this.currentDocumentId = generatedDoc.id;
+          this.activeDocumentTitle = title;
+          this.activeDocumentContent = generatedDoc.content;
+          this.currentDocumentWordCount = this.documentGenerationService.countWords(generatedDoc.content);
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+          this.documentMetadata = {
+            tokensUsed: generatedDoc.tokensUsed,
+            costEstimate: generatedDoc.costEstimate,
+            generatedAt: new Date(generatedDoc.generatedAt),
+            version: 1
+          };
+
+          // Add assistant message to conversation
+          const assistantMessage = {
+            role: 'assistant' as 'assistant',
+            content: `I've generated your ${this.selectedDocTypePill || 'document'}. You can view it in the document preview panel.`,
+            timestamp: new Date()
+          };
+          this.conversationMessages.push(assistantMessage);
+
+          // ACTIVATE SPLIT-VIEW DRAFTING MODE
+          this.draftingMode = true;
+          this.isGenerating = false;
+
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error generating document:', error);
+
+          // Mark workflow as error
+          if (this.workflowSteps.length > 0) {
+            this.workflowSteps[this.workflowSteps.length - 1].status = 'error';
+          }
+
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: 'Sorry, I encountered an error generating the document. Please try again.'
+          });
+
+          this.isGenerating = false;
+          this.showBottomSearchBar = true;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // EXISTING METHOD: Conversation flow for Q&A tasks (extracted from startCustomDraft)
+  private generateConversationFlow(userPrompt: string): void {
     // Map frontend task to backend taskType
     const taskTypeMap: { [key: string]: string } = {
       'question': 'LEGAL_QUESTION',
@@ -986,7 +1401,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             date: new Date(session.createdAt || new Date()),
             type: this.selectedTask,
             messages: [...this.conversationMessages],
-            messageCount: this.conversationMessages.length, // Initialize with current message count
+            messageCount: this.conversationMessages.length,
             jurisdiction: session.jurisdiction,
             backendConversationId: session.id,
             researchMode: session.researchMode || 'AUTO',
@@ -1104,7 +1519,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Apply drafting tool
+  // Apply drafting tool (simplify, condense, expand, redraft) - REAL BACKEND CALL
   applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
+    if (!this.currentDocumentId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Document',
+        text: 'Please generate a document first before applying revisions.',
+        timer: 2000
+      });
+      return;
+    }
+
     console.log(`Applying drafting tool: ${tool}`);
 
     // Add user message requesting the tool
@@ -1130,56 +1556,188 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       timestamp: new Date()
     });
 
-    // Simulate AI processing
-    this.isGenerating = true;
-    setTimeout(() => {
+    // CHECK MOCK MODE
+    if (this.USE_MOCK_DATA) {
+      console.log(`[MOCK MODE] Applying "${tool}" - no actual changes to document`);
+
+      // Just increment version and show success message
+      this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
+
       this.conversationMessages.push({
         role: 'assistant',
-        content: `I've applied the "${tool}" transformation to your document. The updated version is now displayed in the preview panel.`
+        content: `I've applied the "${tool}" transformation to your document (MOCK MODE - document unchanged). The version is now v${this.documentMetadata.version}.`,
+        timestamp: new Date()
       });
-      this.isGenerating = false;
 
-      // Update document content (in real implementation, this would come from backend)
-      // For now, just add a note to the document
-      this.activeDocumentContent += `\n\n*[Document updated with ${tool} transformation]*`;
-      this.currentDocumentWordCount = this.countWords(this.activeDocumentContent);
-    }, 2000);
-  }
-
-  // Save and exit drafting mode
-  saveAndExit(): void {
-    console.log('Saving document and exiting drafting mode');
-    // TODO: Implement actual save to backend
-    this.draftingMode = false;
-    this.showBottomSearchBar = true;
-    alert('Document saved successfully!');
-  }
-
-  // Download document from split-view (drafting mode)
-  downloadDocument(format: 'docx' | 'pdf'): void {
-    // Get the current document ID from the last message
-    const lastMessage = this.conversationMessages[this.conversationMessages.length - 1];
-    if (!lastMessage || !lastMessage.documentId) {
-      console.error('No document ID available for download');
-      alert('Unable to download document. Please generate a document first.');
+      this.cdr.detectChanges();
       return;
     }
 
-    this.downloadDocumentById(lastMessage.documentId.toString(), format);
+    // Call backend revision service
+    this.isGenerating = true;
+
+    const revisionRequest = {
+      documentId: this.currentDocumentId,
+      revisionType: tool,
+      prompt: toolPrompt,
+      currentContent: this.activeDocumentContent
+    };
+
+    this.documentGenerationService.reviseDocument(revisionRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (revisedDoc) => {
+          // Update document content with revised version
+          this.activeDocumentContent = revisedDoc.content;
+          this.currentDocumentWordCount = this.documentGenerationService.countWords(revisedDoc.content);
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+          // Update metadata
+          this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
+          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + (revisedDoc.tokensUsed || 0);
+          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + (revisedDoc.costEstimate || 0);
+
+          // Add assistant message
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: `I've applied the "${tool}" transformation to your document. The updated version (v${this.documentMetadata.version}) is now displayed in the preview panel.`,
+            timestamp: new Date()
+          });
+
+          this.isGenerating = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error applying drafting tool:', error);
+
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: 'Sorry, I encountered an error applying the revision. Please try again.',
+            timestamp: new Date()
+          });
+
+          this.isGenerating = false;
+          this.cdr.detectChanges();
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Revision Failed',
+            text: 'Failed to apply document revision. Please try again.',
+            timer: 3000
+          });
+        }
+      });
   }
 
-  // Download document by ID (shared method)
-  private downloadDocumentById(documentId: string, format: 'docx' | 'pdf'): void {
-    const url = `${environment.apiUrl}/api/document-generations/${documentId}/export?format=${format}`;
+  // Save and exit drafting mode
+  // Save document and exit drafting mode - REAL BACKEND CALL
+  saveAndExit(): void {
+    if (!this.currentDocumentId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Document',
+        text: 'No document to save. Please generate a document first.',
+        timer: 2000
+      });
+      return;
+    }
 
-    // Create a hidden link and trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `document.${format}`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    console.log('Saving document:', this.currentDocumentId);
+
+    // Call backend to save document
+    this.documentGenerationService.saveDocument(
+      this.currentDocumentId,
+      this.activeDocumentContent,
+      this.activeDocumentTitle
+    )
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.documentMetadata.lastSaved = new Date();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved!',
+          text: 'Document saved successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        // Exit drafting mode
+        this.draftingMode = false;
+        this.showBottomSearchBar = true;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error saving document:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Failed to save document. Please try again.',
+          timer: 3000
+        });
+      }
+    });
+  }
+
+  // Download document from split-view (drafting mode) - REAL BACKEND CALL
+  downloadDocument(format: 'docx' | 'pdf'): void {
+    if (!this.currentDocumentId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Document',
+        text: 'No document to download. Please generate a document first.',
+        timer: 2000
+      });
+      return;
+    }
+
+    console.log(`Downloading document ${this.currentDocumentId} as ${format}`);
+
+    // Call backend export service
+    this.documentGenerationService.exportDocument(this.currentDocumentId, format)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          // Create download link
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${this.activeDocumentTitle}.${format}`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Downloaded!',
+            text: `Document exported as ${format.toUpperCase()}`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (error) => {
+          console.error('Error exporting document:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: 'Failed to export document. Please try again.',
+            timer: 3000
+          });
+        }
+      });
+  }
+
+  // Download document by ID (shared method) - kept for backward compatibility
+  private downloadDocumentById(documentId: string, format: 'docx' | 'pdf'): void {
+    this.currentDocumentId = documentId;
+    this.downloadDocument(format);
 
     console.log(`Download initiated: ${format.toUpperCase()}`);
   }

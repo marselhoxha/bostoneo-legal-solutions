@@ -310,6 +310,16 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
             this.cdr.detectChanges();
 
+            // Clean up old observers before setting up new ones (for conversation switching)
+            if (this.conversationObserver) {
+              this.conversationObserver.disconnect();
+            }
+            const oldConversationElement = this.elementRef.nativeElement.querySelector('.chat-conversation');
+            if (oldConversationElement && this.conversationScrollListener) {
+              oldConversationElement.removeEventListener('scroll', this.conversationScrollListener);
+            }
+            this.observersSetup = false; // Reset flag to allow new setup
+
             // Set up scroll observers if chat is showing
             if (this.showChat) {
               setTimeout(() => {

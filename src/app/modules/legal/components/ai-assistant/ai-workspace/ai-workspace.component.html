@@ -16,7 +16,7 @@
   <!-- ========================================== -->
   <!-- LEFT SIDEBAR: Conversation History -->
   <!-- ========================================== -->
-  <aside class="card conversation-sidebar" [class.open]="sidebarOpen">
+  <aside class="card conversation-sidebar" [class.open]="sidebarOpen" *ngIf="!draftingMode">
     <div class="conversation-sidebar-header">
       <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
               (click)="startNewConversation()">
@@ -244,7 +244,34 @@
       <!-- Document Preview Panel (60%) -->
       <div class="document-preview-panel">
         <div class="document-preview-header">
-          <h3 class="document-title">{{activeDocumentTitle}}</h3>
+          <div class="header-left">
+            <h3 class="document-title">
+              <i class="ri-file-text-line"></i>
+              {{activeDocumentTitle}}
+            </h3>
+            <div class="document-metadata">
+              <span class="meta-item" *ngIf="currentDocumentWordCount > 0">
+                <i class="ri-file-word-line"></i>
+                {{currentDocumentWordCount}} words
+              </span>
+              <span class="meta-item" *ngIf="currentDocumentPageCount > 0">
+                <i class="ri-file-copy-line"></i>
+                {{currentDocumentPageCount}} pages
+              </span>
+              <span class="meta-item" *ngIf="documentMetadata.tokensUsed">
+                <i class="ri-code-s-slash-line"></i>
+                {{documentMetadata.tokensUsed}} tokens
+              </span>
+              <span class="meta-item" *ngIf="documentMetadata.costEstimate">
+                <i class="ri-money-dollar-circle-line"></i>
+                ${{documentMetadata.costEstimate | number:'1.4-4'}}
+              </span>
+              <span class="meta-item" *ngIf="documentMetadata.version">
+                <i class="ri-git-commit-line"></i>
+                v{{documentMetadata.version}}
+              </span>
+            </div>
+          </div>
           <div class="preview-actions">
             <button class="btn-icon" title="Zoom in">
               <i class="ri-zoom-in-line"></i>
@@ -293,24 +320,46 @@
         </div>
 
         <div class="chat-messages-area-side">
-          <ul class="message-list">
+          <ul class="list-unstyled chat-conversation-list">
             <!-- User & AI Messages -->
             <ng-container *ngFor="let message of conversationMessages">
-              <li class="message-item" [ngClass]="message.role">
+              <li class="chat-list" [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
+
                 <!-- User Message -->
-                <div class="message-bubble user-message" *ngIf="message.role === 'user'">
-                  <div class="message-content">{{message.content}}</div>
+                <div class="conversation-list" *ngIf="message.role === 'user'">
+                  <div class="user-chat-content">
+                    <div class="message-bubble bg-soft-info text-info">
+                      <div class="message-content">
+                        <p class="mb-0">{{message.content}}</p>
+                      </div>
+                      <div class="message-meta">
+                        <small class="text-muted">{{message.timestamp ? (message.timestamp | date:'short') : 'Just now'}}</small>
+                        <i class="ri-check-double-line ms-1 text-success"></i>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- User Avatar (right side) -->
+                  <div class="chat-avatar ms-3">
+                    <div class="avatar-sm">
+                      <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                        <i class="ri-user-3-fill"></i>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- AI Message -->
-                <div class="message-wrapper ai-wrapper" *ngIf="message.role === 'assistant'">
-                  <div class="ai-avatar">
-                    <i class="ri-robot-2-line"></i>
-                  </div>
-                  <div class="message-bubble ai-message">
-                    <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+                <div class="ai-message-container" *ngIf="message.role === 'assistant'">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="chat-avatar flex-shrink-0">
+                      <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <div class="message-bubble ai-message flex-grow-1">
+                      <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+                    </div>
                   </div>
                 </div>
+
               </li>
             </ng-container>
           </ul>
