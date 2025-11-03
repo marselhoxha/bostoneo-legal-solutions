@@ -1,6 +1,9 @@
 /* You can add global styles to this file, and also import other style files */
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+// Quill Editor Styles
+@import 'quill/dist/quill.snow.css';
+
 // Swiper
 .coverflowslide .slide {
     position: relative;

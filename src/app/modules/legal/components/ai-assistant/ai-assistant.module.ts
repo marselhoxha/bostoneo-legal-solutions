@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AiAssistantRoutingModule } from './ai-assistant-routing.module';
 import { FlatpickrModule } from 'angularx-flatpickr';
+import { QuillModule } from 'ngx-quill';
 
 // Services
 import { AiAssistantService } from '../../../../service/ai-assistant.service';
@@ -22,7 +23,8 @@ import { AiDraftingComponent } from './ai-drafting/ai-drafting.component';
     FormsModule,
     ReactiveFormsModule,
     AiAssistantRoutingModule,
-    FlatpickrModule.forRoot()
+    FlatpickrModule.forRoot(),
+    QuillModule.forRoot()
   ],
   providers: [
     AiAssistantService,

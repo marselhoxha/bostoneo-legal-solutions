@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -12,11 +12,13 @@ import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { UserService } from '../../../../../service/user.service';
 import { environment } from '@environments/environment';
 import Swal from 'sweetalert2';
+import { QuillModule } from 'ngx-quill';
+import Quill from 'quill';
 
 @Component({
   selector: 'app-ai-workspace',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective, QuillModule],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
 })
@@ -174,6 +176,33 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // MOCK MODE: Toggle to test UI without API calls
   private USE_MOCK_DATA = true; // Set to false for real API calls
+
+  // Quill Editor instance and config
+  @ViewChild('documentEditor') documentEditor?: any;
+  quillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'header': [1, 2, 3, false] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      ['link'],
+      ['clean']
+    ]
+  };
+
+  // Text selection tracking
+  selectedText: string = '';
+  selectionRange: { index: number; length: number } | null = null;
+  showFloatingToolbar = false;
+  floatingToolbarPosition = { top: 0, left: 0 };
+
+  // Version history
+  showVersionHistory = false;
+  documentVersions: any[] = [];
+  selectedVersionNumber: number | null = null;
+  showDiffView = false;
+  diffVersion1: number | null = null;
+  diffVersion2: number | null = null;
 
   // Mobile sidebar state
   sidebarOpen = false;
@@ -1186,6 +1215,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // MOCK METHOD: Generate document with mock data for UI testing
   private generateDocumentFlowMock(userPrompt: string): void {
+    console.log('[MOCK] generateDocumentFlowMock called with prompt:', userPrompt);
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
 
     // Complete workflow animation
@@ -1269,7 +1299,9 @@ Email: attorney@lawfirm.com
     // Populate all state variables
     this.currentDocumentId = 'mock-doc-' + Date.now();
     this.activeDocumentTitle = title;
+    // Set markdown content directly - Quill will handle it
     this.activeDocumentContent = mockDocumentContent;
+    console.log('[MOCK] Set activeDocumentContent:', this.activeDocumentContent.substring(0, 100));
     this.currentDocumentWordCount = 602;
     this.currentDocumentPageCount = 4;
     this.documentMetadata = {
@@ -1288,8 +1320,20 @@ Email: attorney@lawfirm.com
 
     // ACTIVATE SPLIT-VIEW DRAFTING MODE
     this.draftingMode = true;
+    this.showChat = true;
     this.isGenerating = false;
+    console.log('[MOCK] Activated split-view: draftingMode=', this.draftingMode, 'showChat=', this.showChat);
+
+    // Force change detection and update Quill editor
     this.cdr.detectChanges();
+
+    // Set content again after view is rendered (Quill may not be initialized yet)
+    setTimeout(() => {
+      if (this.documentEditor && this.documentEditor.quillEditor) {
+        console.log('[MOCK] Manually setting Quill content');
+        this.documentEditor.quillEditor.setText(mockDocumentContent);
+      }
+    }, 100);
   }
 
   // NEW METHOD: Document generation flow for 'draft' task
@@ -1573,34 +1617,36 @@ Email: attorney@lawfirm.com
       return;
     }
 
-    // Call backend revision service
+    // Call backend transformation service (NEW AI Workspace API)
     this.isGenerating = true;
 
-    const revisionRequest = {
-      documentId: this.currentDocumentId,
-      revisionType: tool,
-      prompt: toolPrompt,
-      currentContent: this.activeDocumentContent
+    const transformRequest = {
+      documentId: this.currentDocumentId as number,
+      transformationType: tool.toUpperCase(),
+      transformationScope: 'FULL_DOCUMENT' as const,
+      fullDocumentContent: this.activeDocumentContent,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill
     };
 
-    this.documentGenerationService.reviseDocument(revisionRequest)
+    this.documentGenerationService.transformDocument(transformRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (revisedDoc) => {
-          // Update document content with revised version
-          this.activeDocumentContent = revisedDoc.content;
-          this.currentDocumentWordCount = this.documentGenerationService.countWords(revisedDoc.content);
-          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+        next: (response) => {
+          // Update document content with transformed version
+          this.activeDocumentContent = response.transformedContent;
+          this.currentDocumentWordCount = response.wordCount;
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
 
           // Update metadata
-          this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
-          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + (revisedDoc.tokensUsed || 0);
-          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + (revisedDoc.costEstimate || 0);
+          this.documentMetadata.version = response.newVersion;
+          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
+          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
 
           // Add assistant message
           this.conversationMessages.push({
             role: 'assistant',
-            content: `I've applied the "${tool}" transformation to your document. The updated version (v${this.documentMetadata.version}) is now displayed in the preview panel.`,
+            content: response.explanation,
             timestamp: new Date()
           });
 
@@ -1623,6 +1669,216 @@ Email: attorney@lawfirm.com
             icon: 'error',
             title: 'Revision Failed',
             text: 'Failed to apply document revision. Please try again.',
+            timer: 3000
+          });
+        }
+      });
+  }
+
+  // ========================================
+  // QUILL EDITOR EVENT HANDLERS
+  // ========================================
+
+  /**
+   * Handle text selection changes in Quill editor
+   */
+  onTextSelectionChanged(event: any): void {
+    if (!event || !event.range) {
+      // No selection
+      this.selectedText = '';
+      this.selectionRange = null;
+      this.showFloatingToolbar = false;
+      return;
+    }
+
+    const { index, length } = event.range;
+
+    if (length > 0 && this.documentEditor) {
+      // User has selected text
+      const quill = this.documentEditor.quillEditor;
+      this.selectedText = quill.getText(index, length);
+      this.selectionRange = { index, length };
+
+      // Calculate floating toolbar position using native selection
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        // Position to the RIGHT of the selection
+        this.floatingToolbarPosition = {
+          top: rect.top,
+          left: rect.right + 10
+        };
+      } else {
+        // Fallback to Quill bounds
+        const bounds = quill.getBounds(index, length);
+        const editorRect = quill.root.getBoundingClientRect();
+        this.floatingToolbarPosition = {
+          top: editorRect.top + bounds.top,
+          left: editorRect.left + bounds.left + bounds.width + 10
+        };
+      }
+      this.showFloatingToolbar = true;
+    } else {
+      // Selection cleared
+      this.selectedText = '';
+      this.selectionRange = null;
+      this.showFloatingToolbar = false;
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Handle document content changes
+   */
+  onDocumentContentChanged(event: any): void {
+    // Update word count when content changes
+    if (this.activeDocumentContent) {
+      // Extract plain text from HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = this.activeDocumentContent;
+      const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+      this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Apply transformation to selected text only
+   */
+  applySelectionTransform(tool: string): void {
+    if (!this.selectedText || !this.selectionRange || !this.documentEditor) {
+      console.log('No text selected for transformation');
+      return;
+    }
+
+    console.log(`Applying "${tool}" to selected text:`, this.selectedText.substring(0, 50) + '...');
+
+    // Hide floating toolbar
+    this.showFloatingToolbar = false;
+
+    // Get transformation prompt
+    let toolPrompt = '';
+    switch (tool) {
+      case 'simplify':
+        toolPrompt = `Please simplify the following text to make it more accessible:\n\n"${this.selectedText}"`;
+        break;
+      case 'expand':
+        toolPrompt = `Please expand the following text with more detail:\n\n"${this.selectedText}"`;
+        break;
+      case 'formal':
+        toolPrompt = `Please rewrite the following text in a more formal, professional legal tone:\n\n"${this.selectedText}"`;
+        break;
+      case 'persuasive':
+        toolPrompt = `Please rewrite the following text to be more persuasive and compelling:\n\n"${this.selectedText}"`;
+        break;
+      case 'cite':
+        toolPrompt = `Please suggest relevant legal citations to support this argument:\n\n"${this.selectedText}"`;
+        break;
+      default:
+        toolPrompt = `Please improve the following text:\n\n"${this.selectedText}"`;
+    }
+
+    // Add user message
+    this.conversationMessages.push({
+      role: 'user',
+      content: toolPrompt,
+      timestamp: new Date()
+    });
+
+    // MOCK MODE: Simulate AI transformation
+    if (this.USE_MOCK_DATA) {
+      console.log(`[MOCK MODE] Applying "${tool}" to selection`);
+
+      setTimeout(() => {
+        const mockTransformed = `[${tool.toUpperCase()}] ${this.selectedText}`;
+
+        // Replace selected text with transformed version
+        if (this.documentEditor && this.selectionRange) {
+          const quill = this.documentEditor.quillEditor;
+          quill.deleteText(this.selectionRange.index, this.selectionRange.length);
+          quill.insertText(this.selectionRange.index, mockTransformed);
+
+          // Update selection to new transformed text
+          quill.setSelection(this.selectionRange.index, mockTransformed.length);
+        }
+
+        // Add AI response
+        this.conversationMessages.push({
+          role: 'assistant',
+          content: `I've applied the "${tool}" transformation to your selected text (MOCK MODE). The updated text is now in the document.`,
+          timestamp: new Date()
+        });
+
+        // Increment version
+        this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
+
+        this.cdr.detectChanges();
+      }, 1000);
+
+      return;
+    }
+
+    // Real API call for selection-based transformation
+    this.isGenerating = true;
+
+    const transformRequest = {
+      documentId: this.currentDocumentId as number,
+      transformationType: tool.toUpperCase(),
+      transformationScope: 'SELECTION' as const,
+      fullDocumentContent: this.activeDocumentContent,
+      selectedText: this.selectedText,
+      selectionStartIndex: this.selectionRange.index,
+      selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill
+    };
+
+    this.documentGenerationService.transformDocument(transformRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Update document content with transformed version
+          this.activeDocumentContent = response.transformedContent;
+
+          // Update word count
+          this.currentDocumentWordCount = response.wordCount;
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
+
+          // Update metadata
+          this.documentMetadata.version = response.newVersion;
+          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
+          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
+
+          // Add AI response to conversation
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: response.explanation,
+            timestamp: new Date()
+          });
+
+          this.isGenerating = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error transforming selection:', error);
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: `Sorry, I encountered an error while transforming the text. Please try again.`,
+            timestamp: new Date()
+          });
+          this.isGenerating = false;
+          this.cdr.detectChanges();
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Transformation Failed',
+            text: 'Failed to transform selected text. Please try again.',
             timer: 3000
           });
         }
@@ -2214,5 +2470,150 @@ You can:
     // Set the follow-up message and send it
     this.followUpMessage = question;
     this.sendFollowUpMessage();
+  }
+
+  // ========================================
+  // VERSION HISTORY METHODS (PHASE 2)
+  // ========================================
+
+  /**
+   * Toggle version history sidebar
+   */
+  toggleVersionHistory(): void {
+    this.showVersionHistory = !this.showVersionHistory;
+
+    if (this.showVersionHistory && this.currentDocumentId) {
+      this.loadVersionHistory();
+    }
+  }
+
+  /**
+   * Load version history from backend
+   */
+  loadVersionHistory(): void {
+    if (!this.currentDocumentId) return;
+
+    // Skip loading for mock documents
+    if (typeof this.currentDocumentId === 'string' && this.currentDocumentId.startsWith('mock-doc-')) {
+      console.log('[MOCK MODE] Skipping version history load for mock document');
+      this.documentVersions = [];
+      return;
+    }
+
+    // Call API to get versions
+    this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (versions) => {
+          this.documentVersions = versions;
+          this.selectedVersionNumber = this.documentMetadata.version || null;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading version history:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load version history',
+            timer: 2000
+          });
+        }
+      });
+  }
+
+  /**
+   * Preview a specific version
+   */
+  previewVersion(version: any): void {
+    this.selectedVersionNumber = version.versionNumber;
+    this.activeDocumentContent = version.content;
+    this.currentDocumentWordCount = version.wordCount;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Restore a previous version
+   */
+  restoreVersion(versionNumber: number): void {
+    Swal.fire({
+      title: 'Restore Version?',
+      text: `This will restore version ${versionNumber} as the current version. Current changes will be saved as a new version.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Restore',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed && this.currentDocumentId) {
+        this.documentGenerationService.restoreVersion(this.currentDocumentId as number, versionNumber)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (restoredVersion) => {
+              this.activeDocumentContent = restoredVersion.content;
+              this.documentMetadata.version = restoredVersion.versionNumber;
+              this.currentDocumentWordCount = restoredVersion.wordCount;
+
+              this.conversationMessages.push({
+                role: 'assistant',
+                content: `Restored version ${versionNumber} as version ${restoredVersion.versionNumber}.`,
+                timestamp: new Date()
+              });
+
+              // Reload version history
+              this.loadVersionHistory();
+
+              Swal.fire({
+                icon: 'success',
+                title: 'Version Restored',
+                text: `Version ${versionNumber} restored as v${restoredVersion.versionNumber}`,
+                timer: 2000,
+                showConfirmButton: false
+              });
+
+              this.cdr.detectChanges();
+            },
+            error: (error) => {
+              console.error('Error restoring version:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Restore Failed',
+                text: 'Failed to restore version',
+                timer: 2000
+              });
+            }
+          });
+      }
+    });
+  }
+
+  /**
+   * Compare two versions (shows diff view)
+   */
+  compareVersions(version1: number, version2: number): void {
+    this.diffVersion1 = version1;
+    this.diffVersion2 = version2;
+    this.showDiffView = true;
+    this.showVersionHistory = false;
+
+    // Load both versions and show diff
+    // TODO: Implement diff viewer component
+    console.log(`Compare v${version1} with v${version2}`);
+  }
+
+  /**
+   * Get human-readable transformation label
+   */
+  getTransformationLabel(transformationType: string): string {
+    const labels: { [key: string]: string } = {
+      'INITIAL_GENERATION': 'Initial Draft',
+      'SIMPLIFY': 'Simplified',
+      'CONDENSE': 'Condensed',
+      'EXPAND': 'Expanded',
+      'FORMAL': 'Made Formal',
+      'PERSUASIVE': 'Made Persuasive',
+      'REDRAFT': 'Redrafted',
+      'MANUAL_EDIT': 'Manual Edit',
+      'RESTORE_VERSION': 'Version Restored'
+    };
+    return labels[transformationType] || transformationType;
   }
 }

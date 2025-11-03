@@ -273,6 +273,11 @@
             </div>
           </div>
           <div class="preview-actions">
+            <button class="btn-icon" (click)="toggleVersionHistory()"
+                    [class.active]="showVersionHistory"
+                    title="Version History">
+              <i class="ri-history-line"></i>
+            </button>
             <button class="btn-icon" title="Zoom in">
               <i class="ri-zoom-in-line"></i>
             </button>
@@ -285,8 +290,55 @@
           </div>
         </div>
 
+        <!-- Version History Sidebar -->
+        <div class="version-history-sidebar" *ngIf="showVersionHistory">
+          <div class="version-history-header">
+            <h5>Version History</h5>
+            <button class="btn-close-mini" (click)="toggleVersionHistory()">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <div class="version-history-content">
+            <div class="version-item" *ngFor="let version of documentVersions"
+                 [class.active]="selectedVersionNumber === version.versionNumber"
+                 (click)="previewVersion(version)">
+              <div class="version-header">
+                <span class="version-number">v{{version.versionNumber}}</span>
+                <span class="version-date">{{version.createdAt | date:'short'}}</span>
+              </div>
+              <div class="version-details">
+                <span class="version-type">{{getTransformationLabel(version.transformationType)}}</span>
+                <span class="version-scope" *ngIf="version.transformationScope === 'SELECTION'">
+                  <i class="ri-text-snippet"></i> Selection
+                </span>
+              </div>
+              <div class="version-meta">
+                <span *ngIf="version.tokensUsed">{{version.tokensUsed}} tokens</span>
+                <span *ngIf="version.wordCount">{{version.wordCount}} words</span>
+              </div>
+              <div class="version-actions" *ngIf="version.versionNumber !== documentMetadata.version">
+                <button class="btn-restore" (click)="restoreVersion(version.versionNumber); $event.stopPropagation()">
+                  <i class="ri-arrow-go-back-line"></i> Restore
+                </button>
+                <button class="btn-compare" (click)="compareVersions(documentMetadata.version, version.versionNumber); $event.stopPropagation()">
+                  <i class="ri-git-compare-line"></i> Compare
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="document-preview-content">
-          <div class="document-rendered" [innerHTML]="activeDocumentContent | markdownToHtml" apexChartsContainer></div>
+          <!-- Rich Text Editor (Quill) -->
+          <quill-editor
+            #documentEditor
+            [(ngModel)]="activeDocumentContent"
+            [modules]="quillModules"
+            [styles]="{'min-height': '500px', 'height': '100%'}"
+            (onSelectionChanged)="onTextSelectionChanged($event)"
+            (onContentChanged)="onDocumentContentChanged($event)"
+            placeholder="Your generated document will appear here...">
+          </quill-editor>
         </div>
 
         <!-- Drafting Tools Menu -->
@@ -296,16 +348,24 @@
             Simplify
           </button>
           <button class="tool-btn" (click)="applyDraftingTool('condense')">
-            <i class="ri-compress-line"></i>
+            <i class="ri-file-reduce-line"></i>
             Condense
           </button>
           <button class="tool-btn" (click)="applyDraftingTool('expand')">
-            <i class="ri-expand-line"></i>
+            <i class="ri-file-add-line"></i>
             Expand
           </button>
           <button class="tool-btn" (click)="applyDraftingTool('redraft')">
             <i class="ri-refresh-line"></i>
             Redraft entirely
+          </button>
+          <button class="tool-btn" (click)="applyDraftingTool('formal')">
+            <i class="ri-quill-pen-line"></i>
+            Make Formal
+          </button>
+          <button class="tool-btn" (click)="applyDraftingTool('persuasive')">
+            <i class="ri-chat-quote-line"></i>
+            Make Persuasive
           </button>
         </div>
       </div>
@@ -544,5 +604,26 @@
 
   <!-- Document Editor Modal -->
 
+</div>
 
+<!-- Floating Toolbar for Selection-Based Actions -->
+<div class="floating-toolbar" *ngIf="showFloatingToolbar"
+     [style.top.px]="floatingToolbarPosition.top"
+     [style.left.px]="floatingToolbarPosition.left">
+  <div class="toolbar-menu-item" (click)="applySelectionTransform('simplify')">
+    <i class="ri-subtract-line"></i>
+    <span>Simplify</span>
+  </div>
+  <div class="toolbar-menu-item" (click)="applySelectionTransform('condense')">
+    <i class="ri-file-reduce-line"></i>
+    <span>Condense</span>
+  </div>
+  <div class="toolbar-menu-item" (click)="applySelectionTransform('expand')">
+    <i class="ri-file-add-line"></i>
+    <span>Expand</span>
+  </div>
+  <div class="toolbar-menu-item" (click)="applySelectionTransform('redraft')">
+    <i class="ri-refresh-line"></i>
+    <span>Redraft entirely</span>
+  </div>
 </div>

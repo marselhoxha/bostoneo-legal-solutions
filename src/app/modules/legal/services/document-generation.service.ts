@@ -32,6 +32,31 @@ export interface DocumentRevisionRequest {
   currentContent: string;
 }
 
+export interface DocumentTransformRequest {
+  documentId: number;
+  transformationType: string;
+  transformationScope: 'FULL_DOCUMENT' | 'SELECTION';
+  fullDocumentContent: string;
+  selectedText?: string;
+  selectionStartIndex?: number;
+  selectionEndIndex?: number;
+  jurisdiction?: string;
+  documentType?: string;
+  caseId?: number;
+}
+
+export interface DocumentTransformResponse {
+  documentId: number;
+  newVersion: number;
+  transformedContent: string;
+  explanation: string;
+  tokensUsed: number;
+  costEstimate: number;
+  wordCount: number;
+  transformationType: string;
+  transformationScope: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -79,6 +104,45 @@ export class DocumentGenerationService {
    */
   reviseDocument(request: DocumentRevisionRequest): Observable<GeneratedDocument> {
     return this.http.post<GeneratedDocument>(`${this.apiUrl}/revise`, request);
+  }
+
+  /**
+   * Transform document (full document or selection)
+   * NEW API for AI Workspace
+   */
+  transformDocument(request: DocumentTransformRequest): Observable<DocumentTransformResponse> {
+    return this.http.post<DocumentTransformResponse>(
+      `${environment.apiUrl}/api/legal/ai-workspace/transform`,
+      request
+    );
+  }
+
+  /**
+   * Get document versions
+   */
+  getDocumentVersions(documentId: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions`
+    );
+  }
+
+  /**
+   * Get specific version
+   */
+  getDocumentVersion(documentId: number, versionNumber: number): Observable<any> {
+    return this.http.get<any>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions/${versionNumber}`
+    );
+  }
+
+  /**
+   * Restore previous version
+   */
+  restoreVersion(documentId: number, versionNumber: number): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions/${versionNumber}/restore`,
+      {}
+    );
   }
 
   /**
