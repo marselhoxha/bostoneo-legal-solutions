@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +6,9 @@ import { Subject, lastValueFrom } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
+import { LegalCaseService } from '../../../services/legal-case.service';
+import { MarkdownConverterService } from '../../../services/markdown-converter.service';
+import { FileManagerService } from '../../../../file-manager/services/file-manager.service';
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
@@ -14,11 +17,13 @@ import { environment } from '@environments/environment';
 import Swal from 'sweetalert2';
 import { QuillModule } from 'ngx-quill';
 import Quill from 'quill';
+import html2pdf from 'html2pdf.js';
+import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-ai-workspace',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective, QuillModule],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective, QuillModule, NgbDropdown, NgbDropdownToggle, NgbDropdownMenu],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
 })
@@ -75,6 +80,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       { id: 2, icon: 'ri-search-eye-line', description: 'Analyzing content...', status: 'pending' as const },
       { id: 3, icon: 'ri-shield-check-line', description: 'Identifying risks...', status: 'pending' as const },
       { id: 4, icon: 'ri-file-list-3-line', description: 'Generating analysis...', status: 'pending' as const }
+    ],
+    transform: [
+      { id: 1, icon: 'ri-file-search-line', description: 'Analyzing document...', status: 'pending' as const },
+      { id: 2, icon: 'ri-magic-line', description: 'Applying transformation...', status: 'pending' as const },
+      { id: 3, icon: 'ri-file-edit-line', description: 'Generating preview...', status: 'pending' as const }
     ]
   };
 
@@ -85,11 +95,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     date: Date;
     type: 'question' | 'draft' | 'summarize' | 'upload';
     messages: Array<{
+      id?: string;
       role: 'user' | 'assistant';
       content: string;
       timestamp?: Date;
       documentGenerated?: boolean;
       documentId?: string; // Changed to string to match DocumentGeneration UUID
+      transformationComparison?: {
+        oldContent: string;
+        newContent: string;
+        transformationType: string;
+        scope: 'FULL_DOCUMENT' | 'SELECTION';
+        response: any;
+      };
     }>;
     messageCount?: number; // Message count from backend for badge display
     jurisdiction?: string;
@@ -128,11 +146,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Conversation messages (current active conversation)
   conversationMessages: Array<{
+    id?: string;
     role: 'user' | 'assistant';
     content: string;
     timestamp?: Date;
     documentGenerated?: boolean;
     documentId?: string; // Changed to string to match DocumentGeneration UUID
+    transformationComparison?: {
+      oldContent: string;
+      newContent: string;
+      transformationType: string;
+      scope: 'FULL_DOCUMENT' | 'SELECTION';
+      response: any;
+      fullDocumentContent?: string; // For showing context with highlighted selection
+      selectionRange?: { index: number; length: number }; // For precise Quill replacement
+    };
   }> = [];
 
   // User input
@@ -143,8 +171,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   followUpQuestions: string[] = [];
 
   // Jurisdiction
-  selectedJurisdiction = 'Federal';
-  jurisdictions = ['Federal', 'Ontario', 'California', 'New York', 'Texas', 'Florida'];
+  selectedJurisdiction = 'Massachusetts';
+  jurisdictions = ['Massachusetts', 'Federal'];
 
   // Document editor modal
   editorModalOpen = false;
@@ -174,27 +202,41 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Current user from authentication service
   currentUser: any = null;
 
-  // MOCK MODE: Toggle to test UI without API calls
-  private USE_MOCK_DATA = true; // Set to false for real API calls
+  // Case selection for draft generation
+  selectedCaseId: number | null = null;
+  userCases: any[] = [];
 
   // Quill Editor instance and config
   @ViewChild('documentEditor') documentEditor?: any;
   quillModules = {
     toolbar: [
+      [{ 'font': ['sans-serif', 'serif', 'monospace'] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
       ['bold', 'italic', 'underline'],
       [{ 'header': [1, 2, 3, false] }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'align': [] }],
       [{ 'indent': '-1'}, { 'indent': '+1' }],
       ['link'],
       ['clean']
     ]
   };
 
+  quillFormats = [
+    'font', 'size',
+    'bold', 'italic', 'underline',
+    'header',
+    'list', 'bullet',
+    'align', 'indent',
+    'link'
+  ];
+
   // Text selection tracking
   selectedText: string = '';
   selectionRange: { index: number; length: number } | null = null;
-  showFloatingToolbar = false;
-  floatingToolbarPosition = { top: 0, left: 0 };
+
+  // Pending transformation - stored in message with unique ID
+  private transformationMessageIdCounter = 0;
 
   // Version history
   showVersionHistory = false;
@@ -203,6 +245,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   showDiffView = false;
   diffVersion1: number | null = null;
   diffVersion2: number | null = null;
+  loadingVersions = false;
+  currentVersionNumber: number = 1;
+
+  @ViewChild('versionHistoryModal') versionHistoryModal!: TemplateRef<any>;
+  @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
+
+  // UI Controls
+  editorTextSize: number = 14; // Default font size in px
+  isFullscreen = false;
 
   // Mobile sidebar state
   sidebarOpen = false;
@@ -584,8 +635,48 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private legalResearchService: LegalResearchService,
     private documentGenerationService: DocumentGenerationService,
     private userService: UserService,
-    private cdr: ChangeDetectorRef
+    private legalCaseService: LegalCaseService,
+    private markdownConverter: MarkdownConverterService,
+    private cdr: ChangeDetectorRef,
+    private modalService: NgbModal,
+    private fileManagerService: FileManagerService
   ) {}
+
+  /**
+   * Keyboard shortcut: Ctrl+S - Save version
+   */
+  @HostListener('window:keydown.control.s', ['$event'])
+  @HostListener('window:keydown.meta.s', ['$event']) // For Mac
+  handleSaveShortcut(event: KeyboardEvent): void {
+    if (this.draftingMode && this.currentDocumentId) {
+      event.preventDefault();
+      this.openSaveVersionModal();
+    }
+  }
+
+  /**
+   * Keyboard shortcut: Ctrl+Shift+F - Toggle fullscreen
+   */
+  @HostListener('window:keydown.control.shift.f', ['$event'])
+  @HostListener('window:keydown.meta.shift.f', ['$event']) // For Mac
+  handleFullscreenShortcut(event: KeyboardEvent): void {
+    if (this.draftingMode) {
+      event.preventDefault();
+      this.toggleFullscreen();
+    }
+  }
+
+  /**
+   * Keyboard shortcut: Ctrl+H - Toggle history
+   */
+  @HostListener('window:keydown.control.h', ['$event'])
+  @HostListener('window:keydown.meta.h', ['$event']) // For Mac
+  handleHistoryShortcut(event: KeyboardEvent): void {
+    if (this.draftingMode && this.currentDocumentId) {
+      event.preventDefault();
+      this.openVersionHistoryModal();
+    }
+  }
 
   ngOnInit(): void {
     // Subscribe to UserService userData$ observable for reactive updates
@@ -594,6 +685,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe(user => {
         this.currentUser = user;
         console.log('Current user from UserService observable:', user);
+        // Load cases when user is available
+        if (user && user.id) {
+          this.loadUserCases();
+        }
       });
 
     // Load current user immediately from UserService
@@ -610,6 +705,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             if (response && response.data && response.data.user) {
               this.currentUser = response.data.user;
               console.log('User profile loaded from backend:', this.currentUser);
+              // Load cases after user is loaded
+              this.loadUserCases();
             }
           },
           error: (error) => {
@@ -620,6 +717,32 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Load conversations for the default task type
     this.loadConversations();
+
+    // Load user's cases for case selector if user already available
+    if (this.currentUser && this.currentUser.id) {
+      this.loadUserCases();
+    }
+  }
+
+  // Load user's cases for case selector
+  loadUserCases(): void {
+    if (!this.currentUser || !this.currentUser.id) {
+      console.log('No current user, skipping case load');
+      return;
+    }
+
+    this.legalCaseService.getAllCases(0, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          this.userCases = response.data?.cases || response.cases || response.content || [];
+          console.log('Loaded user cases:', this.userCases.length);
+        },
+        error: (error) => {
+          console.error('Error loading user cases:', error);
+          this.userCases = [];
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -678,7 +801,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Initialize workflow steps based on task type
-  private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload'): void {
+  private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform'): void {
     const template = this.workflowStepTemplates[taskType];
     this.workflowSteps = template.map(step => ({
       ...step,
@@ -868,9 +991,83 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             lastAssistantMsg.content = cleanedContent;
           }
 
-          this.showChat = true;
-          this.showBottomSearchBar = true;
-          this.cdr.detectChanges();
+          // Check if this is a draft conversation - activate drafting mode
+          if (conv.type === 'draft' && conv.relatedDraftId) {
+            console.log('Loading draft document for conversation:', conv.relatedDraftId);
+
+            // Load the draft document from backend
+            this.documentGenerationService.getDocument(conv.relatedDraftId, this.currentUser?.id)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (document) => {
+                  console.log('Loaded draft document:', document);
+
+                  // Populate document state
+                  this.currentDocumentId = document.id;
+                  this.activeDocumentTitle = conv.title;
+                  this.activeDocumentContent = document.content;
+                  this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
+                  this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+                  this.documentMetadata = {
+                    tokensUsed: document.tokensUsed,
+                    costEstimate: document.costEstimate,
+                    generatedAt: new Date(document.generatedAt),
+                    version: document.version || 1
+                  };
+
+                  // Activate drafting mode
+                  this.draftingMode = true;
+                  this.showChat = true;
+                  this.showBottomSearchBar = false;
+
+                  console.log('Drafting mode activated for conversation, content length:', document.content?.length || 0);
+                  this.cdr.detectChanges();
+
+                  // Convert Markdown to HTML and force Quill editor to update with loaded content
+                  // Increased delay to allow Angular to render the template and Quill to initialize
+                  setTimeout(() => {
+                    if (this.documentEditor && this.documentEditor.quillEditor) {
+                      console.log('Converting Markdown to HTML and updating Quill editor with loaded content');
+                      // Convert Markdown to HTML
+                      const htmlContent = this.markdownConverter.convert(document.content || '');
+                      // Convert HTML to Quill Delta format
+                      const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+                      // Set the formatted content in the editor
+                      this.documentEditor.quillEditor.setContents(delta);
+                      this.cdr.detectChanges();
+                    } else {
+                      console.warn('Document editor not available yet, retrying...');
+                      // Retry once after additional delay
+                      setTimeout(() => {
+                        if (this.documentEditor && this.documentEditor.quillEditor) {
+                          const htmlContent = this.markdownConverter.convert(document.content || '');
+                          const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+                          this.documentEditor.quillEditor.setContents(delta);
+                          this.cdr.detectChanges();
+                        } else {
+                          console.error('Document editor still not available after retry');
+                        }
+                      }, 200);
+                    }
+                  }, 300);
+                },
+                error: (error) => {
+                  console.error('Error loading draft document:', error);
+                  // Fall back to regular chat mode if document load fails
+                  this.showChat = true;
+                  this.showBottomSearchBar = true;
+                  this.draftingMode = false;
+                  this.cdr.detectChanges();
+                }
+              });
+          } else {
+            // Non-draft conversations: use regular chat mode
+            console.log('Loading non-draft conversation in regular chat mode');
+            this.showChat = true;
+            this.showBottomSearchBar = true;
+            this.draftingMode = false;
+            this.cdr.detectChanges();
+          }
         },
         error: (error) => {
           console.error('Error loading conversation:', error);
@@ -961,6 +1158,113 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.closeSidebar();
 
     console.log('Started new conversation - view reset');
+  }
+
+  // Exit drafting mode and return to task selection
+  exitDraftingMode(): void {
+    this.draftingMode = false;
+    this.showBottomSearchBar = true;
+    this.activeDocumentContent = '';
+    this.activeDocumentTitle = 'Generated Document';
+    this.currentDocumentId = null;
+    this.documentMetadata = {};
+    this.cdr.detectChanges();
+    console.log('Exited drafting mode');
+  }
+
+  // ========================================
+  // EXPORT METHODS
+  // ========================================
+
+  /**
+   * Export document to PDF (using backend generation)
+   */
+  exportToPDF(): void {
+    if (!this.currentDocumentId || !this.currentUser) {
+      Swal.fire('Error', 'Document not available', 'error');
+      return;
+    }
+
+    // Show loading
+    Swal.fire({
+      title: 'Generating PDF',
+      text: 'Please wait...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.documentGenerationService.exportToPDF(this.currentDocumentId as number, this.currentUser.id)
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'PDF Exported',
+            text: 'Document downloaded successfully',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (error) => {
+          console.error('Error exporting PDF:', error);
+          Swal.fire('Error', 'Failed to export PDF', 'error');
+        }
+      });
+  }
+
+  /**
+   * Export document to Word (DOCX)
+   * Calls backend API to generate Word document
+   */
+  exportToWord(): void {
+    if (!this.currentDocumentId || !this.currentUser) {
+      console.error('Document ID or user not available for Word export');
+      return;
+    }
+
+    this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
+      .subscribe({
+        next: (blob) => {
+          // Download the blob
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Word Document Exported',
+            text: `${a.download} downloaded successfully`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (err) => {
+          console.error('Error exporting to Word:', err);
+          Swal.fire('Error', 'Failed to export Word document', 'error');
+        }
+      });
+  }
+
+  /**
+   * Sanitize filename for safe file system use
+   */
+  private sanitizeFilename(name: string): string {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   }
 
   // Delete all conversations (if needed in the UI)
@@ -1213,189 +1517,109 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
   }
 
-  // MOCK METHOD: Generate document with mock data for UI testing
-  private generateDocumentFlowMock(userPrompt: string): void {
-    console.log('[MOCK] generateDocumentFlowMock called with prompt:', userPrompt);
-    const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
-
-    // Complete workflow animation
-    this.completeAllWorkflowSteps();
-
-    // MOCK DOCUMENT DATA - Professional legal document
-    const mockDocumentContent = `# COMMONWEALTH OF MASSACHUSETTS
-
-## SUPERIOR COURT
-
-**CLIENT NAME**,
-*Plaintiff/Petitioner*
-
-v.
-
-**[OPPOSING PARTY]**,
-*Defendant/Respondent*
-
-**CASE NO.** CASE-NUMBER
-
----
-
-## MOTION TO DISMISS FOR LACK OF PERSONAL JURISDICTION
-
-NOW COMES the Defendant, **[OPPOSING PARTY]**, by and through undersigned counsel, and respectfully moves this Honorable Court to dismiss the above-captioned matter for lack of personal jurisdiction pursuant to Mass. R. Civ. P. 12(b)(2).
-
-### I. INTRODUCTION
-
-This is a **mock document** generated for UI design testing purposes. No API calls were made to generate this content.
-
-### II. STATEMENT OF FACTS
-
-The relevant facts giving rise to this motion are as follows:
-
-1. **First Key Fact**: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-
-2. **Second Important Detail**: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-3. **Third Relevant Consideration**: Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-
-### III. LEGAL STANDARD
-
-Under Massachusetts law, a defendant may challenge personal jurisdiction through a motion to dismiss. The plaintiff bears the burden of demonstrating that jurisdiction is proper.
-
-### IV. ARGUMENT
-
-The Court should grant this motion for the following reasons:
-
-- **Insufficient Minimum Contacts**: The defendant lacks sufficient minimum contacts with Massachusetts to support the exercise of personal jurisdiction.
-
-- **Due Process Concerns**: Requiring the defendant to defend this action in Massachusetts would offend traditional notions of fair play and substantial justice.
-
-- **No Purposeful Availment**: The defendant did not purposefully avail itself of the privilege of conducting activities within Massachusetts.
-
-### V. CONCLUSION
-
-For the foregoing reasons, Defendant respectfully requests that this Honorable Court:
-
-1. Grant this Motion to Dismiss;
-2. Dismiss this action without prejudice; and
-3. Award such other relief as the Court deems just and proper.
-
----
-
-**Respectfully submitted,**
-
-**CLIENT NAME**
-
-By counsel,
-
-_______________________
-Attorney Name
-Bar Number
-Law Firm Name
-Address
-Phone: (555) 123-4567
-Email: attorney@lawfirm.com
-
-**Dated**: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-
-    // Populate all state variables
-    this.currentDocumentId = 'mock-doc-' + Date.now();
-    this.activeDocumentTitle = title;
-    // Set markdown content directly - Quill will handle it
-    this.activeDocumentContent = mockDocumentContent;
-    console.log('[MOCK] Set activeDocumentContent:', this.activeDocumentContent.substring(0, 100));
-    this.currentDocumentWordCount = 602;
-    this.currentDocumentPageCount = 4;
-    this.documentMetadata = {
-      tokensUsed: 1500,
-      costEstimate: 0.0500,
-      generatedAt: new Date(),
-      version: 1
-    };
-
-    // Add mock assistant message
-    this.conversationMessages.push({
-      role: 'assistant',
-      content: `I've generated your ${this.selectedDocTypePill || 'document'}. You can view it in the document preview panel.`,
-      timestamp: new Date()
-    });
-
-    // ACTIVATE SPLIT-VIEW DRAFTING MODE
-    this.draftingMode = true;
-    this.showChat = true;
-    this.isGenerating = false;
-    console.log('[MOCK] Activated split-view: draftingMode=', this.draftingMode, 'showChat=', this.showChat);
-
-    // Force change detection and update Quill editor
-    this.cdr.detectChanges();
-
-    // Set content again after view is rendered (Quill may not be initialized yet)
-    setTimeout(() => {
-      if (this.documentEditor && this.documentEditor.quillEditor) {
-        console.log('[MOCK] Manually setting Quill content');
-        this.documentEditor.quillEditor.setText(mockDocumentContent);
-      }
-    }, 100);
-  }
-
-  // NEW METHOD: Document generation flow for 'draft' task
+  // Document generation flow for 'draft' task
   private generateDocumentFlow(userPrompt: string): void {
-    // CHECK MOCK MODE
-    if (this.USE_MOCK_DATA) {
-      console.log('[MOCK MODE] Generating document with mock data - no API call');
-      // Simulate brief loading delay
-      setTimeout(() => {
-        this.generateDocumentFlowMock(userPrompt);
-      }, 1500);
-      return;
-    }
-
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
 
-    // Prepare document generation request
-    const documentRequest = {
+    // Prepare draft generation request
+    const draftRequest = {
+      userId: this.currentUser.id,
+      caseId: this.selectedCaseId,
+      prompt: userPrompt,
       documentType: this.selectedDocTypePill || 'general-draft',
       jurisdiction: this.selectedJurisdiction,
-      variables: {
-        prompt: userPrompt
-      },
-      prompt: userPrompt
+      sessionName: title
     };
 
-    // Call document generation service
-    this.documentGenerationService.generateDocument(documentRequest)
+    // Call new combined endpoint
+    this.documentGenerationService.generateDraftWithConversation(draftRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (generatedDoc) => {
-          console.log('Document generated:', generatedDoc);
+        next: (response) => {
+          console.log('Draft generated with conversation:', response);
 
           // Complete workflow steps
           this.completeAllWorkflowSteps();
 
-          // Store document metadata
-          this.currentDocumentId = generatedDoc.id;
-          this.activeDocumentTitle = title;
-          this.activeDocumentContent = generatedDoc.content;
-          this.currentDocumentWordCount = this.documentGenerationService.countWords(generatedDoc.content);
-          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
-          this.documentMetadata = {
-            tokensUsed: generatedDoc.tokensUsed,
-            costEstimate: generatedDoc.costEstimate,
-            generatedAt: new Date(generatedDoc.generatedAt),
-            version: 1
+          // Store conversation
+          const newConv = {
+            id: `conv_${response.conversationId}`,
+            title: response.conversation.sessionName,
+            date: new Date(),
+            type: 'draft' as 'draft',
+            messages: [...this.conversationMessages],
+            caseId: response.conversation.caseId,
+            backendConversationId: response.conversationId,
+            relatedDraftId: response.documentId.toString(),
+            taskType: response.conversation.taskType,
+            jurisdiction: this.selectedJurisdiction,
+            researchMode: 'AUTO'
           };
 
-          // Add assistant message to conversation
-          const assistantMessage = {
-            role: 'assistant' as 'assistant',
-            content: `I've generated your ${this.selectedDocTypePill || 'document'}. You can view it in the document preview panel.`,
-            timestamp: new Date()
+          this.conversations.unshift(newConv);
+          this.activeConversationId = newConv.id;
+          this.groupConversationsByDate();
+
+          // Store document metadata
+          this.currentDocumentId = response.document.id;
+          this.activeDocumentTitle = title;
+          this.activeDocumentContent = response.document.content;
+
+          console.log('Document content received:', {
+            contentLength: response.document.content?.length || 0,
+            contentPreview: response.document.content?.substring(0, 200) || 'NO CONTENT',
+            wordCount: response.document.wordCount
+          });
+
+          this.currentDocumentWordCount = response.document.wordCount;
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.document.wordCount);
+          this.documentMetadata = {
+            tokensUsed: response.document.tokensUsed,
+            costEstimate: response.document.costEstimate,
+            generatedAt: new Date(response.document.generatedAt),
+            version: response.document.version
           };
-          this.conversationMessages.push(assistantMessage);
+
+          // Add assistant message
+          this.conversationMessages.push({
+            role: 'assistant',
+            content: `I've generated your ${this.selectedDocTypePill || 'document'}${this.selectedCaseId ? ' for the selected case' : ''}. You can view it in the document preview panel.`,
+            timestamp: new Date()
+          });
 
           // ACTIVATE SPLIT-VIEW DRAFTING MODE
           this.draftingMode = true;
           this.isGenerating = false;
 
           this.cdr.detectChanges();
+
+          // Convert Markdown to HTML and force Quill editor to update
+          // Increased delay to allow Angular to render the template and Quill to initialize
+          setTimeout(() => {
+            if (this.documentEditor && this.documentEditor.quillEditor) {
+              console.log('Converting Markdown to HTML and updating Quill editor');
+              // Convert Markdown to HTML
+              const htmlContent = this.markdownConverter.convert(response.document.content);
+              // Convert HTML to Quill Delta format
+              const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+              // Set the formatted content in the editor
+              this.documentEditor.quillEditor.setContents(delta);
+              this.cdr.detectChanges();
+            } else {
+              console.warn('Document editor not available yet, retrying...');
+              // Retry once after additional delay
+              setTimeout(() => {
+                if (this.documentEditor && this.documentEditor.quillEditor) {
+                  const htmlContent = this.markdownConverter.convert(response.document.content);
+                  const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+                  this.documentEditor.quillEditor.setContents(delta);
+                  this.cdr.detectChanges();
+                } else {
+                  console.error('Document editor still not available after retry');
+                }
+              }, 200);
+            }
+          }, 300);
         },
         error: (error) => {
           console.error('Error generating document:', error);
@@ -1407,7 +1631,8 @@ Email: attorney@lawfirm.com
 
           this.conversationMessages.push({
             role: 'assistant',
-            content: 'Sorry, I encountered an error generating the document. Please try again.'
+            content: 'Sorry, I encountered an error generating the document. Please try again.',
+            timestamp: new Date()
           });
 
           this.isGenerating = false;
@@ -1564,6 +1789,7 @@ Email: attorney@lawfirm.com
 
   // Apply drafting tool
   // Apply drafting tool (simplify, condense, expand, redraft) - REAL BACKEND CALL
+  // Smart button: applies to selection if text is selected, otherwise to full document
   applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
     if (!this.currentDocumentId) {
       Swal.fire({
@@ -1575,7 +1801,15 @@ Email: attorney@lawfirm.com
       return;
     }
 
-    console.log(`Applying drafting tool: ${tool}`);
+    // Check if text is selected - if so, apply to selection only
+    if (this.selectedText && this.selectionRange) {
+      console.log(`Applying ${tool} to selected text`);
+      this.applySelectionTransform(tool);
+      return;
+    }
+
+    // Otherwise, apply to full document
+    console.log(`Applying drafting tool to full document: ${tool}`);
 
     // Add user message requesting the tool
     let toolPrompt = '';
@@ -1600,25 +1834,12 @@ Email: attorney@lawfirm.com
       timestamp: new Date()
     });
 
-    // CHECK MOCK MODE
-    if (this.USE_MOCK_DATA) {
-      console.log(`[MOCK MODE] Applying "${tool}" - no actual changes to document`);
-
-      // Just increment version and show success message
-      this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
-
-      this.conversationMessages.push({
-        role: 'assistant',
-        content: `I've applied the "${tool}" transformation to your document (MOCK MODE - document unchanged). The version is now v${this.documentMetadata.version}.`,
-        timestamp: new Date()
-      });
-
-      this.cdr.detectChanges();
-      return;
-    }
-
-    // Call backend transformation service (NEW AI Workspace API)
+    // Call backend transformation service (AI Workspace API)
     this.isGenerating = true;
+
+    // Initialize and animate workflow steps
+    this.initializeWorkflowSteps('transform');
+    this.animateWorkflowSteps();
 
     const transformRequest = {
       documentId: this.currentDocumentId as number,
@@ -1629,29 +1850,34 @@ Email: attorney@lawfirm.com
       documentType: this.selectedDocTypePill
     };
 
-    this.documentGenerationService.transformDocument(transformRequest)
+    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          // Update document content with transformed version
-          this.activeDocumentContent = response.transformedContent;
-          this.currentDocumentWordCount = response.wordCount;
-          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
+          // Complete workflow steps
+          this.completeAllWorkflowSteps();
 
-          // Update metadata
-          this.documentMetadata.version = response.newVersion;
-          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
-          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
+          // Generate unique message ID
+          const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
-          // Add assistant message
+          // Add assistant message with inline comparison
           this.conversationMessages.push({
+            id: messageId,
             role: 'assistant',
             content: response.explanation,
-            timestamp: new Date()
+            timestamp: new Date(),
+            transformationComparison: {
+              oldContent: this.activeDocumentContent,
+              newContent: response.transformedContent,
+              transformationType: tool,
+              scope: 'FULL_DOCUMENT',
+              response: response
+            }
           });
 
           this.isGenerating = false;
           this.cdr.detectChanges();
+          this.scrollToBottom();
         },
         error: (error) => {
           console.error('Error applying drafting tool:', error);
@@ -1687,7 +1913,6 @@ Email: attorney@lawfirm.com
       // No selection
       this.selectedText = '';
       this.selectionRange = null;
-      this.showFloatingToolbar = false;
       return;
     }
 
@@ -1698,33 +1923,10 @@ Email: attorney@lawfirm.com
       const quill = this.documentEditor.quillEditor;
       this.selectedText = quill.getText(index, length);
       this.selectionRange = { index, length };
-
-      // Calculate floating toolbar position using native selection
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-
-        // Position to the RIGHT of the selection
-        this.floatingToolbarPosition = {
-          top: rect.top,
-          left: rect.right + 10
-        };
-      } else {
-        // Fallback to Quill bounds
-        const bounds = quill.getBounds(index, length);
-        const editorRect = quill.root.getBoundingClientRect();
-        this.floatingToolbarPosition = {
-          top: editorRect.top + bounds.top,
-          left: editorRect.left + bounds.left + bounds.width + 10
-        };
-      }
-      this.showFloatingToolbar = true;
     } else {
       // Selection cleared
       this.selectedText = '';
       this.selectionRange = null;
-      this.showFloatingToolbar = false;
     }
 
     this.cdr.detectChanges();
@@ -1759,26 +1961,20 @@ Email: attorney@lawfirm.com
 
     console.log(`Applying "${tool}" to selected text:`, this.selectedText.substring(0, 50) + '...');
 
-    // Hide floating toolbar
-    this.showFloatingToolbar = false;
-
     // Get transformation prompt
     let toolPrompt = '';
     switch (tool) {
       case 'simplify':
         toolPrompt = `Please simplify the following text to make it more accessible:\n\n"${this.selectedText}"`;
         break;
+      case 'condense':
+        toolPrompt = `Please condense the following text to make it more concise:\n\n"${this.selectedText}"`;
+        break;
       case 'expand':
         toolPrompt = `Please expand the following text with more detail:\n\n"${this.selectedText}"`;
         break;
-      case 'formal':
-        toolPrompt = `Please rewrite the following text in a more formal, professional legal tone:\n\n"${this.selectedText}"`;
-        break;
-      case 'persuasive':
-        toolPrompt = `Please rewrite the following text to be more persuasive and compelling:\n\n"${this.selectedText}"`;
-        break;
-      case 'cite':
-        toolPrompt = `Please suggest relevant legal citations to support this argument:\n\n"${this.selectedText}"`;
+      case 'redraft':
+        toolPrompt = `Please redraft the following text entirely with a fresh approach:\n\n"${this.selectedText}"`;
         break;
       default:
         toolPrompt = `Please improve the following text:\n\n"${this.selectedText}"`;
@@ -1791,47 +1987,22 @@ Email: attorney@lawfirm.com
       timestamp: new Date()
     });
 
-    // MOCK MODE: Simulate AI transformation
-    if (this.USE_MOCK_DATA) {
-      console.log(`[MOCK MODE] Applying "${tool}" to selection`);
-
-      setTimeout(() => {
-        const mockTransformed = `[${tool.toUpperCase()}] ${this.selectedText}`;
-
-        // Replace selected text with transformed version
-        if (this.documentEditor && this.selectionRange) {
-          const quill = this.documentEditor.quillEditor;
-          quill.deleteText(this.selectionRange.index, this.selectionRange.length);
-          quill.insertText(this.selectionRange.index, mockTransformed);
-
-          // Update selection to new transformed text
-          quill.setSelection(this.selectionRange.index, mockTransformed.length);
-        }
-
-        // Add AI response
-        this.conversationMessages.push({
-          role: 'assistant',
-          content: `I've applied the "${tool}" transformation to your selected text (MOCK MODE). The updated text is now in the document.`,
-          timestamp: new Date()
-        });
-
-        // Increment version
-        this.documentMetadata.version = (this.documentMetadata.version || 1) + 1;
-
-        this.cdr.detectChanges();
-      }, 1000);
-
-      return;
-    }
-
-    // Real API call for selection-based transformation
+    // Call backend for selection-based transformation
     this.isGenerating = true;
+
+    // Initialize and animate workflow steps
+    this.initializeWorkflowSteps('transform');
+    this.animateWorkflowSteps();
+
+    // Get plain text from Quill for accurate index-based replacement
+    const quill = this.documentEditor.quillEditor;
+    const fullPlainText = quill.getText();
 
     const transformRequest = {
       documentId: this.currentDocumentId as number,
       transformationType: tool.toUpperCase(),
       transformationScope: 'SELECTION' as const,
-      fullDocumentContent: this.activeDocumentContent,
+      fullDocumentContent: fullPlainText, // Send PLAIN TEXT, not HTML
       selectedText: this.selectedText,
       selectionStartIndex: this.selectionRange.index,
       selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
@@ -1839,31 +2010,36 @@ Email: attorney@lawfirm.com
       documentType: this.selectedDocTypePill
     };
 
-    this.documentGenerationService.transformDocument(transformRequest)
+    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          // Update document content with transformed version
-          this.activeDocumentContent = response.transformedContent;
+          // Complete workflow steps
+          this.completeAllWorkflowSteps();
 
-          // Update word count
-          this.currentDocumentWordCount = response.wordCount;
-          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
+          // Generate unique message ID
+          const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
-          // Update metadata
-          this.documentMetadata.version = response.newVersion;
-          this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
-          this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
-
-          // Add AI response to conversation
+          // Add AI response to conversation with inline comparison
           this.conversationMessages.push({
+            id: messageId,
             role: 'assistant',
             content: response.explanation,
-            timestamp: new Date()
+            timestamp: new Date(),
+            transformationComparison: {
+              oldContent: this.selectedText || '',
+              newContent: response.transformedSelection || '', // ONLY use snippet, not full doc
+              transformationType: tool,
+              scope: 'SELECTION',
+              response: response,
+              fullDocumentContent: fullPlainText, // Store PLAIN TEXT for context view
+              selectionRange: { index: this.selectionRange.index, length: this.selectionRange.length } // Store for precise replacement
+            }
           });
 
           this.isGenerating = false;
           this.cdr.detectChanges();
+          this.scrollToBottom();
         },
         error: (error) => {
           console.error('Error transforming selection:', error);
@@ -2501,7 +2677,7 @@ You can:
     }
 
     // Call API to get versions
-    this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number)
+    this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number, this.currentUser?.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (versions) => {
@@ -2529,6 +2705,15 @@ You can:
     this.activeDocumentContent = version.content;
     this.currentDocumentWordCount = version.wordCount;
     this.cdr.detectChanges();
+
+    // Update Quill editor with version content
+    setTimeout(() => {
+      if (this.documentEditor && this.documentEditor.quillEditor) {
+        const htmlContent = this.markdownConverter.convert(version.content);
+        const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+        this.documentEditor.quillEditor.setContents(delta);
+      }
+    }, 100);
   }
 
   /**
@@ -2543,8 +2728,8 @@ You can:
       confirmButtonText: 'Restore',
       cancelButtonText: 'Cancel'
     }).then((result) => {
-      if (result.isConfirmed && this.currentDocumentId) {
-        this.documentGenerationService.restoreVersion(this.currentDocumentId as number, versionNumber)
+      if (result.isConfirmed && this.currentDocumentId && this.currentUser) {
+        this.documentGenerationService.restoreVersion(this.currentDocumentId as number, versionNumber, this.currentUser.id)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (restoredVersion) => {
@@ -2560,6 +2745,15 @@ You can:
 
               // Reload version history
               this.loadVersionHistory();
+
+              // Update Quill editor with restored content
+              setTimeout(() => {
+                if (this.documentEditor && this.documentEditor.quillEditor) {
+                  const htmlContent = this.markdownConverter.convert(restoredVersion.content);
+                  const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+                  this.documentEditor.quillEditor.setContents(delta);
+                }
+              }, 100);
 
               Swal.fire({
                 icon: 'success',
@@ -2582,6 +2776,227 @@ You can:
             }
           });
       }
+    });
+  }
+
+  /**
+   * Save manual version with custom note
+   */
+  saveManualVersion(): void {
+    if (!this.currentDocumentId || !this.documentEditor || !this.currentUser) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Document not available for saving',
+        timer: 2000
+      });
+      return;
+    }
+
+    // Prompt user for version note
+    Swal.fire({
+      title: 'Save Version',
+      text: 'Add a note to describe this version (optional)',
+      input: 'text',
+      inputPlaceholder: 'e.g., Added new section on liability',
+      showCancelButton: true,
+      confirmButtonText: 'Save',
+      cancelButtonText: 'Cancel',
+      inputValidator: (value) => {
+        // Allow empty notes
+        return null;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const versionNote = result.value || 'Manual edit';
+
+        // Get current content from Quill editor
+        const content = this.documentEditor.quillEditor.root.innerHTML;
+
+        // Call service to save manual version
+        this.documentGenerationService.saveManualVersion(
+          this.currentDocumentId as number,
+          this.currentUser.id,
+          content,
+          versionNote
+        )
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            // Update version number
+            this.documentMetadata.version = response.versionNumber;
+
+            // Show success message
+            Swal.fire({
+              icon: 'success',
+              title: 'Version Saved',
+              text: `Saved as version ${response.versionNumber}`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+
+            // Reload version history if it's open
+            if (this.showVersionHistory) {
+              this.loadVersionHistory();
+            }
+
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Error saving version:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Save Failed',
+              text: 'Failed to save version',
+              timer: 2000
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // ========================================
+  // TRANSFORMATION PREVIEW METHODS
+  // ========================================
+
+  /**
+   * Accept transformation from inline comparison
+   */
+  acceptTransformation(messageId: string): void {
+    // Find the message with the transformation
+    const messageIndex = this.conversationMessages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) {
+      console.error('Message not found:', messageId);
+      return;
+    }
+
+    const message = this.conversationMessages[messageIndex];
+    const transformation = message.transformationComparison;
+
+    if (!transformation) {
+      console.error('No transformation data in message');
+      return;
+    }
+
+    const response = transformation.response;
+
+    if (transformation.scope === 'FULL_DOCUMENT') {
+      // Full document transformation - replace entire content
+      this.activeDocumentContent = transformation.newContent;
+      this.currentDocumentWordCount = response.wordCount;
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
+
+      // Update metadata
+      this.documentMetadata.version = response.newVersion;
+      this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
+      this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
+
+      // Update Quill editor with transformed content
+      setTimeout(() => {
+        if (this.documentEditor && this.documentEditor.quillEditor) {
+          const htmlContent = this.markdownConverter.convert(transformation.newContent);
+          const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
+          this.documentEditor.quillEditor.setContents(delta);
+        }
+      }, 100);
+    } else {
+      // Selection-based transformation - use Quill operations for precise replacement
+      if (!this.documentEditor || !this.documentEditor.quillEditor) {
+        console.error('Quill editor not available');
+        return;
+      }
+
+      const quill = this.documentEditor.quillEditor;
+      const transformedSnippet = transformation.response.transformedSelection || transformation.newContent;
+      const selectionRange = transformation.selectionRange;
+
+      console.log('Accept transformation:', {
+        transformedSnippet,
+        selectionRange,
+        responseTransformedSelection: transformation.response.transformedSelection,
+        responseTransformedContent: transformation.response.transformedContent
+      });
+
+      if (!selectionRange || !transformedSnippet) {
+        console.error('Missing selection range or transformed snippet');
+        return;
+      }
+
+      // Use Quill operations for precise text replacement
+      setTimeout(() => {
+        // 1. Delete old text at the exact selection position
+        quill.deleteText(selectionRange.index, selectionRange.length);
+
+        // 2. Insert the transformed snippet at the same position
+        quill.insertText(selectionRange.index, transformedSnippet);
+
+        // 3. Apply green background highlight to the replaced text
+        quill.formatText(selectionRange.index, transformedSnippet.length, {
+          'background': '#d4edda' // Velzon success-subtle green
+        });
+
+        // 4. Update activeDocumentContent from Quill's current state
+        this.activeDocumentContent = quill.root.innerHTML;
+
+        // 5. Auto-remove highlight after 4 seconds
+        setTimeout(() => {
+          quill.formatText(selectionRange.index, transformedSnippet.length, {
+            'background': false
+          });
+        }, 4000);
+
+        // 6. Update word count
+        const plainText = quill.getText();
+        this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+        this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+        // 7. Detect changes for save
+        this.cdr.detectChanges();
+      }, 100);
+
+      // Update metadata
+      this.documentMetadata.version = response.newVersion;
+      this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
+      this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
+    }
+
+    // Remove transformation comparison from message (hide buttons)
+    delete this.conversationMessages[messageIndex].transformationComparison;
+    this.cdr.detectChanges();
+
+    // Show success message
+    Swal.fire({
+      icon: 'success',
+      title: 'Changes Applied',
+      text: 'The transformation has been applied to your document',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  }
+
+  /**
+   * Reject transformation from inline comparison
+   */
+  rejectTransformation(messageId: string): void {
+    // Find the message with the transformation
+    const messageIndex = this.conversationMessages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) {
+      console.error('Message not found:', messageId);
+      return;
+    }
+
+    // Remove transformation comparison from message (hide buttons)
+    delete this.conversationMessages[messageIndex].transformationComparison;
+    this.cdr.detectChanges();
+
+    // Show brief message
+    Swal.fire({
+      icon: 'info',
+      title: 'Changes Discarded',
+      text: 'The transformation has been discarded',
+      timer: 1500,
+      showConfirmButton: false
     });
   }
 
@@ -2616,4 +3031,231 @@ You can:
     };
     return labels[transformationType] || transformationType;
   }
+
+  /**
+   * Open save version modal with note input
+   */
+  async openSaveVersionModal(): Promise<void> {
+    const { value: note } = await Swal.fire({
+      title: 'Save Version',
+      input: 'textarea',
+      inputLabel: 'Version Note (optional)',
+      inputPlaceholder: 'Enter a note to describe this version...',
+      showCancelButton: true,
+      confirmButtonText: 'Save',
+      cancelButtonText: 'Cancel',
+      inputValidator: (value) => {
+        if (value && value.length > 500) {
+          return 'Note cannot exceed 500 characters';
+        }
+        return null;
+      }
+    });
+
+    if (note !== undefined) {
+      this.saveVersion(note || null);
+    }
+  }
+
+  /**
+   * Save current document as new version
+   */
+  saveVersion(versionNote: string | null): void {
+    if (!this.currentDocumentId || !this.currentUser) {
+      Swal.fire('Error', 'Document not loaded', 'error');
+      return;
+    }
+
+    const content = this.documentEditor.quillEditor.root.innerHTML;
+
+    this.documentGenerationService.saveDocument(this.currentDocumentId, content, this.activeDocumentTitle)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.currentVersionNumber = response.versionNumber;
+          Swal.fire('Success', `Version ${response.versionNumber} saved successfully`, 'success');
+        },
+        error: (error) => {
+          console.error('Error saving version:', error);
+          Swal.fire('Error', 'Failed to save version', 'error');
+        }
+      });
+  }
+
+  /**
+   * Open version history modal
+   */
+  openVersionHistoryModal(): void {
+    if (!this.currentDocumentId) {
+      Swal.fire('Error', 'No document loaded', 'error');
+      return;
+    }
+
+    this.loadingVersions = true;
+    this.modalService.open(this.versionHistoryModal, { size: 'lg', scrollable: true });
+
+    this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number, this.currentUser?.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (versions) => {
+          this.documentVersions = versions;
+          this.loadingVersions = false;
+        },
+        error: (error) => {
+          console.error('Error loading versions:', error);
+          this.loadingVersions = false;
+          Swal.fire('Error', 'Failed to load version history', 'error');
+        }
+      });
+  }
+
+  /**
+   * Decrease editor text size
+   */
+  decreaseTextSize(): void {
+    if (this.editorTextSize > 10) {
+      this.editorTextSize -= 2;
+      this.applyTextSize();
+    }
+  }
+
+  /**
+   * Increase editor text size
+   */
+  increaseTextSize(): void {
+    if (this.editorTextSize < 24) {
+      this.editorTextSize += 2;
+      this.applyTextSize();
+    }
+  }
+
+  /**
+   * Apply text size to Quill editor
+   */
+  private applyTextSize(): void {
+    if (this.documentEditor?.quillEditor) {
+      const editorElement = this.documentEditor.quillEditor.root;
+      editorElement.style.fontSize = `${this.editorTextSize}px`;
+    }
+  }
+
+  /**
+   * Scroll to bottom of chat messages
+   */
+  private scrollToBottom(): void {
+    setTimeout(() => {
+      const chatContainers = document.querySelectorAll('.chat-messages-area, .chat-messages-area-side');
+      chatContainers.forEach(container => {
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+    }, 100);
+  }
+
+  /**
+   * Highlight selected text in full document context
+   */
+  highlightSelectionInContext(fullDocument: string, selectedText: string): string {
+    if (!fullDocument || !selectedText) {
+      return fullDocument;
+    }
+
+    // Escape special regex characters in the selected text
+    const escapedSelection = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Find and replace the selected text with highlighted version
+    // Use a case-sensitive, first-occurrence match
+    const regex = new RegExp(`(${escapedSelection})`, 'i');
+    const highlighted = fullDocument.replace(regex, '<mark class="text-selection-highlight">$1</mark>');
+
+    return highlighted;
+  }
+
+  /**
+   * Toggle fullscreen mode
+   */
+  toggleFullscreen(): void {
+    this.isFullscreen = !this.isFullscreen;
+
+    if (this.isFullscreen) {
+      document.body.classList.add('ai-workspace-fullscreen');
+    } else {
+      document.body.classList.remove('ai-workspace-fullscreen');
+    }
+  }
+
+  /**
+   * Toggle conversation panel visibility
+   */
+  toggleChatPanel(): void {
+    this.showChat = !this.showChat;
+  }
+
+  /**
+   * Close conversation panel (while staying in drafting mode)
+   */
+  closeChatPanel(): void {
+    this.showChat = false;
+  }
+
+  /**
+   * Reopen conversation panel
+   */
+  reopenChatPanel(): void {
+    this.showChat = true;
+  }
+
+  /**
+   * Save document to File Manager
+   */
+  async saveToFileManager(): Promise<void> {
+    if (!this.currentDocumentId || !this.currentUser) {
+      Swal.fire('Error', 'Document not available', 'error');
+      return;
+    }
+
+    try {
+      // Show loading
+      Swal.fire({
+        title: 'Saving to File Manager',
+        text: 'Generating document...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Get the Word document as blob
+      const blob = await lastValueFrom(
+        this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
+      );
+
+      // Convert blob to File object
+      const filename = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
+      const file = new File([blob], filename, {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+
+      // Get case ID if available (check if we're in a case context)
+      const caseId = this.selectedCaseId || undefined;
+
+      // Upload to file manager
+      await lastValueFrom(
+        this.fileManagerService.uploadFile(file, undefined, caseId, 'Legal Document', 'DRAFT')
+      );
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Saved!',
+        text: `Document saved to File Manager${caseId ? ' and linked to case' : ''}`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error saving to file manager:', error);
+      Swal.fire('Error', 'Failed to save to File Manager', 'error');
+    }
+  }
+
 }

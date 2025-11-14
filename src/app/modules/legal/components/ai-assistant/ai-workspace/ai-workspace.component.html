@@ -70,6 +70,9 @@
               (click)="switchConversation(conv.id)">
               <div class="conversation-title">{{conv.title}}</div>
               <div class="conversation-meta">
+                <span class="badge bg-soft-primary me-2" *ngIf="conv.caseId" style="font-size: 0.7rem;">
+                  <i class="ri-briefcase-line"></i> Case
+                </span>
                 <div class="conversation-date">
                   <i class="ri-time-line"></i>
                   <span>{{conv.date | date:'MMM d'}}</span>
@@ -99,7 +102,7 @@
   <main class="main-content-area">
 
     <!-- Welcome Screen (No active conversation) -->
-    <div class="welcome-screen" *ngIf="!showChat && !isGenerating">
+    <div class="welcome-screen" *ngIf="!showChat && !isGenerating && !draftingMode">
       <div class="welcome-header">
 
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
@@ -195,6 +198,25 @@
               name="customPrompt"
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
+
+            <!-- Case Selector (Draft task only) -->
+            <div class="case-selector-section" *ngIf="selectedTask === 'draft'" style="margin-top: 1rem; margin-bottom: 1rem;">
+              <label class="form-label" style="font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">
+                <i class="ri-briefcase-line me-1"></i>
+                Link to Case (Optional):
+              </label>
+              <select [(ngModel)]="selectedCaseId" class="form-select" name="caseSelector" style="margin-bottom: 0.5rem;">
+                <option [ngValue]="null">None - General Draft</option>
+                <option *ngFor="let case of userCases" [ngValue]="case.id">
+                  {{case.caseNumber}} - {{case.title}}
+                </option>
+              </select>
+              <small class="text-muted" style="font-size: 0.75rem;">
+                <i class="ri-information-line"></i>
+                Select a case to include case context in the draft
+              </small>
+            </div>
+
             <div class="prompt-footer">
               <div class="jurisdiction-selector">
                 <label>Jurisdiction:</label>
@@ -214,6 +236,9 @@
     <!-- Top Action Bar (when in drafting mode) -->
     <div class="top-action-bar" *ngIf="draftingMode">
       <div class="action-bar-left">
+        <button class="btn btn-link back-btn" (click)="exitDraftingMode()" title="Exit drafting mode">
+          <i class="ri-arrow-left-line"></i>
+        </button>
         <div class="drafting-mode-indicator">
           <i class="ri-file-edit-line"></i>
           <span>Drafting Mode</span>
@@ -224,14 +249,28 @@
         </div>
       </div>
       <div class="action-bar-right">
-        <button class="btn btn-outline-primary btn-sm" (click)="downloadDocument('docx')">
-          <i class="ri-download-line"></i>
-          Download to Word
-        </button>
-        <button class="btn btn-primary btn-sm" (click)="saveAndExit()">
-          <i class="ri-save-line"></i>
-          Save and Exit
-        </button>
+        <!-- Export Dropdown Button -->
+        <div class="btn-group" ngbDropdown>
+          <button id="export-dropdown" ngbDropdownToggle type="button" class="btn btn-primary btn-sm">
+            <i class="ri-download-line"></i>
+            Export
+          </button>
+          <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end">
+            <a class="dropdown-item" (click)="exportToPDF()">
+              <i class="ri-file-pdf-line me-2"></i>
+              Save as PDF
+            </a>
+            <a class="dropdown-item" (click)="exportToWord()">
+              <i class="ri-file-word-line me-2"></i>
+              Save as Word
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" (click)="saveToFileManager()">
+              <i class="ri-folder-upload-line me-2"></i>
+              Save to File Manager
+            </a>
+          </div>
+        </div>
         <a href="javascript:void(0)" class="help-link">
           <i class="ri-question-line"></i>
           How does it work?
@@ -240,7 +279,7 @@
     </div>
 
     <!-- Split View Container (when document is generated) -->
-    <div class="split-view-container" *ngIf="draftingMode && showChat">
+    <div class="split-view-container" *ngIf="draftingMode">
       <!-- Document Preview Panel (60%) -->
       <div class="document-preview-panel">
         <div class="document-preview-header">
@@ -273,19 +312,25 @@
             </div>
           </div>
           <div class="preview-actions">
-            <button class="btn-icon" (click)="toggleVersionHistory()"
-                    [class.active]="showVersionHistory"
+            <button class="btn-icon" (click)="saveManualVersion()"
+                    title="Save Version">
+              <i class="ri-save-line"></i>
+            </button>
+            <button class="btn-icon" (click)="openVersionHistoryModal()"
                     title="Version History">
               <i class="ri-history-line"></i>
             </button>
-            <button class="btn-icon" title="Zoom in">
+            <button class="btn-icon" (click)="increaseTextSize()" title="Zoom in">
               <i class="ri-zoom-in-line"></i>
             </button>
-            <button class="btn-icon" title="Zoom out">
+            <button class="btn-icon" (click)="decreaseTextSize()" title="Zoom out">
               <i class="ri-zoom-out-line"></i>
             </button>
-            <button class="btn-icon" title="Full screen">
-              <i class="ri-fullscreen-line"></i>
+            <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+              <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
+            </button>
+            <button class="btn-icon" *ngIf="!showChat" (click)="reopenChatPanel()" title="Open conversation">
+              <i class="ri-chat-3-line"></i>
             </button>
           </div>
         </div>
@@ -334,7 +379,14 @@
             #documentEditor
             [(ngModel)]="activeDocumentContent"
             [modules]="quillModules"
-            [styles]="{'min-height': '500px', 'height': '100%'}"
+            [formats]="quillFormats"
+            [styles]="{
+              'min-height': '500px',
+              'height': '100%',
+              'font-family': 'Georgia, serif',
+              'font-size': '14px',
+              'line-height': '1.6'
+            }"
             (onSelectionChanged)="onTextSelectionChanged($event)"
             (onContentChanged)="onDocumentContentChanged($event)"
             placeholder="Your generated document will appear here...">
@@ -359,22 +411,14 @@
             <i class="ri-refresh-line"></i>
             Redraft entirely
           </button>
-          <button class="tool-btn" (click)="applyDraftingTool('formal')">
-            <i class="ri-quill-pen-line"></i>
-            Make Formal
-          </button>
-          <button class="tool-btn" (click)="applyDraftingTool('persuasive')">
-            <i class="ri-chat-quote-line"></i>
-            Make Persuasive
-          </button>
         </div>
       </div>
 
       <!-- Chat Panel (40%) -->
-      <div class="chat-panel-side">
+      <div class="chat-panel-side" *ngIf="showChat">
         <div class="chat-panel-header">
           <h4>Conversation</h4>
-          <button class="btn-close-panel" (click)="closeDraftingMode()">
+          <button class="btn-close-panel" (click)="closeChatPanel()">
             <i class="ri-close-line"></i>
           </button>
         </div>
@@ -416,12 +460,121 @@
                     </div>
                     <div class="message-bubble ai-message flex-grow-1">
                       <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+
+                      <!-- Transformation Comparison (Inline) -->
+                      <div class="transformation-comparison-inline" *ngIf="message.transformationComparison">
+                        <div class="comparison-header">
+                          <i class="ri-magic-line me-2"></i>
+                          <span>Review {{ message.transformationComparison.transformationType | titlecase }} Transformation</span>
+                        </div>
+
+                        <!-- Transformation Metadata -->
+                        <div class="transformation-meta mb-3">
+                          <span class="badge bg-soft-primary me-2">
+                            <i class="ri-file-text-line me-1"></i>
+                            {{ message.transformationComparison.scope === 'FULL_DOCUMENT' ? 'Full Document' : 'Selection' }}
+                          </span>
+                          <span class="badge bg-soft-info me-2">
+                            <i class="ri-file-word-line me-1"></i>
+                            {{ message.transformationComparison.response?.wordCount || 0 }} words
+                          </span>
+                          <span class="badge bg-soft-success me-2">
+                            <i class="ri-code-s-slash-line me-1"></i>
+                            {{ message.transformationComparison.response?.tokensUsed || 0 }} tokens
+                          </span>
+                          <span class="badge bg-soft-warning">
+                            <i class="ri-money-dollar-circle-line me-1"></i>
+                            ${{ message.transformationComparison.response?.costEstimate || 0 | number:'1.4-4' }}
+                          </span>
+                        </div>
+
+                        <!-- Document Context (for SELECTION scope) -->
+                        <div class="document-context-panel mb-3"
+                             *ngIf="message.transformationComparison.scope === 'SELECTION' && message.transformationComparison.fullDocumentContent">
+                          <div class="context-panel-header">
+                            <i class="ri-file-search-line me-2"></i>
+                            <span>Document Context</span>
+                            <span class="badge bg-soft-info ms-auto">Selected text highlighted</span>
+                          </div>
+                          <div class="context-panel-content"
+                               [innerHTML]="highlightSelectionInContext(message.transformationComparison.fullDocumentContent, message.transformationComparison.oldContent) | markdownToHtml">
+                          </div>
+                        </div>
+
+                        <!-- Side-by-side Comparison -->
+                        <div class="comparison-panels-inline">
+                          <div class="comparison-column comparison-original">
+                            <div class="comparison-panel-header">
+                              <i class="ri-file-text-line me-1"></i> Original
+                            </div>
+                            <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.oldContent | markdownToHtml"></div>
+                          </div>
+                          <div class="comparison-column comparison-transformed">
+                            <div class="comparison-panel-header">
+                              <i class="ri-sparkle-line me-1"></i> Transformed
+                            </div>
+                            <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.newContent | markdownToHtml"></div>
+                          </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="comparison-actions mt-3">
+                          <button class="btn btn-sm btn-secondary me-2" (click)="rejectTransformation(message.id)">
+                            <i class="ri-close-line me-1"></i> Reject
+                          </button>
+                          <button class="btn btn-sm btn-primary" (click)="acceptTransformation(message.id)">
+                            <i class="ri-check-line me-1"></i> Accept Changes
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
               </li>
             </ng-container>
+
+            <!-- AI Generating State -->
+            <li class="message-item assistant" *ngIf="isGenerating">
+              <div class="ai-message-container">
+                <div class="d-flex align-items-start gap-3 mb-3">
+                  <div class="chat-avatar flex-shrink-0">
+                    <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                  </div>
+
+                  <div class="message-bubble ai-message flex-grow-1">
+                    <!-- AI Activity Loading -->
+                    <div class="ai-activity-loader">
+                      <!-- Header -->
+                      <div class="activity-header">
+                        <span>Generating response</span>
+                        <i class="ri-arrow-up-s-line"></i>
+                      </div>
+
+                      <!-- Activity Steps -->
+                      <div class="activity-steps">
+                        <div *ngFor="let step of workflowSteps"
+                             class="activity-step"
+                             [class.active]="step.status === 'active'"
+                             [class.pending]="step.status === 'pending'"
+                             [class.completed]="step.status === 'completed'"
+                             [class.error]="step.status === 'error'">
+                          <i [class]="step.icon" class="step-icon" *ngIf="step.status !== 'completed'"></i>
+                          <i class="ri-check-line step-icon step-check" *ngIf="step.status === 'completed'"></i>
+                          <span class="step-text">{{ step.description }}</span>
+                        </div>
+                      </div>
+
+                      <button class="btn-stop-response" (click)="stopGeneration()">
+                        <i class="ri-stop-circle-line"></i>
+                        Stop response
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+
           </ul>
         </div>
 
@@ -485,6 +638,60 @@
 
                   <div class="message-bubble ai-message flex-grow-1">
                     <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+
+                    <!-- Transformation Comparison (Inline) -->
+                    <div class="transformation-comparison-inline" *ngIf="message.transformationComparison">
+                      <div class="comparison-header">
+                        <i class="ri-magic-line me-2"></i>
+                        <span>Review {{ message.transformationComparison.transformationType | titlecase }} Transformation</span>
+                      </div>
+
+                      <!-- Transformation Metadata -->
+                      <div class="transformation-meta mb-3">
+                        <span class="badge bg-soft-primary me-2">
+                          <i class="ri-file-text-line me-1"></i>
+                          {{ message.transformationComparison.scope === 'FULL_DOCUMENT' ? 'Full Document' : 'Selection' }}
+                        </span>
+                        <span class="badge bg-soft-info me-2">
+                          <i class="ri-file-word-line me-1"></i>
+                          {{ message.transformationComparison.response?.wordCount || 0 }} words
+                        </span>
+                        <span class="badge bg-soft-success me-2">
+                          <i class="ri-code-s-slash-line me-1"></i>
+                          {{ message.transformationComparison.response?.tokensUsed || 0 }} tokens
+                        </span>
+                        <span class="badge bg-soft-warning">
+                          <i class="ri-money-dollar-circle-line me-1"></i>
+                          ${{ message.transformationComparison.response?.costEstimate || 0 | number:'1.4-4' }}
+                        </span>
+                      </div>
+
+                      <!-- Side-by-side Comparison -->
+                      <div class="comparison-panels-inline">
+                        <div class="comparison-column">
+                          <div class="comparison-panel-header">
+                            <i class="ri-file-text-line me-1"></i> Original
+                          </div>
+                          <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.oldContent | markdownToHtml"></div>
+                        </div>
+                        <div class="comparison-column">
+                          <div class="comparison-panel-header transformed">
+                            <i class="ri-sparkle-line me-1"></i> Transformed
+                          </div>
+                          <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.newContent | markdownToHtml"></div>
+                        </div>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div class="comparison-actions mt-3">
+                        <button class="btn btn-sm btn-secondary me-2" (click)="rejectTransformation(message.id)">
+                          <i class="ri-close-line me-1"></i> Reject
+                        </button>
+                        <button class="btn btn-sm btn-primary" (click)="acceptTransformation(message.id)">
+                          <i class="ri-check-line me-1"></i> Accept Changes
+                        </button>
+                      </div>
+                    </div>
 
                     <!-- Suggested Actions -->
                     <div class="suggested-actions" *ngIf="message.documentGenerated">
@@ -606,24 +813,43 @@
 
 </div>
 
-<!-- Floating Toolbar for Selection-Based Actions -->
-<div class="floating-toolbar" *ngIf="showFloatingToolbar"
-     [style.top.px]="floatingToolbarPosition.top"
-     [style.left.px]="floatingToolbarPosition.left">
-  <div class="toolbar-menu-item" (click)="applySelectionTransform('simplify')">
-    <i class="ri-subtract-line"></i>
-    <span>Simplify</span>
+<!-- Version History Modal -->
+<ng-template #versionHistoryModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Version History</h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
   </div>
-  <div class="toolbar-menu-item" (click)="applySelectionTransform('condense')">
-    <i class="ri-file-reduce-line"></i>
-    <span>Condense</span>
+  <div class="modal-body">
+    <div *ngIf="loadingVersions" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    <div *ngIf="!loadingVersions && documentVersions.length === 0" class="text-center py-4 text-muted">
+      No versions found
+    </div>
+    <div class="version-list" *ngIf="!loadingVersions">
+      <div class="version-item" *ngFor="let version of documentVersions" [class.current-version]="version.versionNumber === currentVersionNumber">
+        <div class="version-header">
+          <strong>Version {{ version.versionNumber }}</strong>
+          <span class="badge bg-primary ms-2" *ngIf="version.versionNumber === currentVersionNumber">Current</span>
+          <span class="badge bg-success ms-2" *ngIf="version.createdByUser">Manual Save</span>
+        </div>
+        <div class="version-meta text-muted small">
+          {{ version.createdAt | date:'MMM d, y h:mm a' }} • {{ version.wordCount }} words
+          <span *ngIf="version.transformationType"> • {{ version.transformationType }}</span>
+        </div>
+        <div class="version-note" *ngIf="version.versionNote">
+          <i class="ri-sticky-note-line me-1"></i> {{ version.versionNote }}
+        </div>
+        <div class="version-actions mt-2">
+          <button class="btn btn-sm btn-outline-primary" (click)="previewVersion(version)" *ngIf="version.versionNumber !== currentVersionNumber">
+            <i class="ri-eye-line"></i> View
+          </button>
+          <button class="btn btn-sm btn-outline-success ms-2" (click)="modal.dismiss(); restoreVersion(version.versionNumber)" *ngIf="version.versionNumber !== currentVersionNumber">
+            <i class="ri-restart-line"></i> Restore
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="toolbar-menu-item" (click)="applySelectionTransform('expand')">
-    <i class="ri-file-add-line"></i>
-    <span>Expand</span>
-  </div>
-  <div class="toolbar-menu-item" (click)="applySelectionTransform('redraft')">
-    <i class="ri-refresh-line"></i>
-    <span>Redraft entirely</span>
-  </div>
-</div>
+</ng-template>
+

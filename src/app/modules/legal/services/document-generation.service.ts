@@ -23,6 +23,7 @@ export interface GeneratedDocument {
   costEstimate: number;
   wordCount?: number;
   pageCount?: number;
+  version?: number;
 }
 
 export interface DocumentRevisionRequest {
@@ -49,12 +50,46 @@ export interface DocumentTransformResponse {
   documentId: number;
   newVersion: number;
   transformedContent: string;
+  transformedSelection?: string; // For selection scope: only the transformed snippet
   explanation: string;
   tokensUsed: number;
   costEstimate: number;
   wordCount: number;
   transformationType: string;
   transformationScope: string;
+}
+
+export interface DraftGenerationRequest {
+  userId: number;
+  caseId?: number | null;
+  prompt: string;
+  documentType: string;
+  jurisdiction: string;
+  sessionName: string;
+}
+
+export interface DraftGenerationResponse {
+  conversationId: number;
+  documentId: number;
+  document: {
+    id: number;
+    caseId?: number;
+    title: string;
+    content: string;
+    wordCount: number;
+    version: number;
+    tokensUsed: number;
+    costEstimate: number;
+    generatedAt: string;
+  };
+  conversation: {
+    id: number;
+    caseId?: number;
+    sessionName: string;
+    taskType: string;
+    relatedDraftId: string;
+    createdAt: string;
+  };
 }
 
 @Injectable({
@@ -95,8 +130,22 @@ export class DocumentGenerationService {
   /**
    * Retrieve document by ID
    */
-  getDocument(documentId: string | number): Observable<GeneratedDocument> {
-    return this.http.get<GeneratedDocument>(`${this.apiUrl}/${documentId}`);
+  getDocument(documentId: string | number, userId?: number): Observable<GeneratedDocument> {
+    const params = userId ? { userId: userId.toString() } : {};
+    return this.http.get<GeneratedDocument>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}`,
+      { params }
+    );
+  }
+
+  /**
+   * Generate draft with conversation (combined endpoint)
+   */
+  generateDraftWithConversation(request: DraftGenerationRequest): Observable<DraftGenerationResponse> {
+    return this.http.post<DraftGenerationResponse>(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/generate`,
+      request
+    );
   }
 
   /**
@@ -110,38 +159,52 @@ export class DocumentGenerationService {
    * Transform document (full document or selection)
    * NEW API for AI Workspace
    */
-  transformDocument(request: DocumentTransformRequest): Observable<DocumentTransformResponse> {
+  transformDocument(request: DocumentTransformRequest, userId?: number): Observable<DocumentTransformResponse> {
+    const params = userId ? { userId: userId.toString() } : {};
     return this.http.post<DocumentTransformResponse>(
       `${environment.apiUrl}/api/legal/ai-workspace/transform`,
-      request
+      request,
+      { params }
     );
   }
 
   /**
    * Get document versions
    */
-  getDocumentVersions(documentId: number): Observable<any[]> {
+  getDocumentVersions(documentId: number, userId?: number): Observable<any[]> {
+    const params: any = {};
+    if (userId) {
+      params.userId = userId.toString();
+    }
     return this.http.get<any[]>(
-      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions`
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions`,
+      { params }
     );
   }
 
   /**
    * Get specific version
    */
-  getDocumentVersion(documentId: number, versionNumber: number): Observable<any> {
+  getDocumentVersion(documentId: number, versionNumber: number, userId?: number): Observable<any> {
+    const params: any = {};
+    if (userId) {
+      params.userId = userId.toString();
+    }
     return this.http.get<any>(
-      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions/${versionNumber}`
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions/${versionNumber}`,
+      { params }
     );
   }
 
   /**
    * Restore previous version
    */
-  restoreVersion(documentId: number, versionNumber: number): Observable<any> {
+  restoreVersion(documentId: number, versionNumber: number, userId?: number): Observable<any> {
+    const params = userId ? { userId: userId.toString() } : {};
     return this.http.post<any>(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/versions/${versionNumber}/restore`,
-      {}
+      {},
+      { params }
     );
   }
 
@@ -176,5 +239,47 @@ export class DocumentGenerationService {
    */
   estimatePageCount(wordCount: number): number {
     return Math.ceil(wordCount / 250);
+  }
+
+  /**
+   * Export document to Word (DOCX)
+   */
+  exportToWord(documentId: number, userId: number): Observable<Blob> {
+    return this.http.get(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/word`,
+      {
+        params: { userId: userId.toString() },
+        responseType: 'blob'
+      }
+    );
+  }
+
+  /**
+   * Export document to PDF
+   */
+  exportToPDF(documentId: number, userId: number): Observable<Blob> {
+    return this.http.get(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/pdf`,
+      {
+        params: { userId: userId.toString() },
+        responseType: 'blob'
+      }
+    );
+  }
+
+  /**
+   * Save manual edit as a new version
+   */
+  saveManualVersion(documentId: number, userId: number, content: string, versionNote?: string): Observable<any> {
+    return this.http.post(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/save`,
+      {
+        content,
+        versionNote: versionNote || 'Manual edit'
+      },
+      {
+        params: { userId: userId.toString() }
+      }
+    );
   }
 }

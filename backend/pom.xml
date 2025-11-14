@@ -109,6 +109,12 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.3.0</version>
 		</dependency>
+		<!-- Apache Commons IO (required by POI 5.3.0) -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.15.1</version>
+		</dependency>
 		<!-- Apache PDFBox for PDF manipulation -->
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>

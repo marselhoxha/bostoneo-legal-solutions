@@ -48,9 +48,15 @@ public class AiWorkspaceDocumentVersion {
     @Column(name = "selection_end_index")
     private Integer selectionEndIndex;
 
+    @Column(name = "transformed_selection", columnDefinition = "TEXT")
+    private String transformedSelection; // For selection scope: only the AI-transformed snippet
+
     @Column(name = "created_by_user")
     @Builder.Default
     private Boolean createdByUser = false;
+
+    @Column(name = "version_note", length = 500)
+    private String versionNote;
 
     @Column(name = "tokens_used")
     private Integer tokensUsed;

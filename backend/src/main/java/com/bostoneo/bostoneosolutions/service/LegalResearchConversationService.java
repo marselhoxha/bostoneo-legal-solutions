@@ -183,11 +183,19 @@ public class LegalResearchConversationService {
     /**
      * Get ONLY general conversations (no caseId) filtered by task type with pagination
      * Used by AI Workspace to exclude case-specific research conversations
+     * EXCEPTION: For GENERATE_DRAFT task, returns ALL drafts (both with and without caseId)
      */
     @Transactional(readOnly = true)
     public Page<AiConversationSession> getGeneralConversationsByTaskType(String taskType, Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return sessionRepository.findGeneralConversationsByUserIdAndTaskType(userId, taskType, pageable);
+
+        // For drafts, show ALL drafts regardless of caseId
+        // For other tasks, only show general conversations
+        if ("GENERATE_DRAFT".equals(taskType)) {
+            return sessionRepository.findByUserIdAndTaskType(userId, taskType, pageable);
+        } else {
+            return sessionRepository.findGeneralConversationsByUserIdAndTaskType(userId, taskType, pageable);
+        }
     }
 
     /**
