@@ -11,12 +11,12 @@
   </button>
 
   <!-- Sidebar Backdrop Overlay (Mobile Only) -->
-  <div class="sidebar-backdrop" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
+  <div class="sidebar-backdrop" [class.show]="sidebarOpen$ | async" (click)="closeSidebar()"></div>
 
   <!-- ========================================== -->
   <!-- LEFT SIDEBAR: Conversation History -->
   <!-- ========================================== -->
-  <aside class="card conversation-sidebar" [class.open]="sidebarOpen" *ngIf="!draftingMode">
+  <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async" *ngIf="!(draftingMode$ | async)">
     <div class="conversation-sidebar-header">
       <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
               (click)="startNewConversation()">
@@ -47,16 +47,16 @@
       </div>
 
       <!-- Empty State -->
-      <div class="conversation-empty" *ngIf="!loadingDrafts && conversations.length === 0">
+      <div class="conversation-empty" *ngIf="!loadingDrafts && (conversations$ | async)?.length === 0">
         <i class="ri-chat-3-line empty-icon"></i>
         <p class="empty-title">No conversations yet</p>
         <p class="empty-description">Start a new conversation to see it here</p>
       </div>
 
       <!-- Conversations List -->
-      <div *ngIf="!loadingDrafts && conversations.length > 0">
+      <div *ngIf="!loadingDrafts && (conversations$ | async)?.length > 0">
         <!-- Past 90 Days -->
-        <div class="conversation-group" *ngIf="groupedConversations.past90Days.length > 0">
+        <div class="conversation-group" *ngIf="(groupedConversations$ | async)?.past90Days?.length > 0">
           <div class="conversation-group-header">
             <span>Past 90 Days</span>
             <button class="btn-delete-all" (click)="deleteAllConversations()">Delete all</button>
@@ -66,7 +66,7 @@
             <div
               *ngFor="let conv of filteredConversations"
               class="conversation-item"
-              [class.active]="activeConversationId === conv.id"
+              [class.active]="(activeConversationId$ | async) === conv.id"
               (click)="switchConversation(conv.id)">
               <div class="conversation-title">{{conv.title}}</div>
               <div class="conversation-meta">
@@ -102,7 +102,7 @@
   <main class="main-content-area">
 
     <!-- Welcome Screen (No active conversation) -->
-    <div class="welcome-screen" *ngIf="!showChat && !isGenerating && !draftingMode">
+    <div class="welcome-screen" *ngIf="!(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
       <div class="welcome-header">
 
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
@@ -234,7 +234,7 @@
     </div>
 
     <!-- Top Action Bar (when in drafting mode) -->
-    <div class="top-action-bar" *ngIf="draftingMode">
+    <div class="top-action-bar" *ngIf="draftingMode$ | async">
       <div class="action-bar-left">
         <button class="btn btn-link back-btn" (click)="exitDraftingMode()" title="Exit drafting mode">
           <i class="ri-arrow-left-line"></i>
@@ -279,7 +279,7 @@
     </div>
 
     <!-- Split View Container (when document is generated) -->
-    <div class="split-view-container" *ngIf="draftingMode">
+    <div class="split-view-container" *ngIf="draftingMode$ | async">
       <!-- Document Preview Panel (60%) -->
       <div class="document-preview-panel">
         <div class="document-preview-header">
@@ -305,20 +305,83 @@
                 <i class="ri-money-dollar-circle-line"></i>
                 ${{documentMetadata.costEstimate | number:'1.4-4'}}
               </span>
-              <span class="meta-item" *ngIf="documentMetadata.version">
-                <i class="ri-git-commit-line"></i>
-                v{{documentMetadata.version}}
-              </span>
+
+              <!-- Version Dropdown -->
+              <div class="version-dropdown" ngbDropdown container="body" placement="bottom-end" *ngIf="documentMetadata.version">
+                <button class="version-dropdown-toggle" ngbDropdownToggle type="button">
+                  <i class="ri-git-commit-line me-1"></i>
+                  v{{documentMetadata.version}}
+                </button>
+                <div ngbDropdownMenu class="version-dropdown-menu">
+                  <div class="version-dropdown-header">
+                    <h6 class="mb-0">Version History</h6>
+                  </div>
+
+                  <!-- Loading State -->
+                  <div class="version-dropdown-loading" *ngIf="loadingVersions">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="ms-2">Loading versions...</span>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="version-dropdown-empty" *ngIf="!loadingVersions && documentVersions.length === 0">
+                    <i class="ri-inbox-line"></i>
+                    <p class="mb-0">No versions found</p>
+                  </div>
+
+                  <!-- Version List -->
+                  <div class="version-dropdown-list" *ngIf="!loadingVersions && documentVersions.length > 0">
+                    <button
+                      *ngFor="let version of documentVersions"
+                      class="version-dropdown-item"
+                      [class.current-version]="version.versionNumber === documentMetadata.version"
+                      (click)="restoreVersionWithConfirmation(version)"
+                      [disabled]="version.versionNumber === documentMetadata.version">
+
+                      <div class="version-item-header">
+                        <span class="version-number">v{{version.versionNumber}}</span>
+                        <span class="version-badge" [ngClass]="{
+                          'badge-primary': version.transformationType === 'INITIAL_GENERATION',
+                          'badge-info': version.transformationType === 'SIMPLIFY' || version.transformationType === 'CONDENSE',
+                          'badge-success': version.transformationType === 'EXPAND',
+                          'badge-warning': version.transformationType === 'REDRAFT',
+                          'badge-secondary': version.transformationType === 'MANUAL_EDIT',
+                          'badge-danger': version.transformationType === 'RESTORE_VERSION'
+                        }">
+                          {{getTransformationLabel(version.transformationType)}}
+                        </span>
+                        <span class="current-badge" *ngIf="version.versionNumber === documentMetadata.version">
+                          <i class="ri-check-line"></i> CURRENT
+                        </span>
+                      </div>
+
+                      <div class="version-item-meta">
+                        <span class="version-date">
+                          <i class="ri-time-line"></i>
+                          {{version.createdAt | date:'MMM d, h:mm a'}}
+                        </span>
+                        <span class="version-words">
+                          <i class="ri-file-word-line"></i>
+                          {{version.wordCount}} words
+                        </span>
+                      </div>
+
+                      <div class="version-item-note" *ngIf="version.versionNote">
+                        <i class="ri-sticky-note-line"></i>
+                        {{version.versionNote}}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="preview-actions">
             <button class="btn-icon" (click)="saveManualVersion()"
                     title="Save Version">
               <i class="ri-save-line"></i>
-            </button>
-            <button class="btn-icon" (click)="openVersionHistoryModal()"
-                    title="Version History">
-              <i class="ri-history-line"></i>
             </button>
             <button class="btn-icon" (click)="increaseTextSize()" title="Zoom in">
               <i class="ri-zoom-in-line"></i>
@@ -329,85 +392,49 @@
             <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
               <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
             </button>
-            <button class="btn-icon" *ngIf="!showChat" (click)="reopenChatPanel()" title="Open conversation">
+            <button class="btn-icon" *ngIf="!(showChat$ | async)" (click)="reopenChatPanel()" title="Open conversation">
               <i class="ri-chat-3-line"></i>
             </button>
           </div>
         </div>
 
-        <!-- Version History Sidebar -->
-        <div class="version-history-sidebar" *ngIf="showVersionHistory">
-          <div class="version-history-header">
-            <h5>Version History</h5>
-            <button class="btn-close-mini" (click)="toggleVersionHistory()">
-              <i class="ri-close-line"></i>
-            </button>
-          </div>
-          <div class="version-history-content">
-            <div class="version-item" *ngFor="let version of documentVersions"
-                 [class.active]="selectedVersionNumber === version.versionNumber"
-                 (click)="previewVersion(version)">
-              <div class="version-header">
-                <span class="version-number">v{{version.versionNumber}}</span>
-                <span class="version-date">{{version.createdAt | date:'short'}}</span>
-              </div>
-              <div class="version-details">
-                <span class="version-type">{{getTransformationLabel(version.transformationType)}}</span>
-                <span class="version-scope" *ngIf="version.transformationScope === 'SELECTION'">
-                  <i class="ri-text-snippet"></i> Selection
-                </span>
-              </div>
-              <div class="version-meta">
-                <span *ngIf="version.tokensUsed">{{version.tokensUsed}} tokens</span>
-                <span *ngIf="version.wordCount">{{version.wordCount}} words</span>
-              </div>
-              <div class="version-actions" *ngIf="version.versionNumber !== documentMetadata.version">
-                <button class="btn-restore" (click)="restoreVersion(version.versionNumber); $event.stopPropagation()">
-                  <i class="ri-arrow-go-back-line"></i> Restore
-                </button>
-                <button class="btn-compare" (click)="compareVersions(documentMetadata.version, version.versionNumber); $event.stopPropagation()">
-                  <i class="ri-git-compare-line"></i> Compare
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="document-preview-content">
+
           <!-- Rich Text Editor (Quill) -->
+          <!-- showEditor flag toggled OFF→ON to force destruction and recreation -->
           <quill-editor
+            *ngIf="showEditor"
             #documentEditor
-            [(ngModel)]="activeDocumentContent"
             [modules]="quillModules"
             [formats]="quillFormats"
             [styles]="{
               'min-height': '500px',
               'height': '100%',
-              'font-family': 'Georgia, serif',
-              'font-size': '14px',
-              'line-height': '1.6'
+              'font-family': 'Georgia, Times New Roman, serif',
+              'font-size': '16px',
+              'line-height': '1.8'
             }"
+            (onEditorCreated)="onEditorCreated($event)"
             (onSelectionChanged)="onTextSelectionChanged($event)"
-            (onContentChanged)="onDocumentContentChanged($event)"
             placeholder="Your generated document will appear here...">
           </quill-editor>
         </div>
 
         <!-- Drafting Tools Menu -->
         <div class="drafting-tools-menu">
-          <button class="tool-btn" (click)="applyDraftingTool('simplify')">
+          <button class="tool-btn" (click)="applyDraftingTool('simplify')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Simplify language'">
             <i class="ri-subtract-line"></i>
             Simplify
           </button>
-          <button class="tool-btn" (click)="applyDraftingTool('condense')">
+          <button class="tool-btn" (click)="applyDraftingTool('condense')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Condense document'">
             <i class="ri-file-reduce-line"></i>
             Condense
           </button>
-          <button class="tool-btn" (click)="applyDraftingTool('expand')">
+          <button class="tool-btn" (click)="applyDraftingTool('expand')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Expand with more detail'">
             <i class="ri-file-add-line"></i>
             Expand
           </button>
-          <button class="tool-btn" (click)="applyDraftingTool('redraft')">
+          <button class="tool-btn" (click)="applyDraftingTool('redraft')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Redraft entirely'">
             <i class="ri-refresh-line"></i>
             Redraft entirely
           </button>
@@ -415,7 +442,7 @@
       </div>
 
       <!-- Chat Panel (40%) -->
-      <div class="chat-panel-side" *ngIf="showChat">
+      <div class="chat-panel-side" *ngIf="showChat$ | async">
         <div class="chat-panel-header">
           <h4>Conversation</h4>
           <button class="btn-close-panel" (click)="closeChatPanel()">
@@ -426,7 +453,7 @@
         <div class="chat-messages-area-side">
           <ul class="list-unstyled chat-conversation-list">
             <!-- User & AI Messages -->
-            <ng-container *ngFor="let message of conversationMessages">
+            <ng-container *ngFor="let message of (conversationMessages$ | async)">
               <li class="chat-list" [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
 
                 <!-- User Message -->
@@ -461,72 +488,14 @@
                     <div class="message-bubble ai-message flex-grow-1">
                       <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
 
-                      <!-- Transformation Comparison (Inline) -->
-                      <div class="transformation-comparison-inline" *ngIf="message.transformationComparison">
-                        <div class="comparison-header">
-                          <i class="ri-magic-line me-2"></i>
-                          <span>Review {{ message.transformationComparison.transformationType | titlecase }} Transformation</span>
-                        </div>
-
-                        <!-- Transformation Metadata -->
-                        <div class="transformation-meta mb-3">
-                          <span class="badge bg-soft-primary me-2">
-                            <i class="ri-file-text-line me-1"></i>
-                            {{ message.transformationComparison.scope === 'FULL_DOCUMENT' ? 'Full Document' : 'Selection' }}
-                          </span>
-                          <span class="badge bg-soft-info me-2">
-                            <i class="ri-file-word-line me-1"></i>
-                            {{ message.transformationComparison.response?.wordCount || 0 }} words
-                          </span>
-                          <span class="badge bg-soft-success me-2">
-                            <i class="ri-code-s-slash-line me-1"></i>
-                            {{ message.transformationComparison.response?.tokensUsed || 0 }} tokens
-                          </span>
-                          <span class="badge bg-soft-warning">
-                            <i class="ri-money-dollar-circle-line me-1"></i>
-                            ${{ message.transformationComparison.response?.costEstimate || 0 | number:'1.4-4' }}
-                          </span>
-                        </div>
-
-                        <!-- Document Context (for SELECTION scope) -->
-                        <div class="document-context-panel mb-3"
-                             *ngIf="message.transformationComparison.scope === 'SELECTION' && message.transformationComparison.fullDocumentContent">
-                          <div class="context-panel-header">
-                            <i class="ri-file-search-line me-2"></i>
-                            <span>Document Context</span>
-                            <span class="badge bg-soft-info ms-auto">Selected text highlighted</span>
-                          </div>
-                          <div class="context-panel-content"
-                               [innerHTML]="highlightSelectionInContext(message.transformationComparison.fullDocumentContent, message.transformationComparison.oldContent) | markdownToHtml">
-                          </div>
-                        </div>
-
-                        <!-- Side-by-side Comparison -->
-                        <div class="comparison-panels-inline">
-                          <div class="comparison-column comparison-original">
-                            <div class="comparison-panel-header">
-                              <i class="ri-file-text-line me-1"></i> Original
-                            </div>
-                            <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.oldContent | markdownToHtml"></div>
-                          </div>
-                          <div class="comparison-column comparison-transformed">
-                            <div class="comparison-panel-header">
-                              <i class="ri-sparkle-line me-1"></i> Transformed
-                            </div>
-                            <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.newContent | markdownToHtml"></div>
-                          </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="comparison-actions mt-3">
-                          <button class="btn btn-sm btn-secondary me-2" (click)="rejectTransformation(message.id)">
-                            <i class="ri-close-line me-1"></i> Reject
-                          </button>
-                          <button class="btn btn-sm btn-primary" (click)="acceptTransformation(message.id)">
-                            <i class="ri-check-line me-1"></i> Accept Changes
-                          </button>
-                        </div>
-                      </div>
+                      <!-- Transformation Comparison - Refactored Component -->
+                      <app-transformation-preview
+                        *ngIf="message.transformationComparison"
+                        [transformation]="message.transformationComparison"
+                        [messageId]="message.id!"
+                        (accept)="acceptTransformation($event)"
+                        (reject)="rejectTransformation($event)">
+                      </app-transformation-preview>
                     </div>
                   </div>
                 </div>
@@ -535,7 +504,7 @@
             </ng-container>
 
             <!-- AI Generating State -->
-            <li class="message-item assistant" *ngIf="isGenerating">
+            <li class="message-item assistant" *ngIf="isGenerating$ | async">
               <div class="ai-message-container">
                 <div class="d-flex align-items-start gap-3 mb-3">
                   <div class="chat-avatar flex-shrink-0">
@@ -551,19 +520,11 @@
                         <i class="ri-arrow-up-s-line"></i>
                       </div>
 
-                      <!-- Activity Steps -->
-                      <div class="activity-steps">
-                        <div *ngFor="let step of workflowSteps"
-                             class="activity-step"
-                             [class.active]="step.status === 'active'"
-                             [class.pending]="step.status === 'pending'"
-                             [class.completed]="step.status === 'completed'"
-                             [class.error]="step.status === 'error'">
-                          <i [class]="step.icon" class="step-icon" *ngIf="step.status !== 'completed'"></i>
-                          <i class="ri-check-line step-icon step-check" *ngIf="step.status === 'completed'"></i>
-                          <span class="step-text">{{ step.description }}</span>
-                        </div>
-                      </div>
+                      <!-- Activity Steps - Refactored Component -->
+                      <app-workflow-steps
+                        [steps]="workflowSteps$ | async"
+                        [isGenerating]="isGenerating$ | async">
+                      </app-workflow-steps>
 
                       <button class="btn-stop-response" (click)="stopGeneration()">
                         <i class="ri-stop-circle-line"></i>
@@ -598,12 +559,12 @@
     </div>
 
     <!-- Chat Container (Active conversation - full width when not in drafting mode) -->
-    <div class="chat-container-main" *ngIf="(showChat || isGenerating) && !draftingMode">
+    <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async)">
       <div class="chat-messages-area">
         <ul class="list-unstyled chat-conversation-list">
 
           <!-- User & AI Messages -->
-          <ng-container *ngFor="let message of conversationMessages; let i = index">
+          <ng-container *ngFor="let message of (conversationMessages$ | async); let i = index">
             <li class="chat-list" [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
 
               <!-- User Message -->
@@ -639,59 +600,14 @@
                   <div class="message-bubble ai-message flex-grow-1">
                     <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
 
-                    <!-- Transformation Comparison (Inline) -->
-                    <div class="transformation-comparison-inline" *ngIf="message.transformationComparison">
-                      <div class="comparison-header">
-                        <i class="ri-magic-line me-2"></i>
-                        <span>Review {{ message.transformationComparison.transformationType | titlecase }} Transformation</span>
-                      </div>
-
-                      <!-- Transformation Metadata -->
-                      <div class="transformation-meta mb-3">
-                        <span class="badge bg-soft-primary me-2">
-                          <i class="ri-file-text-line me-1"></i>
-                          {{ message.transformationComparison.scope === 'FULL_DOCUMENT' ? 'Full Document' : 'Selection' }}
-                        </span>
-                        <span class="badge bg-soft-info me-2">
-                          <i class="ri-file-word-line me-1"></i>
-                          {{ message.transformationComparison.response?.wordCount || 0 }} words
-                        </span>
-                        <span class="badge bg-soft-success me-2">
-                          <i class="ri-code-s-slash-line me-1"></i>
-                          {{ message.transformationComparison.response?.tokensUsed || 0 }} tokens
-                        </span>
-                        <span class="badge bg-soft-warning">
-                          <i class="ri-money-dollar-circle-line me-1"></i>
-                          ${{ message.transformationComparison.response?.costEstimate || 0 | number:'1.4-4' }}
-                        </span>
-                      </div>
-
-                      <!-- Side-by-side Comparison -->
-                      <div class="comparison-panels-inline">
-                        <div class="comparison-column">
-                          <div class="comparison-panel-header">
-                            <i class="ri-file-text-line me-1"></i> Original
-                          </div>
-                          <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.oldContent | markdownToHtml"></div>
-                        </div>
-                        <div class="comparison-column">
-                          <div class="comparison-panel-header transformed">
-                            <i class="ri-sparkle-line me-1"></i> Transformed
-                          </div>
-                          <div class="comparison-panel-content" [innerHTML]="message.transformationComparison.newContent | markdownToHtml"></div>
-                        </div>
-                      </div>
-
-                      <!-- Action Buttons -->
-                      <div class="comparison-actions mt-3">
-                        <button class="btn btn-sm btn-secondary me-2" (click)="rejectTransformation(message.id)">
-                          <i class="ri-close-line me-1"></i> Reject
-                        </button>
-                        <button class="btn btn-sm btn-primary" (click)="acceptTransformation(message.id)">
-                          <i class="ri-check-line me-1"></i> Accept Changes
-                        </button>
-                      </div>
-                    </div>
+                    <!-- Transformation Comparison - Refactored Component -->
+                    <app-transformation-preview
+                      *ngIf="message.transformationComparison"
+                      [transformation]="message.transformationComparison"
+                      [messageId]="message.id!"
+                      (accept)="acceptTransformation($event)"
+                      (reject)="rejectTransformation($event)">
+                    </app-transformation-preview>
 
                     <!-- Suggested Actions -->
                     <div class="suggested-actions" *ngIf="message.documentGenerated">
@@ -713,17 +629,17 @@
                     </div>
 
                     <!-- Follow-up Questions -->
-                    <div class="follow-up-questions-section" *ngIf="followUpQuestions.length > 0 && i === conversationMessages.length - 1">
+                    <div class="follow-up-questions-section" *ngIf="(followUpQuestions$ | async)?.length > 0 && i === (conversationMessages$ | async)?.length - 1">
                       <div class="follow-up-label">
                         <i class="ri-question-line"></i>
                         Suggested follow up questions:
                       </div>
                       <div class="follow-up-list">
                         <button
-                          *ngFor="let question of followUpQuestions"
+                          *ngFor="let question of (followUpQuestions$ | async)"
                           class="follow-up-btn"
                           (click)="askFollowUpQuestion(question)"
-                          [disabled]="isGenerating">
+                          [disabled]="isGenerating$ | async">
                           <i class="ri-add-line"></i>
                           <span>{{ question }}</span>
                         </button>
@@ -737,7 +653,7 @@
           </ng-container>
 
           <!-- AI Generating State -->
-          <li class="message-item assistant" *ngIf="isGenerating">
+          <li class="message-item assistant" *ngIf="isGenerating$ | async">
             <div class="ai-message-container">
               <div class="d-flex align-items-start gap-3 mb-3">
                 <div class="chat-avatar flex-shrink-0">
@@ -753,19 +669,11 @@
                       <i class="ri-arrow-up-s-line"></i>
                     </div>
 
-                    <!-- Activity Steps -->
-                    <div class="activity-steps">
-                      <div *ngFor="let step of workflowSteps"
-                           class="activity-step"
-                           [class.active]="step.status === 'active'"
-                           [class.pending]="step.status === 'pending'"
-                           [class.completed]="step.status === 'completed'"
-                           [class.error]="step.status === 'error'">
-                        <i [class]="step.icon" class="step-icon" *ngIf="step.status !== 'completed'"></i>
-                        <i class="ri-check-line step-icon step-check" *ngIf="step.status === 'completed'"></i>
-                        <span class="step-text">{{ step.description }}</span>
-                      </div>
-                    </div>
+                    <!-- Activity Steps - Refactored Component -->
+                    <app-workflow-steps
+                      [steps]="workflowSteps$ | async"
+                      [isGenerating]="isGenerating$ | async">
+                    </app-workflow-steps>
 
                     <button class="btn-stop-response" (click)="stopGeneration()">
                       <i class="ri-stop-circle-line"></i>
@@ -781,7 +689,7 @@
       </div>
 
       <!-- Bottom Input Bar (in chat mode) -->
-      <div class="chat-input-bar-bottom" *ngIf="showBottomSearchBar && !isGenerating">
+      <div class="chat-input-bar-bottom" *ngIf="(showBottomSearchBar$ | async) && !(isGenerating$ | async)">
         <form (ngSubmit)="sendFollowUpMessage()" class="chat-input-form">
           <textarea
             class="form-control chat-input"
@@ -812,44 +720,4 @@
   <!-- Document Editor Modal -->
 
 </div>
-
-<!-- Version History Modal -->
-<ng-template #versionHistoryModal let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">Version History</h5>
-    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
-  </div>
-  <div class="modal-body">
-    <div *ngIf="loadingVersions" class="text-center py-4">
-      <div class="spinner-border text-primary" role="status"></div>
-    </div>
-    <div *ngIf="!loadingVersions && documentVersions.length === 0" class="text-center py-4 text-muted">
-      No versions found
-    </div>
-    <div class="version-list" *ngIf="!loadingVersions">
-      <div class="version-item" *ngFor="let version of documentVersions" [class.current-version]="version.versionNumber === currentVersionNumber">
-        <div class="version-header">
-          <strong>Version {{ version.versionNumber }}</strong>
-          <span class="badge bg-primary ms-2" *ngIf="version.versionNumber === currentVersionNumber">Current</span>
-          <span class="badge bg-success ms-2" *ngIf="version.createdByUser">Manual Save</span>
-        </div>
-        <div class="version-meta text-muted small">
-          {{ version.createdAt | date:'MMM d, y h:mm a' }} • {{ version.wordCount }} words
-          <span *ngIf="version.transformationType"> • {{ version.transformationType }}</span>
-        </div>
-        <div class="version-note" *ngIf="version.versionNote">
-          <i class="ri-sticky-note-line me-1"></i> {{ version.versionNote }}
-        </div>
-        <div class="version-actions mt-2">
-          <button class="btn btn-sm btn-outline-primary" (click)="previewVersion(version)" *ngIf="version.versionNumber !== currentVersionNumber">
-            <i class="ri-eye-line"></i> View
-          </button>
-          <button class="btn btn-sm btn-outline-success ms-2" (click)="modal.dismiss(); restoreVersion(version.versionNumber)" *ngIf="version.versionNumber !== currentVersionNumber">
-            <i class="ri-restart-line"></i> Restore
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</ng-template>
 

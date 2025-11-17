@@ -1,0 +1,114 @@
+<div class="conversation-list-container">
+  <!-- Header -->
+  <div class="conversation-list-header">
+    <h5 class="mb-0">Conversations</h5>
+    <button class="btn btn-sm btn-primary" (click)="onNewConversation()">
+      <i class="ri-add-line"></i>
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="conversation-search">
+    <div class="search-input-wrapper">
+      <i class="ri-search-line search-icon"></i>
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Search conversations..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange($event)">
+      <i class="ri-close-line clear-icon"
+         *ngIf="searchQuery"
+         (click)="searchQuery = ''; onSearchChange('')"></i>
+    </div>
+  </div>
+
+  <!-- Conversation List -->
+  <div class="conversation-list-content">
+    <!-- No conversations -->
+    <div class="empty-state" *ngIf="filteredConversations.length === 0">
+      <i class="ri-chat-3-line empty-icon"></i>
+      <p class="empty-text">
+        {{ searchQuery ? 'No conversations found' : 'No conversations yet' }}
+      </p>
+      <button class="btn btn-sm btn-outline-primary" (click)="onNewConversation()" *ngIf="!searchQuery">
+        <i class="ri-add-line me-1"></i> Start New
+      </button>
+    </div>
+
+    <!-- Past 90 Days -->
+    <div class="conversation-group" *ngIf="!searchQuery && groupedConversations?.past90Days?.length > 0">
+      <div class="conversation-group-header">Recent</div>
+      <div class="conversation-item"
+           *ngFor="let conv of groupedConversations.past90Days"
+           [class.active]="conv.id === activeConversationId"
+           (click)="onConversationClick(conv)">
+        <div class="conversation-icon">
+          <i [class]="getConversationIcon(conv.type)"></i>
+        </div>
+        <div class="conversation-details">
+          <div class="conversation-title">{{ conv.title }}</div>
+          <div class="conversation-meta">
+            <span class="conversation-date">{{ getRelativeTime(conv.date) }}</span>
+            <span class="conversation-count" *ngIf="conv.messageCount">
+              {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
+            </span>
+          </div>
+        </div>
+        <button class="btn-delete" (click)="onDeleteClick($event, conv)" title="Delete conversation">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Older -->
+    <div class="conversation-group" *ngIf="!searchQuery && groupedConversations?.older?.length > 0">
+      <div class="conversation-group-header">Older</div>
+      <div class="conversation-item"
+           *ngFor="let conv of groupedConversations.older"
+           [class.active]="conv.id === activeConversationId"
+           (click)="onConversationClick(conv)">
+        <div class="conversation-icon">
+          <i [class]="getConversationIcon(conv.type)"></i>
+        </div>
+        <div class="conversation-details">
+          <div class="conversation-title">{{ conv.title }}</div>
+          <div class="conversation-meta">
+            <span class="conversation-date">{{ getRelativeTime(conv.date) }}</span>
+            <span class="conversation-count" *ngIf="conv.messageCount">
+              {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
+            </span>
+          </div>
+        </div>
+        <button class="btn-delete" (click)="onDeleteClick($event, conv)" title="Delete conversation">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="conversation-group" *ngIf="searchQuery && filteredConversations.length > 0">
+      <div class="conversation-group-header">Search Results</div>
+      <div class="conversation-item"
+           *ngFor="let conv of filteredConversations"
+           [class.active]="conv.id === activeConversationId"
+           (click)="onConversationClick(conv)">
+        <div class="conversation-icon">
+          <i [class]="getConversationIcon(conv.type)"></i>
+        </div>
+        <div class="conversation-details">
+          <div class="conversation-title">{{ conv.title }}</div>
+          <div class="conversation-meta">
+            <span class="conversation-date">{{ getRelativeTime(conv.date) }}</span>
+            <span class="conversation-count" *ngIf="conv.messageCount">
+              {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
+            </span>
+          </div>
+        </div>
+        <button class="btn-delete" (click)="onDeleteClick($event, conv)" title="Delete conversation">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

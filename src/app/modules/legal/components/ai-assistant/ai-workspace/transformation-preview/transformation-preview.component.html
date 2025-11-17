@@ -1,0 +1,50 @@
+<div class="transformation-preview-container">
+  <!-- Comparison View -->
+  <div class="comparison-view">
+    <div class="comparison-columns">
+      <!-- Original Content -->
+      <div class="comparison-column comparison-original">
+        <div class="comparison-panel-header">
+          <i class="ri-file-text-line me-1"></i> Original
+        </div>
+        <div class="comparison-panel-content" [innerHTML]="transformation.oldContent | markdownToHtml"></div>
+      </div>
+
+      <!-- Transformed Content -->
+      <div class="comparison-column comparison-transformed">
+        <div class="comparison-panel-header">
+          <i class="ri-sparkle-line me-1"></i> Transformed
+        </div>
+        <div class="comparison-panel-content" [innerHTML]="transformation.newContent | markdownToHtml"></div>
+      </div>
+    </div>
+
+    <!-- Context Toggle (for selection-based transformations) -->
+    <div class="context-toggle" *ngIf="transformation.scope === 'SELECTION' && transformation.fullDocumentContent">
+      <button class="btn btn-sm btn-outline-secondary" (click)="toggleContext()">
+        <i class="ri-eye-line me-1"></i>
+        {{ showContext ? 'Hide' : 'Show' }} Full Document Context
+      </button>
+    </div>
+
+    <!-- Full Document Context -->
+    <div class="document-context" *ngIf="showContext && transformation.fullDocumentContent">
+      <div class="context-panel-header">
+        <i class="ri-file-list-3-line me-1"></i> Full Document (Selection Highlighted)
+      </div>
+      <div class="context-panel-content"
+           [innerHTML]="highlightSelectionInContext(transformation.fullDocumentContent, transformation.oldContent) | markdownToHtml">
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="transformation-actions">
+    <button class="btn btn-success" (click)="onAccept()">
+      <i class="ri-check-line me-1"></i> Accept Changes
+    </button>
+    <button class="btn btn-outline-secondary" (click)="onReject()">
+      <i class="ri-close-line me-1"></i> Reject
+    </button>
+  </div>
+</div>

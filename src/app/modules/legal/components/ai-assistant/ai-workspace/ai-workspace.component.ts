@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, switchMap } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
 import { LegalCaseService } from '../../../services/legal-case.service';
@@ -14,16 +14,51 @@ import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { UserService } from '../../../../../service/user.service';
 import { environment } from '@environments/environment';
-import Swal from 'sweetalert2';
 import { QuillModule } from 'ngx-quill';
 import Quill from 'quill';
-import html2pdf from 'html2pdf.js';
 import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+
+// NEW: Refactored child components
+import { WorkflowStepsComponent } from './workflow-steps/workflow-steps.component';
+import { TransformationPreviewComponent } from './transformation-preview/transformation-preview.component';
+import { DocumentEditorComponent } from './document-editor/document-editor.component';
+import { ConversationListComponent } from './conversation-list/conversation-list.component';
+import { VersionHistoryComponent } from './version-history/version-history.component';
+
+// NEW: Refactored services
+import { NotificationService } from '../../../services/notification.service';
+import { QuillEditorService } from '../../../services/quill-editor.service';
+import { AiWorkspaceStateService } from '../../../services/ai-workspace-state.service';
+import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
+import { DocumentTransformationService } from '../../../services/document-transformation.service';
+
+// NEW: Models and enums
+import { Conversation, Message } from '../../../models/conversation.model';
+import { ConversationType, ResearchMode, TaskType } from '../../../models/enums/conversation-type.enum';
+import { WorkflowStep } from '../../../models/workflow.model';
+import { DocumentState } from '../../../models/document.model';
 
 @Component({
   selector: 'app-ai-workspace',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, MarkdownToHtmlPipe, ApexChartDirective, QuillModule, NgbDropdown, NgbDropdownToggle, NgbDropdownMenu],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MarkdownToHtmlPipe,
+    ApexChartDirective,
+    QuillModule,
+    NgbDropdown,
+    NgbDropdownToggle,
+    NgbDropdownMenu,
+    // NEW: Refactored child components
+    WorkflowStepsComponent,
+    TransformationPreviewComponent,
+    DocumentEditorComponent,
+    ConversationListComponent,
+    VersionHistoryComponent
+  ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
 })
@@ -33,27 +68,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Timeout/Interval tracking for cleanup
   private activeTimeouts: number[] = [];
   private activeIntervals: number[] = [];
+  private contentChangeDebounce: any;
 
   // Timing constants
   private readonly STEP_DELAY = 2000;
   private readonly TYPING_DELAY = 1500;
   private readonly RESPONSE_DELAY = 3000;
 
-  // Conversation state
-  showChat = false;
-  showBottomSearchBar = false;
-  isGenerating = false;
+  // Conversation state (migrated to observables from StateService)
+  showChat$ = this.stateService.showChat$;
+  showBottomSearchBar$ = this.stateService.showBottomSearchBar$;
+  isGenerating$ = this.stateService.isGenerating$;
+  draftingMode$ = this.stateService.draftingMode$;
+
+  // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
   selectedDocumentType: 'interrogatories' | 'motion' | 'brief' | '' = '';
-  draftingMode = false; // Split-view mode when document is being edited
 
-  // Workflow steps with dynamic status tracking
-  workflowSteps: Array<{
-    id: number;
-    icon: string;
-    description: string;
-    status: 'pending' | 'active' | 'completed' | 'error';
-  }> = [];
+  // Workflow steps (migrated to observable from StateService)
+  workflowSteps$ = this.stateService.workflowSteps$;
 
   // Workflow step templates for different task types
   private workflowStepTemplates = {
@@ -88,87 +121,34 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     ]
   };
 
-  // Conversation management - Load from backend
-  conversations: Array<{
-    id: string;
-    title: string;
-    date: Date;
-    type: 'question' | 'draft' | 'summarize' | 'upload';
-    messages: Array<{
-      id?: string;
-      role: 'user' | 'assistant';
-      content: string;
-      timestamp?: Date;
-      documentGenerated?: boolean;
-      documentId?: string; // Changed to string to match DocumentGeneration UUID
-      transformationComparison?: {
-        oldContent: string;
-        newContent: string;
-        transformationType: string;
-        scope: 'FULL_DOCUMENT' | 'SELECTION';
-        response: any;
-      };
-    }>;
-    messageCount?: number; // Message count from backend for badge display
-    jurisdiction?: string;
-    documentType?: string;
-    sessionId?: number; // Link to DraftingSession
-    backendConversationId?: number; // Link to ResearchConversation (for Q&A)
-    researchMode?: string; // FAST, AUTO, THOROUGH
-    taskType?: string; // LEGAL_QUESTION, GENERATE_DRAFT, SUMMARIZE_CASE, ANALYZE_DOCUMENT
-    documentId?: number; // Document ID for ANALYZE_DOCUMENT tasks
-    relatedDraftId?: string; // Draft ID for related drafting tasks
-  }> = [];
+  // Conversation management (migrated to observables from StateService)
+  conversations$ = this.stateService.conversations$;
+  activeConversationId$ = this.stateService.activeConversationId$;
+  groupedConversations$ = this.stateService.groupedConversations$;
+  conversationMessages$ = this.stateService.conversationMessages$;
 
-  activeConversationId: string | null = null;
+  // Search query for filtering conversations
   conversationSearchQuery = '';
 
-  // Grouped conversations for UI display
-  groupedConversations: {
-    past90Days: any[];
-    older: any[];
-  } = {
-    past90Days: [],
-    older: []
-  };
-
-  // Filtered conversations based on search query
+  // Filtered conversations based on search query (computed from observable)
   get filteredConversations() {
+    // This will be replaced with combineLatest in template for reactive approach
     if (!this.conversationSearchQuery.trim()) {
-      return this.conversations;
+      return this.stateService.getConversations();
     }
 
     const query = this.conversationSearchQuery.toLowerCase();
-    return this.conversations.filter(conv =>
+    return this.stateService.getConversations().filter(conv =>
       conv.title.toLowerCase().includes(query)
     );
   }
-
-  // Conversation messages (current active conversation)
-  conversationMessages: Array<{
-    id?: string;
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp?: Date;
-    documentGenerated?: boolean;
-    documentId?: string; // Changed to string to match DocumentGeneration UUID
-    transformationComparison?: {
-      oldContent: string;
-      newContent: string;
-      transformationType: string;
-      scope: 'FULL_DOCUMENT' | 'SELECTION';
-      response: any;
-      fullDocumentContent?: string; // For showing context with highlighted selection
-      selectionRange?: { index: number; length: number }; // For precise Quill replacement
-    };
-  }> = [];
 
   // User input
   customPrompt = '';
   followUpMessage = '';
 
-  // Follow-up questions
-  followUpQuestions: string[] = [];
+  // Follow-up questions (migrated to observable from StateService)
+  followUpQuestions$ = this.stateService.followUpQuestions$;
 
   // Jurisdiction
   selectedJurisdiction = 'Massachusetts';
@@ -180,20 +160,44 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   editorDocumentTitle = '';
   editorDocumentContent = '';
 
-  // Split-view drafting mode state
-  activeDocumentTitle = 'Generated Document';
+  // Split-view drafting mode state (migrated to observable from StateService)
+  currentDocument$ = this.stateService.currentDocument$;
+
+  // Legacy document properties for backwards compatibility (accessing from state service)
+  get activeDocumentTitle(): string {
+    return this.stateService.getCurrentDocument().title;
+  }
+  set activeDocumentTitle(value: string) {
+    this.stateService.setCurrentDocument({ title: value });
+  }
+
+  // Document content and metadata (simple properties, not getters/setters)
   activeDocumentContent = '';
   currentDocumentWordCount = 0;
   currentDocumentPageCount = 0;
+
+  // Pending document content - stores markdown content before editor is ready
+  // This eliminates placeholder delay by loading content immediately in onEditorCreated()
+  private pendingDocumentContent: string | null = null;
+
+  // Track setTimeout ID for content loading to prevent race conditions
+  private contentLoadTimeoutId: number | null = null;
+
+  get currentDocumentId(): string | number | null {
+    return this.stateService.getCurrentDocument().id;
+  }
+  set currentDocumentId(value: string | number | null) {
+    this.stateService.setCurrentDocument({ id: value });
+  }
+
+  get documentMetadata(): any {
+    return this.stateService.getCurrentDocument().metadata;
+  }
+  set documentMetadata(value: any) {
+    this.stateService.updateDocumentMetadata(value);
+  }
+
   currentDate = new Date();
-  currentDocumentId: string | number | null = null;
-  documentMetadata: {
-    tokensUsed?: number;
-    costEstimate?: number;
-    generatedAt?: Date;
-    lastSaved?: Date;
-    version?: number;
-  } = {};
 
   // Recent drafts
   recentDrafts: any[] = [];
@@ -208,27 +212,39 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Quill Editor instance and config
   @ViewChild('documentEditor') documentEditor?: any;
+  quillEditorInstance: any; // Direct reference to Quill instance
+
+  // Force editor recreation when switching documents by toggling this flag
+  // Toggling OFF→ON forces Angular to destroy and recreate the component
+  // MUST BE PUBLIC for template access
+  showEditor = true;
+
   quillModules = {
     toolbar: [
       [{ 'font': ['sans-serif', 'serif', 'monospace'] }],
       [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline'],
-      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['blockquote', 'code-block'],
       [{ 'align': [] }],
       [{ 'indent': '-1'}, { 'indent': '+1' }],
       ['link'],
+      [{ 'color': [] }, { 'background': [] }],
       ['clean']
     ]
   };
 
   quillFormats = [
     'font', 'size',
-    'bold', 'italic', 'underline',
+    'bold', 'italic', 'underline', 'strike',
     'header',
-    'list', 'bullet',
+    'list',
     'align', 'indent',
-    'link'
+    'link',
+    'blockquote',
+    'code-block',
+    'color', 'background'
   ];
 
   // Text selection tracking
@@ -238,25 +254,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Pending transformation - stored in message with unique ID
   private transformationMessageIdCounter = 0;
 
-  // Version history
-  showVersionHistory = false;
+  // Version history (simplified for dropdown)
   documentVersions: any[] = [];
-  selectedVersionNumber: number | null = null;
-  showDiffView = false;
-  diffVersion1: number | null = null;
-  diffVersion2: number | null = null;
   loadingVersions = false;
   currentVersionNumber: number = 1;
 
-  @ViewChild('versionHistoryModal') versionHistoryModal!: TemplateRef<any>;
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
   isFullscreen = false;
 
-  // Mobile sidebar state
-  sidebarOpen = false;
+  // Mobile sidebar state (migrated to observable from StateService)
+  sidebarOpen$ = this.stateService.sidebarOpen$;
 
   // Practice areas for filtering
   practiceAreas = [
@@ -639,7 +649,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private markdownConverter: MarkdownConverterService,
     private cdr: ChangeDetectorRef,
     private modalService: NgbModal,
-    private fileManagerService: FileManagerService
+    private fileManagerService: FileManagerService,
+    // NEW: Refactored services
+    private notificationService: NotificationService,
+    private quillEditorService: QuillEditorService,
+    private stateService: AiWorkspaceStateService,
+    private conversationOrchestration: ConversationOrchestrationService,
+    private transformationService: DocumentTransformationService
   ) {}
 
   /**
@@ -648,7 +664,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown.control.s', ['$event'])
   @HostListener('window:keydown.meta.s', ['$event']) // For Mac
   handleSaveShortcut(event: KeyboardEvent): void {
-    if (this.draftingMode && this.currentDocumentId) {
+    if (this.stateService.getDraftingMode() && this.currentDocumentId) {
       event.preventDefault();
       this.openSaveVersionModal();
     }
@@ -660,23 +676,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown.control.shift.f', ['$event'])
   @HostListener('window:keydown.meta.shift.f', ['$event']) // For Mac
   handleFullscreenShortcut(event: KeyboardEvent): void {
-    if (this.draftingMode) {
+    if (this.stateService.getDraftingMode()) {
       event.preventDefault();
       this.toggleFullscreen();
     }
   }
 
-  /**
-   * Keyboard shortcut: Ctrl+H - Toggle history
-   */
-  @HostListener('window:keydown.control.h', ['$event'])
-  @HostListener('window:keydown.meta.h', ['$event']) // For Mac
-  handleHistoryShortcut(event: KeyboardEvent): void {
-    if (this.draftingMode && this.currentDocumentId) {
-      event.preventDefault();
-      this.openVersionHistoryModal();
-    }
-  }
 
   ngOnInit(): void {
     // Subscribe to UserService userData$ observable for reactive updates
@@ -751,11 +756,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Clear all active timeouts
     this.activeTimeouts.forEach(id => clearTimeout(id));
+
+    // Clear content load timeout if pending
+    if (this.contentLoadTimeoutId !== null) {
+      clearTimeout(this.contentLoadTimeoutId);
+      this.contentLoadTimeoutId = null;
+    }
     this.activeTimeouts = [];
 
     // Clear all active intervals
     this.activeIntervals.forEach(id => clearInterval(id));
     this.activeIntervals = [];
+
+    // Clear content change debounce
+    if (this.contentChangeDebounce) {
+      clearTimeout(this.contentChangeDebounce);
+    }
   }
 
   // Helper method to track setTimeout
@@ -782,34 +798,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeIntervals = this.activeIntervals.filter(intervalId => intervalId !== id);
   }
 
-  // Helper method to update workflow step status
+  // Helper method to update workflow step status (now uses StateService)
   private updateWorkflowStep(stepId: number, status: 'pending' | 'active' | 'completed' | 'error', description?: string): void {
-    const step = this.workflowSteps.find(s => s.id === stepId);
-    if (step) {
-      step.status = status;
-      if (description) {
-        step.description = description;
-      }
-    }
+    this.stateService.updateWorkflowStep(stepId, { status: status as any, description });
   }
 
-  // Helper method to reset workflow steps
+  // Helper method to reset workflow steps (now uses StateService)
   private resetWorkflowSteps(): void {
-    this.workflowSteps.forEach(step => {
-      step.status = 'pending';
-    });
+    this.stateService.resetWorkflowSteps();
   }
 
-  // Initialize workflow steps based on task type
+  // Initialize workflow steps based on task type (now uses StateService)
   private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform'): void {
     const template = this.workflowStepTemplates[taskType];
-    this.workflowSteps = template.map(step => ({
+    const steps = template.map(step => ({
       ...step,
-      status: 'pending' as 'pending' | 'active' | 'completed' | 'error'
+      status: 'pending' as any
     }));
+    this.stateService.setWorkflowSteps(steps);
   }
 
-  // Animate workflow steps progressively
+  // Animate workflow steps progressively (now works with StateService)
   private animateWorkflowSteps(): void {
     // Clear any existing timeouts
     this.activeTimeouts.forEach(id => clearTimeout(id));
@@ -817,21 +826,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Progressive animation of steps
     const stepDuration = 3000; // 3 seconds per step
+    const steps = this.stateService.getWorkflowSteps();
 
-    this.workflowSteps.forEach((step, index) => {
+    steps.forEach((step, index) => {
       // Mark step as active
       const activeTimeout = this.setTrackedTimeout(() => {
-        if (this.isGenerating) {
-          this.updateWorkflowStep(step.id, 'active');
+        if (this.stateService.getIsGenerating()) {
+          this.updateWorkflowStep(step.id, 'active' as any);
           this.cdr.detectChanges();
         }
       }, index * stepDuration);
 
       // Mark step as completed (unless it's the last step)
-      if (index < this.workflowSteps.length - 1) {
+      if (index < steps.length - 1) {
         const completedTimeout = this.setTrackedTimeout(() => {
-          if (this.isGenerating) {
-            this.updateWorkflowStep(step.id, 'completed');
+          if (this.stateService.getIsGenerating()) {
+            this.updateWorkflowStep(step.id, 'completed' as any);
             this.cdr.detectChanges();
           }
         }, (index + 0.8) * stepDuration);
@@ -839,11 +849,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Complete all workflow steps (called when AI response is received)
+  // Complete all workflow steps (called when AI response is received) - now uses StateService
   private completeAllWorkflowSteps(): void {
-    this.workflowSteps.forEach(step => {
-      step.status = 'completed';
-    });
+    this.stateService.completeAllWorkflowSteps();
     this.cdr.detectChanges();
   }
 
@@ -856,16 +864,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeIntervals = [];
 
     // Reset state
-    this.isGenerating = false;
+    this.stateService.setIsGenerating(false);
     this.resetWorkflowSteps();
 
     // Add a cancelled message
-    this.conversationMessages.push({
+    this.stateService.addConversationMessage({
       role: 'assistant',
       content: '_Generation stopped by user._'
     });
 
-    this.showBottomSearchBar = true;
+    this.stateService.setShowBottomSearchBar(true);
   }
 
   // ========================================
@@ -873,11 +881,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // ========================================
 
   toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
+    const current = this.stateService.getSidebarOpen();
+    this.stateService.setSidebarOpen(!current);
   }
 
   closeSidebar(): void {
-    this.sidebarOpen = false;
+    this.stateService.setSidebarOpen(false);
   }
 
 
@@ -905,8 +914,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         next: (response) => {
           console.log('Loaded general conversations from backend:', response);
 
-          // Map backend conversations to frontend format
-          this.conversations = response.conversations.map(conv => ({
+          // Map backend conversations to frontend format and set in state service
+          const conversations: Conversation[] = response.conversations.map(conv => ({
             id: `conv_${conv.id}`,
             title: conv.sessionName || 'Untitled Conversation',
             date: new Date(conv.createdAt || new Date()),
@@ -915,14 +924,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             messageCount: conv.messageCount || 0, // Use for badge display after page refresh
             jurisdiction: conv.jurisdiction,
             backendConversationId: conv.id,
-            researchMode: conv.researchMode || 'AUTO',
-            taskType: conv.taskType,
+            researchMode: conv.researchMode as ResearchMode || 'AUTO' as ResearchMode,
+            taskType: conv.taskType as TaskType,
             documentId: conv.documentId,
             relatedDraftId: conv.relatedDraftId
           }));
 
-          // Group conversations by date
-          this.groupConversationsByDate();
+          // State service automatically groups conversations by date
+          this.stateService.setConversations(conversations);
 
           this.cdr.detectChanges();
         },
@@ -932,56 +941,58 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Group conversations by date (past 90 days vs older)
-  private groupConversationsByDate(): void {
-    const now = new Date();
-    const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
-
-    this.groupedConversations.past90Days = this.conversations.filter(conv =>
-      conv.date >= ninetyDaysAgo
-    );
-
-    this.groupedConversations.older = this.conversations.filter(conv =>
-      conv.date < ninetyDaysAgo
-    );
-  }
+  // REMOVED: groupConversationsByDate() - now handled by StateService automatically
 
   // Map backend task type to frontend type
-  private mapBackendTaskTypeToFrontend(taskType: string): 'question' | 'draft' | 'summarize' | 'upload' {
-    const typeMap: { [key: string]: 'question' | 'draft' | 'summarize' | 'upload' } = {
-      'LEGAL_QUESTION': 'question',
-      'GENERATE_DRAFT': 'draft',
-      'SUMMARIZE_CASE': 'summarize',
-      'ANALYZE_DOCUMENT': 'upload'
+  private mapBackendTaskTypeToFrontend(taskType: string): ConversationType {
+    const typeMap: { [key: string]: ConversationType } = {
+      'LEGAL_QUESTION': ConversationType.Question,
+      'GENERATE_DRAFT': ConversationType.Draft,
+      'SUMMARIZE_CASE': ConversationType.Summarize,
+      'ANALYZE_DOCUMENT': ConversationType.Upload
     };
-    return typeMap[taskType] || 'question';
+    return typeMap[taskType] || ConversationType.Question;
   }
 
   // Load specific conversation by ID
   loadConversation(conversationId: string): void {
-    const conv = this.conversations.find(c => c.id === conversationId);
+    console.log('🔍 loadConversation called with ID:', conversationId);
+
+    const conv = this.stateService.getConversations().find(c => c.id === conversationId);
     if (!conv || !conv.backendConversationId) {
-      console.error('Conversation not found or missing backend ID');
+      console.error('❌ Conversation not found or missing backend ID');
       return;
     }
+
+    console.log('📦 Conversation found:', {
+      id: conv.id,
+      type: conv.type,
+      title: conv.title,
+      backendId: conv.backendConversationId,
+      relatedDraftId: conv.relatedDraftId
+    });
 
     this.legalResearchService.getConversationById(conv.backendConversationId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Loaded conversation details:', response);
+          console.log('✅ Loaded conversation details:', response);
 
-          // Update conversation with messages
-          this.activeConversationId = conversationId;
-          this.followUpQuestions = []; // Clear old follow-up questions from previous conversation
-          this.conversationMessages = response.messages.map(msg => ({
+          // Update conversation with messages via state service
+          this.stateService.setActiveConversationId(conversationId);
+          this.stateService.clearFollowUpQuestions(); // Clear old follow-up questions from previous conversation
+
+          const messages = response.messages.map(msg => ({
             role: msg.role as 'user' | 'assistant',
             content: msg.content,
             timestamp: new Date(msg.createdAt || new Date())
           }));
+          this.stateService.setConversationMessages(messages);
+
+          console.log('✅ Messages loaded:', messages.length);
 
           // Extract follow-up questions from last assistant message (if any)
-          const lastAssistantMsg = this.conversationMessages
+          const lastAssistantMsg = this.stateService.getConversationMessages()
             .slice()
             .reverse()
             .find(msg => msg.role === 'assistant');
@@ -1005,7 +1016,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   // Populate document state
                   this.currentDocumentId = document.id;
                   this.activeDocumentTitle = conv.title;
-                  this.activeDocumentContent = document.content;
                   this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
                   this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
                   this.documentMetadata = {
@@ -1015,114 +1025,113 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     version: document.version || 1
                   };
 
-                  // Activate drafting mode
-                  this.draftingMode = true;
-                  this.showChat = true;
-                  this.showBottomSearchBar = false;
+                  // Load version history for dropdown
+                  this.loadVersionHistory();
 
-                  console.log('Drafting mode activated for conversation, content length:', document.content?.length || 0);
+                  console.log('📄 Document loaded, length:', document.content?.length || 0);
+
+                  // CRITICAL: Cancel any pending content load from previous document
+                  if (this.contentLoadTimeoutId !== null) {
+                    console.log('🚫 Cancelling previous document load timeout');
+                    clearTimeout(this.contentLoadTimeoutId);
+                    this.contentLoadTimeoutId = null;
+                  }
+
+                  // Store content in pending property - will be loaded in onEditorCreated()
+                  this.pendingDocumentContent = document.content || '';
+
+                  // FORCE editor destruction and recreation
+                  this.showEditor = false;
                   this.cdr.detectChanges();
 
-                  // Convert Markdown to HTML and force Quill editor to update with loaded content
-                  // Increased delay to allow Angular to render the template and Quill to initialize
+                  // Recreate editor - content will load automatically in onEditorCreated()
                   setTimeout(() => {
-                    if (this.documentEditor && this.documentEditor.quillEditor) {
-                      console.log('Converting Markdown to HTML and updating Quill editor with loaded content');
-                      // Convert Markdown to HTML
-                      const htmlContent = this.markdownConverter.convert(document.content || '');
-                      // Convert HTML to Quill Delta format
-                      const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-                      // Set the formatted content in the editor
-                      this.documentEditor.quillEditor.setContents(delta);
-                      this.cdr.detectChanges();
-                    } else {
-                      console.warn('Document editor not available yet, retrying...');
-                      // Retry once after additional delay
-                      setTimeout(() => {
-                        if (this.documentEditor && this.documentEditor.quillEditor) {
-                          const htmlContent = this.markdownConverter.convert(document.content || '');
-                          const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-                          this.documentEditor.quillEditor.setContents(delta);
-                          this.cdr.detectChanges();
-                        } else {
-                          console.error('Document editor still not available after retry');
-                        }
-                      }, 200);
-                    }
-                  }, 300);
+                    // Clear editor instance BEFORE recreating component
+                    this.quillEditorInstance = null;
+
+                    // Recreate editor component
+                    this.showEditor = true;
+
+                    // Activate drafting mode
+                    this.stateService.setDraftingMode(true);
+                    this.stateService.setShowChat(true);
+                    this.stateService.setShowBottomSearchBar(false);
+
+                    this.cdr.detectChanges();
+                  }, 0);
                 },
                 error: (error) => {
                   console.error('Error loading draft document:', error);
                   // Fall back to regular chat mode if document load fails
-                  this.showChat = true;
-                  this.showBottomSearchBar = true;
-                  this.draftingMode = false;
+                  this.stateService.setShowChat(true);
+                  this.stateService.setShowBottomSearchBar(true);
+                  this.stateService.setDraftingMode(false);
                   this.cdr.detectChanges();
                 }
               });
           } else {
             // Non-draft conversations: use regular chat mode
-            console.log('Loading non-draft conversation in regular chat mode');
-            this.showChat = true;
-            this.showBottomSearchBar = true;
-            this.draftingMode = false;
+            console.log('💬 Loading non-draft conversation in regular chat mode');
+            console.log('📊 Setting state: showChat=true, showBottomSearchBar=true, draftingMode=false');
+
+            this.stateService.setShowChat(true);
+            this.stateService.setShowBottomSearchBar(true);
+            this.stateService.setDraftingMode(false);
+
+            console.log('📊 State after setting:', {
+              showChat: this.stateService.getShowChat(),
+              showBottomSearchBar: this.stateService.getShowBottomSearchBar(),
+              draftingMode: this.stateService.getDraftingMode(),
+              isGenerating: this.stateService.getIsGenerating()
+            });
+
             this.cdr.detectChanges();
+            console.log('✅ Change detection triggered');
           }
         },
         error: (error) => {
           console.error('Error loading conversation:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load conversation. Please try again.'
-          });
+          this.notificationService.error('Error', 'Failed to load conversation. Please try again.');
         }
       });
   }
 
   // Delete conversation
   deleteConversation(conversationId: string): void {
-    const conv = this.conversations.find(c => c.id === conversationId);
+    const conv = this.stateService.getConversations().find(c => c.id === conversationId);
     if (!conv || !conv.backendConversationId) {
       console.error('Conversation not found or missing backend ID');
       return;
     }
 
-    Swal.fire({
-      title: 'Delete Conversation?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it'
-    }).then((result) => {
+    this.notificationService.confirmDelete(
+      'Delete Conversation?',
+      'This action cannot be undone.',
+      'Yes, delete it'
+    ).then((result) => {
       if (result.isConfirmed && conv.backendConversationId) {
         this.legalResearchService.deleteConversationById(conv.backendConversationId)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (success) => {
               if (success) {
-                // Remove from local array
-                this.conversations = this.conversations.filter(c => c.id !== conversationId);
-
-                // Re-group conversations
-                this.groupConversationsByDate();
+                // Remove from state service (automatically re-groups)
+                this.stateService.removeConversation(conversationId);
 
                 // Clear active conversation if it was deleted
-                if (this.activeConversationId === conversationId) {
-                  this.activeConversationId = null;
-                  this.conversationMessages = [];
-                  this.showChat = false;
+                if (this.stateService.getActiveConversationId() === conversationId) {
+                  this.stateService.setActiveConversationId(null);
+                  this.stateService.clearConversationMessages();
+                  this.stateService.setShowChat(false);
                 }
 
-                Swal.fire('Deleted!', 'Conversation has been deleted.', 'success');
+                this.notificationService.success('Deleted!', 'Conversation has been deleted.');
                 this.cdr.detectChanges();
               }
             },
             error: (error) => {
               console.error('Error deleting conversation:', error);
-              Swal.fire('Error', 'Failed to delete conversation.', 'error');
+              this.notificationService.error('Error', 'Failed to delete conversation.');
             }
           });
       }
@@ -1137,19 +1146,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Start a new conversation - resets the view
   startNewConversation(): void {
     // Clear active conversation
-    this.activeConversationId = null;
-    this.conversationMessages = [];
+    this.stateService.setActiveConversationId(null);
+    this.stateService.clearConversationMessages();
 
     // Reset UI state
-    this.showChat = false;
-    this.showBottomSearchBar = false;
-    this.isGenerating = false;
-    this.draftingMode = false;
+    this.stateService.setShowChat(false);
+    this.stateService.setShowBottomSearchBar(false);
+    this.stateService.setIsGenerating(false);
+    this.stateService.setDraftingMode(false);
 
     // Clear inputs
     this.customPrompt = '';
     this.followUpMessage = '';
-    this.followUpQuestions = [];
+    this.stateService.clearFollowUpQuestions();
 
     // Reset workflow steps
     this.resetWorkflowSteps();
@@ -1162,14 +1171,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Exit drafting mode and return to task selection
   exitDraftingMode(): void {
-    this.draftingMode = false;
-    this.showBottomSearchBar = true;
+    // Reset all state to show welcome screen
+    this.stateService.setDraftingMode(false);
+    this.stateService.setShowChat(false);
+    this.stateService.setIsGenerating(false);
+    this.stateService.setShowBottomSearchBar(true);
+
+    // Clear active conversation
+    this.stateService.setActiveConversationId(null);
+
+    // Reset workflow steps
+    this.stateService.setWorkflowSteps([]);
+
+    // Clear document state
     this.activeDocumentContent = '';
     this.activeDocumentTitle = 'Generated Document';
     this.currentDocumentId = null;
     this.documentMetadata = {};
-    this.cdr.detectChanges();
-    console.log('Exited drafting mode');
+
+    console.log('Exited drafting mode - returning to welcome screen');
   }
 
   // ========================================
@@ -1177,25 +1197,39 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // ========================================
 
   /**
-   * Export document to PDF (using backend generation)
+   * Export document to PDF
+   * Saves current content then calls backend API to generate PDF
    */
   exportToPDF(): void {
     if (!this.currentDocumentId || !this.currentUser) {
-      Swal.fire('Error', 'Document not available', 'error');
+      this.notificationService.error('Error', 'Document not available');
       return;
     }
 
-    // Show loading
-    Swal.fire({
-      title: 'Generating PDF',
-      text: 'Please wait...',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
+    // Get current HTML content from Quill editor
+    const htmlContent = this.quillEditorInstance ? this.quillEditorInstance.root.innerHTML : '';
 
-    this.documentGenerationService.exportToPDF(this.currentDocumentId as number, this.currentUser.id)
+    // Convert HTML to Markdown for backend processing (preserves all formatting)
+    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+
+    this.notificationService.loading('Preparing PDF', 'Please wait...');
+
+    // First save the markdown content to ensure backend has latest version
+    this.documentGenerationService.saveManualVersion(
+      this.currentDocumentId as number,
+      this.currentUser.id,
+      markdownContent,
+      'Export to PDF'
+    )
+      .pipe(
+        switchMap(() => {
+          // Then export using backend API which will generate proper PDF format
+          return this.documentGenerationService.exportToPDF(
+            this.currentDocumentId as number,
+            this.currentUser.id
+          );
+        })
+      )
       .subscribe({
         next: (blob) => {
           const url = window.URL.createObjectURL(blob);
@@ -1207,24 +1241,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          Swal.fire({
-            icon: 'success',
-            title: 'PDF Exported',
-            text: 'Document downloaded successfully',
-            timer: 2000,
-            showConfirmButton: false
-          });
+          this.notificationService.success('PDF Exported', 'Document downloaded successfully');
         },
         error: (error) => {
           console.error('Error exporting PDF:', error);
-          Swal.fire('Error', 'Failed to export PDF', 'error');
+          this.notificationService.error('Error', 'Failed to export PDF. Please ensure the backend service is running.');
         }
       });
   }
 
   /**
    * Export document to Word (DOCX)
-   * Calls backend API to generate Word document
+   * Saves current content then calls backend API to generate Word document
    */
   exportToWord(): void {
     if (!this.currentDocumentId || !this.currentUser) {
@@ -1232,7 +1260,30 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
+    // Get current HTML content from Quill editor
+    const htmlContent = this.quillEditorInstance ? this.quillEditorInstance.root.innerHTML : '';
+
+    // Convert HTML to Markdown for backend processing (preserves all formatting)
+    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+
+    this.notificationService.loading('Preparing Word document', 'Please wait...');
+
+    // First save the markdown content to ensure backend has latest version
+    this.documentGenerationService.saveManualVersion(
+      this.currentDocumentId as number,
+      this.currentUser.id,
+      markdownContent,
+      'Export to Word'
+    )
+      .pipe(
+        switchMap(() => {
+          // Then export using backend API which will generate proper DOCX format
+          return this.documentGenerationService.exportToWord(
+            this.currentDocumentId as number,
+            this.currentUser.id
+          );
+        })
+      )
       .subscribe({
         next: (blob) => {
           // Download the blob
@@ -1245,17 +1296,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          Swal.fire({
-            icon: 'success',
-            title: 'Word Document Exported',
-            text: `${a.download} downloaded successfully`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          this.notificationService.success('Word Document Exported', 'Document downloaded successfully');
         },
         error: (err) => {
           console.error('Error exporting to Word:', err);
-          Swal.fire('Error', 'Failed to export Word document', 'error');
+          this.notificationService.error('Error', 'Failed to export Word document. Please ensure the backend service is running.');
         }
       });
   }
@@ -1269,18 +1314,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Delete all conversations (if needed in the UI)
   deleteAllConversations(): void {
-    Swal.fire({
-      title: 'Delete All Conversations?',
-      text: 'This will delete all conversations for the current task. This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete all'
-    }).then((result) => {
+    this.notificationService.confirmDelete(
+      'Delete All Conversations?',
+      'This will delete all conversations for the current task. This action cannot be undone.',
+      'Yes, delete all'
+    ).then((result) => {
       if (result.isConfirmed) {
         // Delete all conversations one by one
-        const deletePromises = this.conversations
+        const deletePromises = this.stateService.getConversations()
           .filter(c => c.backendConversationId)
           .map(c =>
             lastValueFrom(
@@ -1291,17 +1332,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
         Promise.all(deletePromises)
           .then(() => {
-            this.conversations = [];
-            this.groupConversationsByDate();
-            this.activeConversationId = null;
-            this.conversationMessages = [];
-            this.showChat = false;
-            Swal.fire('Deleted!', 'All conversations have been deleted.', 'success');
+            this.stateService.setConversations([]);
+            this.stateService.setActiveConversationId(null);
+            this.stateService.clearConversationMessages();
+            this.stateService.setShowChat(false);
+            this.notificationService.success('Deleted!', 'All conversations have been deleted.');
             this.cdr.detectChanges();
           })
           .catch((error) => {
             console.error('Error deleting conversations:', error);
-            Swal.fire('Error', 'Failed to delete some conversations.', 'error');
+            this.notificationService.error('Error', 'Failed to delete some conversations.');
             this.loadConversations(); // Reload to get current state
           });
       }
@@ -1346,15 +1386,20 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Select task (Protégé-style)
-  selectedTask: 'question' | 'draft' | 'summarize' | 'upload' = 'draft';
-  activeTask: 'question' | 'draft' | 'summarize' | 'upload' = 'draft';
+  selectedTask: ConversationType = ConversationType.Draft;
+  activeTask: ConversationType = ConversationType.Draft;
 
-  selectTask(task: 'question' | 'draft' | 'summarize' | 'upload'): void {
+  selectTask(task: ConversationType): void {
+    console.log('🎯 selectTask called:', task);
+
     this.selectedTask = task;
     this.activeTask = task;
-    this.activeConversationId = null;
-    this.conversationMessages = [];
-    this.showChat = false;
+    this.stateService.setActiveConversationId(null);
+    this.stateService.clearConversationMessages();
+
+    // Don't set showChat or showBottomSearchBar here - let them be set when:
+    // 1. User sends first message (handled in startCustomDraft)
+    // 2. User selects existing conversation (handled in loadConversation)
 
     // Load conversations for this task type
     this.loadConversations();
@@ -1472,15 +1517,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     if (type) {
       // Add user message
-      this.conversationMessages.push({
+      this.stateService.addConversationMessage({
         role: 'user',
         content: `I want to draft a ${type.name}`,
         timestamp: new Date()
       });
 
       // Show chat and start generating
-      this.showChat = true;
-      this.showBottomSearchBar = false;
+      this.stateService.setShowChat(true);
+      this.stateService.setShowBottomSearchBar(false);
     }
   }
 
@@ -1491,17 +1536,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const userPrompt = this.customPrompt;
     this.customPrompt = '';
 
+    // CRITICAL: Clear old conversation messages if starting new draft
+    // Each draft generation should be a fresh conversation
+    if (!this.stateService.getActiveConversationId()) {
+      this.stateService.clearConversationMessages();
+      this.stateService.setActiveConversationId(null);
+    }
+
     // Add user message
-    this.conversationMessages.push({
+    this.stateService.addConversationMessage({
       role: 'user',
       content: userPrompt,
       timestamp: new Date()
     });
 
     // Show chat and start generating
-    this.showChat = true;
-    this.showBottomSearchBar = false;
-    this.isGenerating = true;
+    this.stateService.setShowChat(true);
+    this.stateService.setShowBottomSearchBar(false);
+    this.stateService.setIsGenerating(true);
 
     // Initialize workflow steps for the selected task
     this.initializeWorkflowSteps(this.selectedTask);
@@ -1542,33 +1594,38 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.completeAllWorkflowSteps();
 
           // Store conversation
-          const newConv = {
+          const newConv: Conversation = {
             id: `conv_${response.conversationId}`,
             title: response.conversation.sessionName,
             date: new Date(),
-            type: 'draft' as 'draft',
-            messages: [...this.conversationMessages],
-            caseId: response.conversation.caseId,
+            type: 'draft' as ConversationType,
+            messages: [...this.stateService.getConversationMessages()],
             backendConversationId: response.conversationId,
             relatedDraftId: response.documentId.toString(),
-            taskType: response.conversation.taskType,
+            taskType: response.conversation.taskType as TaskType,
             jurisdiction: this.selectedJurisdiction,
-            researchMode: 'AUTO'
+            researchMode: 'AUTO' as ResearchMode
           };
 
-          this.conversations.unshift(newConv);
-          this.activeConversationId = newConv.id;
-          this.groupConversationsByDate();
+          this.stateService.addConversation(newConv);
+          this.stateService.setActiveConversationId(newConv.id);
+
+          // Reload conversations from backend to ensure sidebar is up-to-date
+          // This is more reliable than relying on state updates alone
+          this.loadConversations();
+
+          // Trigger change detection to update sidebar with new conversation
+          this.cdr.detectChanges();
 
           // Store document metadata
           this.currentDocumentId = response.document.id;
           this.activeDocumentTitle = title;
-          this.activeDocumentContent = response.document.content;
 
           console.log('Document content received:', {
             contentLength: response.document.content?.length || 0,
             contentPreview: response.document.content?.substring(0, 200) || 'NO CONTENT',
-            wordCount: response.document.wordCount
+            wordCount: response.document.wordCount,
+            documentId: response.document.id
           });
 
           this.currentDocumentWordCount = response.document.wordCount;
@@ -1580,63 +1637,63 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             version: response.document.version
           };
 
+          // Load version history for dropdown
+          this.loadVersionHistory();
+
+          console.log('📄 Document generated, length:', response.document.content?.length || 0);
+
+          // CRITICAL: Cancel any pending content load from previous document
+          if (this.contentLoadTimeoutId !== null) {
+            console.log('🚫 Cancelling previous document load timeout');
+            clearTimeout(this.contentLoadTimeoutId);
+            this.contentLoadTimeoutId = null;
+          }
+
+          // Store content in pending property - will be loaded in onEditorCreated()
+          this.pendingDocumentContent = response.document.content || '';
+
           // Add assistant message
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: `I've generated your ${this.selectedDocTypePill || 'document'}${this.selectedCaseId ? ' for the selected case' : ''}. You can view it in the document preview panel.`,
             timestamp: new Date()
           });
 
-          // ACTIVATE SPLIT-VIEW DRAFTING MODE
-          this.draftingMode = true;
-          this.isGenerating = false;
-
+          // FORCE editor destruction and recreation
+          this.showEditor = false;
           this.cdr.detectChanges();
 
-          // Convert Markdown to HTML and force Quill editor to update
-          // Increased delay to allow Angular to render the template and Quill to initialize
+          // Recreate editor - content will load automatically in onEditorCreated()
           setTimeout(() => {
-            if (this.documentEditor && this.documentEditor.quillEditor) {
-              console.log('Converting Markdown to HTML and updating Quill editor');
-              // Convert Markdown to HTML
-              const htmlContent = this.markdownConverter.convert(response.document.content);
-              // Convert HTML to Quill Delta format
-              const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-              // Set the formatted content in the editor
-              this.documentEditor.quillEditor.setContents(delta);
-              this.cdr.detectChanges();
-            } else {
-              console.warn('Document editor not available yet, retrying...');
-              // Retry once after additional delay
-              setTimeout(() => {
-                if (this.documentEditor && this.documentEditor.quillEditor) {
-                  const htmlContent = this.markdownConverter.convert(response.document.content);
-                  const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-                  this.documentEditor.quillEditor.setContents(delta);
-                  this.cdr.detectChanges();
-                } else {
-                  console.error('Document editor still not available after retry');
-                }
-              }, 200);
-            }
-          }, 300);
+            // Clear editor instance BEFORE recreating component
+            this.quillEditorInstance = null;
+
+            // Recreate editor component
+            this.showEditor = true;
+
+            // ACTIVATE SPLIT-VIEW DRAFTING MODE
+            this.stateService.setDraftingMode(true);
+            this.stateService.setIsGenerating(false);
+
+            this.cdr.detectChanges();
+          }, 0);
         },
         error: (error) => {
           console.error('Error generating document:', error);
 
           // Mark workflow as error
-          if (this.workflowSteps.length > 0) {
-            this.workflowSteps[this.workflowSteps.length - 1].status = 'error';
+          if (this.stateService.getWorkflowSteps().length > 0) {
+            const steps = this.stateService.getWorkflowSteps(); if (steps.length > 0) this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
           }
 
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error generating the document. Please try again.',
             timestamp: new Date()
           });
 
-          this.isGenerating = false;
-          this.showBottomSearchBar = true;
+          this.stateService.setIsGenerating(false);
+          this.stateService.setShowBottomSearchBar(true);
           this.cdr.detectChanges();
         }
       });
@@ -1664,26 +1721,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           console.log('Created conversation:', session);
 
           // Add to conversations list
-          const newConv = {
+          const newConv: Conversation = {
             id: `conv_${session.id}`,
             title: session.sessionName || title,
             date: new Date(session.createdAt || new Date()),
             type: this.selectedTask,
-            messages: [...this.conversationMessages],
-            messageCount: this.conversationMessages.length,
+            messages: [...this.stateService.getConversationMessages()],
+            messageCount: this.stateService.getConversationMessages().length,
             jurisdiction: session.jurisdiction,
             backendConversationId: session.id,
-            researchMode: session.researchMode || 'AUTO',
-            taskType: session.taskType,
+            researchMode: session.researchMode as ResearchMode || 'AUTO' as ResearchMode,
+            taskType: session.taskType as TaskType,
             documentId: session.documentId,
             relatedDraftId: session.relatedDraftId
           };
 
-          this.conversations.unshift(newConv);
-          this.activeConversationId = newConv.id;
+          this.stateService.addConversation(newConv);
+          this.stateService.setActiveConversationId(newConv.id);
 
           // Re-group conversations
-          this.groupConversationsByDate();
 
           // Send message to get AI response
           if (session.id) {
@@ -1698,7 +1754,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   console.log('Received AI response for conversation:', requestConversationId);
 
                   // Only update UI if THIS conversation is still active (prevents race condition)
-                  if (this.activeConversationId === requestConversationId) {
+                  if (this.stateService.getActiveConversationId() === requestConversationId) {
                     // Complete all workflow steps
                     this.completeAllWorkflowSteps();
 
@@ -1711,10 +1767,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                       content: cleanedContent,
                       timestamp: new Date(message.createdAt || new Date())
                     };
-                    this.conversationMessages.push(assistantMessage);
+                    this.stateService.addConversationMessage(assistantMessage);
 
                     // ALSO update the conversation object in sidebar for message count badge
-                    const conv = this.conversations.find(c => c.id === requestConversationId);
+                    const conv = this.stateService.getConversations().find(c => c.id === requestConversationId);
                     if (conv) {
                       conv.messages.push(assistantMessage);
                       conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
@@ -1723,28 +1779,28 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                       this.cdr.detectChanges();
                     }
 
-                    this.isGenerating = false;
-                    this.showBottomSearchBar = true;
+                    this.stateService.setIsGenerating(false);
+                    this.stateService.setShowBottomSearchBar(true);
                     this.cdr.detectChanges();
                   } else {
                     console.log('Response arrived for inactive conversation, ignoring UI update');
-                    this.isGenerating = false;
+                    this.stateService.setIsGenerating(false);
                   }
                 },
                 error: (error) => {
                   console.error('Error getting AI response:', error);
 
                   // Mark workflow as error
-                  if (this.workflowSteps.length > 0) {
-                    this.workflowSteps[this.workflowSteps.length - 1].status = 'error';
+                  if (this.stateService.getWorkflowSteps().length > 0) {
+                    const steps = this.stateService.getWorkflowSteps(); if (steps.length > 0) this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
                   }
 
-                  this.conversationMessages.push({
+                  this.stateService.addConversationMessage({
                     role: 'assistant',
                     content: 'Sorry, I encountered an error processing your request. Please try again.'
                   });
-                  this.isGenerating = false;
-                  this.showBottomSearchBar = true;
+                  this.stateService.setIsGenerating(false);
+                  this.stateService.setShowBottomSearchBar(true);
                   this.cdr.detectChanges();
                 }
               });
@@ -1752,12 +1808,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error creating conversation:', error);
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error creating the conversation. Please try again.'
           });
-          this.isGenerating = false;
-          this.showBottomSearchBar = true;
+          this.stateService.setIsGenerating(false);
+          this.stateService.setShowBottomSearchBar(true);
           this.cdr.detectChanges();
         }
       });
@@ -1791,25 +1847,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Apply drafting tool (simplify, condense, expand, redraft) - REAL BACKEND CALL
   // Smart button: applies to selection if text is selected, otherwise to full document
   applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
+    console.log(`🔧 applyDraftingTool('${tool}') called`);
+    console.log(`  selectedText:`, this.selectedText?.substring(0, 50) || 'NONE');
+    console.log(`  selectionRange:`, this.selectionRange);
+
     if (!this.currentDocumentId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Document',
-        text: 'Please generate a document first before applying revisions.',
-        timer: 2000
-      });
+      this.notificationService.warning('No Document', 'Please generate a document first before applying revisions.');
       return;
     }
 
     // Check if text is selected - if so, apply to selection only
     if (this.selectedText && this.selectionRange) {
-      console.log(`Applying ${tool} to selected text`);
+      console.log(`  ✅ Applying ${tool} to SELECTED text (${this.selectedText.length} chars)`);
       this.applySelectionTransform(tool);
       return;
     }
 
     // Otherwise, apply to full document
-    console.log(`Applying drafting tool to full document: ${tool}`);
+    console.log(`  ⚠️ No selection, applying ${tool} to FULL document`);
 
     // Add user message requesting the tool
     let toolPrompt = '';
@@ -1828,14 +1883,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         break;
     }
 
-    this.conversationMessages.push({
+    this.stateService.addConversationMessage({
       role: 'user',
       content: toolPrompt,
       timestamp: new Date()
     });
 
     // Call backend transformation service (AI Workspace API)
-    this.isGenerating = true;
+    this.stateService.setIsGenerating(true);
 
     // Initialize and animate workflow steps
     this.initializeWorkflowSteps('transform');
@@ -1861,7 +1916,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
           // Add assistant message with inline comparison
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             id: messageId,
             role: 'assistant',
             content: response.explanation,
@@ -1875,28 +1930,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             }
           });
 
-          this.isGenerating = false;
+          this.stateService.setIsGenerating(false);
           this.cdr.detectChanges();
           this.scrollToBottom();
         },
         error: (error) => {
           console.error('Error applying drafting tool:', error);
 
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error applying the revision. Please try again.',
             timestamp: new Date()
           });
 
-          this.isGenerating = false;
+          this.stateService.setIsGenerating(false);
           this.cdr.detectChanges();
 
-          Swal.fire({
-            icon: 'error',
-            title: 'Revision Failed',
-            text: 'Failed to apply document revision. Please try again.',
-            timer: 3000
-          });
+          this.notificationService.error('Revision Failed', 'Failed to apply document revision. Please try again.', 3000);
         }
       });
   }
@@ -1906,55 +1956,280 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // ========================================
 
   /**
+   * Robust helper to set Quill editor content from markdown
+   * Handles clipboard.convert() failures and has multiple fallbacks
+   * Used by: loadDocumentContent, acceptTransformation, restoreVersion
+   * NOTE: Caller should wrap this in setTimeout(100) for Quill clipboard initialization
+   */
+  private setQuillContentFromMarkdown(markdownContent: string): void {
+    if (!this.quillEditorInstance) {
+      console.warn('⚠️ Cannot set content - Quill editor instance not available');
+      return;
+    }
+
+    // Convert Markdown to HTML
+    const htmlContent = this.markdownConverter.convert(markdownContent);
+
+    try {
+      console.log('📋 Converting HTML to Delta format...');
+      const delta = this.quillEditorInstance.clipboard.convert(htmlContent);
+      console.log('📋 Delta ops length:', delta.ops?.length || 0);
+
+      // Check if Delta is empty (clipboard.convert returns empty Delta for incompatible HTML)
+      if (!delta.ops || delta.ops.length === 0) {
+        console.warn('⚠️ Delta is empty - clipboard.convert() failed to parse HTML');
+        console.log('⚠️ Using direct innerHTML insertion + Delta rebuild');
+
+        // Set HTML in DOM
+        this.quillEditorInstance.root.innerHTML = htmlContent;
+
+        // CRITICAL: Force Quill to rebuild its Delta from the DOM
+        // This syncs Quill's internal state with the HTML we just set
+        (this.quillEditorInstance as any).clipboard.dangerouslyPasteHTML(0, '', 'silent');
+        this.quillEditorInstance.setSelection(null as any);
+
+        // Get the Delta from the current DOM state
+        const currentContents = this.quillEditorInstance.getContents();
+        console.log('🔄 Rebuilt Delta from DOM, ops:', currentContents.ops?.length || 0);
+
+        // Force update to sync everything
+        this.quillEditorInstance.update('silent' as any);
+
+        console.log('✅ Content set via innerHTML + Delta rebuild');
+      } else {
+        console.log('📋 Setting contents with Delta...');
+        this.quillEditorInstance.setContents(delta);
+        console.log('✅ Content set via Delta API');
+      }
+
+      // Verify content was actually set
+      const editorText = this.quillEditorInstance.getText();
+      console.log('✅ Editor text length after setting:', editorText.length);
+    } catch (error) {
+      console.error('❌ Failed to convert/set content via Delta:', error);
+      console.log('⚠️ Fallback: Setting innerHTML directly');
+      // Fallback to direct innerHTML if Delta conversion fails
+      this.quillEditorInstance.root.innerHTML = htmlContent;
+      console.log('✅ Content set via innerHTML fallback');
+    }
+  }
+
+  /**
+   * Load document content into Quill editor
+   * Handles clearing previous content and pasting new HTML
+   * Can be called from onEditorCreated() or when switching documents
+   */
+  private loadDocumentContent(markdownContent: string): void {
+    if (!this.quillEditorInstance) {
+      console.warn('⚠️ Cannot load content - Quill editor instance not available');
+      return;
+    }
+
+    if (!markdownContent) {
+      console.warn('⚠️ Cannot load content - no markdown content provided');
+      return;
+    }
+
+    // CRITICAL: Cancel any pending content load timeout to prevent race conditions
+    if (this.contentLoadTimeoutId !== null) {
+      console.log('🚫 Cancelling previous content load timeout:', this.contentLoadTimeoutId);
+      clearTimeout(this.contentLoadTimeoutId);
+      this.contentLoadTimeoutId = null;
+    }
+
+    console.log('📄 Loading document content');
+    console.log('📄 Markdown length:', markdownContent.length);
+    console.log('📄 Markdown preview:', markdownContent.substring(0, 300));
+
+    // Convert Markdown to HTML
+    const htmlContent = this.markdownConverter.convert(markdownContent);
+    console.log('🔄 HTML length:', htmlContent.length);
+    console.log('🔄 HTML preview:', htmlContent.substring(0, 500));
+    console.log('🔄 HTML contains <h1>?', htmlContent.includes('<h1>'));
+    console.log('🔄 HTML contains <strong>?', htmlContent.includes('<strong>'));
+    console.log('🔄 HTML contains <p>?', htmlContent.includes('<p>'));
+
+    // CRITICAL: Use Quill's proper Delta API with setTimeout
+    // setTimeout allows Quill's clipboard module to fully initialize
+    // MUST use 100ms delay (matches pattern used successfully elsewhere in codebase)
+    this.contentLoadTimeoutId = window.setTimeout(() => {
+      // Clear the timeout ID since it's now executing
+      this.contentLoadTimeoutId = null;
+
+      // Use robust helper that handles clipboard.convert() failures
+      this.setQuillContentFromMarkdown(markdownContent);
+    }, 100); // CRITICAL: Must be 100ms, not 0ms!
+
+    // Force contenteditable and selection on the editor root and all children
+    const editorRoot = this.quillEditorInstance.root;
+    if (editorRoot) {
+      editorRoot.setAttribute('contenteditable', 'true');
+      editorRoot.style.userSelect = 'text';
+      editorRoot.style.webkitUserSelect = 'text';
+      editorRoot.style.cursor = 'text';
+
+      // Force selection on all newly created child elements
+      setTimeout(() => {
+        const allChildren = editorRoot.querySelectorAll('*');
+        allChildren.forEach((child: Element) => {
+          const htmlChild = child as HTMLElement;
+          htmlChild.style.userSelect = 'text';
+          htmlChild.style.webkitUserSelect = 'text';
+          htmlChild.style.cursor = 'text';
+        });
+        console.log('✅ Selection enabled on', allChildren.length, 'child elements');
+      }, 100);
+    }
+
+    console.log('✅ Content loaded successfully');
+  }
+
+  /**
+   * Handle Quill editor creation - capture direct reference
+   */
+  onEditorCreated(quill: any): void {
+    this.quillEditorInstance = quill;
+    console.log('✅ Quill editor created');
+
+    // Enable text selection explicitly
+    if (quill) {
+      quill.enable(true);
+
+      // CRITICAL: Load content here if pending - this is the ONLY reliable place
+      // onEditorCreated fires when editor is actually ready, not based on setTimeout guessing
+      if (this.pendingDocumentContent) {
+        console.log('🎯 Loading pending content (length: ' + this.pendingDocumentContent.length + ')');
+        this.loadDocumentContent(this.pendingDocumentContent);
+        this.pendingDocumentContent = null;
+      }
+
+      // Force ensure the editor and all its children are selectable
+      const editorElement = quill.root;
+      if (editorElement) {
+        editorElement.setAttribute('contenteditable', 'true');
+        editorElement.style.userSelect = 'text';
+        editorElement.style.webkitUserSelect = 'text';
+        editorElement.style.mozUserSelect = 'text';
+        editorElement.style.msUserSelect = 'text';
+        editorElement.style.cursor = 'text';
+
+        // Force selection on all child elements
+        const allChildren = editorElement.querySelectorAll('*');
+        allChildren.forEach((child: Element) => {
+          const htmlChild = child as HTMLElement;
+          htmlChild.style.userSelect = 'text';
+          htmlChild.style.webkitUserSelect = 'text';
+        });
+
+        // Make all links open in new window
+        editorElement.addEventListener('click', (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          if (target && target.tagName === 'A') {
+            e.preventDefault();
+            const href = target.getAttribute('href');
+            if (href) {
+              window.open(href, '_blank', 'noopener,noreferrer');
+            }
+          }
+        });
+
+        // Ensure all existing and future links have target="_blank"
+        const updateLinks = () => {
+          const links = editorElement.querySelectorAll('a');
+          links.forEach((link: Element) => {
+            const anchor = link as HTMLAnchorElement;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+          });
+        };
+
+        // Update existing links
+        updateLinks();
+
+        // Watch for new links
+        quill.on('text-change', () => {
+          updateLinks();
+        });
+
+        console.log('✅ Editor configured for text selection and link handling');
+      }
+    }
+  }
+
+  /**
    * Handle text selection changes in Quill editor
    */
   onTextSelectionChanged(event: any): void {
+    console.log('📝 onTextSelectionChanged called:', event);
+
     if (!event || !event.range) {
       // No selection
+      console.log('  ❌ No event or range, clearing selection');
       this.selectedText = '';
       this.selectionRange = null;
       return;
     }
 
     const { index, length } = event.range;
+    console.log('  Range:', { index, length });
 
-    if (length > 0 && this.documentEditor) {
+    if (length > 0 && this.quillEditorInstance) {
       // User has selected text
-      const quill = this.documentEditor.quillEditor;
-      this.selectedText = quill.getText(index, length);
+      this.selectedText = this.quillEditorInstance.getText(index, length);
       this.selectionRange = { index, length };
+      console.log('  ✅ Selection captured:', this.selectedText.substring(0, 50));
+      console.log('  📍 Now you can use drafting tools!');
     } else {
       // Selection cleared
       this.selectedText = '';
       this.selectionRange = null;
+      console.log('  ⚠️ Selection cleared (length = 0)');
     }
 
-    this.cdr.detectChanges();
+    // DO NOT call cdr.detectChanges() here - it destroys the selection
+    // Angular's natural change detection handles property updates
   }
 
   /**
    * Handle document content changes
+   * Debounced to avoid disrupting text selection
    */
   onDocumentContentChanged(event: any): void {
-    // Update word count when content changes
-    if (this.activeDocumentContent) {
-      // Extract plain text from HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = this.activeDocumentContent;
-      const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    // Get content directly from Quill editor event
+    const htmlContent = event.html || '';
+    const plainText = event.text || '';
 
+    // Let Quill maintain its own internal state
+    // We'll sync activeDocumentContent after debounce for tracking purposes only
+
+    // Clear previous debounce timer
+    if (this.contentChangeDebounce) {
+      clearTimeout(this.contentChangeDebounce);
+    }
+
+    // Debounce the state update to avoid disrupting selection
+    this.contentChangeDebounce = setTimeout(() => {
+      // Update local property only after debounce (for other components that read it)
+      this.activeDocumentContent = htmlContent;
+
+      // Calculate word count and page count
       this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
       this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
 
-      this.cdr.detectChanges();
-    }
+      // Update state service with debounced changes
+      this.stateService.updateDocumentContent(
+        htmlContent,
+        this.currentDocumentWordCount,
+        this.currentDocumentPageCount
+      );
+    }, 300); // 300ms debounce
   }
 
   /**
    * Apply transformation to selected text only
    */
   applySelectionTransform(tool: string): void {
-    if (!this.selectedText || !this.selectionRange || !this.documentEditor) {
+    if (!this.selectedText || !this.selectionRange || !this.quillEditorInstance) {
       console.log('No text selected for transformation');
       return;
     }
@@ -1981,21 +2256,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
 
     // Add user message
-    this.conversationMessages.push({
+    this.stateService.addConversationMessage({
       role: 'user',
       content: toolPrompt,
       timestamp: new Date()
     });
 
     // Call backend for selection-based transformation
-    this.isGenerating = true;
+    this.stateService.setIsGenerating(true);
 
     // Initialize and animate workflow steps
     this.initializeWorkflowSteps('transform');
     this.animateWorkflowSteps();
 
     // Get plain text from Quill for accurate index-based replacement
-    const quill = this.documentEditor.quillEditor;
+    const quill = this.quillEditorInstance;
     const fullPlainText = quill.getText();
 
     const transformRequest = {
@@ -2021,7 +2296,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
           // Add AI response to conversation with inline comparison
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             id: messageId,
             role: 'assistant',
             content: response.explanation,
@@ -2037,26 +2312,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             }
           });
 
-          this.isGenerating = false;
+          this.stateService.setIsGenerating(false);
           this.cdr.detectChanges();
           this.scrollToBottom();
         },
         error: (error) => {
           console.error('Error transforming selection:', error);
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: `Sorry, I encountered an error while transforming the text. Please try again.`,
             timestamp: new Date()
           });
-          this.isGenerating = false;
+          this.stateService.setIsGenerating(false);
           this.cdr.detectChanges();
 
-          Swal.fire({
-            icon: 'error',
-            title: 'Transformation Failed',
-            text: 'Failed to transform selected text. Please try again.',
-            timer: 3000
-          });
+          this.notificationService.error('Transformation Failed', 'Failed to transform selected text. Please try again.', 3000);
         }
       });
   }
@@ -2065,12 +2335,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Save document and exit drafting mode - REAL BACKEND CALL
   saveAndExit(): void {
     if (!this.currentDocumentId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Document',
-        text: 'No document to save. Please generate a document first.',
-        timer: 2000
-      });
+      this.notificationService.warning('No Document', 'No document to save. Please generate a document first.');
       return;
     }
 
@@ -2087,27 +2352,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.documentMetadata.lastSaved = new Date();
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Saved!',
-          text: 'Document saved successfully',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.notificationService.success('Saved!', 'Document saved successfully');
 
         // Exit drafting mode
-        this.draftingMode = false;
-        this.showBottomSearchBar = true;
+        this.stateService.setDraftingMode(false);
+        this.stateService.setShowBottomSearchBar(true);
         this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error saving document:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Save Failed',
-          text: 'Failed to save document. Please try again.',
-          timer: 3000
-        });
+        this.notificationService.error('Save Failed', 'Failed to save document. Please try again.', 3000);
       }
     });
   }
@@ -2115,12 +2369,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Download document from split-view (drafting mode) - REAL BACKEND CALL
   downloadDocument(format: 'docx' | 'pdf'): void {
     if (!this.currentDocumentId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Document',
-        text: 'No document to download. Please generate a document first.',
-        timer: 2000
-      });
+      this.notificationService.warning('No Document', 'No document to download. Please generate a document first.');
       return;
     }
 
@@ -2146,22 +2395,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             window.URL.revokeObjectURL(url);
           }, 100);
 
-          Swal.fire({
-            icon: 'success',
-            title: 'Downloaded!',
-            text: `Document exported as ${format.toUpperCase()}`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          this.notificationService.success('Downloaded!', `Document exported as ${format.toUpperCase()}`);
         },
         error: (error) => {
           console.error('Error exporting document:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Export Failed',
-            text: 'Failed to export document. Please try again.',
-            timer: 3000
-          });
+          this.notificationService.error('Export Failed', 'Failed to export document. Please try again.', 3000);
         }
       });
   }
@@ -2275,7 +2513,7 @@ You can:
     if (!this.followUpMessage.trim()) return;
 
     // Clear follow-up questions when sending new message
-    this.followUpQuestions = [];
+    this.stateService.clearFollowUpQuestions();
 
     // Add user message to chat view
     const userMsg = {
@@ -2283,38 +2521,38 @@ You can:
       content: this.followUpMessage,
       timestamp: new Date()
     };
-    this.conversationMessages.push(userMsg);
+    this.stateService.addConversationMessage(userMsg);
 
     const userMessage = this.followUpMessage;
     this.followUpMessage = '';
-    this.showBottomSearchBar = false;
+    this.stateService.setShowBottomSearchBar(false);
 
     // Get active conversation and also update its messages array
-    const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+    const activeConv = this.stateService.getConversations().find(c => c.id === this.stateService.getActiveConversationId());
     if (activeConv) {
       activeConv.messages.push(userMsg);
       activeConv.messageCount = (activeConv.messageCount || 0) + 1; // Increment message count
-      console.log(`Added user message to conversation ${this.activeConversationId}, count: ${activeConv.messages.length}, messageCount: ${activeConv.messageCount}`);
+      console.log(`Added user message to conversation ${this.stateService.getActiveConversationId()}, count: ${activeConv.messages.length}, messageCount: ${activeConv.messageCount}`);
     }
 
     if (!activeConv || !activeConv.backendConversationId) {
       // No active conversation - this is likely a document drafting follow-up
       // Keep original mock behavior for now
-      this.isGenerating = true;
+      this.stateService.setIsGenerating(true);
       setTimeout(() => {
-        this.conversationMessages.push({
+        this.stateService.addConversationMessage({
           role: 'assistant',
           content: `I understand you'd like to: "${userMessage}". I'll help you with those revisions. This functionality will be connected to the backend API to provide real-time document editing and improvements.`,
           timestamp: new Date()
         });
-        this.isGenerating = false;
-        this.showBottomSearchBar = true;
+        this.stateService.setIsGenerating(false);
+        this.stateService.setShowBottomSearchBar(true);
       }, 2000);
       return;
     }
 
     // Send message to backend conversation
-    this.isGenerating = true;
+    this.stateService.setIsGenerating(true);
     const researchMode = activeConv.researchMode || 'AUTO';
 
     // Initialize and animate workflow steps for the active task
@@ -2322,7 +2560,7 @@ You can:
     this.animateWorkflowSteps();
 
     // Capture conversation ID at request time to prevent race condition
-    const requestConversationId = this.activeConversationId;
+    const requestConversationId = this.stateService.getActiveConversationId();
     const requestBackendId = activeConv.backendConversationId;
 
     this.legalResearchService.sendMessageToConversation(
@@ -2336,7 +2574,7 @@ You can:
           console.log('Received AI response for conversation:', requestConversationId);
 
           // Only update UI if THIS conversation is still active (prevents race condition)
-          if (this.activeConversationId === requestConversationId) {
+          if (this.stateService.getActiveConversationId() === requestConversationId) {
             // Complete all workflow steps
             this.completeAllWorkflowSteps();
 
@@ -2349,10 +2587,10 @@ You can:
               content: cleanedContent,
               timestamp: new Date(message.createdAt || new Date())
             };
-            this.conversationMessages.push(assistantMessage);
+            this.stateService.addConversationMessage(assistantMessage);
 
             // ALSO update the conversation object in sidebar for message count badge
-            const conv = this.conversations.find(c => c.id === requestConversationId);
+            const conv = this.stateService.getConversations().find(c => c.id === requestConversationId);
             if (conv) {
               conv.messages.push(assistantMessage);
               conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
@@ -2361,28 +2599,28 @@ You can:
               this.cdr.detectChanges();
             }
 
-            this.isGenerating = false;
-            this.showBottomSearchBar = true;
+            this.stateService.setIsGenerating(false);
+            this.stateService.setShowBottomSearchBar(true);
             this.cdr.detectChanges();
           } else {
             console.log('Response arrived for inactive conversation, ignoring UI update');
-            this.isGenerating = false;
+            this.stateService.setIsGenerating(false);
           }
         },
         error: (error) => {
           console.error('Error sending message:', error);
 
           // Mark workflow as error
-          if (this.workflowSteps.length > 0) {
-            this.workflowSteps[this.workflowSteps.length - 1].status = 'error';
+          if (this.stateService.getWorkflowSteps().length > 0) {
+            const steps = this.stateService.getWorkflowSteps(); if (steps.length > 0) this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
           }
 
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error processing your message. Please try again.'
           });
-          this.isGenerating = false;
-          this.showBottomSearchBar = true;
+          this.stateService.setIsGenerating(false);
+          this.stateService.setShowBottomSearchBar(true);
           this.cdr.detectChanges();
         }
       });
@@ -2399,7 +2637,7 @@ You can:
   // View generated document
   viewGeneratedDocument(documentId: string): void {
     // Find the message with this document
-    const message = this.conversationMessages.find(
+    const message = this.stateService.getConversationMessages().find(
       m => m.documentGenerated && m.documentId === documentId
     );
 
@@ -2412,7 +2650,7 @@ You can:
   // Edit document
   editDocument(documentId: string): void {
     // Find the message with this document
-    const message = this.conversationMessages.find(
+    const message = this.stateService.getConversationMessages().find(
       m => m.documentGenerated && m.documentId === documentId
     );
 
@@ -2434,7 +2672,7 @@ You can:
     console.log('Saving document:', this.editorDocumentId);
 
     // Update the message content
-    const message = this.conversationMessages.find(
+    const message = this.stateService.getConversationMessages().find(
       m => m.documentId === this.editorDocumentId
     );
 
@@ -2488,21 +2726,21 @@ You can:
 
       case 'summarize-authority':
         // Add user message requesting case authority summary
-        this.conversationMessages.push({
+        this.stateService.addConversationMessage({
           role: 'user',
           content: 'Please summarize the case authority used in this document.',
           timestamp: new Date()
         });
 
         // Simulate AI response
-        this.isGenerating = true;
+        this.stateService.setIsGenerating(true);
         setTimeout(() => {
-          this.conversationMessages.push({
+          this.stateService.addConversationMessage({
             role: 'assistant',
             content: `I've analyzed the case authority in your document. Here's a summary:\n\n**Primary Cases Referenced:**\n\n1. *Smith v. Jones* (2020) - Established the legal standard for...\n2. *Doe v. Corporation* (2019) - Precedent for contract interpretation...\n\nThese cases support your main arguments regarding liability and damages.`
           });
-          this.isGenerating = false;
-          this.showBottomSearchBar = true;
+          this.stateService.setIsGenerating(false);
+          this.stateService.setShowBottomSearchBar(true);
         }, 2000);
         break;
 
@@ -2577,7 +2815,7 @@ You can:
 
   // Extract follow-up questions from AI response and remove section from markdown (matching case-research component)
   extractAndRemoveFollowUpQuestions(response: string): string {
-    this.followUpQuestions = [];
+    this.stateService.clearFollowUpQuestions();
     console.log('=== EXTRACTING FOLLOW-UP QUESTIONS ===');
     console.log('Response length:', response.length);
 
@@ -2595,14 +2833,15 @@ You can:
                              questionsSection.match(/\d+\.\s*(.+?)(?=\n\d+\.|\n|$)/g);
 
       if (questionMatches) {
-        this.followUpQuestions = questionMatches
+        const questions = questionMatches
           .map(q => q.replace(/^[-•*\d+\.]\s*/, '').trim())
           .map(q => q.replace(/\*\*/g, '')) // Remove bold markdown
           .filter(q => q.length > 0)
           .filter(q => this.isValidFollowUpQuestion(q)) // Validate question quality
           .slice(0, 3); // Limit to 3 questions
 
-        console.log('Extracted follow-up questions:', this.followUpQuestions);
+        this.stateService.setFollowUpQuestions(questions);
+        console.log('Extracted follow-up questions:', questions);
       } else {
         console.log('No question matches found in section');
       }
@@ -2641,7 +2880,7 @@ You can:
 
   // Ask a follow-up question
   askFollowUpQuestion(question: string): void {
-    if (!question || this.isGenerating) return;
+    if (!question || this.stateService.getIsGenerating()) return;
 
     // Set the follow-up message and send it
     this.followUpMessage = question;
@@ -2653,18 +2892,7 @@ You can:
   // ========================================
 
   /**
-   * Toggle version history sidebar
-   */
-  toggleVersionHistory(): void {
-    this.showVersionHistory = !this.showVersionHistory;
-
-    if (this.showVersionHistory && this.currentDocumentId) {
-      this.loadVersionHistory();
-    }
-  }
-
-  /**
-   * Load version history from backend
+   * Load version history from backend (for dropdown)
    */
   loadVersionHistory(): void {
     if (!this.currentDocumentId) return;
@@ -2676,103 +2904,87 @@ You can:
       return;
     }
 
-    // Call API to get versions
+    this.loadingVersions = true;
+    this.cdr.detectChanges();
+
+    // Call API to get versions (limit to 10 most recent)
     this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number, this.currentUser?.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (versions) => {
-          this.documentVersions = versions;
-          this.selectedVersionNumber = this.documentMetadata.version || null;
+          // Show only last 10 versions for dropdown
+          this.documentVersions = versions.slice(0, 10);
+          this.loadingVersions = false;
           this.cdr.detectChanges();
         },
         error: (error) => {
           console.error('Error loading version history:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load version history',
-            timer: 2000
-          });
+          this.notificationService.error('Error', 'Failed to load version history');
+          this.loadingVersions = false;
+          this.cdr.detectChanges();
         }
       });
   }
 
   /**
-   * Preview a specific version
+   * Restore version with confirmation dialog (called from dropdown)
    */
-  previewVersion(version: any): void {
-    this.selectedVersionNumber = version.versionNumber;
-    this.activeDocumentContent = version.content;
-    this.currentDocumentWordCount = version.wordCount;
-    this.cdr.detectChanges();
+  restoreVersionWithConfirmation(version: any): void {
+    // Don't allow restoring current version
+    if (version.versionNumber === this.documentMetadata.version) {
+      return;
+    }
 
-    // Update Quill editor with version content
-    setTimeout(() => {
-      if (this.documentEditor && this.documentEditor.quillEditor) {
-        const htmlContent = this.markdownConverter.convert(version.content);
-        const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-        this.documentEditor.quillEditor.setContents(delta);
-      }
-    }, 100);
+    this.restoreVersion(version.versionNumber);
   }
 
   /**
-   * Restore a previous version
+   * Restore a previous version (creates new version with old content)
    */
   restoreVersion(versionNumber: number): void {
-    Swal.fire({
-      title: 'Restore Version?',
-      text: `This will restore version ${versionNumber} as the current version. Current changes will be saved as a new version.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Restore',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
+    this.notificationService.confirm(
+      'Restore Version?',
+      `This will restore version ${versionNumber} as the current version. Current changes will be saved as a new version.`,
+      'Restore',
+      'Cancel'
+    ).then((result) => {
       if (result.isConfirmed && this.currentDocumentId && this.currentUser) {
         this.documentGenerationService.restoreVersion(this.currentDocumentId as number, versionNumber, this.currentUser.id)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (restoredVersion) => {
+              // Update document state with restored version
               this.activeDocumentContent = restoredVersion.content;
               this.documentMetadata.version = restoredVersion.versionNumber;
               this.currentDocumentWordCount = restoredVersion.wordCount;
+              this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(restoredVersion.wordCount);
 
-              this.conversationMessages.push({
+              this.stateService.addConversationMessage({
                 role: 'assistant',
                 content: `Restored version ${versionNumber} as version ${restoredVersion.versionNumber}.`,
                 timestamp: new Date()
               });
 
-              // Reload version history
+              // Reload version history to show updated list
               this.loadVersionHistory();
 
-              // Update Quill editor with restored content
+              // Update Quill editor with restored content using robust helper
               setTimeout(() => {
-                if (this.documentEditor && this.documentEditor.quillEditor) {
-                  const htmlContent = this.markdownConverter.convert(restoredVersion.content);
-                  const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-                  this.documentEditor.quillEditor.setContents(delta);
+                this.setQuillContentFromMarkdown(restoredVersion.content);
+
+                // Ensure editor is editable
+                if (this.quillEditorInstance) {
+                  this.quillEditorInstance.enable(true);
                 }
               }, 100);
 
-              Swal.fire({
-                icon: 'success',
-                title: 'Version Restored',
-                text: `Version ${versionNumber} restored as v${restoredVersion.versionNumber}`,
-                timer: 2000,
-                showConfirmButton: false
-              });
+              this.notificationService.success('Version Restored', `Version ${versionNumber} restored as v${restoredVersion.versionNumber}`);
 
               this.cdr.detectChanges();
             },
             error: (error) => {
               console.error('Error restoring version:', error);
-              Swal.fire({
-                icon: 'error',
-                title: 'Restore Failed',
-                text: 'Failed to restore version',
-                timer: 2000
-              });
+              this.notificationService.error('Restore Failed', 'Failed to restore version');
             }
           });
       }
@@ -2784,34 +2996,21 @@ You can:
    */
   saveManualVersion(): void {
     if (!this.currentDocumentId || !this.documentEditor || !this.currentUser) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Document not available for saving',
-        timer: 2000
-      });
+      this.notificationService.error('Error', 'Document not available for saving');
       return;
     }
 
     // Prompt user for version note
-    Swal.fire({
-      title: 'Save Version',
-      text: 'Add a note to describe this version (optional)',
-      input: 'text',
-      inputPlaceholder: 'e.g., Added new section on liability',
-      showCancelButton: true,
-      confirmButtonText: 'Save',
-      cancelButtonText: 'Cancel',
-      inputValidator: (value) => {
-        // Allow empty notes
-        return null;
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const versionNote = result.value || 'Manual edit';
+    this.notificationService.prompt(
+      'Save Version',
+      'Add a note to describe this version (optional)',
+      'e.g., Added new section on liability'
+    ).then((note) => {
+      if (note !== null) {
+        const versionNote = note || 'Manual edit';
 
         // Get current content from Quill editor
-        const content = this.documentEditor.quillEditor.root.innerHTML;
+        const content = this.quillEditorInstance.root.innerHTML;
 
         // Call service to save manual version
         this.documentGenerationService.saveManualVersion(
@@ -2827,16 +3026,10 @@ You can:
             this.documentMetadata.version = response.versionNumber;
 
             // Show success message
-            Swal.fire({
-              icon: 'success',
-              title: 'Version Saved',
-              text: `Saved as version ${response.versionNumber}`,
-              timer: 2000,
-              showConfirmButton: false
-            });
+            this.notificationService.success('Version Saved', `Saved as version ${response.versionNumber}`);
 
             // Reload version history if it's open
-            if (this.showVersionHistory) {
+            if (this.stateService.getShowVersionHistory()) {
               this.loadVersionHistory();
             }
 
@@ -2844,12 +3037,7 @@ You can:
           },
           error: (error) => {
             console.error('Error saving version:', error);
-            Swal.fire({
-              icon: 'error',
-              title: 'Save Failed',
-              text: 'Failed to save version',
-              timer: 2000
-            });
+            this.notificationService.error('Save Failed', 'Failed to save version');
           }
         });
       }
@@ -2865,13 +3053,13 @@ You can:
    */
   acceptTransformation(messageId: string): void {
     // Find the message with the transformation
-    const messageIndex = this.conversationMessages.findIndex(msg => msg.id === messageId);
+    const messageIndex = this.stateService.getConversationMessages().findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) {
       console.error('Message not found:', messageId);
       return;
     }
 
-    const message = this.conversationMessages[messageIndex];
+    const message = this.stateService.getConversationMessages()[messageIndex];
     const transformation = message.transformationComparison;
 
     if (!transformation) {
@@ -2892,22 +3080,18 @@ You can:
       this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
       this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
 
-      // Update Quill editor with transformed content
+      // Update Quill editor with transformed content using robust helper
       setTimeout(() => {
-        if (this.documentEditor && this.documentEditor.quillEditor) {
-          const htmlContent = this.markdownConverter.convert(transformation.newContent);
-          const delta = this.documentEditor.quillEditor.clipboard.convert(htmlContent);
-          this.documentEditor.quillEditor.setContents(delta);
-        }
+        this.setQuillContentFromMarkdown(transformation.newContent);
       }, 100);
     } else {
       // Selection-based transformation - use Quill operations for precise replacement
-      if (!this.documentEditor || !this.documentEditor.quillEditor) {
+      if (!this.documentEditor || !this.quillEditorInstance) {
         console.error('Quill editor not available');
         return;
       }
 
-      const quill = this.documentEditor.quillEditor;
+      const quill = this.quillEditorInstance;
       const transformedSnippet = transformation.response.transformedSelection || transformation.newContent;
       const selectionRange = transformation.selectionRange;
 
@@ -2923,36 +3107,71 @@ You can:
         return;
       }
 
-      // Use Quill operations for precise text replacement
+      // Use Quill operations for precise text replacement with formatting preserved
       setTimeout(() => {
-        // 1. Delete old text at the exact selection position
-        quill.deleteText(selectionRange.index, selectionRange.length);
+        try {
+          // Convert transformed markdown snippet to HTML
+          const htmlContent = this.markdownConverter.convert(transformedSnippet);
+          let transformedDelta;
 
-        // 2. Insert the transformed snippet at the same position
-        quill.insertText(selectionRange.index, transformedSnippet);
+          // Try to convert HTML to Delta using clipboard API
+          try {
+            transformedDelta = quill.clipboard.convert(htmlContent);
 
-        // 3. Apply green background highlight to the replaced text
-        quill.formatText(selectionRange.index, transformedSnippet.length, {
-          'background': '#d4edda' // Velzon success-subtle green
-        });
+            // Check if Delta is empty (clipboard.convert failed)
+            if (!transformedDelta.ops || transformedDelta.ops.length === 0) {
+              console.warn('⚠️ clipboard.convert() returned empty Delta for selection, using plain text');
+              // Fallback: Create simple Delta with plain text
+              transformedDelta = { ops: [{ insert: transformedSnippet }] };
+            }
+          } catch (error) {
+            console.error('❌ clipboard.convert() failed for selection:', error);
+            // Fallback: Create simple Delta with plain text
+            transformedDelta = { ops: [{ insert: transformedSnippet }] };
+          }
 
-        // 4. Update activeDocumentContent from Quill's current state
-        this.activeDocumentContent = quill.root.innerHTML;
+          // 1. Delete old text at the exact selection position
+          quill.deleteText(selectionRange.index, selectionRange.length);
 
-        // 5. Auto-remove highlight after 4 seconds
-        setTimeout(() => {
-          quill.formatText(selectionRange.index, transformedSnippet.length, {
-            'background': false
+          // 2. Insert the formatted Delta at the same position
+          quill.updateContents({
+            ops: [
+              { retain: selectionRange.index },
+              ...transformedDelta.ops
+            ]
           });
-        }, 4000);
 
-        // 6. Update word count
-        const plainText = quill.getText();
-        this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
-        this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+          // 3. Calculate the length of inserted content for highlighting
+          const insertedLength = transformedDelta.ops.reduce((len: number, op: any) => {
+            return len + (op.insert ? op.insert.length : 0);
+          }, 0);
 
-        // 7. Detect changes for save
-        this.cdr.detectChanges();
+          // 4. Apply green background highlight to the replaced text
+          quill.formatText(selectionRange.index, insertedLength, {
+            'background': '#d4edda' // Velzon success-subtle green
+          });
+
+          // 5. Update activeDocumentContent from Quill's current state
+          this.activeDocumentContent = quill.root.innerHTML;
+
+          // 6. Auto-remove highlight after 4 seconds
+          setTimeout(() => {
+            quill.formatText(selectionRange.index, insertedLength, {
+              'background': false
+            });
+          }, 4000);
+
+          // 7. Update word count
+          const plainText = quill.getText();
+          this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+          // 8. Detect changes for save
+          this.cdr.detectChanges();
+        } catch (error) {
+          console.error('❌ Error applying selection transformation:', error);
+          this.notificationService.error('Transformation Error', 'Failed to apply transformation to selected text');
+        }
       }, 100);
 
       // Update metadata
@@ -2962,17 +3181,11 @@ You can:
     }
 
     // Remove transformation comparison from message (hide buttons)
-    delete this.conversationMessages[messageIndex].transformationComparison;
+    delete this.stateService.getConversationMessages()[messageIndex].transformationComparison;
     this.cdr.detectChanges();
 
     // Show success message
-    Swal.fire({
-      icon: 'success',
-      title: 'Changes Applied',
-      text: 'The transformation has been applied to your document',
-      timer: 2000,
-      showConfirmButton: false
-    });
+    this.notificationService.success('Changes Applied', 'The transformation has been applied to your document');
   }
 
   /**
@@ -2980,38 +3193,18 @@ You can:
    */
   rejectTransformation(messageId: string): void {
     // Find the message with the transformation
-    const messageIndex = this.conversationMessages.findIndex(msg => msg.id === messageId);
+    const messageIndex = this.stateService.getConversationMessages().findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) {
       console.error('Message not found:', messageId);
       return;
     }
 
     // Remove transformation comparison from message (hide buttons)
-    delete this.conversationMessages[messageIndex].transformationComparison;
+    delete this.stateService.getConversationMessages()[messageIndex].transformationComparison;
     this.cdr.detectChanges();
 
     // Show brief message
-    Swal.fire({
-      icon: 'info',
-      title: 'Changes Discarded',
-      text: 'The transformation has been discarded',
-      timer: 1500,
-      showConfirmButton: false
-    });
-  }
-
-  /**
-   * Compare two versions (shows diff view)
-   */
-  compareVersions(version1: number, version2: number): void {
-    this.diffVersion1 = version1;
-    this.diffVersion2 = version2;
-    this.showDiffView = true;
-    this.showVersionHistory = false;
-
-    // Load both versions and show diff
-    // TODO: Implement diff viewer component
-    console.log(`Compare v${version1} with v${version2}`);
+    this.notificationService.info('Changes Discarded', 'The transformation has been discarded', 1500);
   }
 
   /**
@@ -3036,23 +3229,13 @@ You can:
    * Open save version modal with note input
    */
   async openSaveVersionModal(): Promise<void> {
-    const { value: note } = await Swal.fire({
-      title: 'Save Version',
-      input: 'textarea',
-      inputLabel: 'Version Note (optional)',
-      inputPlaceholder: 'Enter a note to describe this version...',
-      showCancelButton: true,
-      confirmButtonText: 'Save',
-      cancelButtonText: 'Cancel',
-      inputValidator: (value) => {
-        if (value && value.length > 500) {
-          return 'Note cannot exceed 500 characters';
-        }
-        return null;
-      }
-    });
+    const note = await this.notificationService.promptTextArea(
+      'Save Version',
+      'Version Note (optional)',
+      'Enter a note to describe this version...'
+    );
 
-    if (note !== undefined) {
+    if (note !== null) {
       this.saveVersion(note || null);
     }
   }
@@ -3062,52 +3245,26 @@ You can:
    */
   saveVersion(versionNote: string | null): void {
     if (!this.currentDocumentId || !this.currentUser) {
-      Swal.fire('Error', 'Document not loaded', 'error');
+      this.notificationService.error('Error', 'Document not loaded');
       return;
     }
 
-    const content = this.documentEditor.quillEditor.root.innerHTML;
+    const content = this.quillEditorInstance.root.innerHTML;
 
     this.documentGenerationService.saveDocument(this.currentDocumentId, content, this.activeDocumentTitle)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.currentVersionNumber = response.versionNumber;
-          Swal.fire('Success', `Version ${response.versionNumber} saved successfully`, 'success');
+          this.notificationService.success('Success', `Version ${response.versionNumber} saved successfully`);
         },
         error: (error) => {
           console.error('Error saving version:', error);
-          Swal.fire('Error', 'Failed to save version', 'error');
+          this.notificationService.error('Error', 'Failed to save version');
         }
       });
   }
 
-  /**
-   * Open version history modal
-   */
-  openVersionHistoryModal(): void {
-    if (!this.currentDocumentId) {
-      Swal.fire('Error', 'No document loaded', 'error');
-      return;
-    }
-
-    this.loadingVersions = true;
-    this.modalService.open(this.versionHistoryModal, { size: 'lg', scrollable: true });
-
-    this.documentGenerationService.getDocumentVersions(this.currentDocumentId as number, this.currentUser?.id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (versions) => {
-          this.documentVersions = versions;
-          this.loadingVersions = false;
-        },
-        error: (error) => {
-          console.error('Error loading versions:', error);
-          this.loadingVersions = false;
-          Swal.fire('Error', 'Failed to load version history', 'error');
-        }
-      });
-  }
 
   /**
    * Decrease editor text size
@@ -3134,7 +3291,7 @@ You can:
    */
   private applyTextSize(): void {
     if (this.documentEditor?.quillEditor) {
-      const editorElement = this.documentEditor.quillEditor.root;
+      const editorElement = this.quillEditorInstance.root;
       editorElement.style.fontSize = `${this.editorTextSize}px`;
     }
   }
@@ -3189,21 +3346,21 @@ You can:
    * Toggle conversation panel visibility
    */
   toggleChatPanel(): void {
-    this.showChat = !this.showChat;
+    this.stateService.setShowChat(!this.stateService.getShowChat());
   }
 
   /**
    * Close conversation panel (while staying in drafting mode)
    */
   closeChatPanel(): void {
-    this.showChat = false;
+    this.stateService.setShowChat(false);
   }
 
   /**
    * Reopen conversation panel
    */
   reopenChatPanel(): void {
-    this.showChat = true;
+    this.stateService.setShowChat(true);
   }
 
   /**
@@ -3211,20 +3368,13 @@ You can:
    */
   async saveToFileManager(): Promise<void> {
     if (!this.currentDocumentId || !this.currentUser) {
-      Swal.fire('Error', 'Document not available', 'error');
+      this.notificationService.error('Error', 'Document not available');
       return;
     }
 
     try {
       // Show loading
-      Swal.fire({
-        title: 'Saving to File Manager',
-        text: 'Generating document...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+      this.notificationService.loading('Saving to File Manager', 'Generating document...');
 
       // Get the Word document as blob
       const blob = await lastValueFrom(
@@ -3245,16 +3395,10 @@ You can:
         this.fileManagerService.uploadFile(file, undefined, caseId, 'Legal Document', 'DRAFT')
       );
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Saved!',
-        text: `Document saved to File Manager${caseId ? ' and linked to case' : ''}`,
-        timer: 2000,
-        showConfirmButton: false
-      });
+      this.notificationService.success('Saved!', `Document saved to File Manager${caseId ? ' and linked to case' : ''}`);
     } catch (error) {
       console.error('Error saving to file manager:', error);
-      Swal.fire('Error', 'Failed to save to File Manager', 'error');
+      this.notificationService.error('Error', 'Failed to save to File Manager');
     }
   }
 

@@ -1,0 +1,13 @@
+<div class="document-editor-wrapper">
+  <quill-editor
+    #editor
+    [(ngModel)]="content"
+    [modules]="quillModules"
+    [formats]="quillFormats"
+    [placeholder]="placeholder"
+    [readOnly]="readOnly"
+    (onContentChanged)="onContentChanged($event)"
+    (onSelectionChanged)="onSelectionChanged($event)"
+    class="document-editor">
+  </quill-editor>
+</div>

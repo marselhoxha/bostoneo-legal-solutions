@@ -139,20 +139,21 @@ export class MarkdownConverterService {
   /**
    * Convert Markdown to HTML
    * Handles: headers, bold, italic, lists, links, tables, paragraphs
+   * Note: No custom classes - Quill strips them. Style native HTML elements directly.
    */
   private convertMarkdownToHtml(text: string): string {
     // Convert tables
     text = this.convertTablesToHtml(text);
 
-    // Headers (H6 to H1, order matters)
-    text = text.replace(/^#{6}\s+(.*$)/gim, '<h6 style="margin-top: 1.5rem;">$1</h6>');
-    text = text.replace(/^#{5}\s+(.*$)/gim, '<h5 style="margin-top: 1.5rem;">$1</h5>');
-    text = text.replace(/^#{4}\s+(.*$)/gim, '<h4 style="margin-top: 1.75rem;">$1</h4>');
-    text = text.replace(/^#{3}\s+(.*$)/gim, '<h3 style="margin-top: 2rem;">$1</h3>');
-    text = text.replace(/^#{2}\s+(.*$)/gim, '<h2 style="margin-top: 2.25rem;">$1</h2>');
-    text = text.replace(/^#\s+(?!#)(.*$)/gim, '<h1 style="margin-top: 0.15rem;">$1</h1>');
+    // Headers - native HTML only (H6 to H1, order matters)
+    text = text.replace(/^#{6}\s+(.*$)/gim, '<h6>$1</h6>');
+    text = text.replace(/^#{5}\s+(.*$)/gim, '<h5>$1</h5>');
+    text = text.replace(/^#{4}\s+(.*$)/gim, '<h4>$1</h4>');
+    text = text.replace(/^#{3}\s+(.*$)/gim, '<h3>$1</h3>');
+    text = text.replace(/^#{2}\s+(.*$)/gim, '<h2>$1</h2>');
+    text = text.replace(/^#\s+(?!#)(.*$)/gim, '<h1>$1</h1>');
 
-    // Blockquotes
+    // Blockquotes - native HTML only
     text = text.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
 
     // Bold and italic
@@ -160,17 +161,17 @@ export class MarkdownConverterService {
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // Inline code
+    // Inline code - native HTML only
     text = text.replace(/`(.*?)`/g, '<code>$1</code>');
 
-    // Links
+    // Links - native HTML only
     text = text.replace(/\[(.+?)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
-    // Horizontal rules
+    // Horizontal rules - native HTML only
     text = text.replace(/^\-\-\-$/gim, '<hr>');
     text = text.replace(/^\*\*\*$/gim, '<hr>');
 
-    // Lists - Ordered
+    // Lists - Ordered (native HTML only)
     text = text.replace(/^(\d+)\.\s+(.+)$/gim, '<li>$2</li>');
     text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
       if (!match.includes('<ol>')) {
@@ -180,7 +181,7 @@ export class MarkdownConverterService {
     });
     text = text.replace(/<\/ol>\s*<ol>/g, '');
 
-    // Lists - Unordered
+    // Lists - Unordered (native HTML only)
     text = text.replace(/^[\*\-]\s+(.+)$/gim, '<li>$1</li>');
     text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
       if (!match.includes('<ul>') && !match.includes('<ol>')) {
@@ -190,7 +191,7 @@ export class MarkdownConverterService {
     });
     text = text.replace(/<\/ul>\s*<ul>/g, '');
 
-    // Paragraphs
+    // Paragraphs - native HTML only
     const lines = text.split('\n');
     const processedLines = lines.map(line => {
       const trimmed = line.trim();
@@ -207,6 +208,9 @@ export class MarkdownConverterService {
     // Clean up extra <br> tags around block elements
     text = text.replace(/<br>\s*<(h[1-6]|p|ul|ol|li|blockquote|hr)/gi, '<$1');
     text = text.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|hr)>\s*<br>/gi, '</$1>');
+
+    // Clean up excessive line breaks (more than 2 consecutive)
+    text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
 
     return text;
   }

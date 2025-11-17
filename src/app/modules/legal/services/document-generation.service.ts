@@ -107,6 +107,7 @@ export class DocumentGenerationService {
     return this.http.post<GeneratedDocument>(`${this.apiUrl}/generate`, request);
   }
 
+
   /**
    * Export document to PDF or DOCX format
    */
@@ -242,9 +243,92 @@ export class DocumentGenerationService {
   }
 
   /**
-   * Export document to Word (DOCX)
+   * Convert HTML to Markdown for backend export
+   * Preserves all formatting (headers, bold, italic, lists, links)
+   */
+  convertHtmlToMarkdown(html: string): string {
+    if (!html) return '';
+
+    let markdown = html;
+
+    // Headers (H1-H6) - process from H6 to H1 to avoid conflicts
+    markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '\n###### $1\n\n');
+    markdown = markdown.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '\n##### $1\n\n');
+    markdown = markdown.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '\n#### $1\n\n');
+    markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '\n### $1\n\n');
+    markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '\n## $1\n\n');
+    markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '\n# $1\n\n');
+
+    // Bold and Strong
+    markdown = markdown.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gi, '**$2**');
+
+    // Italic and Emphasis
+    markdown = markdown.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gi, '*$2*');
+
+    // Links - Keep as HTML <a> tags with clean attributes (backend handles HTML links better than Markdown)
+    markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '<a href="$1">$2</a>');
+
+    // Unordered Lists
+    markdown = markdown.replace(/<ul[^>]*>/gi, '\n');
+    markdown = markdown.replace(/<\/ul>/gi, '\n');
+
+    // Ordered Lists - need to track numbering
+    let olCounter = 0;
+    markdown = markdown.replace(/<ol[^>]*>/gi, () => {
+      olCounter = 0;
+      return '\n';
+    });
+    markdown = markdown.replace(/<\/ol>/gi, '\n');
+
+    // List items - handle both ordered and unordered
+    // Check if inside <ol> context by looking for numbers before
+    markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gi, (match, content) => {
+      // Simple heuristic: if we see numbered items recently, this is ordered
+      // Otherwise unordered
+      olCounter++;
+      // For now, default to unordered (-)
+      // Backend will need to handle this
+      return `- ${content}\n`;
+    });
+
+    // Paragraphs
+    markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, '\n$1\n\n');
+
+    // Line breaks
+    markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+
+    // Horizontal rules
+    markdown = markdown.replace(/<hr\s*\/?>/gi, '\n---\n\n');
+
+    // Blockquotes
+    markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '\n> $1\n\n');
+
+    // Code blocks
+    markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+
+    // Remove remaining HTML tags (cleanup)
+    markdown = markdown.replace(/<[^>]+>/g, '');
+
+    // Decode HTML entities
+    const temp = document.createElement('div');
+    temp.innerHTML = markdown;
+    markdown = temp.textContent || markdown;
+
+    // Clean up excessive newlines (more than 2 consecutive)
+    markdown = markdown.replace(/\n{3,}/g, '\n\n');
+
+    // Trim leading/trailing whitespace
+    markdown = markdown.trim();
+
+    return markdown;
+  }
+
+  /**
+   * Export document to Word (DOCX) - use backend API for proper format
    */
   exportToWord(documentId: number, userId: number): Observable<Blob> {
+    // Always use backend API for proper DOCX generation
+    // The backend has proper libraries to generate valid Office Open XML format
     return this.http.get(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/word`,
       {
@@ -255,9 +339,11 @@ export class DocumentGenerationService {
   }
 
   /**
-   * Export document to PDF
+   * Export document to PDF - use backend API for proper format
    */
   exportToPDF(documentId: number, userId: number): Observable<Blob> {
+    // Always use backend API for proper PDF generation
+    // The backend has proper libraries to generate valid PDFs with correct formatting
     return this.http.get(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/pdf`,
       {

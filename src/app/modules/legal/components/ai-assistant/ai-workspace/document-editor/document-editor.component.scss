@@ -1,0 +1,119 @@
+.document-editor-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+::ng-deep .document-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .ql-toolbar {
+    border: 1px solid var(--vz-border-color);
+    border-bottom: none;
+    background: var(--vz-light);
+    border-radius: 0.5rem 0.5rem 0 0;
+    padding: 0.75rem;
+  }
+
+  .ql-container {
+    flex: 1;
+    border: 1px solid var(--vz-border-color);
+    border-radius: 0 0 0.5rem 0.5rem;
+    font-family: var(--vz-body-font-family);
+    font-size: 14px;
+    height: auto;
+    min-height: 500px;
+  }
+
+  .ql-editor {
+    min-height: 500px;
+    padding: 1.5rem;
+    line-height: 1.8;
+
+    &.ql-blank::before {
+      color: var(--vz-secondary);
+      font-style: italic;
+      opacity: 0.5;
+    }
+
+    p, ol, ul {
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    a {
+      color: var(--vz-primary);
+      text-decoration: underline;
+
+      &:hover {
+        color: var(--vz-primary-darker);
+      }
+    }
+
+    // Green highlight for recently transformed text
+    [style*="background: rgb(212, 237, 218)"],
+    [style*="background:#d4edda"],
+    [style*="background: #d4edda"] {
+      background-color: #d4edda !important;
+      padding: 0.125rem 0.25rem;
+      border-radius: 0.25rem;
+      transition: background-color 0.3s ease;
+    }
+  }
+
+  // Scrollbar styling
+  .ql-editor::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .ql-editor::-webkit-scrollbar-track {
+    background: rgba(var(--vz-secondary-rgb), 0.1);
+    border-radius: 4px;
+  }
+
+  .ql-editor::-webkit-scrollbar-thumb {
+    background: rgba(var(--vz-secondary-rgb), 0.3);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(var(--vz-secondary-rgb), 0.5);
+    }
+  }
+}
+
+// Read-only mode styling
+::ng-deep .document-editor.ql-disabled {
+  .ql-toolbar {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .ql-editor {
+    background: rgba(var(--vz-light-rgb), 0.3);
+    cursor: not-allowed;
+  }
+}
