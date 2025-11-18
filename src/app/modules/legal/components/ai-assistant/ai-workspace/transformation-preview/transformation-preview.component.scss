@@ -1,19 +1,19 @@
 .transformation-preview-container {
   margin: 1.5rem 0;
-  border: 2px solid rgba(var(--vz-info-rgb), 0.2);
   border-radius: 0.5rem;
   overflow: hidden;
-  background: var(--vz-body-bg);
 }
 
 .comparison-view {
-  padding: 1.5rem;
+  padding: 1.25rem;
+  background: var(--vz-light);
+  border-radius: 0.5rem;
 }
 
 .comparison-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1.25rem;
   margin-bottom: 1rem;
 
   @media (max-width: 768px) {
@@ -22,132 +22,96 @@
 }
 
 .comparison-column {
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: var(--vz-body-bg);
-  transition: all 0.2s ease;
-
   &.comparison-original {
-    border: 2px solid rgba(var(--vz-warning-rgb), 0.4);
-    background: rgba(var(--vz-warning-rgb), 0.03);
+    .card {
+      border: 1px solid rgba(var(--vz-warning-rgb), 0.25);
 
-    .comparison-panel-header {
-      background: rgba(var(--vz-warning-rgb), 0.15);
-      color: var(--vz-warning);
-      border-bottom: 1px solid rgba(var(--vz-warning-rgb), 0.3);
+      .card-header {
+        background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.08), rgba(var(--vz-warning-rgb), 0.04));
+        border-bottom: 1px solid rgba(var(--vz-warning-rgb), 0.2);
+        color: #8b6914;
 
-      i {
-        color: var(--vz-warning);
+        i {
+          color: var(--vz-warning);
+        }
+      }
+
+      .card-body {
+        background: rgba(var(--vz-warning-rgb), 0.02);
       }
     }
   }
 
   &.comparison-transformed {
-    border: 2px solid rgba(var(--vz-success-rgb), 0.5);
-    background: rgba(var(--vz-success-rgb), 0.04);
+    .card {
+      border: 1px solid rgba(var(--vz-success-rgb), 0.25);
 
-    .comparison-panel-header {
-      background: rgba(var(--vz-success-rgb), 0.18);
-      color: var(--vz-success);
-      border-bottom: 1px solid rgba(var(--vz-success-rgb), 0.35);
+      .card-header {
+        background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.08), rgba(var(--vz-success-rgb), 0.04));
+        border-bottom: 1px solid rgba(var(--vz-success-rgb), 0.2);
+        color: #0d6832;
 
-      i {
-        color: var(--vz-success);
+        i {
+          color: var(--vz-success);
+        }
+      }
+
+      .card-body {
+        background: rgba(var(--vz-success-rgb), 0.02);
       }
     }
   }
 }
 
 .comparison-panel-header {
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  font-size: 0.875rem;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.8125rem;
   display: flex;
   align-items: center;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .comparison-panel-content {
-  padding: 1rem;
+  padding: 1.25rem;
   max-height: 400px;
   overflow-y: auto;
   font-size: 0.9375rem;
-  line-height: 1.6;
+  line-height: 1.7;
 
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(var(--vz-light-rgb), 0.3);
+    border-radius: 10px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(var(--vz-secondary-rgb), 0.3);
-    border-radius: 3px;
+    background: rgba(var(--vz-secondary-rgb), 0.4);
+    border-radius: 10px;
 
     &:hover {
-      background: rgba(var(--vz-secondary-rgb), 0.5);
+      background: rgba(var(--vz-secondary-rgb), 0.6);
     }
-  }
-}
-
-.context-toggle {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: center;
-}
-
-.document-context {
-  margin-top: 1.5rem;
-  border: 2px solid rgba(var(--vz-info-rgb), 0.3);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: rgba(var(--vz-info-rgb), 0.03);
-}
-
-.context-panel-header {
-  padding: 0.75rem 1rem;
-  background: rgba(var(--vz-info-rgb), 0.15);
-  color: var(--vz-info);
-  font-weight: 600;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(var(--vz-info-rgb), 0.3);
-
-  i {
-    color: var(--vz-info);
-  }
-}
-
-.context-panel-content {
-  padding: 1rem;
-  max-height: 300px;
-  overflow-y: auto;
-  font-size: 0.9375rem;
-  line-height: 1.6;
-
-  ::ng-deep mark.text-selection-highlight {
-    background-color: rgba(var(--vz-warning-rgb), 0.3);
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-    font-weight: 600;
   }
 }
 
 .transformation-actions {
   display: flex;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  background: rgba(var(--vz-light-rgb), 0.5);
+  gap: 0.875rem;
+  padding: 1.25rem;
+  background: var(--vz-light);
   border-top: 1px solid var(--vz-border-color);
 
   button {
     flex: 1;
     font-weight: 500;
+    padding: 0.625rem 1.25rem;
 
     @media (max-width: 576px) {
       font-size: 0.875rem;
+      padding: 0.5rem 1rem;
     }
   }
 }

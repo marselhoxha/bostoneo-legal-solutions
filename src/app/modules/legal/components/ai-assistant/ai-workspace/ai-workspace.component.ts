@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Subject, lastValueFrom } from 'rxjs';
+import { Subject, lastValueFrom, merge } from 'rxjs';
 import { takeUntil, switchMap } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
@@ -64,6 +64,7 @@ import { DocumentState } from '../../../models/document.model';
 })
 export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private cancelGeneration$ = new Subject<void>();
 
   // Timeout/Interval tracking for cleanup
   private activeTimeouts: number[] = [];
@@ -260,6 +261,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   currentVersionNumber: number = 1;
 
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
+  @ViewChild('howItWorksModal') howItWorksModal!: TemplateRef<any>;
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
@@ -750,9 +752,20 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Opens the "How It Works" modal to explain AI Workspace features
+   */
+  openHowItWorksModal(): void {
+    this.modalService.open(this.howItWorksModal, {
+      centered: true,
+      size: 'lg'
+    });
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.cancelGeneration$.complete();
 
     // Clear all active timeouts
     this.activeTimeouts.forEach(id => clearTimeout(id));
@@ -800,7 +813,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Helper method to update workflow step status (now uses StateService)
   private updateWorkflowStep(stepId: number, status: 'pending' | 'active' | 'completed' | 'error', description?: string): void {
-    this.stateService.updateWorkflowStep(stepId, { status: status as any, description });
+    const updates: Partial<any> = { status: status as any };
+    if (description !== undefined) {
+      updates.description = description;
+    }
+    this.stateService.updateWorkflowStep(stepId, updates);
   }
 
   // Helper method to reset workflow steps (now uses StateService)
@@ -857,20 +874,48 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Stop generation
   stopGeneration(): void {
+    // Get active conversation to cancel backend request
+    const activeConvId = this.stateService.getActiveConversationId();
+    const conversations = this.stateService.getConversations();
+    const activeConv = conversations.find(c => c.id === activeConvId);
+
+    console.log('🛑 STOP button clicked');
+    console.log('🔍 Active conversation ID:', activeConvId);
+    console.log('🔍 Active conversation:', activeConv);
+    console.log('🔍 Backend conversation ID:', activeConv?.backendConversationId);
+
+    // Call backend to cancel the AI request
+    if (activeConv?.backendConversationId) {
+      console.log('🔵 Calling backend cancel API with ID:', activeConv.backendConversationId);
+      this.legalResearchService.cancelConversation(activeConv.backendConversationId)
+        .subscribe({
+          next: () => {
+            console.log('✅ Backend generation cancelled successfully for conversation', activeConv.backendConversationId);
+          },
+          error: (err) => {
+            console.error('❌ Failed to cancel backend generation:', err);
+          }
+        });
+    } else {
+      console.warn('⚠️ No backend conversation ID found - cannot cancel');
+    }
+
+    // Cancel any ongoing frontend HTTP requests
+    this.cancelGeneration$.next();
+
     // Clear all active timeouts and intervals
     this.activeTimeouts.forEach(id => clearTimeout(id));
     this.activeTimeouts = [];
     this.activeIntervals.forEach(id => clearInterval(id));
     this.activeIntervals = [];
 
-    // Reset state
+    // Reset state (but keep workflow steps visible to show progress when stopped)
     this.stateService.setIsGenerating(false);
-    this.resetWorkflowSteps();
 
     // Add a cancelled message
     this.stateService.addConversationMessage({
       role: 'assistant',
-      content: '_Generation stopped by user._'
+      content: 'Generation stopped by user.'
     });
 
     this.stateService.setShowBottomSearchBar(true);
@@ -1015,7 +1060,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
                   // Populate document state
                   this.currentDocumentId = document.id;
-                  this.activeDocumentTitle = conv.title;
+                  // Extract professional title from document content (first # heading)
+                  this.activeDocumentTitle = this.extractTitleFromMarkdown(document.content) || conv.title;
                   this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
                   this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
                   this.documentMetadata = {
@@ -1198,7 +1244,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   /**
    * Export document to PDF
-   * Saves current content then calls backend API to generate PDF
+   * Calls backend API to generate PDF from latest saved version
    */
   exportToPDF(): void {
     if (!this.currentDocumentId || !this.currentUser) {
@@ -1206,42 +1252,37 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Get current HTML content from Quill editor
-    const htmlContent = this.quillEditorInstance ? this.quillEditorInstance.root.innerHTML : '';
-
-    // Convert HTML to Markdown for backend processing (preserves all formatting)
-    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
-
     this.notificationService.loading('Preparing PDF', 'Please wait...');
 
-    // First save the markdown content to ensure backend has latest version
-    this.documentGenerationService.saveManualVersion(
+    // Export using backend API which will generate proper PDF format
+    // Backend reads latest version from database - no need to save before exporting
+    this.documentGenerationService.exportToPDF(
       this.currentDocumentId as number,
-      this.currentUser.id,
-      markdownContent,
-      'Export to PDF'
+      this.currentUser.id
     )
-      .pipe(
-        switchMap(() => {
-          // Then export using backend API which will generate proper PDF format
-          return this.documentGenerationService.exportToPDF(
-            this.currentDocumentId as number,
-            this.currentUser.id
-          );
-        })
-      )
       .subscribe({
-        next: (blob) => {
+        next: (response) => {
+          // Extract blob and filename from HTTP response
+          const blob = response.body;
+          if (!blob) {
+            console.error('No blob in response body');
+            this.notificationService.error('Error', 'Failed to export PDF.');
+            return;
+          }
+
+          const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+          const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
+
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+          a.download = filename;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          this.notificationService.success('PDF Exported', 'Document downloaded successfully');
+          this.notificationService.success('PDF Exported', `${filename} downloaded successfully`);
         },
         error: (error) => {
           console.error('Error exporting PDF:', error);
@@ -1252,7 +1293,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   /**
    * Export document to Word (DOCX)
-   * Saves current content then calls backend API to generate Word document
+   * Calls backend API to generate Word document from latest saved version
    */
   exportToWord(): void {
     if (!this.currentDocumentId || !this.currentUser) {
@@ -1260,43 +1301,38 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Get current HTML content from Quill editor
-    const htmlContent = this.quillEditorInstance ? this.quillEditorInstance.root.innerHTML : '';
-
-    // Convert HTML to Markdown for backend processing (preserves all formatting)
-    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
-
     this.notificationService.loading('Preparing Word document', 'Please wait...');
 
-    // First save the markdown content to ensure backend has latest version
-    this.documentGenerationService.saveManualVersion(
+    // Export using backend API which will generate proper DOCX format
+    // Backend reads latest version from database - no need to save before exporting
+    this.documentGenerationService.exportToWord(
       this.currentDocumentId as number,
-      this.currentUser.id,
-      markdownContent,
-      'Export to Word'
+      this.currentUser.id
     )
-      .pipe(
-        switchMap(() => {
-          // Then export using backend API which will generate proper DOCX format
-          return this.documentGenerationService.exportToWord(
-            this.currentDocumentId as number,
-            this.currentUser.id
-          );
-        })
-      )
       .subscribe({
-        next: (blob) => {
+        next: (response) => {
+          // Extract blob and filename from HTTP response
+          const blob = response.body;
+          if (!blob) {
+            console.error('No blob in response body');
+            this.notificationService.error('Error', 'Failed to export Word document.');
+            return;
+          }
+
+          const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
+          const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
+
           // Download the blob
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
+          a.download = filename;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          this.notificationService.success('Word Document Exported', 'Document downloaded successfully');
+          this.notificationService.success('Word Document Exported', `${filename} downloaded successfully`);
         },
         error: (err) => {
           console.error('Error exporting to Word:', err);
@@ -1310,6 +1346,31 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private sanitizeFilename(name: string): string {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  }
+
+  /**
+   * Extract professional title from markdown content (first # heading)
+   * Used to display document title instead of user prompt
+   */
+  private extractTitleFromMarkdown(content: string): string | null {
+    if (!content) {
+      return null;
+    }
+
+    // Look for first markdown heading (# Title)
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        // Remove # symbols and trim
+        const title = trimmed.replace(/^#+\s*/, '').trim();
+        if (title) {
+          return title;
+        }
+      }
+    }
+
+    return null;
   }
 
   // Delete all conversations (if needed in the UI)
@@ -1573,6 +1634,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private generateDocumentFlow(userPrompt: string): void {
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
 
+    // Create temporary conversation immediately so stop button can find it
+    const tempConvId = `conv_temp_${Date.now()}`;
+    const tempConv: Conversation = {
+      id: tempConvId,
+      title: title,
+      date: new Date(),
+      type: 'draft' as ConversationType,
+      messages: [...this.stateService.getConversationMessages()],
+      backendConversationId: undefined, // Will be set when response arrives
+      relatedDraftId: undefined,
+      taskType: TaskType.GenerateDraft,
+      jurisdiction: this.selectedJurisdiction,
+      researchMode: ResearchMode.Auto
+    };
+
+    // Add temp conversation and set as active BEFORE making request
+    this.stateService.addConversation(tempConv);
+    this.stateService.setActiveConversationId(tempConvId);
+
+    console.log('🔵 Created temporary conversation for cancellation:', tempConvId);
+
     // Prepare draft generation request
     const draftRequest = {
       userId: this.currentUser.id,
@@ -1583,32 +1665,55 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       sessionName: title
     };
 
-    // Call new combined endpoint
-    this.documentGenerationService.generateDraftWithConversation(draftRequest)
+    // First, initialize the conversation to get backend ID immediately
+    this.documentGenerationService.initDraftConversation(draftRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          console.log('Draft generated with conversation:', response);
+        next: (initResponse) => {
+          console.log('🔵 Initialized conversation:', initResponse.conversationId);
+
+          // Update temp conversation with real backend ID
+          const tempConvInList = this.stateService.getConversations().find(c => c.id === tempConvId);
+          if (tempConvInList) {
+            tempConvInList.backendConversationId = initResponse.conversationId;
+            console.log('✅ Temp conversation updated with backend ID:', initResponse.conversationId);
+          }
+
+          // Now call the generate endpoint with the conversation ID so it reuses the same conversation
+          const draftRequestWithConversation = {
+            ...draftRequest,
+            conversationId: initResponse.conversationId
+          };
+
+          this.documentGenerationService.generateDraftWithConversation(draftRequestWithConversation)
+            .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+            .subscribe({
+              next: (response) => {
+                console.log('Draft generated with conversation:', response);
 
           // Complete workflow steps
           this.completeAllWorkflowSteps();
 
-          // Store conversation
-          const newConv: Conversation = {
-            id: `conv_${response.conversationId}`,
-            title: response.conversation.sessionName,
-            date: new Date(),
-            type: 'draft' as ConversationType,
-            messages: [...this.stateService.getConversationMessages()],
-            backendConversationId: response.conversationId,
-            relatedDraftId: response.documentId.toString(),
-            taskType: response.conversation.taskType as TaskType,
-            jurisdiction: this.selectedJurisdiction,
-            researchMode: 'AUTO' as ResearchMode
-          };
+          // Update the temporary conversation with real backend ID
+          const conversations = this.stateService.getConversations();
+          const tempConvIndex = conversations.findIndex(c => c.id === tempConvId);
 
-          this.stateService.addConversation(newConv);
-          this.stateService.setActiveConversationId(newConv.id);
+          if (tempConvIndex !== -1) {
+            // Update existing temp conversation with real data
+            conversations[tempConvIndex] = {
+              ...conversations[tempConvIndex],
+              id: `conv_${response.conversationId}`,
+              title: response.conversation.sessionName,
+              backendConversationId: response.conversationId,
+              relatedDraftId: response.documentId.toString(),
+              taskType: response.conversation.taskType as TaskType
+            };
+
+            // Update active conversation ID to the real one
+            this.stateService.setActiveConversationId(`conv_${response.conversationId}`);
+
+            console.log('✅ Updated temp conversation with backend ID:', response.conversationId);
+          }
 
           // Reload conversations from backend to ensure sidebar is up-to-date
           // This is more reliable than relying on state updates alone
@@ -1619,7 +1724,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           // Store document metadata
           this.currentDocumentId = response.document.id;
-          this.activeDocumentTitle = title;
+          // Extract professional title from document content (first # heading) instead of using user prompt
+          this.activeDocumentTitle = this.extractTitleFromMarkdown(response.document.content) || title;
 
           console.log('Document content received:', {
             contentLength: response.document.content?.length || 0,
@@ -1681,6 +1787,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error generating document:', error);
 
+          // Remove temp conversation if it still exists
+          const conversations = this.stateService.getConversations();
+          const tempIndex = conversations.findIndex(c => c.id === tempConvId);
+          if (tempIndex !== -1) {
+            conversations.splice(tempIndex, 1);
+            console.log('🗑️ Removed temporary conversation after error');
+          }
+
           // Mark workflow as error
           if (this.stateService.getWorkflowSteps().length > 0) {
             const steps = this.stateService.getWorkflowSteps(); if (steps.length > 0) this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
@@ -1694,6 +1808,30 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           this.stateService.setIsGenerating(false);
           this.stateService.setShowBottomSearchBar(true);
+          this.stateService.setActiveConversationId(null);
+          this.cdr.detectChanges();
+        }
+      });
+        },
+        error: (error) => {
+          console.error('Error initializing draft conversation:', error);
+
+          // Remove temp conversation
+          const conversations = this.stateService.getConversations();
+          const tempIndex = conversations.findIndex(c => c.id === tempConvId);
+          if (tempIndex !== -1) {
+            conversations.splice(tempIndex, 1);
+          }
+
+          this.stateService.addConversationMessage({
+            role: 'assistant',
+            content: 'Sorry, I encountered an error starting the draft generation. Please try again.',
+            timestamp: new Date()
+          });
+
+          this.stateService.setIsGenerating(false);
+          this.stateService.setShowBottomSearchBar(true);
+          this.stateService.setActiveConversationId(null);
           this.cdr.detectChanges();
         }
       });
@@ -1748,7 +1886,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             const requestBackendId = session.id;
 
             this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt, researchMode)
-              .pipe(takeUntil(this.destroy$))
+              .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
               .subscribe({
                 next: (message) => {
                   console.log('Received AI response for conversation:', requestConversationId);
@@ -1906,7 +2044,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     };
 
     this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
       .subscribe({
         next: (response) => {
           // Complete workflow steps
@@ -2286,7 +2424,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     };
 
     this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
       .subscribe({
         next: (response) => {
           // Complete workflow steps
@@ -2379,12 +2517,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.documentGenerationService.exportDocument(this.currentDocumentId, format)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (blob) => {
+        next: (response) => {
+          // Extract blob from HTTP response
+          const blob = response.body;
+          if (!blob) {
+            console.error('No blob in response body');
+            this.notificationService.error('Export Failed', 'Failed to export document. Please try again.', 3000);
+            return;
+          }
+
+          // Extract filename from Content-Disposition header
+          // Falls back to a sanitized version of the document title if header not found
+          const fallbackFilename = `${this.activeDocumentTitle}.${format}`;
+          const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
+
           // Create download link
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `${this.activeDocumentTitle}.${format}`;
+          link.download = filename;
           link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
@@ -2395,7 +2546,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             window.URL.revokeObjectURL(url);
           }, 100);
 
-          this.notificationService.success('Downloaded!', `Document exported as ${format.toUpperCase()}`);
+          console.log(`Document downloaded as: ${filename}`);
+          this.notificationService.success('Downloaded!', `${filename} downloaded successfully`);
         },
         error: (error) => {
           console.error('Error exporting document:', error);
@@ -2410,6 +2562,65 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.downloadDocument(format);
 
     console.log(`Download initiated: ${format.toUpperCase()}`);
+  }
+
+  /**
+   * Extract filename from Content-Disposition header
+   * Parses: Content-Disposition: attachment; filename="Motion_to_Dismiss.pdf"
+   * Returns the filename or a fallback if not found
+   */
+  private extractFilenameFromHeader(headers: any, fallbackName: string): string {
+    try {
+      const contentDisposition = headers.get('Content-Disposition');
+
+      // Debug: Log raw header value
+      console.log('🔍 RAW Content-Disposition header:', contentDisposition);
+
+      if (!contentDisposition) {
+        console.warn('❌ No Content-Disposition header found, using fallback filename');
+        return fallbackName;
+      }
+
+      // Method 1: Try filename*=UTF-8'' format (our backend's format)
+      // Example: filename*=UTF-8''Demand_Letter_TO_Insurance_Carrier.pdf
+      if (contentDisposition.includes("filename*=UTF-8''")) {
+        console.log(`✅ Found filename*=UTF-8'' format`);
+        const parts = contentDisposition.split("filename*=UTF-8''");
+        if (parts.length > 1) {
+          // Get everything after filename*=UTF-8'' until semicolon or end
+          const encoded = parts[1].split(';')[0].trim();
+          const filename = decodeURIComponent(encoded);
+          console.log('✅ EXTRACTED filename:', filename);
+          return filename;
+        }
+      }
+
+      // Method 2: Try standard filename="..." format
+      // Example: filename="document.pdf"
+      if (contentDisposition.includes('filename=')) {
+        console.log('⚠️ Trying standard filename= format');
+        const match = contentDisposition.match(/filename="([^"]+)"/);
+        if (match && match[1]) {
+          let filename = match[1];
+
+          // Decode RFC 2047 Q-encoding if present (=?UTF-8?Q?...?=)
+          if (filename.startsWith('=?UTF-8?Q?') && filename.endsWith('?=')) {
+            console.log('⚠️ Decoding Q-encoded filename');
+            filename = filename.substring(10, filename.length - 2);
+            filename = decodeURIComponent(filename.replace(/=/g, '%'));
+          }
+
+          console.log('⚠️ EXTRACTED filename (fallback):', filename);
+          return filename;
+        }
+      }
+
+      console.error('❌ Could not parse filename from Content-Disposition header, using fallback');
+      return fallbackName;
+    } catch (error) {
+      console.error('❌ Error extracting filename from header:', error);
+      return fallbackName;
+    }
   }
 
   // Mock document generation (will be replaced with actual API call)
@@ -2568,7 +2779,7 @@ You can:
       userMessage,
       researchMode
     )
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
       .subscribe({
         next: (message) => {
           console.log('Received AI response for conversation:', requestConversationId);
@@ -3071,7 +3282,6 @@ You can:
 
     if (transformation.scope === 'FULL_DOCUMENT') {
       // Full document transformation - replace entire content
-      this.activeDocumentContent = transformation.newContent;
       this.currentDocumentWordCount = response.wordCount;
       this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
 
@@ -3083,6 +3293,15 @@ You can:
       // Update Quill editor with transformed content using robust helper
       setTimeout(() => {
         this.setQuillContentFromMarkdown(transformation.newContent);
+
+        // CRITICAL: Sync activeDocumentContent with Quill's HTML after markdown conversion
+        // Wait for Quill to finish converting markdown to HTML
+        setTimeout(() => {
+          if (this.quillEditorInstance) {
+            this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+            console.log('✅ Synced activeDocumentContent with Quill HTML after transformation');
+          }
+        }, 50);
       }, 100);
     } else {
       // Selection-based transformation - use Quill operations for precise replacement
@@ -3183,6 +3402,46 @@ You can:
     // Remove transformation comparison from message (hide buttons)
     delete this.stateService.getConversationMessages()[messageIndex].transformationComparison;
     this.cdr.detectChanges();
+
+    // CRITICAL: Save transformed content to database
+    // Wait for all async operations (setTimeout callbacks) to complete before saving
+    setTimeout(() => {
+      if (!this.currentDocumentId || !this.currentUser || !this.quillEditorInstance) {
+        console.warn('⚠️ Cannot save transformation - missing required data');
+        return;
+      }
+
+      // Get current HTML content from Quill (already has the transformation applied)
+      const htmlContent = this.quillEditorInstance.root.innerHTML;
+
+      // Convert HTML to Markdown for backend storage
+      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+
+      // Save to database with transformation note
+      const transformationType = transformation.response.transformationType || 'TRANSFORMATION';
+      const transformationLabel = this.getTransformationLabel(transformationType);
+
+      this.documentGenerationService.saveManualVersion(
+        this.currentDocumentId as number,
+        this.currentUser.id,
+        markdownContent,
+        `Applied ${transformationLabel}`
+      )
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (saveResponse) => {
+            console.log('✅ Transformation saved to database:', saveResponse);
+            // Update version number from save response
+            if (saveResponse && saveResponse.version) {
+              this.documentMetadata.version = saveResponse.version;
+            }
+          },
+          error: (error) => {
+            console.error('❌ Error saving transformation:', error);
+            this.notificationService.error('Save Failed', 'Transformation applied but failed to save to database');
+          }
+        });
+    }, 200); // Wait for all async operations to complete
 
     // Show success message
     this.notificationService.success('Changes Applied', 'The transformation has been applied to your document');
@@ -3376,13 +3635,23 @@ You can:
       // Show loading
       this.notificationService.loading('Saving to File Manager', 'Generating document...');
 
-      // Get the Word document as blob
-      const blob = await lastValueFrom(
+      // Get the Word document as blob with headers
+      const response = await lastValueFrom(
         this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
       );
 
+      // Extract blob from response
+      const blob = response.body;
+      if (!blob) {
+        this.notificationService.error('Error', 'Failed to generate document');
+        return;
+      }
+
+      // Extract filename from header or use fallback
+      const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
+      const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
+
       // Convert blob to File object
-      const filename = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
       const file = new File([blob], filename, {
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       });

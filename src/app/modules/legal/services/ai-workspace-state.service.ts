@@ -75,7 +75,8 @@ export class AiWorkspaceStateService {
   }
 
   addConversation(conversation: Conversation): void {
-    const conversations = [...this.conversationsSubject.value, conversation];
+    // Add new conversation at the beginning (index 0) so it appears at the top
+    const conversations = [conversation, ...this.conversationsSubject.value];
     this.setConversations(conversations);
   }
 

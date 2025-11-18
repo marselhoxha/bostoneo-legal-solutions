@@ -8,14 +8,18 @@ import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentVersion;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.service.AiWorkspaceDocumentService;
+import com.bostoneo.bostoneosolutions.service.GenerationCancellationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,10 +29,10 @@ import java.util.Map;
 @RequestMapping("/api/legal/ai-workspace")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AiWorkspaceController {
 
     private final AiWorkspaceDocumentService documentService;
+    private final GenerationCancellationService cancellationService;
 
     /**
      * Transform document (full document or selection)
@@ -96,6 +100,32 @@ public class AiWorkspaceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             log.error("Error transforming document", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Cancel ongoing AI generation for a conversation
+     * POST /api/legal/ai-workspace/conversations/{conversationId}/cancel
+     */
+    @PostMapping("/conversations/{conversationId}/cancel")
+    public ResponseEntity<Map<String, Object>> cancelGeneration(
+        @PathVariable Long conversationId,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            log.info("🛑 Cancellation requested for conversation {}", conversationId);
+
+            cancellationService.cancelConversation(conversationId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Generation cancellation requested");
+            response.put("conversationId", conversationId);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error cancelling generation for conversation {}", conversationId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -267,6 +297,48 @@ public class AiWorkspaceController {
     }
 
     /**
+     * Create conversation session for draft (returns immediately with conversation ID)
+     * POST /api/legal/ai-workspace/drafts/init-conversation
+     */
+    @PostMapping("/drafts/init-conversation")
+    public ResponseEntity<Map<String, Object>> initDraftConversation(
+        @RequestBody DraftGenerationRequest request,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long userId = (user != null) ? user.getId() : request.getUserId();
+
+            if (userId == null) {
+                log.error("No user ID available - user not authenticated and no userId in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            log.info("🔵 Initializing draft conversation for user={}, caseId={}", userId, request.getCaseId());
+
+            // Create conversation session immediately
+            Long conversationId = documentService.createDraftConversationSession(
+                userId,
+                request.getCaseId(),
+                request.getPrompt(),
+                request.getJurisdiction(),
+                request.getSessionName()
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("conversationId", conversationId);
+            response.put("message", "Conversation created");
+
+            log.info("✅ Created conversation {} for draft generation", conversationId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error initializing draft conversation: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Generate draft with conversation
      * POST /api/legal/ai-workspace/drafts/generate
      */
@@ -285,8 +357,8 @@ public class AiWorkspaceController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            log.info("Generating draft for user={}, caseId={}, type={}",
-                userId, request.getCaseId(), request.getDocumentType());
+            log.info("Generating draft for user={}, caseId={}, type={}, conversationId={}",
+                userId, request.getCaseId(), request.getDocumentType(), request.getConversationId());
 
             DraftGenerationResponse response = documentService.generateDraftWithConversation(
                 userId,
@@ -294,7 +366,8 @@ public class AiWorkspaceController {
                 request.getPrompt(),
                 request.getDocumentType(),
                 request.getJurisdiction(),
-                request.getSessionName()
+                request.getSessionName(),
+                request.getConversationId()
             );
 
             return ResponseEntity.ok(response);
@@ -369,12 +442,23 @@ public class AiWorkspaceController {
 
             log.info("Exporting document {} to Word for user {}", documentId, effectiveUserId);
 
+            // Generate Word document
             byte[] wordDoc = documentService.generateWordDocument(documentId, effectiveUserId, includeMetadata);
+
+            // Get professional filename from document content
+            String filename = documentService.getDocumentFilename(documentId, effectiveUserId, "docx");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
-            headers.setContentDispositionFormData("attachment", "document.docx");
+
+            // Set Content-Disposition header properly for downloads
+            ContentDisposition contentDisposition = ContentDisposition.attachment()
+                    .filename(filename, StandardCharsets.UTF_8)
+                    .build();
+            headers.setContentDisposition(contentDisposition);
             headers.setContentLength(wordDoc.length);
+
+            log.info("Exporting Word document with filename: {}", filename);
 
             return ResponseEntity.ok()
                 .headers(headers)
@@ -410,12 +494,23 @@ public class AiWorkspaceController {
 
             log.info("Exporting document {} to PDF for user {}", documentId, effectiveUserId);
 
+            // Generate PDF document
             byte[] pdfDoc = documentService.generatePdfDocument(documentId, effectiveUserId, includeMetadata);
+
+            // Get professional filename from document content
+            String filename = documentService.getDocumentFilename(documentId, effectiveUserId, "pdf");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData("attachment", "document.pdf");
+
+            // Set Content-Disposition header properly for downloads
+            ContentDisposition contentDisposition = ContentDisposition.attachment()
+                    .filename(filename, StandardCharsets.UTF_8)
+                    .build();
+            headers.setContentDisposition(contentDisposition);
             headers.setContentLength(pdfDoc.length);
+
+            log.info("Exporting PDF document with filename: {}", filename);
 
             return ResponseEntity.ok()
                 .headers(headers)

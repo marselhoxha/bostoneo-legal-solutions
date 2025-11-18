@@ -451,13 +451,16 @@ public class LegalResearchConversationController {
             @RequestBody QueryRequest request
     ) {
         try {
-            // Wait for the AI response synchronously to avoid async timeout
-            AiConversationMessage message = conversationService.sendMessageWithAIResponse(
+            // Call the service - it handles cancellation internally
+            CompletableFuture<AiConversationMessage> aiRequest = conversationService.sendMessageWithAIResponse(
                     sessionId,
                     request.userId(),
                     request.query(),
                     request.researchMode()
-            ).join(); // Block and wait for completion
+            );
+
+            // Wait for the AI response synchronously to avoid async timeout
+            AiConversationMessage message = aiRequest.join(); // Block and wait for completion
 
             return ResponseEntity.ok(
                     HttpResponse.builder()
@@ -468,6 +471,17 @@ public class LegalResearchConversationController {
                             .statusCode(HttpStatus.OK.value())
                             .build()
             );
+
+        } catch (IllegalStateException e) {
+            // Cancellation or other state error
+            log.info("Query cancelled or invalid state: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message(e.getMessage())
+                            .status(HttpStatus.BAD_REQUEST)
+                            .statusCode(HttpStatus.BAD_REQUEST.value())
+                            .build());
 
         } catch (Exception e) {
             log.error("Error sending query to session: {}", sessionId, e);

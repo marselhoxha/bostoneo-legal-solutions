@@ -86,6 +86,7 @@ public class EnhancedSecurityConfig {
             corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:4200", "http://localhost:8085"));
             corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
             corsConfig.setAllowedHeaders(java.util.List.of("*"));
+            corsConfig.setExposedHeaders(java.util.List.of("Content-Disposition", "Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
             corsConfig.setAllowCredentials(true);
             corsConfig.setMaxAge(3600L);
             return corsConfig;

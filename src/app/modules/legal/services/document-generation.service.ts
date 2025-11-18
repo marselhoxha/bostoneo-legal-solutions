@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
 
@@ -110,12 +110,18 @@ export class DocumentGenerationService {
 
   /**
    * Export document to PDF or DOCX format
+   * Routes to appropriate export method based on format
+   * Returns full HTTP response to access Content-Disposition header with filename
    */
-  exportDocument(documentId: string | number, format: 'pdf' | 'docx'): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${documentId}/export`, {
-      params: { format },
-      responseType: 'blob'
-    });
+  exportDocument(documentId: string | number, format: 'pdf' | 'docx'): Observable<HttpResponse<Blob>> {
+    const docId = typeof documentId === 'string' ? parseInt(documentId, 10) : documentId;
+    const userId = 1; // Default user ID, should be injected from auth service in production
+
+    if (format === 'docx') {
+      return this.exportToWord(docId, userId);
+    } else {
+      return this.exportToPDF(docId, userId);
+    }
   }
 
   /**
@@ -136,6 +142,17 @@ export class DocumentGenerationService {
     return this.http.get<GeneratedDocument>(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}`,
       { params }
+    );
+  }
+
+  /**
+   * Initialize draft conversation (returns conversation ID immediately)
+   */
+  initDraftConversation(request: DraftGenerationRequest): Observable<{conversationId: number, message: string}> {
+    return this.http.post<{conversationId: number, message: string}>(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/init-conversation`,
+      request,
+      { withCredentials: true }
     );
   }
 
@@ -326,14 +343,16 @@ export class DocumentGenerationService {
   /**
    * Export document to Word (DOCX) - use backend API for proper format
    */
-  exportToWord(documentId: number, userId: number): Observable<Blob> {
+  exportToWord(documentId: number, userId: number): Observable<HttpResponse<Blob>> {
     // Always use backend API for proper DOCX generation
     // The backend has proper libraries to generate valid Office Open XML format
+    // Returns full HTTP response to access Content-Disposition header with filename
     return this.http.get(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/word`,
       {
         params: { userId: userId.toString() },
-        responseType: 'blob'
+        responseType: 'blob',
+        observe: 'response'
       }
     );
   }
@@ -341,14 +360,16 @@ export class DocumentGenerationService {
   /**
    * Export document to PDF - use backend API for proper format
    */
-  exportToPDF(documentId: number, userId: number): Observable<Blob> {
+  exportToPDF(documentId: number, userId: number): Observable<HttpResponse<Blob>> {
     // Always use backend API for proper PDF generation
     // The backend has proper libraries to generate valid PDFs with correct formatting
+    // Returns full HTTP response to access Content-Disposition header with filename
     return this.http.get(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/export/pdf`,
       {
         params: { userId: userId.toString() },
-        responseType: 'blob'
+        responseType: 'blob',
+        observe: 'response'
       }
     );
   }

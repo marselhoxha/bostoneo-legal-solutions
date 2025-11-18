@@ -29,6 +29,7 @@ public class LegalResearchConversationService {
     private final AiConversationSessionRepository sessionRepository;
     private final AiConversationMessageRepository messageRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final GenerationCancellationService cancellationService;
 
     /**
      * Get or create a conversation session for legal research
@@ -256,6 +257,13 @@ public class LegalResearchConversationService {
                     .append("\n\n");
         }
 
+        // Check if generation has been cancelled before starting
+        if (cancellationService.isCancelled(sessionId)) {
+            log.warn("🛑 Query cancelled before AI call for session {}", sessionId);
+            cancellationService.clearCancellation(sessionId);
+            return CompletableFuture.failedFuture(new IllegalStateException("Query cancelled by user"));
+        }
+
         // Determine if we should use deep thinking based on research mode
         boolean useDeepThinking = "THOROUGH".equalsIgnoreCase(researchMode);
 
@@ -324,7 +332,11 @@ public class LegalResearchConversationService {
                 + "- --- (punctuation only)\n\n"
                 + "Conversation History:\n" + conversationHistory.toString();
 
-        return claudeService.generateCompletion(prompt, useDeepThinking)
+        // Get the Claude AI future - subscription registration handled inside
+        CompletableFuture<String> claudeFuture = claudeService.generateCompletion(prompt, null, useDeepThinking, sessionId);
+
+        // Transform the String response to AiConversationMessage
+        return claudeFuture
                 .thenApply(aiResponse -> {
                     // Save AI response message
                     AiConversationMessage assistantMessage = AiConversationMessage.builder()
@@ -342,6 +354,14 @@ public class LegalResearchConversationService {
                     sessionRepository.save(session);
 
                     return savedMessage;
+                })
+                .exceptionally(ex -> {
+                    // Check if it was cancelled
+                    if (cancellationService.isCancelled(sessionId) || ex.getCause() instanceof IllegalStateException) {
+                        log.info("🛑 AI query was cancelled for session {}", sessionId);
+                    }
+
+                    throw new RuntimeException("Failed to generate AI response", ex);
                 });
     }
 }

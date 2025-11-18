@@ -3,9 +3,6 @@
 // Legal Drafting Interface
 // ===========================
 
-// Import workflow steps component styles
-@import './workflow-steps/workflow-steps.component.scss';
-
 $sidebar-width: 320px;  // Increased width for laptop/desktop
 $main-content-flex: 1;
 
@@ -1283,7 +1280,6 @@ $main-content-flex: 1;
         }
 
         blockquote {
-          border-left: 3px solid var(--vz-primary);
           background: rgba(var(--vz-primary-rgb), 0.06);
           padding: 1rem 1.25rem;
           margin: 1.25rem 0;
@@ -1774,94 +1770,6 @@ $main-content-flex: 1;
       i {
         color: var(--vz-secondary);
         font-size: 14px;
-      }
-    }
-
-    .activity-steps {
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-
-      .activity-step {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-        padding: 0;
-        margin: 0;
-        transition: all 0.3s ease;
-        background: transparent;
-
-        .step-icon {
-          font-size: 16px;
-          color: var(--vz-secondary);
-          flex-shrink: 0;
-          opacity: 0.4;
-          width: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-        }
-
-        .step-check {
-          opacity: 1;
-          color: var(--vz-success);
-          font-weight: 600;
-        }
-
-        .step-text {
-          font-size: 13px;
-          line-height: 1.5;
-          opacity: 0.5;
-          font-weight: 400;
-          transition: all 0.3s ease;
-        }
-
-        &.pending {
-          .step-icon {
-            opacity: 0.4;
-            color: var(--vz-secondary);
-          }
-          .step-text {
-            opacity: 0.5;
-          }
-        }
-
-        &.completed {
-          .step-icon {
-            color: var(--vz-success);
-            opacity: 1;
-          }
-          .step-text {
-            opacity: 0.8;
-          }
-        }
-
-        &.active {
-          .step-icon {
-            color: var(--vz-primary);
-            opacity: 1;
-            animation: minimal-pulse 2s ease-in-out infinite;
-            font-weight: 600;
-          }
-          .step-text {
-            opacity: 1;
-            font-weight: 500;
-          }
-        }
-
-        &.error {
-          .step-icon {
-            color: var(--vz-danger);
-            opacity: 1;
-          }
-          .step-text {
-            color: var(--vz-danger);
-            opacity: 1;
-            font-weight: 500;
-          }
-        }
       }
     }
 
@@ -2744,7 +2652,6 @@ $main-content-flex: 1;
       }
 
       blockquote {
-        border-left: 4px solid var(--vz-primary);
         background: rgba(var(--vz-primary-rgb), 0.04);
         padding: 1.25rem 1.5rem;
         margin: 1.5rem 0;
@@ -3613,94 +3520,6 @@ $main-content-flex: 1;
         }
       }
 
-      .activity-steps {
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-
-        .activity-step {
-          display: flex;
-          align-items: center;
-          gap: 0.65rem;
-          padding: 0;
-          margin: 0;
-          transition: all 0.3s ease;
-          background: transparent;
-
-          .step-icon {
-            font-size: 16px;
-            color: var(--vz-secondary);
-            flex-shrink: 0;
-            opacity: 0.4;
-            width: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-          }
-
-          .step-check {
-            opacity: 1;
-            color: var(--vz-success);
-            font-weight: 600;
-          }
-
-          .step-text {
-            font-size: 13px;
-            line-height: 1.5;
-            opacity: 0.5;
-            font-weight: 400;
-            transition: all 0.3s ease;
-          }
-
-          &.pending {
-            .step-icon {
-              opacity: 0.4;
-              color: var(--vz-secondary);
-            }
-            .step-text {
-              opacity: 0.5;
-            }
-          }
-
-          &.completed {
-            .step-icon {
-              color: var(--vz-success);
-              opacity: 1;
-            }
-            .step-text {
-              opacity: 0.8;
-            }
-          }
-
-          &.active {
-            .step-icon {
-              color: var(--vz-primary);
-              opacity: 1;
-              animation: minimal-pulse 2s ease-in-out infinite;
-              font-weight: 600;
-            }
-            .step-text {
-              opacity: 1;
-              font-weight: 500;
-            }
-          }
-
-          &.error {
-            .step-icon {
-              color: var(--vz-danger);
-              opacity: 1;
-            }
-            .step-text {
-              color: var(--vz-danger);
-              opacity: 1;
-              font-weight: 500;
-            }
-          }
-        }
-      }
-
       .btn-stop-response {
         background: var(--vz-card-bg);
         border: 1px solid var(--vz-border-color);
@@ -4264,7 +4083,6 @@ $main-content-flex: 1;
     line-height: 1.7;
     margin: 1.5rem 0 1.5rem 2.5rem;
     padding: 1rem 1.5rem;
-    border-left: 4px solid var(--bs-primary);
     background-color: var(--bs-secondary-bg);
     font-style: italic;
     color: var(--bs-secondary-color);
@@ -4784,6 +4602,63 @@ $main-content-flex: 1;
         transparent 100%
       );
       flex-shrink: 0;
+    }
+  }
+}
+
+// ===========================
+// How It Works Modal
+// ===========================
+::ng-deep .modal-content {
+  .feature-list {
+    .feature-item {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      background: rgba(var(--vz-light-rgb), 0.3);
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(var(--vz-primary-rgb), 0.05);
+        transform: translateX(4px);
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .feature-icon {
+        flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.15), rgba(var(--vz-primary-rgb), 0.08));
+        border-radius: 0.5rem;
+        color: var(--vz-primary);
+        font-size: 1.5rem;
+      }
+
+      .feature-content {
+        flex: 1;
+
+        h6 {
+          margin-bottom: 0.5rem;
+          color: var(--vz-heading-color);
+          font-weight: 600;
+          font-size: 1rem;
+        }
+
+        p {
+          margin: 0;
+          color: var(--vz-body-color);
+          line-height: 1.6;
+          font-size: 0.875rem;
+        }
+      }
     }
   }
 }

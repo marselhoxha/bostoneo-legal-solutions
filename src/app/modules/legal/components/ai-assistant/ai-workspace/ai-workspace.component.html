@@ -271,7 +271,7 @@
             </a>
           </div>
         </div>
-        <a href="javascript:void(0)" class="help-link">
+        <a href="javascript:void(0)" class="help-link" (click)="openHowItWorksModal()">
           <i class="ri-question-line"></i>
           How does it work?
         </a>
@@ -720,4 +720,61 @@
   <!-- Document Editor Modal -->
 
 </div>
+
+<!-- How It Works Modal -->
+<ng-template #howItWorksModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">
+      <i class="ri-lightbulb-line me-2"></i>
+      How AI Drafting Assistant Works
+    </h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="ri-file-add-line"></i>
+        </div>
+        <div class="feature-content">
+          <h6>Draft Generation</h6>
+          <p>Generate professional legal documents using AI. Simply describe what you need, and the AI will create a complete draft based on your requirements and jurisdiction.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="ri-pencil-line"></i>
+        </div>
+        <div class="feature-content">
+          <h6>Smart Transformations</h6>
+          <p>Select any text in your document and request changes. The AI will show you a side-by-side comparison before applying edits, giving you full control over modifications.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="ri-history-line"></i>
+        </div>
+        <div class="feature-content">
+          <h6>Version History</h6>
+          <p>Every change creates a version snapshot. Review, compare, or restore any previous version of your document at any time.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">
+          <i class="ri-download-line"></i>
+        </div>
+        <div class="feature-content">
+          <h6>Export & Save</h6>
+          <p>Download your document as a formatted Word file (.docx) or save it to your file manager for future access and collaboration.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="modal.close()">Got it!</button>
+  </div>
+</ng-template>
 

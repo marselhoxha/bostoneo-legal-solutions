@@ -747,6 +747,22 @@ export class LegalResearchService {
   }
 
   /**
+   * Cancel ongoing AI generation for a conversation
+   */
+  cancelConversation(conversationId: number): Observable<void> {
+    return this.http.post<void>(
+      `${environment.apiUrl}/api/legal/ai-workspace/conversations/${conversationId}/cancel`,
+      {},
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to cancel conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
    * Get a conversation by ID
    */
   getConversationById(conversationId: number): Observable<{

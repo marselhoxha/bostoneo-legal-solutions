@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WorkflowStep } from '../../../../models/workflow.model';
 import { WorkflowStepStatus } from '../../../../models/enums/workflow-step-status.enum';
@@ -9,7 +9,8 @@ import { WorkflowStepStatus } from '../../../../models/enums/workflow-step-statu
   imports: [CommonModule],
   templateUrl: './workflow-steps.component.html',
   styleUrls: ['./workflow-steps.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None
 })
 export class WorkflowStepsComponent {
   @Input() steps: WorkflowStep[] = [];

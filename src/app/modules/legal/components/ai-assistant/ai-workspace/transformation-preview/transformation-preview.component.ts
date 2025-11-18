@@ -26,27 +26,11 @@ export class TransformationPreviewComponent {
   @Output() accept = new EventEmitter<string>();
   @Output() reject = new EventEmitter<string>();
 
-  showContext = false;
-
   onAccept(): void {
     this.accept.emit(this.messageId);
   }
 
   onReject(): void {
     this.reject.emit(this.messageId);
-  }
-
-  toggleContext(): void {
-    this.showContext = !this.showContext;
-  }
-
-  highlightSelectionInContext(fullDocument: string, selectedText: string): string {
-    if (!fullDocument || !selectedText) {
-      return fullDocument;
-    }
-
-    const escapedSelection = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedSelection})`, 'i');
-    return fullDocument.replace(regex, '<mark class="text-selection-highlight">$1</mark>');
   }
 }

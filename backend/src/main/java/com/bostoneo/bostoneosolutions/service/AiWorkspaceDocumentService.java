@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -47,6 +48,7 @@ public class AiWorkspaceDocumentService {
     private final LegalCaseRepository caseRepository;
     private final ClaudeSonnet4Service claudeService;
     private final LegalResearchConversationService conversationService;
+    private final GenerationCancellationService cancellationService;
 
     // MOCK MODE DISABLED - Using real API
     private static final boolean USE_MOCK_MODE = false;
@@ -120,13 +122,27 @@ public class AiWorkspaceDocumentService {
         // Build transformation prompt
         String prompt = buildTransformationPrompt(transformationType, currentContent, null, null);
 
+        // Check if generation has been cancelled (using document's sessionId as conversation ID)
+        if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
+            log.warn("🛑 Transformation cancelled for document {} (conversation {})", documentId, document.getSessionId());
+            cancellationService.clearCancellation(document.getSessionId());
+            throw new IllegalStateException("Transformation cancelled by user");
+        }
+
         // Call Claude API or use mock
         String transformedContent;
         if (USE_MOCK_MODE) {
             transformedContent = generateMockTransformation(transformationType, currentContent, "full");
             log.info("Using MOCK response for transformation (no API cost)");
         } else {
-            transformedContent = claudeService.generateCompletion(prompt, false).join();
+            // Pass sessionId for proper cancellation support
+            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+
+            try {
+                transformedContent = aiRequest.join();
+            } catch (Exception e) {
+                throw e;
+            }
         }
 
         // Calculate tokens and cost (simplified - should use actual metrics)
@@ -181,13 +197,27 @@ public class AiWorkspaceDocumentService {
         // Build transformation prompt for selection with full document context
         String prompt = buildTransformationPrompt(transformationType, selectedText, "selection", fullDocumentContent);
 
+        // Check if generation has been cancelled (using document's sessionId as conversation ID)
+        if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
+            log.warn("🛑 Selection transformation cancelled for document {} (conversation {})", documentId, document.getSessionId());
+            cancellationService.clearCancellation(document.getSessionId());
+            throw new IllegalStateException("Transformation cancelled by user");
+        }
+
         // Call Claude API or use mock
         String transformedSelection;
         if (USE_MOCK_MODE) {
             transformedSelection = generateMockTransformation(transformationType, selectedText, "selection");
             log.info("Using MOCK response for selection transformation (no API cost)");
         } else {
-            transformedSelection = claudeService.generateCompletion(prompt, false).join();
+            // Pass sessionId for proper cancellation support
+            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+
+            try {
+                transformedSelection = aiRequest.join();
+            } catch (Exception e) {
+                throw e;
+            }
         }
 
         // Replace selected text in full document
@@ -534,30 +564,19 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
-     * Generate draft with conversation - Complete flow
+     * Create draft conversation session (returns immediately with conversation ID)
      */
     @Transactional
-    public DraftGenerationResponse generateDraftWithConversation(
+    public Long createDraftConversationSession(
         Long userId,
         Long caseId,
         String prompt,
-        String documentType,
         String jurisdiction,
         String sessionName
     ) {
-        log.info("Generating draft with conversation: userId={}, caseId={}, type={}", userId, caseId, documentType);
+        log.info("Creating draft conversation session: userId={}, caseId={}", userId, caseId);
 
-        // 1. Fetch case context if caseId provided
-        String caseContext = "";
-        LegalCase legalCase = null;
-        if (caseId != null) {
-            legalCase = caseRepository.findById(caseId).orElse(null);
-            if (legalCase != null) {
-                caseContext = buildCaseContext(legalCase);
-            }
-        }
-
-        // 2. Create conversation session
+        // Create conversation session
         AiConversationSession conversation = AiConversationSession.builder()
             .userId(userId)
             .caseId(caseId)
@@ -571,21 +590,102 @@ public class AiWorkspaceDocumentService {
 
         conversation = conversationRepository.save(conversation);
 
-        // 3. Add user message
+        // Add user message
         conversationService.addMessage(conversation.getId(), userId, "user", prompt);
+
+        log.info("✅ Created conversation session {} for draft generation", conversation.getId());
+
+        return conversation.getId();
+    }
+
+    /**
+     * Generate draft with conversation - Complete flow
+     */
+    @Transactional
+    public DraftGenerationResponse generateDraftWithConversation(
+        Long userId,
+        Long caseId,
+        String prompt,
+        String documentType,
+        String jurisdiction,
+        String sessionName,
+        Long conversationId
+    ) {
+        log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}", userId, caseId, documentType, conversationId);
+
+        // 1. Fetch case context if caseId provided
+        String caseContext = "";
+        LegalCase legalCase = null;
+        if (caseId != null) {
+            legalCase = caseRepository.findById(caseId).orElse(null);
+            if (legalCase != null) {
+                caseContext = buildCaseContext(legalCase);
+            }
+        }
+
+        // 2. Use existing conversation or create new one
+        AiConversationSession conversation;
+        if (conversationId != null) {
+            // Use existing conversation
+            conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + conversationId));
+            log.info("✅ Using existing conversation {}", conversationId);
+        } else {
+            // Create new conversation session
+            conversation = AiConversationSession.builder()
+                .userId(userId)
+                .caseId(caseId)
+                .sessionName(sessionName)
+                .sessionType(caseId != null ? "case-specific" : "general")
+                .taskType("GENERATE_DRAFT")
+                .researchMode("AUTO")
+                .jurisdiction(jurisdiction)
+                .isActive(true)
+                .build();
+
+            conversation = conversationRepository.save(conversation);
+
+            // Add user message (only for new conversation)
+            conversationService.addMessage(conversation.getId(), userId, "user", prompt);
+        }
 
         // 4. Build AI prompt with case context
         String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase);
 
-        // 5. Generate document content using Claude
-        String content = claudeService.generateCompletion(fullPrompt, false).join();
+        // 5. Check if generation has been cancelled
+        if (cancellationService.isCancelled(conversation.getId())) {
+            log.warn("🛑 Generation cancelled for conversation {} before AI call", conversation.getId());
+            cancellationService.clearCancellation(conversation.getId());
+            throw new IllegalStateException("Generation cancelled by user");
+        }
 
-        // 6. Calculate metrics
+        // 6. Generate document content using Claude with cancellation support
+        CompletableFuture<String> aiRequest = claudeService.generateCompletion(fullPrompt, null, false, conversation.getId());
+
+        String content;
+        try {
+            content = aiRequest.join();
+        } catch (Exception e) {
+            if (cancellationService.isCancelled(conversation.getId())) {
+                log.info("🛑 AI generation was cancelled for conversation {}", conversation.getId());
+                throw new IllegalStateException("Generation cancelled by user");
+            }
+            throw e;
+        }
+
+        // 6. Validate content completeness
+        String validationWarning = validateDocumentCompleteness(content);
+        if (validationWarning != null) {
+            log.warn("⚠️ Document validation warning: {}", validationWarning);
+            // Note: We continue with generation but log the warning for monitoring
+        }
+
+        // 7. Calculate metrics
         int tokensUsed = estimateTokens(content);
         BigDecimal cost = calculateCost(tokensUsed);
         int wordCount = countWords(content);
 
-        // 7. Create document
+        // 8. Create document
         AiWorkspaceDocument document = AiWorkspaceDocument.builder()
             .userId(userId)
             .caseId(caseId)
@@ -599,7 +699,7 @@ public class AiWorkspaceDocumentService {
 
         document = documentRepository.save(document);
 
-        // 8. Create initial version
+        // 9. Create initial version
         AiWorkspaceDocumentVersion initialVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
             .versionNumber(1)
@@ -614,11 +714,11 @@ public class AiWorkspaceDocumentService {
 
         versionRepository.save(initialVersion);
 
-        // 9. Update conversation with relatedDraftId
+        // 10. Update conversation with relatedDraftId
         conversation.setRelatedDraftId(document.getId().toString());
         conversationRepository.save(conversation);
 
-        // 10. Add AI response message
+        // 11. Add AI response message
         String aiResponse = "I've generated your " + documentType +
             (caseId != null && legalCase != null ? " for Case #" + legalCase.getCaseNumber() : "") +
             ". You can view it in the document preview panel.";
@@ -733,15 +833,33 @@ public class AiWorkspaceDocumentService {
         prompt.append("INSTRUCTIONS:\n");
         prompt.append("1. Generate a complete, properly formatted legal document\n");
         prompt.append("2. Use the case information provided above\n");
-        prompt.append("3. Include proper legal citations\n");
-        prompt.append("4. Follow standard legal document structure\n");
-        prompt.append("5. Make it court-ready and professional\n");
+        prompt.append("3. Follow standard legal document structure\n");
+        prompt.append("4. Make it court-ready and professional\n");
 
         if (legalCase != null) {
-            prompt.append("6. Use EXACT case number: ").append(legalCase.getCaseNumber()).append("\n");
-            prompt.append("7. Use EXACT client name: ").append(legalCase.getClientName()).append("\n");
-            prompt.append("8. Address the specific issues in this case\n");
+            prompt.append("5. Use EXACT case number: ").append(legalCase.getCaseNumber()).append("\n");
+            prompt.append("6. Use EXACT client name: ").append(legalCase.getClientName()).append("\n");
+            prompt.append("7. Address the specific issues in this case\n");
         }
+
+        prompt.append("\n⚠️ CRITICAL CITATION POLICY - PREVENT MALPRACTICE:\n");
+        prompt.append("DO NOT include specific case citations, statute numbers, or regulatory citations.\n");
+        prompt.append("Fabricated citations can result in court sanctions and attorney malpractice.\n\n");
+        prompt.append("CITATION RULES:\n");
+        prompt.append("✓ ALLOWED:\n");
+        prompt.append("  - General legal principles: 'Under Massachusetts law...' or 'Federal courts have held...'\n");
+        prompt.append("  - Descriptive placeholders: [CITE: Massachusetts personal jurisdiction standard]\n");
+        prompt.append("  - Generic references: 'Courts apply a three-part test [CITATION NEEDED: specific standard]'\n");
+        prompt.append("  - Legal concepts: 'The purposeful availment doctrine requires...'\n\n");
+        prompt.append("✗ PROHIBITED:\n");
+        prompt.append("  - Specific case names: 'Copy Cop, Inc. v. Task Printing, Inc., 325 F. Supp. 2d 242'\n");
+        prompt.append("  - Statute numbers: '28 U.S.C. § 1331'\n");
+        prompt.append("  - Regulatory citations: '8 C.F.R. § 1003.38'\n");
+        prompt.append("  - ANY citation that could be fabricated or hallucinated\n\n");
+        prompt.append("EXAMPLES:\n");
+        prompt.append("✓ CORRECT: 'To establish personal jurisdiction, Massachusetts courts apply a three-part test [CITE: personal jurisdiction standard]. The plaintiff must demonstrate...'\n");
+        prompt.append("✗ INCORRECT: 'To establish personal jurisdiction, see Copy Cop, Inc., 325 F. Supp. 2d at 247.'\n\n");
+        prompt.append("REMINDER: All citations must be added manually by attorney after verification with legal research tools.\n");
 
         prompt.append("\nFORMATTING REQUIREMENTS:\n");
         prompt.append("- Use Markdown formatting for structure and emphasis\n");
@@ -751,7 +869,187 @@ public class AiWorkspaceDocumentService {
         prompt.append("- Use bullet lists (- ) for non-sequential items\n");
         prompt.append("- Use proper paragraph breaks for readability\n");
 
+        prompt.append("\n⚠️ CRITICAL LIST COMPLETION RULE:\n");
+        prompt.append("NEVER write a list header (ending with a colon) without the actual list items immediately following it.\n");
+        prompt.append("If you write 'Specifically:', 'Including:', 'Such as:', or similar list introductions, you MUST:\n");
+        prompt.append("1. Include at least 2-3 actual bullet points or numbered items after the header\n");
+        prompt.append("2. Complete each list item with full sentences or meaningful content\n");
+        prompt.append("3. NEVER leave a list header empty or skip to another section\n");
+        prompt.append("Example of INCORRECT format (DO NOT DO THIS):\n");
+        prompt.append("   'These conferences were conducted in good faith. Specifically:\n");
+        prompt.append("   \n");
+        prompt.append("   These communications were genuine...'\n");
+        prompt.append("Example of CORRECT format:\n");
+        prompt.append("   'These conferences were conducted in good faith. Specifically:\n");
+        prompt.append("   1. Conference on [date] regarding discovery scope\n");
+        prompt.append("   2. Email exchange on [date] discussing document production\n");
+        prompt.append("   3. Phone call on [date] attempting to resolve disputed requests\n");
+        prompt.append("   \n");
+        prompt.append("   These communications were genuine...'\n");
+
         return prompt.toString();
+    }
+
+    /**
+     * Get professional filename for document export
+     * Extracts title from markdown content and sanitizes it
+     */
+    public String getDocumentFilename(Long documentId, Long userId, String extension) {
+        // Fetch document with latest version
+        Optional<Map<String, Object>> docData = getDocumentWithLatestVersion(documentId, userId);
+        if (docData.isEmpty()) {
+            return "Document." + extension;
+        }
+
+        Map<String, Object> data = docData.get();
+        String content = (String) data.get("content");
+        String documentType = (String) data.get("documentType");
+
+        // Extract and sanitize title from content
+        String filename = extractDocumentTitle(content, documentType);
+        return filename + "." + extension;
+    }
+
+    /**
+     * Extract document title from markdown content
+     * Looks for first # heading in the content and sanitizes it for use as filename
+     * Returns sanitized title or document type as fallback
+     */
+    private String extractDocumentTitle(String content, String documentType) {
+        if (content == null || content.isEmpty()) {
+            return sanitizeFilename(documentType != null ? documentType : "Legal_Document");
+        }
+
+        // Look for first markdown heading (# Title)
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("#")) {
+                // Extract heading text (remove all # symbols)
+                String title = trimmed.replaceAll("^#+\\s*", "").trim();
+                if (!title.isEmpty()) {
+                    return sanitizeFilename(title);
+                }
+            }
+        }
+
+        // Fallback to document type
+        return sanitizeFilename(documentType != null ? documentType : "Legal_Document");
+    }
+
+    /**
+     * Sanitize string for use as filename
+     * Converts to proper case, removes special characters, replaces spaces with underscores
+     */
+    private String sanitizeFilename(String input) {
+        if (input == null || input.isEmpty()) {
+            return "Document";
+        }
+
+        // Remove or replace special characters
+        String sanitized = input
+            .replaceAll("[^a-zA-Z0-9\\s-]", "") // Remove special chars except spaces and hyphens
+            .replaceAll("\\s+", "_") // Replace spaces with underscores
+            .replaceAll("_+", "_") // Collapse multiple underscores
+            .replaceAll("^_|_$", ""); // Remove leading/trailing underscores
+
+        // Capitalize first letter of each word for professional appearance
+        String[] words = sanitized.split("_");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                if (result.length() > 0) {
+                    result.append("_");
+                }
+                // Capitalize first letter, lowercase the rest (unless it's an acronym)
+                if (word.length() <= 3 && word.equals(word.toUpperCase())) {
+                    // Keep short acronyms uppercase (e.g., "USA", "LLC")
+                    result.append(word);
+                } else {
+                    result.append(word.substring(0, 1).toUpperCase())
+                          .append(word.substring(1).toLowerCase());
+                }
+            }
+        }
+
+        // Limit length to 50 characters for filename compatibility
+        String finalName = result.toString();
+        if (finalName.length() > 50) {
+            finalName = finalName.substring(0, 50);
+            // Remove trailing underscore if truncation created one
+            finalName = finalName.replaceAll("_$", "");
+        }
+
+        return finalName.isEmpty() ? "Document" : finalName;
+    }
+
+    /**
+     * Check if content starts with a markdown heading
+     * Returns true if first non-empty line is a # heading
+     */
+    private boolean contentHasMarkdownTitle(String content) {
+        if (content == null || content.isEmpty()) {
+            return false;
+        }
+
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty()) {
+                return trimmed.startsWith("#");
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Validate document content for incomplete list patterns
+     * Returns warning message if incomplete lists are detected, null otherwise
+     */
+    private String validateDocumentCompleteness(String content) {
+        if (content == null || content.isEmpty()) {
+            return null;
+        }
+
+        // Patterns that indicate incomplete lists:
+        // 1. Line ending with colon followed by blank line(s) then a new section or sentence
+        String[] listIntroducers = {
+            "specifically:", "including:", "such as:", "namely:", "for example:",
+            "as follows:", "these include:", "the following:", "particularly:"
+        };
+
+        String lowerContent = content.toLowerCase();
+        for (String introducer : listIntroducers) {
+            int index = lowerContent.indexOf(introducer);
+            while (index != -1) {
+                // Get text after the introducer (next 200 chars for analysis)
+                int endIndex = Math.min(index + introducer.length() + 200, lowerContent.length());
+                String afterIntroducer = content.substring(index + introducer.length(), endIndex);
+
+                // Check if there's no list after the introducer
+                // Look for list markers: -, *, 1., 2., etc.
+                boolean hasListMarker = afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*[-*]\\s+.*") ||
+                                       afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*\\d+\\.\\s+.*");
+
+                if (!hasListMarker) {
+                    // Check if it jumps to new paragraph or section instead
+                    boolean jumpsToNewSection = afterIntroducer.matches("(?s)\\s*[\\n\\r]{2,}.*") ||
+                                               afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*#.*");
+
+                    if (jumpsToNewSection) {
+                        log.warn("⚠️ Incomplete list detected after '{}' at position {}", introducer, index);
+                        return "Warning: Generated document may contain incomplete lists. " +
+                               "Document was generated but may need manual review for completeness.";
+                    }
+                }
+
+                // Find next occurrence
+                index = lowerContent.indexOf(introducer, index + 1);
+            }
+        }
+
+        return null; // No incomplete lists detected
     }
 
     /**
@@ -775,15 +1073,21 @@ public class AiWorkspaceDocumentService {
             // Create Word document
             XWPFDocument document = new XWPFDocument();
 
-            // Add title (centered, large, bold)
-            XWPFParagraph titlePara = document.createParagraph();
-            titlePara.setAlignment(ParagraphAlignment.CENTER);
-            titlePara.setSpacingAfter(400);
-            XWPFRun titleRun = titlePara.createRun();
-            titleRun.setText(title);
-            titleRun.setBold(true);
-            titleRun.setFontSize(18);
-            titleRun.setFontFamily("Georgia");
+            // Only add title if content doesn't already have a markdown title
+            // This prevents user prompt from appearing in the document
+            if (!contentHasMarkdownTitle(content)) {
+                log.info("Content has no markdown title, adding document title: {}", title);
+                XWPFParagraph titlePara = document.createParagraph();
+                titlePara.setAlignment(ParagraphAlignment.CENTER);
+                titlePara.setSpacingAfter(400);
+                XWPFRun titleRun = titlePara.createRun();
+                titleRun.setText(title);
+                titleRun.setBold(true);
+                titleRun.setFontSize(18);
+                titleRun.setFontFamily("Georgia");
+            } else {
+                log.info("Content has markdown title, skipping title injection");
+            }
 
             // Convert Markdown content to Word
             convertMarkdownToWord(content, document);
@@ -973,6 +1277,7 @@ public class AiWorkspaceDocumentService {
         Map<String, Object> data = docData.get();
         String content = (String) data.get("content");
         String title = (String) data.get("title");
+        String documentType = (String) data.get("documentType");
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -985,13 +1290,19 @@ public class AiWorkspaceDocumentService {
             PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
             PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
 
-            // Add centered title
-            Paragraph titleParagraph = new Paragraph(title)
-                    .setFont(titleFont)
-                    .setFontSize(18)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20);
-            document.add(titleParagraph);
+            // Only add title if content doesn't already have a markdown title
+            // This prevents user prompt from appearing in the document
+            if (!contentHasMarkdownTitle(content)) {
+                log.info("Content has no markdown title, adding document title: {}", title);
+                Paragraph titleParagraph = new Paragraph(title)
+                        .setFont(titleFont)
+                        .setFontSize(18)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setMarginBottom(20);
+                document.add(titleParagraph);
+            } else {
+                log.info("Content has markdown title, skipping title injection");
+            }
 
             // Convert Markdown content to PDF
             convertMarkdownToPdf(content, document, headerFont, normalFont);

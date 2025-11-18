@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.config.AIConfig;
 import com.bostoneo.bostoneosolutions.dto.ai.*;
 import com.bostoneo.bostoneosolutions.service.tools.LegalResearchTools;
 import com.bostoneo.bostoneosolutions.service.ResearchProgressPublisher;
+import com.bostoneo.bostoneosolutions.service.GenerationCancellationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,16 +30,30 @@ public class ClaudeSonnet4Service implements AIService {
     private final AIConfig aiConfig;
     private final LegalResearchTools legalResearchTools;
     private final ResearchProgressPublisher progressPublisher;
+    private final GenerationCancellationService cancellationService;
     
     @Override
     public CompletableFuture<String> generateCompletion(String prompt, boolean useDeepThinking) {
-        return generateCompletion(prompt, null, useDeepThinking);
+        return generateCompletion(prompt, null, useDeepThinking, null);
     }
 
     /**
      * Generate completion with optional system message for high-priority instructions
      */
     public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking) {
+        return generateCompletion(prompt, systemMessage, useDeepThinking, null);
+    }
+
+    /**
+     * Generate completion with cancellation support (using sessionId)
+     */
+    public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId) {
+        // Check if generation has been cancelled BEFORE making expensive API call
+        if (sessionId != null && cancellationService.isCancelled(sessionId)) {
+            log.warn("🛑 AI generation cancelled before API call for session {}", sessionId);
+            cancellationService.clearCancellation(sessionId);
+            return CompletableFuture.failedFuture(new IllegalStateException("AI generation cancelled by user"));
+        }
         AIRequest request = createRequest(prompt, systemMessage, useDeepThinking);
 
         log.info("=== SENDING REQUEST TO ANTHROPIC ===");
@@ -52,7 +67,11 @@ public class ClaudeSonnet4Service implements AIService {
         String apiKey = aiConfig.getApiKey();
         log.info("API Key being used: {}", apiKey.isEmpty() ? "EMPTY!" : apiKey.substring(0, Math.min(20, apiKey.length())) + "...");
 
-        return anthropicWebClient
+        // Create CompletableFuture manually to bridge reactive and imperative worlds
+        CompletableFuture<String> future = new CompletableFuture<>();
+
+        // Build the reactive Mono
+        Mono<String> responseMono = anthropicWebClient
                 .post()
                 .uri("/v1/messages")
                 .header("x-api-key", apiKey)  // Inject API key per request
@@ -101,8 +120,36 @@ public class ClaudeSonnet4Service implements AIService {
                     }
                     log.error("Error calling Claude API: {}", e.getMessage(), e);
                     return new RuntimeException("AI service unavailable: " + e.getMessage(), e);
-                })
-                .toFuture();
+                });
+
+        // Subscribe and store the Disposable for proper cancellation
+        log.info("🔵 Creating subscription for session {}", sessionId);
+        reactor.core.Disposable subscription = responseMono.subscribe(
+            result -> {
+                // On success
+                log.info("✅ AI request completed successfully for session {}", sessionId);
+                future.complete(result);
+                if (sessionId != null) {
+                    cancellationService.clearCancellation(sessionId);
+                }
+            },
+            error -> {
+                // On error
+                log.error("❌ AI request failed for session {}: {}", sessionId, error.getMessage());
+                future.completeExceptionally(error);
+                if (sessionId != null) {
+                    cancellationService.clearCancellation(sessionId);
+                }
+            }
+        );
+
+        // Register the Disposable subscription so it can be cancelled mid-flight
+        if (sessionId != null) {
+            log.info("📝 Registering subscription for session {} (disposed: {})", sessionId, subscription.isDisposed());
+            cancellationService.registerSubscription(sessionId, subscription);
+        }
+
+        return future;
     }
 
     @Override
@@ -1232,9 +1279,18 @@ public class ClaudeSonnet4Service implements AIService {
 
         // Smart token allocation based on query complexity
         int maxTokens;
-        if (useDeepThinking) {
+        String lowerPrompt = prompt.toLowerCase();
+
+        // Detect draft generation - needs higher token limit for complete documents
+        boolean isDraftGeneration = lowerPrompt.contains("generate a professional legal") ||
+                                   lowerPrompt.contains("generate a complete, properly formatted legal document");
+
+        if (isDraftGeneration) {
+            // Legal documents need 8000-10000 tokens to avoid incomplete lists/sections
+            maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ? 10000 : 8000;
+            log.info("📄 Draft generation detected - allocating {} tokens for complete document", maxTokens);
+        } else if (useDeepThinking) {
             // Detect if query needs extra-long response
-            String lowerPrompt = prompt.toLowerCase();
             boolean isComplexQuery = lowerPrompt.contains("comprehensive analysis") ||
                                    lowerPrompt.contains("detailed explanation") ||
                                    lowerPrompt.contains("thorough review") ||
