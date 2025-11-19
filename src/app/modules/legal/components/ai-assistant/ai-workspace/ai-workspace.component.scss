@@ -647,10 +647,10 @@ $main-content-flex: 1;
     }
   }
 
-  // Document Type Pills - Velzon Card Style (Inline for Desktop/Laptop)
-  .document-type-pills {
+  // Document Type Selector - Compact Dropdown
+  .document-type-selector {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 2rem;
     padding: 1rem 1.25rem;
@@ -659,50 +659,294 @@ $main-content-flex: 1;
     border-radius: 0.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
-    flex-wrap: nowrap; // No wrapping for desktop/laptop
-    overflow-x: auto; // Allow horizontal scroll if needed
 
     &:hover {
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
     }
 
-    // Hide scrollbar for cleaner look
-    &::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba(var(--vz-border-color-rgb, 200, 200, 200), 0.3);
-      border-radius: 2px;
-    }
-
-    @media (max-width: 768px) {
-      flex-wrap: wrap; // Allow wrapping on mobile
-      overflow-x: visible;
-    }
-
-    .pills-label {
-      font-weight: 600;
-      color: var(--vz-body-color);
-      font-size: 0.875rem;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .pills-container {
+    // Header with dropdown, search, and tips
+    .selector-header {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: nowrap; // Keep pills inline
-      flex: 1;
       align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
 
-      @media (max-width: 768px) {
-        flex-wrap: wrap;
+      .selector-label {
+        font-weight: 600;
+        color: var(--vz-body-color);
+        font-size: 0.875rem;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
+
+      // Custom Dropdown
+      .custom-dropdown-wrapper {
+        position: relative;
+        flex: 0 0 auto;
+        min-width: 250px;
+        max-width: 350px;
+
+        .custom-dropdown-toggle {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: var(--vz-card-bg);
+          border: 1px solid var(--vz-border-color);
+          border-radius: 0.375rem;
+          padding: 0.5rem 0.75rem;
+          font-size: 0.8125rem;
+          color: var(--vz-body-color);
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            border-color: var(--vz-primary);
+          }
+
+          &.active {
+            border-color: var(--vz-primary);
+            box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+          }
+
+          .dropdown-text {
+            flex: 1;
+            text-align: left;
+            color: var(--vz-body-color);
+          }
+
+          .dropdown-arrow {
+            transition: transform 0.2s ease;
+            color: var(--vz-secondary);
+
+            &.rotated {
+              transform: rotate(180deg);
+            }
+          }
+        }
+
+        .custom-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 0.25rem);
+          left: 0;
+          right: 0;
+          background: #ffffff;
+          border: 1px solid #e9ecef;
+          border-radius: 0.375rem;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 1000;
+          max-height: 400px;
+          overflow-y: auto;
+          animation: slideDown 0.2s ease;
+
+          .dropdown-content {
+            padding: 0.5rem 0;
+          }
+
+          .dropdown-category {
+            .category-header {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              padding: 0.625rem 1rem;
+              background: #f3f6f9;
+              border-bottom: 1px solid #e9ecef;
+              cursor: pointer;
+              transition: background 0.2s ease;
+              font-weight: 600;
+              color: #212529;
+              font-size: 0.8125rem;
+
+              &:hover {
+                background: #e3e8ef;
+              }
+
+              .category-icon {
+                font-size: 1rem;
+              }
+
+              .category-name {
+                flex: 1;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+
+              .toggle-icon {
+                transition: transform 0.2s ease;
+                color: #6c757d;
+
+                &.rotated {
+                  transform: rotate(180deg);
+                }
+              }
+            }
+
+            .category-items {
+              background: #ffffff;
+
+              .dropdown-item {
+                width: 100%;
+                display: block;
+                text-align: left;
+                background: transparent;
+                border: none;
+                padding: 0.5rem 1rem 0.5rem 2.5rem;
+                font-size: 0.8125rem;
+                color: #212529;
+                cursor: pointer;
+                transition: all 0.2s ease;
+
+                &:hover {
+                  background: #e8f0fe;
+                  color: #405189;
+                }
+
+                &.selected {
+                  background: #405189;
+                  color: white;
+                  font-weight: 600;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Dark mode overrides for custom dropdown
+      [data-bs-theme="dark"] & {
+        .custom-dropdown-wrapper {
+          .custom-dropdown-toggle {
+            background: #212529;
+            border-color: #32383e;
+            color: #adb5bd;
+
+            &:hover {
+              border-color: #5e81ff;
+            }
+
+            &.active {
+              border-color: #5e81ff;
+              box-shadow: 0 0 0 0.2rem rgba(94, 129, 255, 0.25);
+            }
+
+            .dropdown-text {
+              color: #adb5bd;
+            }
+
+            .dropdown-arrow {
+              color: #6c757d;
+            }
+          }
+
+          .custom-dropdown-menu {
+            background: #212529;
+            border-color: #32383e;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+            .dropdown-category {
+              .category-header {
+                background: #2a2f34;
+                border-bottom-color: #32383e;
+                color: #adb5bd;
+
+                &:hover {
+                  background: #343a40;
+                }
+
+                .toggle-icon {
+                  color: #6c757d;
+                }
+              }
+
+              .category-items {
+                background: #212529;
+
+                .dropdown-item {
+                  color: #adb5bd;
+
+                  &:hover {
+                    background: #2c3136;
+                    color: #5e81ff;
+                  }
+
+                  &.selected {
+                    background: #5e81ff;
+                    color: white;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Search input wrapper
+      .doc-type-search-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 200px;
+        max-width: 300px;
+
+        .search-icon {
+          position: absolute;
+          left: 0.75rem;
+          color: var(--vz-secondary);
+          pointer-events: none;
+          font-size: 0.875rem;
+        }
+
+        .doc-type-search {
+          padding-left: 2.25rem;
+          border-radius: 2rem;
+          border: 1px solid var(--vz-border-color);
+          font-size: 0.8125rem;
+          width: 100%;
+
+          &:focus {
+            border-color: var(--vz-primary);
+            box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+          }
+        }
+      }
+
+      // Prompt tips link
+      .prompt-tips-link {
+        color: var(--vz-primary);
+        text-decoration: none;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-weight: 500;
+        padding: 0.375rem 0.75rem;
+        background: rgba(var(--vz-primary-rgb), 0.1);
+        border-radius: 2rem;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+
+        i {
+          font-size: 0.875rem;
+        }
+
+        &:hover {
+          background: rgba(var(--vz-primary-rgb), 0.15);
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.2);
+        }
+      }
+    }
+
+    // Quick access pills (shown when searching)
+    .quick-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--vz-border-color);
+      animation: slideDown 0.2s ease;
 
       .pill-btn {
         background: var(--vz-card-bg);
@@ -715,7 +959,6 @@ $main-content-flex: 1;
         cursor: pointer;
         transition: all 0.2s ease;
         white-space: nowrap;
-        flex-shrink: 0;
 
         &:hover {
           background: rgba(var(--vz-primary-rgb), 0.1);
@@ -734,31 +977,33 @@ $main-content-flex: 1;
         }
       }
     }
+  }
 
-    .prompt-tips-link {
-      color: var(--vz-primary);
-      text-decoration: none;
-      font-size: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.375rem;
-      font-weight: 500;
-      padding: 0.375rem 0.75rem;
-      background: rgba(var(--vz-primary-rgb), 0.1);
-      border-radius: 2rem;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-      flex-shrink: 0;
+  // Warning message styling
+  .doc-type-warning {
+    margin: 1rem 1.5rem 1rem !important; // Bottom margin added for spacing
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    animation: fadeIn 0.3s ease;
 
-      i {
-        font-size: 0.875rem;
-      }
+    i {
+      color: #f7b84b; // Velzon warning color
+    }
+  }
 
-      &:hover {
-        background: rgba(var(--vz-primary-rgb), 0.15);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.2);
-      }
+
+  // Animations
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      max-height: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      max-height: 500px;
+      transform: translateY(0);
     }
   }
 

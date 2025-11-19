@@ -171,25 +171,8 @@ export class MarkdownConverterService {
     text = text.replace(/^\-\-\-$/gim, '<hr>');
     text = text.replace(/^\*\*\*$/gim, '<hr>');
 
-    // Lists - Ordered (native HTML only)
-    text = text.replace(/^(\d+)\.\s+(.+)$/gim, '<li>$2</li>');
-    text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
-      if (!match.includes('<ol>')) {
-        return '<ol>' + match + '</ol>';
-      }
-      return match;
-    });
-    text = text.replace(/<\/ol>\s*<ol>/g, '');
-
-    // Lists - Unordered (native HTML only)
-    text = text.replace(/^[\*\-]\s+(.+)$/gim, '<li>$1</li>');
-    text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
-      if (!match.includes('<ul>') && !match.includes('<ol>')) {
-        return '<ul>' + match + '</ul>';
-      }
-      return match;
-    });
-    text = text.replace(/<\/ul>\s*<ul>/g, '');
+    // Lists - Process line by line to properly group consecutive items
+    text = this.processListsLineByLine(text);
 
     // Paragraphs - native HTML only
     const lines = text.split('\n');
@@ -213,6 +196,68 @@ export class MarkdownConverterService {
     text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
 
     return text;
+  }
+
+  /**
+   * Process lists line by line to properly group consecutive items
+   * This ensures clean HTML structure that Quill can parse correctly
+   */
+  private processListsLineByLine(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    let currentList: { type: 'ul' | 'ol' | null; items: string[] } = { type: null, items: [] };
+
+    for (const line of lines) {
+      // Check for unordered list (bullet points)
+      const bulletMatch = line.match(/^[\*\-]\s+(.+)$/);
+      // Check for ordered list (numbered)
+      const numberedMatch = line.match(/^(\d+)\.\s+(.+)$/);
+
+      if (bulletMatch) {
+        // Found a bullet list item
+        if (currentList.type === 'ol') {
+          // Flush previous ordered list before starting unordered
+          result.push(`<ol>${currentList.items.map(item => `<li>${item}</li>`).join('')}</ol>`);
+          currentList = { type: 'ul', items: [bulletMatch[1]] };
+        } else {
+          // Continue or start unordered list
+          if (currentList.type !== 'ul') {
+            currentList.type = 'ul';
+          }
+          currentList.items.push(bulletMatch[1]);
+        }
+      } else if (numberedMatch) {
+        // Found a numbered list item
+        if (currentList.type === 'ul') {
+          // Flush previous unordered list before starting ordered
+          result.push(`<ul>${currentList.items.map(item => `<li>${item}</li>`).join('')}</ul>`);
+          currentList = { type: 'ol', items: [numberedMatch[2]] };
+        } else {
+          // Continue or start ordered list
+          if (currentList.type !== 'ol') {
+            currentList.type = 'ol';
+          }
+          currentList.items.push(numberedMatch[2]);
+        }
+      } else {
+        // Not a list item - flush any pending list first
+        if (currentList.type) {
+          const tag = currentList.type;
+          result.push(`<${tag}>${currentList.items.map(item => `<li>${item}</li>`).join('')}</${tag}>`);
+          currentList = { type: null, items: [] };
+        }
+        // Add the non-list line
+        result.push(line);
+      }
+    }
+
+    // Flush any remaining list at the end
+    if (currentList.type) {
+      const tag = currentList.type;
+      result.push(`<${tag}>${currentList.items.map(item => `<li>${item}</li>`).join('')}</${tag}>`);
+    }
+
+    return result.join('\n');
   }
 
   /**

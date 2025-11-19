@@ -1287,15 +1287,31 @@ public class ClaudeSonnet4Service implements AIService {
 
         // Detect draft generation - needs higher token limit for complete documents
         boolean isDraftGeneration = lowerPrompt.contains("generate a professional legal") ||
-                                   lowerPrompt.contains("generate a complete, properly formatted legal document");
+                                   lowerPrompt.contains("generate a complete, properly formatted legal document") ||
+                                   lowerPrompt.contains("draft a motion") ||
+                                   lowerPrompt.contains("draft a brief") ||
+                                   lowerPrompt.contains("draft a complaint") ||
+                                   lowerPrompt.contains("draft interrogatories") ||
+                                   lowerPrompt.contains("draft discovery") ||
+                                   lowerPrompt.contains("draft pleading");
+
+        // Detect THOROUGH mode in draft generation
+        boolean isThoroughModeDraft = isDraftGeneration &&
+                                     (prompt.contains("**tool usage requirements** (citation verification mandatory)") ||
+                                      lowerPrompt.contains("verified citations"));
 
         if (isThoroughModeResearch) {
             // THOROUGH mode: 12000 tokens for comprehensive analysis with verified citations
             maxTokens = 12000;
             log.info("🔍 THOROUGH mode research detected - allocating {} tokens for comprehensive citation-verified analysis", maxTokens);
+        } else if (isThoroughModeDraft) {
+            // THOROUGH mode drafts: 24000 tokens for complete documents with verified citations
+            maxTokens = 24000;
+            log.info("📄🔍 THOROUGH mode draft detected - allocating {} tokens for complete document with verified citations", maxTokens);
         } else if (isDraftGeneration) {
-            // Legal documents need 8000-10000 tokens to avoid incomplete lists/sections
-            maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ? 10000 : 8000;
+            // Legal documents need 16000-20000 tokens to avoid incomplete lists/sections
+            // Increased from 8000-10000 to prevent mid-list truncation
+            maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ? 20000 : 16000;
             log.info("📄 Draft generation detected - allocating {} tokens for complete document", maxTokens);
         } else if (useDeepThinking) {
             // Detect if query needs extra-long response

@@ -42,6 +42,15 @@ import com.itextpdf.io.font.constants.StandardFonts;
 @Slf4j
 public class AiWorkspaceDocumentService {
 
+    /**
+     * Citation level for different document types
+     */
+    public enum CitationLevel {
+        NONE,           // No citations at all (contracts, transactional documents)
+        MINIMAL,        // 0-2 statutes only (demand letters, discovery, correspondence)
+        COMPREHENSIVE   // Full case law + statutes (motions, briefs, pleadings, memos)
+    }
+
     private final AiWorkspaceDocumentRepository documentRepository;
     private final AiWorkspaceDocumentVersionRepository versionRepository;
     private final AiConversationSessionRepository conversationRepository;
@@ -49,6 +58,8 @@ public class AiWorkspaceDocumentService {
     private final ClaudeSonnet4Service claudeService;
     private final LegalResearchConversationService conversationService;
     private final GenerationCancellationService cancellationService;
+    private final AILegalResearchService legalResearchService;  // For citation verification
+    private final CitationUrlInjector citationUrlInjector;       // For URL injection
 
     // MOCK MODE DISABLED - Using real API
     private static final boolean USE_MOCK_MODE = false;
@@ -572,9 +583,10 @@ public class AiWorkspaceDocumentService {
         Long caseId,
         String prompt,
         String jurisdiction,
-        String sessionName
+        String sessionName,
+        String researchMode
     ) {
-        log.info("Creating draft conversation session: userId={}, caseId={}", userId, caseId);
+        log.info("Creating draft conversation session: userId={}, caseId={}, researchMode={}", userId, caseId, researchMode);
 
         // Create conversation session
         AiConversationSession conversation = AiConversationSession.builder()
@@ -583,7 +595,7 @@ public class AiWorkspaceDocumentService {
             .sessionName(sessionName)
             .sessionType(caseId != null ? "case-specific" : "general")
             .taskType("GENERATE_DRAFT")
-            .researchMode("FAST")
+            .researchMode(researchMode != null ? researchMode : "FAST")
             .jurisdiction(jurisdiction)
             .isActive(true)
             .build();
@@ -609,9 +621,11 @@ public class AiWorkspaceDocumentService {
         String documentType,
         String jurisdiction,
         String sessionName,
-        Long conversationId
+        Long conversationId,
+        String researchMode
     ) {
-        log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}", userId, caseId, documentType, conversationId);
+        log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}, researchMode={}",
+                 userId, caseId, documentType, conversationId, researchMode);
 
         // 1. Fetch case context if caseId provided
         String caseContext = "";
@@ -638,7 +652,7 @@ public class AiWorkspaceDocumentService {
                 .sessionName(sessionName)
                 .sessionType(caseId != null ? "case-specific" : "general")
                 .taskType("GENERATE_DRAFT")
-                .researchMode("FAST")
+                .researchMode(researchMode != null ? researchMode : "FAST")
                 .jurisdiction(jurisdiction)
                 .isActive(true)
                 .build();
@@ -650,7 +664,7 @@ public class AiWorkspaceDocumentService {
         }
 
         // 4. Build AI prompt with case context
-        String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase);
+        String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode);
 
         // 5. Check if generation has been cancelled
         if (cancellationService.isCancelled(conversation.getId())) {
@@ -673,11 +687,57 @@ public class AiWorkspaceDocumentService {
             throw e;
         }
 
-        // 6. Validate content completeness
+        // POST-PROCESSING: Verify citations and inject URLs (conditional based on document type)
+        CitationLevel postProcessingLevel = getCitationLevel(documentType);
+        log.info("📋 POST-PROCESSING: Citation level for '{}' is {}", documentType, postProcessingLevel);
+
+        switch (postProcessingLevel) {
+            case COMPREHENSIVE:
+                // Verify citations for comprehensive documents (motions, briefs, memos, pleadings)
+                log.info("🔍 POST-PROCESSING: Verifying citations and injecting URLs in legal brief/motion");
+
+                try {
+                    // Step 1: Verify case law citations via CourtListener/Justia
+                    content = legalResearchService.verifyAllCitationsInResponse(content);
+                    log.info("✅ Citation verification complete");
+
+                    // Step 2: Inject URLs for statutory/rule citations (FRCP, M.G.L., CFR, etc.)
+                    content = citationUrlInjector.inject(content);
+                    log.info("✅ URL injection complete");
+                } catch (Exception e) {
+                    log.error("❌ POST-PROCESSING failed: {}", e.getMessage(), e);
+                    // Continue anyway - better to have document without links than no document
+                }
+                break;
+
+            case MINIMAL:
+                // Skip case law verification for minimal citation documents (demand letters, discovery, correspondence)
+                log.info("📋 Skipping case law verification for minimal-citation document ({})", documentType);
+                log.info("ℹ️ Only statutory URL injection will run (if any statutes present)");
+
+                try {
+                    // Still inject URLs for any statutory citations (G.L. c., CFR, etc.)
+                    content = citationUrlInjector.inject(content);
+                    log.info("✅ URL injection complete");
+                } catch (Exception e) {
+                    log.error("❌ URL injection failed: {}", e.getMessage(), e);
+                }
+                break;
+
+            case NONE:
+                // No citation processing for transactional documents (contracts, agreements)
+                log.info("📋 No citation processing for transactional document ({})", documentType);
+                // Don't run any citation verification or URL injection
+                break;
+        }
+
+        // 6. Validate content completeness (monitoring only - non-blocking)
         String validationWarning = validateDocumentCompleteness(content);
         if (validationWarning != null) {
-            log.warn("⚠️ Document validation warning: {}", validationWarning);
-            // Note: We continue with generation but log the warning for monitoring
+            log.warn("⚠️ Document quality check: {}", validationWarning);
+            log.warn("📋 Document will be delivered to user for review. Attorney can fill any placeholders or gaps.");
+            // Continue normally - always save and return document
+            // Prompt improvements should prevent incomplete lists via placeholders
         }
 
         // 7. Calculate metrics
@@ -810,6 +870,55 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Determine citation level based on document type
+     */
+    private CitationLevel getCitationLevel(String documentType) {
+        if (documentType == null) {
+            return CitationLevel.COMPREHENSIVE; // Default to comprehensive if not specified
+        }
+
+        String type = documentType.toLowerCase();
+
+        // NO CITATIONS: Contracts and transactional documents
+        if (type.contains("contract") ||
+            type.contains("nda") ||
+            type.contains("amendment") ||
+            type.contains("clause") && !type.contains("legal") ||
+            type.contains("employment") && type.contains("agreement") ||
+            type.contains("purchase") && type.contains("agreement") ||
+            type.contains("service") && type.contains("agreement")) {
+            return CitationLevel.NONE;
+        }
+
+        // MINIMAL CITATIONS: Correspondence, discovery, business documents
+        if (type.contains("letter") ||
+            type.contains("demand") ||
+            type.contains("email") ||
+            type.contains("correspondence") ||
+            type.contains("settlement-offer") ||
+            type.contains("opinion-letter") ||
+            type.contains("opposing-counsel") ||
+            type.contains("client-email") ||
+            type.contains("interrogator") ||
+            type.contains("rfp") ||
+            type.contains("rfa") ||
+            type.contains("request") && type.contains("production") ||
+            type.contains("request") && type.contains("admission") ||
+            type.contains("subpoena") ||
+            type.contains("deposition") && type.contains("notice") ||
+            type.contains("notice") ||
+            type.contains("stipulation") ||
+            type.contains("affidavit") ||
+            type.contains("settlement-agreement")) {
+            return CitationLevel.MINIMAL;
+        }
+
+        // COMPREHENSIVE CITATIONS: Legal arguments, motions, briefs, pleadings, memos
+        // This includes: complaint, answer, counterclaim, motion-*, appellate-*, legal-memo, legal-argument
+        return CitationLevel.COMPREHENSIVE;
+    }
+
+    /**
      * Build draft prompt with case context
      */
     private String buildDraftPromptWithCaseContext(
@@ -817,10 +926,27 @@ public class AiWorkspaceDocumentService {
         String documentType,
         String jurisdiction,
         String caseContext,
-        LegalCase legalCase
+        LegalCase legalCase,
+        String researchMode
     ) {
         StringBuilder prompt = new StringBuilder();
+
+        // CRITICAL CONTEXT: Establish attorney-client relationship
+        prompt.append("**ATTORNEY-CLIENT CONTEXT**:\n");
+        prompt.append("You are assisting a licensed attorney who is representing a client.\n");
+        prompt.append("This is a law firm document management system.\n");
+        prompt.append("The attorney is already retained and representing the client in this matter.\n");
+        prompt.append("All documents MUST be drafted from the attorney's perspective representing the client.\n");
+        prompt.append("DO NOT draft as if the client is representing themselves (pro se).\n\n");
+
         prompt.append("Generate a professional legal ").append(documentType).append(" document.\n\n");
+
+        // Indicate research mode for token allocation and citation behavior
+        if ("THOROUGH".equalsIgnoreCase(researchMode)) {
+            prompt.append("**RESEARCH MODE**: THOROUGH - Include verified citations from case law databases\n");
+            prompt.append("**TOOL USAGE**: Use citation verification tools to validate all legal citations\n\n");
+        }
+
         prompt.append("JURISDICTION: ").append(jurisdiction).append("\n\n");
 
         if (caseContext != null && !caseContext.isEmpty()) {
@@ -842,24 +968,93 @@ public class AiWorkspaceDocumentService {
             prompt.append("7. Address the specific issues in this case\n");
         }
 
-        prompt.append("\n⚠️ CRITICAL CITATION POLICY - PREVENT MALPRACTICE:\n");
-        prompt.append("DO NOT include specific case citations, statute numbers, or regulatory citations.\n");
-        prompt.append("Fabricated citations can result in court sanctions and attorney malpractice.\n\n");
-        prompt.append("CITATION RULES:\n");
-        prompt.append("✓ ALLOWED:\n");
-        prompt.append("  - General legal principles: 'Under Massachusetts law...' or 'Federal courts have held...'\n");
-        prompt.append("  - Descriptive placeholders: [CITE: Massachusetts personal jurisdiction standard]\n");
-        prompt.append("  - Generic references: 'Courts apply a three-part test [CITATION NEEDED: specific standard]'\n");
-        prompt.append("  - Legal concepts: 'The purposeful availment doctrine requires...'\n\n");
-        prompt.append("✗ PROHIBITED:\n");
-        prompt.append("  - Specific case names: 'Copy Cop, Inc. v. Task Printing, Inc., 325 F. Supp. 2d 242'\n");
-        prompt.append("  - Statute numbers: '28 U.S.C. § 1331'\n");
-        prompt.append("  - Regulatory citations: '8 C.F.R. § 1003.38'\n");
-        prompt.append("  - ANY citation that could be fabricated or hallucinated\n\n");
-        prompt.append("EXAMPLES:\n");
-        prompt.append("✓ CORRECT: 'To establish personal jurisdiction, Massachusetts courts apply a three-part test [CITE: personal jurisdiction standard]. The plaintiff must demonstrate...'\n");
-        prompt.append("✗ INCORRECT: 'To establish personal jurisdiction, see Copy Cop, Inc., 325 F. Supp. 2d at 247.'\n\n");
-        prompt.append("REMINDER: All citations must be added manually by attorney after verification with legal research tools.\n");
+        // DETERMINE CITATION POLICY based on document type
+        CitationLevel citationLevel = getCitationLevel(documentType);
+        log.info("📋 Document type '{}' has citation level: {}", documentType, citationLevel);
+
+        // CONDITIONAL CITATION POLICY based on research mode AND document type
+        if ("THOROUGH".equalsIgnoreCase(researchMode)) {
+            switch (citationLevel) {
+                case NONE:
+                    // NO CITATIONS: Contracts and transactional documents
+                    prompt.append("\n**📋 CITATION POLICY - NONE (Transactional/Contract Document)**:\n");
+                    prompt.append("This is a transactional or contract document.\n");
+                    prompt.append("DO NOT include any legal citations (no case law, no statutes).\n");
+                    prompt.append("Focus on clear business terms, obligations, and commercial language.\n\n");
+
+                    prompt.append("**FOCUS YOUR WRITING ON**:\n");
+                    prompt.append("- Clear contractual terms and obligations\n");
+                    prompt.append("- Rights and responsibilities of parties\n");
+                    prompt.append("- Payment terms, deadlines, deliverables\n");
+                    prompt.append("- Warranties, representations, and indemnification\n");
+                    prompt.append("- Dispute resolution mechanisms\n\n");
+
+                    prompt.append("**CITATION RULES - ABSOLUTE**:\n");
+                    prompt.append("✗ DO NOT cite any case law\n");
+                    prompt.append("✗ DO NOT cite any statutes\n");
+                    prompt.append("✗ DO NOT include legal precedents\n");
+                    prompt.append("✓ Use standard contract language and business terms\n\n");
+                    break;
+
+                case MINIMAL:
+                    // MINIMAL CITATIONS: Demand letters, correspondence, discovery
+                    prompt.append("\n**📋 CITATION POLICY - MINIMAL (Business/Demand Document)**:\n");
+                    prompt.append("This is a business/demand document, NOT a legal brief or motion.\n");
+                    prompt.append("Insurance adjusters and business parties care about FACTS and DAMAGES, not case law.\n\n");
+
+                    prompt.append("**FOCUS YOUR WRITING ON**:\n");
+                    prompt.append("- Specific factual allegations (what happened, when, where, how)\n");
+                    prompt.append("- Documented damages (medical bills, lost wages, repair costs)\n");
+                    prompt.append("- Settlement value and business pressure\n");
+                    prompt.append("- Clear liability narrative (defendant's fault)\n\n");
+
+                    prompt.append("**CITATION RULES - STRICT**:\n");
+                    prompt.append("✗ DO NOT cite case law precedents (no 'See Smith v. Jones, 123 Mass. 456')\n");
+                    prompt.append("✗ DO NOT cite court decisions or judicial opinions\n");
+                    prompt.append("✓ You MAY cite 1-2 directly applicable STATUTES if essential (e.g., 'G.L. c. 231, § 6')\n");
+                    prompt.append("✓ You MAY reference general legal standards WITHOUT case names (e.g., 'Under Massachusetts law, rear-end collisions create a presumption of negligence')\n\n");
+
+                    prompt.append("**EXAMPLE - CORRECT APPROACH** (No case citations):\n");
+                    prompt.append("'Under Massachusetts law, a rear-end collision creates a presumption of negligence on the part of the following driver. ");
+                    prompt.append("Your insured failed to maintain a safe distance and proper control, directly causing this collision and our client's injuries.'\n\n");
+
+                    prompt.append("**EXAMPLE - INCORRECT APPROACH** (Avoid this):\n");
+                    prompt.append("'Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence. See Haddad v. Burns, 59 Mass. App. Ct. 582 (2003); ");
+                    prompt.append("Meuse v. Fox, 39 Mass. App. Ct. (1995). The operator has a duty... See G.L. c. 89, § 7A; Mass. Model Civil Jury Instruction 5.10.'\n\n");
+
+                    prompt.append("Remember: This is about BUSINESS and SETTLEMENT, not legal scholarship. Keep it focused and persuasive.\n\n");
+                    break;
+
+                case COMPREHENSIVE:
+                    // COMPREHENSIVE CITATIONS: Motions, briefs, pleadings, memos
+                    prompt.append("\n✓ CITATION VERIFICATION ENABLED (THOROUGH MODE - Legal Brief/Motion):\n");
+                    prompt.append("You may include verified case citations and legal precedents to support your arguments.\n");
+                    prompt.append("All citations will be automatically verified via CourtListener and legal databases.\n");
+                    prompt.append("Generate complete lists and detailed legal analysis with proper citations.\n");
+                    prompt.append("You have permission to cite controlling case law, statutes, and regulations.\n\n");
+                    break;
+            }
+        } else {
+            // FAST mode: Keep strict anti-fabrication policy
+            prompt.append("\n⚠️ CRITICAL CITATION POLICY - PREVENT MALPRACTICE:\n");
+            prompt.append("DO NOT include specific case citations, statute numbers, or regulatory citations.\n");
+            prompt.append("Fabricated citations can result in court sanctions and attorney malpractice.\n\n");
+            prompt.append("CITATION RULES:\n");
+            prompt.append("✓ ALLOWED:\n");
+            prompt.append("  - General legal principles: 'Under Massachusetts law...' or 'Federal courts have held...'\n");
+            prompt.append("  - Descriptive placeholders: [CITE: Massachusetts personal jurisdiction standard]\n");
+            prompt.append("  - Generic references: 'Courts apply a three-part test [CITATION NEEDED: specific standard]'\n");
+            prompt.append("  - Legal concepts: 'The purposeful availment doctrine requires...'\n\n");
+            prompt.append("✗ PROHIBITED:\n");
+            prompt.append("  - Specific case names: 'Copy Cop, Inc. v. Task Printing, Inc., 325 F. Supp. 2d 242'\n");
+            prompt.append("  - Statute numbers: '28 U.S.C. § 1331'\n");
+            prompt.append("  - Regulatory citations: '8 C.F.R. § 1003.38'\n");
+            prompt.append("  - ANY citation that could be fabricated or hallucinated\n\n");
+            prompt.append("EXAMPLES:\n");
+            prompt.append("✓ CORRECT: 'To establish personal jurisdiction, Massachusetts courts apply a three-part test [CITE: personal jurisdiction standard]. The plaintiff must demonstrate...'\n");
+            prompt.append("✗ INCORRECT: 'To establish personal jurisdiction, see Copy Cop, Inc., 325 F. Supp. 2d at 247.'\n\n");
+            prompt.append("REMINDER: All citations must be added manually by attorney after verification with legal research tools.\n");
+        }
 
         prompt.append("\nFORMATTING REQUIREMENTS:\n");
         prompt.append("- Use Markdown formatting for structure and emphasis\n");
@@ -869,23 +1064,95 @@ public class AiWorkspaceDocumentService {
         prompt.append("- Use bullet lists (- ) for non-sequential items\n");
         prompt.append("- Use proper paragraph breaks for readability\n");
 
-        prompt.append("\n⚠️ CRITICAL LIST COMPLETION RULE:\n");
-        prompt.append("NEVER write a list header (ending with a colon) without the actual list items immediately following it.\n");
-        prompt.append("If you write 'Specifically:', 'Including:', 'Such as:', or similar list introductions, you MUST:\n");
-        prompt.append("1. Include at least 2-3 actual bullet points or numbered items after the header\n");
-        prompt.append("2. Complete each list item with full sentences or meaningful content\n");
-        prompt.append("3. NEVER leave a list header empty or skip to another section\n");
-        prompt.append("Example of INCORRECT format (DO NOT DO THIS):\n");
-        prompt.append("   'These conferences were conducted in good faith. Specifically:\n");
-        prompt.append("   \n");
-        prompt.append("   These communications were genuine...'\n");
-        prompt.append("Example of CORRECT format:\n");
-        prompt.append("   'These conferences were conducted in good faith. Specifically:\n");
-        prompt.append("   1. Conference on [date] regarding discovery scope\n");
-        prompt.append("   2. Email exchange on [date] discussing document production\n");
-        prompt.append("   3. Phone call on [date] attempting to resolve disputed requests\n");
-        prompt.append("   \n");
-        prompt.append("   These communications were genuine...'\n");
+        // MANDATORY RULE: COMPLETE ALL LISTS WITH PLACEHOLDERS
+        prompt.append("\n**⚠️ MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
+        prompt.append("When you write 'as follows:', 'including:', 'specifically:', 'demonstrates:', 'such as:', etc., ");
+        prompt.append("you MUST complete the list immediately after.\n");
+        prompt.append("This is the #1 most common error. You MUST follow this rule strictly.\n\n");
+
+        prompt.append("**IF YOU HAVE SPECIFIC FACTS** → Use them:\n");
+        prompt.append("✓ CORRECT:\n");
+        prompt.append("'The evidence demonstrates:\n");
+        prompt.append("1. Dashcam footage showing defendant ran red light at 45mph\n");
+        prompt.append("2. Police report #12345 confirming defendant's fault\n");
+        prompt.append("3. Witness testimony from [Witness Name] corroborating collision sequence'\n\n");
+
+        prompt.append("**IF YOU DON'T HAVE SPECIFIC FACTS** → Use structured placeholders:\n");
+        prompt.append("✓ CORRECT:\n");
+        prompt.append("'The evidence demonstrates:\n");
+        prompt.append("1. [ATTORNEY TO INSERT: specific evidence from case file]\n");
+        prompt.append("2. [ATTORNEY TO INSERT: supporting documentation]\n");
+        prompt.append("3. [ATTORNEY TO INSERT: witness testimony or expert reports]'\n\n");
+
+        prompt.append("**PLACEHOLDER FORMATS BY CONTEXT**:\n");
+        prompt.append("- Dollar amounts: $[Amount] or [Dollar Amount]\n");
+        prompt.append("- Dates: [Date] or [MM/DD/YYYY]\n");
+        prompt.append("- Names: [Defendant Name], [Witness Name], [Doctor Name]\n");
+        prompt.append("- Evidence: [ATTORNEY TO INSERT: specific evidence]\n");
+        prompt.append("- Medical: [ATTORNEY TO INSERT: medical records and bills]\n");
+        prompt.append("- Tables: Use [Amount], [Date], [Description] in table cells\n\n");
+
+        prompt.append("**❌ ABSOLUTELY PROHIBITED - INCOMPLETE LISTS**:\n");
+        prompt.append("✗ WRONG: 'The damages include:'\n");
+        prompt.append("          [blank space or jumps to new topic]\n\n");
+        prompt.append("✗ WRONG: 'Dashcam footage that conclusively documents:'\n");
+        prompt.append("          [next paragraph starts without list items]\n\n");
+        prompt.append("✗ WRONG: 'Total damages as follows:'\n");
+        prompt.append("          [table with empty cells or missing rows]\n\n");
+
+        prompt.append("**✓ ALWAYS ACCEPTABLE - COMPLETE WITH PLACEHOLDERS**:\n");
+        prompt.append("✓ RIGHT: 'The damages include:\n");
+        prompt.append("1. Medical expenses: $[Amount]\n");
+        prompt.append("2. Lost wages: $[Amount]\n");
+        prompt.append("3. Pain and suffering: $[Amount]'\n\n");
+
+        prompt.append("✓ RIGHT: 'Total damages as follows:\n");
+        prompt.append("| Category | Amount |\n");
+        prompt.append("|----------|--------|\n");
+        prompt.append("| Medical | $[Amount] |\n");
+        prompt.append("| Lost Wages | $[Amount] |\n");
+        prompt.append("| Pain & Suffering | $[Amount] |'\n\n");
+
+        prompt.append("**ALTERNATIVE**: If you don't have facts, rephrase to avoid the colon:\n");
+        prompt.append("✓ RIGHT: 'The dashcam footage provides conclusive evidence of defendant's liability.'\n");
+        prompt.append("✓ RIGHT: 'Medical documentation supports the claimed injuries.'\n\n");
+
+        // ATTORNEY REPRESENTATION REQUIREMENTS
+        prompt.append("**ATTORNEY REPRESENTATION REQUIREMENTS - CRITICAL**:\n");
+        prompt.append("All documents MUST be drafted from the attorney's perspective representing the client.\n");
+        prompt.append("DO NOT draft as if the client is representing themselves (pro se).\n\n");
+
+        prompt.append("MANDATORY REQUIREMENTS:\n");
+        prompt.append("- Draft from attorney's perspective: 'This office represents...', 'On behalf of my client...'\n");
+        prompt.append("- Signature blocks must show attorney information, NOT client as self-represented\n");
+        prompt.append("- DO NOT include pro se disclaimers or suggestions to 'consider retaining an attorney'\n");
+        prompt.append("- The attorney IS already retained - do not suggest hiring one\n");
+        prompt.append("- DO NOT discuss contingency fees or attorney costs\n");
+        prompt.append("- Use professional attorney-to-opposing-party tone\n\n");
+
+        prompt.append("✓ CORRECT ATTORNEY REPRESENTATION:\n");
+        prompt.append("  - 'This office represents Mr. Hoxha in connection with the collision on [date]'\n");
+        prompt.append("  - 'On behalf of my client, I demand full compensation for all damages sustained'\n");
+        prompt.append("  - 'Please contact the undersigned to discuss settlement'\n");
+        prompt.append("  - Signature: 'Respectfully, [Attorney Name] / [Law Firm] / Attorney for Plaintiff Marsel Hoxha'\n\n");
+
+        prompt.append("✗ PROHIBITED - NEVER INCLUDE:\n");
+        prompt.append("  - 'This demand letter is drafted as a pro se document (claimant representing self)'\n");
+        prompt.append("  - 'If the case becomes more complex, you should consider retaining an attorney'\n");
+        prompt.append("  - 'Personal injury attorneys typically work on contingency (33-40% of recovery)'\n");
+        prompt.append("  - Any suggestion that the claimant is self-represented\n");
+        prompt.append("  - Signature showing client's name only without attorney representation\n");
+        prompt.append("  - Disclaimers about attorney fees or suggesting to hire counsel\n\n");
+
+        // FINAL CHECKLIST BEFORE GENERATION
+        prompt.append("**📋 FINAL CHECKLIST BEFORE SUBMITTING YOUR RESPONSE**:\n");
+        prompt.append("Before you submit, verify:\n");
+        prompt.append("✓ Every 'as follows:', 'including:', 'specifically:', etc. is followed by list items or placeholders\n");
+        prompt.append("✓ All tables have complete rows with placeholder values like $[Amount] for unknown numbers\n");
+        prompt.append("✓ No blank spaces after colons - every list is complete\n");
+        prompt.append("✓ Used [ATTORNEY TO INSERT: ...] format for case-specific details you don't have\n");
+        prompt.append("✓ Document is drafted from attorney's perspective, not pro se\n");
+        prompt.append("✓ All citations properly formatted (if in THOROUGH mode)\n\n");
 
         return prompt.toString();
     }
@@ -1005,43 +1272,36 @@ public class AiWorkspaceDocumentService {
 
     /**
      * Validate document content for incomplete list patterns
-     * Returns warning message if incomplete lists are detected, null otherwise
+     * MONITORING ONLY - Does not block document generation
+     * Returns info message if potential issues detected, null otherwise
      */
     private String validateDocumentCompleteness(String content) {
         if (content == null || content.isEmpty()) {
             return null;
         }
 
-        // Patterns that indicate incomplete lists:
-        // 1. Line ending with colon followed by blank line(s) then a new section or sentence
+        // Simple check: Look for list introducers followed by suspicious gaps
+        // This is for MONITORING/METRICS only - not blocking
+        // Prompt improvements should prevent these issues via placeholders
         String[] listIntroducers = {
-            "specifically:", "including:", "such as:", "namely:", "for example:",
-            "as follows:", "these include:", "the following:", "particularly:"
+            "specifically:", "including:", "such as:", "namely:",
+            "as follows:", "the following:", "demonstrates:"
         };
 
         String lowerContent = content.toLowerCase();
         for (String introducer : listIntroducers) {
             int index = lowerContent.indexOf(introducer);
             while (index != -1) {
-                // Get text after the introducer (next 200 chars for analysis)
-                int endIndex = Math.min(index + introducer.length() + 200, lowerContent.length());
+                // Check next 150 characters for obvious gaps
+                int endIndex = Math.min(index + introducer.length() + 150, lowerContent.length());
                 String afterIntroducer = content.substring(index + introducer.length(), endIndex);
 
-                // Check if there's no list after the introducer
-                // Look for list markers: -, *, 1., 2., etc.
-                boolean hasListMarker = afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*[-*]\\s+.*") ||
-                                       afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*\\d+\\.\\s+.*");
-
-                if (!hasListMarker) {
-                    // Check if it jumps to new paragraph or section instead
-                    boolean jumpsToNewSection = afterIntroducer.matches("(?s)\\s*[\\n\\r]{2,}.*") ||
-                                               afterIntroducer.matches("(?s)\\s*[\\n\\r]+\\s*#.*");
-
-                    if (jumpsToNewSection) {
-                        log.warn("⚠️ Incomplete list detected after '{}' at position {}", introducer, index);
-                        return "Warning: Generated document may contain incomplete lists. " +
-                               "Document was generated but may need manual review for completeness.";
-                    }
+                // Simple heuristic: If introducer followed by 2+ blank lines then capitalized sentence
+                // (likely jumped to new paragraph without list or placeholder)
+                // Note: This will NOT catch tables, headers, or other valid structures (by design)
+                if (afterIntroducer.matches("(?s)\\s*[\\n\\r]{2,}\\s*[A-Z][^\\n]{20,}")) {
+                    log.info("📊 METRICS: Possible incomplete list after '{}' at position {}", introducer, index);
+                    return "Info: Document may contain sections where attorney should verify completeness.";
                 }
 
                 // Find next occurrence
@@ -1049,7 +1309,7 @@ public class AiWorkspaceDocumentService {
             }
         }
 
-        return null; // No incomplete lists detected
+        return null; // No obvious issues detected
     }
 
     /**

@@ -321,7 +321,8 @@ public class AiWorkspaceController {
                 request.getCaseId(),
                 request.getPrompt(),
                 request.getJurisdiction(),
-                request.getSessionName()
+                request.getSessionName(),
+                request.getResearchMode()
             );
 
             Map<String, Object> response = new HashMap<>();
@@ -367,7 +368,8 @@ public class AiWorkspaceController {
                 request.getDocumentType(),
                 request.getJurisdiction(),
                 request.getSessionName(),
-                request.getConversationId()
+                request.getConversationId(),
+                request.getResearchMode()
             );
 
             return ResponseEntity.ok(response);

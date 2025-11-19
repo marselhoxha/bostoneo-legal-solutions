@@ -684,12 +684,13 @@ public class AILegalResearchService {
         system.append("   - **Environmental**: Reference EPA guidance documents, administrative orders, settlement precedents\n");
         system.append("   - **Administrative Law**: These precedents carry significant weight - use them alongside published court opinions\n\n");
 
-        // DOCUMENT DRAFTING LIMITATIONS
-        system.append("**DOCUMENT DRAFTING LIMITATIONS**:\n");
-        system.append("   - If user requests to \"draft\" a legal document (motion, brief, complaint, contract):\n");
-        system.append("   - Clarify: \"I can provide a detailed outline and key arguments, but cannot generate a complete, court-ready legal document\"\n");
-        system.append("   - Provide: Structure, legal standards, key arguments, case theories, strategic considerations\n");
-        system.append("   - Advise: \"You'll need to draft the formal document with proper formatting, caption, signature blocks, certificates\"\n");
+        // DOCUMENT DRAFTING CAPABILITIES
+        system.append("**DOCUMENT DRAFTING CAPABILITIES**:\n");
+        system.append("   - When drafting legal documents (motions, briefs, complaints, discovery), generate complete professional documents\n");
+        system.append("   - Include: Proper structure, verified citations, legal standards, compelling arguments, and clear organization\n");
+        system.append("   - Follow: Court rules, professional standards, proper formatting with numbered paragraphs and headings\n");
+        system.append("   - Provide: Signature blocks and certificates of service when appropriate\n");
+        system.append("   - For questions (non-drafting): Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
 
         return system.toString();
     }
@@ -1119,12 +1120,11 @@ public class AILegalResearchService {
                     prompt.append("   - **Environmental**: Reference EPA guidance documents, administrative orders, and settlement precedents\n");
                     prompt.append("   - **Administrative Law**: These precedents carry significant weight in their respective domains - use them alongside published court opinions\n\n");
 
-                    // Document drafting expectations
-                    prompt.append("**DOCUMENT DRAFTING LIMITATIONS**:\n");
-                    prompt.append("   - If user requests you to \"draft\" a legal document (motion, brief, complaint, contract):\n");
-                    prompt.append("   - Clarify: \"I can provide a detailed outline and key arguments, but cannot generate a complete, court-ready legal document\"\n");
-                    prompt.append("   - Provide: Structure, legal standards, key arguments, case theories, and strategic considerations\n");
-                    prompt.append("   - Advise: \"You'll need to draft the formal document with proper formatting, caption, signature blocks, and certificates\"\n\n");
+                    // Document drafting capabilities
+                    prompt.append("**DOCUMENT DRAFTING CAPABILITIES**:\n");
+                    prompt.append("   - When drafting legal documents: Generate complete professional documents with proper structure, verified citations, and compelling arguments\n");
+                    prompt.append("   - Follow court rules and professional standards with numbered paragraphs and clear headings\n");
+                    prompt.append("   - For questions: Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
                 });
             } catch (NumberFormatException e) {
                 // If not a numeric ID, try looking up by case_number
@@ -3946,8 +3946,9 @@ public class AILegalResearchService {
      * POST-PROCESSING SAFETY NET: Verify all citations in the response
      * This ensures EVERY citation is verified even if Claude forgets to use verify_citation tool
      * Prevents hallucinations by validating against CourtListener database
+     * PUBLIC: Called by both research mode AND draft generation for consistent citation verification
      */
-    private String verifyAllCitationsInResponse(String aiResponse) {
+    public String verifyAllCitationsInResponse(String aiResponse) {
         if (aiResponse == null || aiResponse.isBlank()) {
             return aiResponse;
         }
@@ -3975,13 +3976,15 @@ public class AILegalResearchService {
         // - "*Case v. Case*, Citation (Year)" (italic markdown)
         // - "**Case v. Case**, Citation (Year)" (bold markdown - Claude's format)
         // - "- ✓ [*Case v. Case*, Citation](URL)" (bullet + marker + italic + link)
+        // - "Case v. Case, 340 Mass. 300, 163 N.E.2d 728 (1960)" (dual reporters)
+        // - "Case v. Case, 21 Mass. App. Ct. 542, 544, 488 N.E.2d 1029 (1986)" (Mass. App. Ct. with pin cites and dual reporter)
         // Formats: "(2003)", "(S.D.N.Y. 2003)", "(7th Cir. 2015)", "(D. Md. 2008)"
         java.util.regex.Pattern fullCitationPattern = java.util.regex.Pattern.compile(
             "(?:⚠️\\s*)?(?:✓\\s*)?\\[?\\*{0,2}([A-Z][\\w\\s\\.'&,-]+\\s+v\\.\\s+[A-Z][\\w\\s\\.'&,-]+)\\*{0,2},\\s*(" +
             String.join("|", extractedCitations.stream()
                 .map(java.util.regex.Pattern::quote)
                 .collect(java.util.stream.Collectors.toList())) +
-            ")(?:\\]\\([^)]+\\))?\\s*\\((?:([A-Z][\\.\\w\\s]+)\\s+)?(\\d{4})\\)"  // Optional URL, court, year
+            ")(?:,\\s*\\d+)?(?:,\\s*\\d+\\s+N\\.E\\.\\d*d?\\s+\\d+)?(?:\\]\\([^)]+\\))?\\s*\\((?:([A-Z][\\.\\w\\s]+)\\s+)?(\\d{4})\\)"  // Optional pin cite, optional N.E.2d, optional URL, court, year
         );
 
         java.util.regex.Matcher matcher = fullCitationPattern.matcher(processedResponse);
@@ -4092,14 +4095,39 @@ public class AILegalResearchService {
                     verifiedCount++;
                 } else {
                     // Not a Supreme Court case - check if this is a Massachusetts case
-                    // Massachusetts pattern: "400 Mass. 425" → https://law.justia.com/cases/massachusetts/supreme-court/{year}/{volume}-mass-{page}.html
-                    java.util.regex.Pattern massPattern = java.util.regex.Pattern.compile("(\\d+)\\s+Mass\\.\\s+(\\d+)");
-                    java.util.regex.Matcher massMatcher = massPattern.matcher(citation);
+                    // Massachusetts SJC pattern: "400 Mass. 425" → https://law.justia.com/cases/massachusetts/supreme-court/{year}/{volume}-mass-{page}.html
+                    // Massachusetts Appeals Court pattern: "59 Mass. App. Ct. 582" → https://law.justia.com/cases/massachusetts/court-of-appeals/{year}/{volume}-mass-app-ct-{page}.html
+                    java.util.regex.Pattern massSJCPattern = java.util.regex.Pattern.compile("(\\d+)\\s+Mass\\.\\s+(\\d+)");
+                    java.util.regex.Pattern massAppCtPattern = java.util.regex.Pattern.compile("(\\d+)\\s+Mass\\.\\s+App\\.\\s+Ct\\.\\s+(\\d+)");
 
-                    if (massMatcher.find()) {
-                        // Massachusetts case - construct Justia URL
-                        String volume = massMatcher.group(1);
-                        String page = massMatcher.group(2);
+                    java.util.regex.Matcher massAppCtMatcher = massAppCtPattern.matcher(citation);
+                    java.util.regex.Matcher massSJCMatcher = massSJCPattern.matcher(citation);
+
+                    if (massAppCtMatcher.find()) {
+                        // Massachusetts Appeals Court case
+                        String volume = massAppCtMatcher.group(1);
+                        String page = massAppCtMatcher.group(2);
+                        String justiaUrl = String.format(
+                            "https://law.justia.com/cases/massachusetts/court-of-appeals/%s/%s-mass-app-ct-%s.html",
+                            year, volume, page
+                        );
+
+                        String fullCitation = court != null ?
+                            String.format("%s (%s %s)", citation, court.trim(), year) :
+                            String.format("%s (%s)", citation, year);
+
+                        String replacement = String.format("✓ [%s](%s), %s",
+                            caseName, justiaUrl, fullCitation);
+
+                        log.info("✅ MASSACHUSETTS APPEALS COURT - Justia URL constructed: {}", justiaUrl);
+                        log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
+
+                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                        verifiedCount++;
+                    } else if (massSJCMatcher.find()) {
+                        // Massachusetts SJC case
+                        String volume = massSJCMatcher.group(1);
+                        String page = massSJCMatcher.group(2);
                         String justiaUrl = String.format(
                             "https://law.justia.com/cases/massachusetts/supreme-court/%s/%s-mass-%s.html",
                             year, volume, page
@@ -4112,22 +4140,20 @@ public class AILegalResearchService {
                         String replacement = String.format("✓ [%s](%s), %s",
                             caseName, justiaUrl, fullCitation);
 
-                        log.info("✅ MASSACHUSETTS CASE - Justia URL constructed: {}", justiaUrl);
+                        log.info("✅ MASSACHUSETTS SJC - Justia URL constructed: {}", justiaUrl);
                         log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
 
                         matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
                         verifiedCount++;
                     } else {
-                        // Not a Supreme Court or Massachusetts case - keep original format with warning
-                        String fullCitation = court != null ?
-                            String.format("%s (%s %s)", citation, court.trim(), year) :
-                            String.format("%s (%s)", citation, year);
+                        // Not a verifiable citation - REMOVE IT instead of showing warning
+                        // This prevents malpractice issues from unverified citations appearing in final documents
+                        log.warn("⚠️ REMOVING unverified citation: {} | Citation: {}", caseName, citation);
+                        log.warn("   Original: '{}'", fullMatch);
+                        log.warn("   This citation will be REMOVED from the output (prevents malpractice)");
 
-                        String replacement = String.format("⚠️ %s, %s (could not verify)",
-                            caseName, fullCitation);
-
-                        log.warn("⚠️ Could not verify: {} | REPLACING: '{}' → '{}'", caseName, fullMatch, replacement);
-                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                        // Replace with empty string to remove the citation
+                        matcher.appendReplacement(sb, "");
                         unverifiedCount++;
                     }
                 }

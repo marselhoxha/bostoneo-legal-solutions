@@ -265,6 +265,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
   @ViewChild('howItWorksModal') howItWorksModal!: TemplateRef<any>;
+  @ViewChild('promptTipsModal') promptTipsModal!: TemplateRef<any>;
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
@@ -687,6 +688,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Close dropdown when clicking outside
+   */
+  @HostListener('document:click', ['$event'])
+  handleClickOutside(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const dropdown = document.querySelector('.custom-dropdown-wrapper');
+    if (dropdown && !dropdown.contains(target)) {
+      this.showDocTypeDropdown = false;
+    }
+  }
+
 
   ngOnInit(): void {
     // Subscribe to UserService userData$ observable for reactive updates
@@ -764,10 +777,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Show notification to user
     const modeInfo = mode === 'FAST'
-      ? { title: 'Fast Mode', msg: 'Quick answers without citations (~15s, $0.15)' }
-      : { title: 'Thorough Mode', msg: 'Verified citations via CourtListener (~90s, $2-4)' };
+      ? { title: 'Fast Mode', msg: 'Quick answers without citations (~15s)' }
+      : { title: 'Thorough Mode', msg: 'Verified citations via CourtListener (~90s)' };
 
     this.notificationService.success(modeInfo.title, modeInfo.msg);
+  }
+
+  /**
+   * Set mode to THOROUGH when entering drafting mode
+   * Legal documents need citations for credibility and court filings
+   */
+  private setModeForDrafting(): void {
+    const previousMode = this.selectedResearchMode;
+    this.selectedResearchMode = ResearchMode.Thorough;
+
+    if (previousMode !== ResearchMode.Thorough) {
+      console.log('🎯 Drafting mode: Auto-switched to THOROUGH for verified citations');
+      this.notificationService.info(
+        'THOROUGH Mode Active',
+        'Drafting mode automatically uses THOROUGH mode for verified citations'
+      );
+    }
   }
 
   /**
@@ -1121,6 +1151,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     this.stateService.setShowChat(true);
                     this.stateService.setShowBottomSearchBar(false);
 
+                    // Auto-switch to THOROUGH mode for drafting
+                    this.setModeForDrafting();
+
                     this.cdr.detectChanges();
                   }, 0);
                 },
@@ -1433,26 +1466,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // TEMPLATE/DOCUMENT TYPE FILTERING
   // ========================================
 
-  // Get filtered document types
-  get filteredDocumentTypes() {
-    if (this.selectedPracticeArea === 'all') {
-      return this.documentTypes;
-    }
-    return this.documentTypes.filter(doc =>
-      doc.practiceAreas.includes(this.selectedPracticeArea)
-    );
-  }
-
-  // Get document types by category
-  getDocumentsByCategory(category: string) {
-    return this.filteredDocumentTypes.filter(doc => doc.category === category);
-  }
-
-  // Get unique categories from filtered documents
-  get availableCategories() {
-    const categories = new Set(this.filteredDocumentTypes.map(doc => doc.category));
-    return Array.from(categories);
-  }
 
   // Toggle template filters
   toggleFilters(): void {
@@ -1486,55 +1499,432 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
  
   // Protégé-style document type pills
-  documentTypePills = [
+  // Categorized document types with icons
+  documentTypeCategories = [
     {
-      id: 'transactional',
-      name: 'Transactional Document',
-      placeholderExample: 'Draft a purchase agreement for a commercial property sale between ABC Corp and XYZ LLC...'
+      id: 'pleadings',
+      name: 'Pleadings',
+      icon: '📋',
+      expanded: true,
+      types: [
+        {
+          id: 'complaint',
+          name: 'Complaint',
+          placeholderExample: 'Draft a complaint for breach of contract against ABC Corp for failing to deliver goods...'
+        },
+        {
+          id: 'answer',
+          name: 'Answer',
+          placeholderExample: 'Draft an answer to the plaintiff\'s complaint denying liability and asserting affirmative defenses...'
+        },
+        {
+          id: 'counterclaim',
+          name: 'Counterclaim',
+          placeholderExample: 'Draft a counterclaim alleging fraudulent misrepresentation by the plaintiff...'
+        }
+      ]
     },
     {
-      id: 'motion',
-      name: 'Motion',
-      placeholderExample: 'Draft a Motion to Dismiss the complaint for failure to state a claim...'
+      id: 'motions',
+      name: 'Motions',
+      icon: '⚖️',
+      expanded: true,
+      types: [
+        {
+          id: 'motion-dismiss',
+          name: 'Motion to Dismiss',
+          placeholderExample: 'Draft a Motion to Dismiss the complaint for failure to state a claim under Rule 12(b)(6)...'
+        },
+        {
+          id: 'motion-summary-judgment',
+          name: 'Summary Judgment',
+          placeholderExample: 'Draft a Motion for Summary Judgment arguing there are no genuine disputes of material fact...'
+        },
+        {
+          id: 'motion-compel',
+          name: 'Motion to Compel',
+          placeholderExample: 'Draft a Motion to Compel discovery responses that were not provided within the deadline...'
+        },
+        {
+          id: 'motion-suppress',
+          name: 'Motion to Suppress',
+          placeholderExample: 'Draft a Motion to Suppress evidence obtained during an unlawful search...'
+        },
+        {
+          id: 'motion-protective-order',
+          name: 'Protective Order',
+          placeholderExample: 'Draft a Motion for Protective Order to prevent disclosure of confidential business information...'
+        }
+      ]
     },
     {
-      id: 'legal-argument',
-      name: 'Legal Argument',
-      placeholderExample: 'Draft a legal argument addressing the admissibility of hearsay evidence in this case...'
+      id: 'discovery',
+      name: 'Discovery',
+      icon: '🔍',
+      expanded: false,
+      types: [
+        {
+          id: 'interrogatories',
+          name: 'Interrogatories',
+          placeholderExample: 'Draft interrogatories seeking information about the defendant\'s employment history and income...'
+        },
+        {
+          id: 'rfp',
+          name: 'Request for Production',
+          placeholderExample: 'Draft requests for production seeking all contracts and correspondence related to the transaction...'
+        },
+        {
+          id: 'rfa',
+          name: 'Request for Admission',
+          placeholderExample: 'Draft requests for admission regarding the authenticity of documents and basic facts of the case...'
+        },
+        {
+          id: 'deposition-notice',
+          name: 'Deposition Notice',
+          placeholderExample: 'Draft a notice of deposition for the plaintiff\'s key witness scheduled for next month...'
+        },
+        {
+          id: 'subpoena',
+          name: 'Subpoena',
+          placeholderExample: 'Draft a subpoena duces tecum for medical records from ABC Hospital...'
+        }
+      ]
     },
     {
-      id: 'legal-memo',
-      name: 'Legal Memo',
-      placeholderExample: 'Draft a legal memorandum analyzing the liability issues in a slip and fall case...'
+      id: 'correspondence',
+      name: 'Correspondence',
+      icon: '📝',
+      expanded: false,
+      types: [
+        {
+          id: 'demand-letter',
+          name: 'Demand Letter',
+          placeholderExample: 'Draft a demand letter seeking $50,000 in damages for personal injuries sustained in a car accident...'
+        },
+        {
+          id: 'settlement-offer',
+          name: 'Settlement Offer',
+          placeholderExample: 'Draft a settlement offer proposing resolution of all claims for $75,000...'
+        },
+        {
+          id: 'opinion-letter',
+          name: 'Opinion Letter',
+          placeholderExample: 'Draft an opinion letter advising the client on the legal risks of their proposed business transaction...'
+        },
+        {
+          id: 'client-email',
+          name: 'Client Email',
+          placeholderExample: 'Draft an email to the client explaining the discovery process and next steps in litigation...'
+        },
+        {
+          id: 'opposing-counsel-letter',
+          name: 'Letter to Counsel',
+          placeholderExample: 'Draft a letter to opposing counsel proposing a schedule for completing discovery...'
+        }
+      ]
     },
     {
-      id: 'letter',
-      name: 'Letter',
-      placeholderExample: 'Draft a demand letter to the opposing party requesting payment of $50,000...'
+      id: 'contracts',
+      name: 'Contracts',
+      icon: '📄',
+      expanded: false,
+      types: [
+        {
+          id: 'contract-employment',
+          name: 'Employment Agreement',
+          placeholderExample: 'Draft an employment agreement for a senior executive with salary, benefits, and non-compete terms...'
+        },
+        {
+          id: 'contract-nda',
+          name: 'NDA',
+          placeholderExample: 'Draft a mutual non-disclosure agreement for discussions about a potential merger...'
+        },
+        {
+          id: 'contract-sale',
+          name: 'Purchase Agreement',
+          placeholderExample: 'Draft a purchase agreement for the sale of commercial property including inspection contingencies...'
+        },
+        {
+          id: 'contract-service',
+          name: 'Service Agreement',
+          placeholderExample: 'Draft a consulting services agreement with payment terms and deliverable milestones...'
+        },
+        {
+          id: 'amendment',
+          name: 'Contract Amendment',
+          placeholderExample: 'Draft an amendment to extend the contract term and modify the payment schedule...'
+        },
+        {
+          id: 'clause',
+          name: 'Contract Clause',
+          placeholderExample: 'Draft an arbitration clause for a commercial services agreement...'
+        }
+      ]
     },
     {
-      id: 'email',
-      name: 'Email',
-      placeholderExample: 'Draft an email to the client explaining the next steps in their litigation matter...'
+      id: 'appellate',
+      name: 'Appellate',
+      icon: '🏛️',
+      expanded: false,
+      types: [
+        {
+          id: 'appellate-brief',
+          name: 'Appellate Brief',
+          placeholderExample: 'Draft an appellate brief arguing the trial court erred in granting summary judgment...'
+        },
+        {
+          id: 'reply-brief',
+          name: 'Reply Brief',
+          placeholderExample: 'Draft a reply brief responding to appellee\'s arguments on the standard of review...'
+        }
+      ]
     },
     {
-      id: 'clause',
-      name: 'Clause',
-      placeholderExample: 'Draft an arbitration clause for a commercial services agreement...'
+      id: 'other',
+      name: 'Other',
+      icon: '📑',
+      expanded: false,
+      types: [
+        {
+          id: 'legal-memo',
+          name: 'Legal Memo',
+          placeholderExample: 'Draft a legal memorandum analyzing the liability issues in a slip and fall case...'
+        },
+        {
+          id: 'legal-argument',
+          name: 'Legal Argument',
+          placeholderExample: 'Draft a legal argument addressing the admissibility of hearsay evidence in this case...'
+        },
+        {
+          id: 'affidavit',
+          name: 'Affidavit',
+          placeholderExample: 'Draft an affidavit for a witness describing what they observed at the accident scene...'
+        },
+        {
+          id: 'settlement-agreement',
+          name: 'Settlement Agreement',
+          placeholderExample: 'Draft a settlement agreement resolving all claims with mutual releases and confidentiality terms...'
+        },
+        {
+          id: 'stipulation',
+          name: 'Stipulation',
+          placeholderExample: 'Draft a stipulation agreeing to extend discovery deadlines by 60 days...'
+        },
+        {
+          id: 'notice',
+          name: 'Notice',
+          placeholderExample: 'Draft a notice to the court requesting a continuance of the hearing date...'
+        }
+      ]
     }
   ];
 
+  documentTypeSearchText: string = '';
   selectedDocTypePill: string | null = null;
+  showDocTypeWarning: boolean = false;
+  showDocTypeDropdown: boolean = false;
 
   selectDocTypePill(pillId: string): void {
     this.selectedDocTypePill = pillId;
+    this.showDocTypeWarning = false; // Hide warning once type is selected
+    this.showDocTypeDropdown = false; // Close dropdown after selection
 
-    // Update placeholder in the prompt textarea
-    const selectedPill = this.documentTypePills.find(p => p.id === pillId);
-    if (selectedPill) {
-      // You could optionally pre-fill or update a hint
-      console.log(`Selected document type: ${selectedPill.name}`);
+    // Find the selected pill across all categories
+    for (const category of this.documentTypeCategories) {
+      const selectedPill = category.types.find(p => p.id === pillId);
+      if (selectedPill) {
+        console.log(`Selected document type: ${selectedPill.name} (${category.name})`);
+        break;
+      }
     }
+  }
+
+  toggleDocTypeDropdown(): void {
+    this.showDocTypeDropdown = !this.showDocTypeDropdown;
+  }
+
+  get selectedDocTypeName(): string {
+    if (!this.selectedDocTypePill) {
+      return 'Select document type...';
+    }
+
+    for (const category of this.documentTypeCategories) {
+      const selectedType = category.types.find(t => t.id === this.selectedDocTypePill);
+      if (selectedType) {
+        return selectedType.name;
+      }
+    }
+
+    return 'Select document type...';
+  }
+
+  toggleCategory(categoryId: string): void {
+    const category = this.documentTypeCategories.find(c => c.id === categoryId);
+    if (category) {
+      category.expanded = !category.expanded;
+    }
+  }
+
+  /**
+   * Get flat list of filtered document types (for search quick pills)
+   */
+  get filteredDocumentTypes() {
+    if (!this.documentTypeSearchText.trim()) {
+      return [];
+    }
+
+    const search = this.documentTypeSearchText.toLowerCase();
+    const allTypes: any[] = [];
+
+    this.documentTypeCategories.forEach(cat => {
+      cat.types.forEach(type => {
+        if (type.name.toLowerCase().includes(search) || type.id.toLowerCase().includes(search)) {
+          allTypes.push(type);
+        }
+      });
+    });
+
+    return allTypes;
+  }
+
+  /**
+   * Show warning when user focuses on prompt without selecting type
+   */
+  onPromptFocus(): void {
+    if (!this.selectedDocTypePill && this.selectedTask === 'draft') {
+      this.showDocTypeWarning = true;
+    }
+  }
+
+  /**
+   * Prompt Tips by Category
+   */
+  promptTipsByCategory = [
+    {
+      icon: '📋',
+      name: 'Pleadings',
+      tips: [
+        'Draft a complaint for breach of contract involving a construction dispute. Include facts about delayed completion, cost overruns, and defective work.',
+        'Prepare an answer to a negligence complaint, denying liability and asserting comparative negligence as an affirmative defense.',
+        'Create a counterclaim for tortious interference with business relations based on defendant\'s actions in soliciting my clients.'
+      ]
+    },
+    {
+      icon: '⚖️',
+      name: 'Motions',
+      tips: [
+        'Draft a motion to dismiss for lack of personal jurisdiction, arguing that the defendant has insufficient contacts with this state.',
+        'Prepare a motion for summary judgment based on plaintiff\'s failure to establish a genuine issue of material fact regarding causation.',
+        'Create a motion to compel discovery responses that are 45 days overdue, including interrogatories and document requests.'
+      ]
+    },
+    {
+      icon: '🔍',
+      name: 'Discovery',
+      tips: [
+        'Draft 25 interrogatories for a personal injury case involving a car accident, focusing on liability, damages, and insurance coverage.',
+        'Prepare requests for production of documents in an employment discrimination case, including personnel files, emails, and performance reviews.',
+        'Create requests for admissions regarding the authenticity of key documents and basic facts in a contract dispute.'
+      ]
+    },
+    {
+      icon: '📝',
+      name: 'Correspondence',
+      tips: [
+        'Draft a demand letter for unpaid invoices totaling $50,000, threatening litigation if payment is not received within 30 days.',
+        'Prepare an engagement letter for representation in a commercial real estate transaction, including fee structure and scope of services.',
+        'Create a settlement offer letter proposing $100,000 to resolve all claims in a business dispute, with detailed reasoning.'
+      ]
+    }
+  ];
+
+  /**
+   * Open Prompt Tips Modal
+   */
+  showPromptTips(): void {
+    this.modalService.open(this.promptTipsModal, {
+      size: 'lg',
+      backdrop: 'static',
+      centered: true,
+      windowClass: 'prompt-tips-modal'
+    });
+  }
+
+  /**
+   * Insert example prompt into textarea
+   */
+  usePromptExample(example: string): void {
+    this.customPrompt = example;
+    // Focus on the prompt textarea after inserting
+    setTimeout(() => {
+      const textarea = document.querySelector('.prompt-textarea') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+      }
+    }, 100);
+  }
+
+  /**
+   * Smart auto-detection: Detect document type from prompt text
+   * Used as fallback when user doesn't select a document type
+   */
+  private detectDocumentTypeFromPrompt(prompt: string): string {
+    if (!prompt) {
+      return 'general-draft';
+    }
+
+    const lower = prompt.toLowerCase();
+
+    // Check for specific keywords and patterns
+    // PLEADINGS
+    if (lower.includes('complaint') || lower.includes('petition')) return 'complaint';
+    if (lower.includes('answer to') || lower.includes('answer the')) return 'answer';
+    if (lower.includes('counterclaim')) return 'counterclaim';
+
+    // MOTIONS
+    if (lower.includes('motion to dismiss')) return 'motion-dismiss';
+    if (lower.includes('summary judgment')) return 'motion-summary-judgment';
+    if (lower.includes('motion to compel')) return 'motion-compel';
+    if (lower.includes('motion to suppress')) return 'motion-suppress';
+    if (lower.includes('protective order')) return 'motion-protective-order';
+    if (lower.includes('motion')) return 'motion-dismiss'; // Generic motion
+
+    // DISCOVERY
+    if (lower.includes('interrogator')) return 'interrogatories';
+    if (lower.includes('request for production') || lower.includes('rfp')) return 'rfp';
+    if (lower.includes('request for admission') || lower.includes('rfa')) return 'rfa';
+    if (lower.includes('deposition notice')) return 'deposition-notice';
+    if (lower.includes('subpoena')) return 'subpoena';
+
+    // CORRESPONDENCE
+    if (lower.includes('demand letter')) return 'demand-letter';
+    if (lower.includes('settlement offer')) return 'settlement-offer';
+    if (lower.includes('opinion letter')) return 'opinion-letter';
+    if (lower.includes('email to client') || lower.includes('client email')) return 'client-email';
+    if (lower.includes('letter to opposing counsel') || lower.includes('counsel letter')) return 'opposing-counsel-letter';
+
+    // CONTRACTS
+    if (lower.includes('employment agreement') || lower.includes('employment contract')) return 'contract-employment';
+    if (lower.includes('nda') || lower.includes('non-disclosure')) return 'contract-nda';
+    if (lower.includes('purchase agreement') || lower.includes('sale agreement')) return 'contract-sale';
+    if (lower.includes('service agreement') || lower.includes('consulting agreement')) return 'contract-service';
+    if (lower.includes('amendment')) return 'amendment';
+    if (lower.includes('contract') || lower.includes('agreement')) return 'contract-service'; // Generic contract
+
+    // APPELLATE
+    if (lower.includes('appellate brief') || lower.includes('appeal')) return 'appellate-brief';
+    if (lower.includes('reply brief')) return 'reply-brief';
+
+    // OTHER
+    if (lower.includes('legal memo') || lower.includes('memorandum')) return 'legal-memo';
+    if (lower.includes('legal argument')) return 'legal-argument';
+    if (lower.includes('affidavit') || lower.includes('declaration')) return 'affidavit';
+    if (lower.includes('settlement agreement')) return 'settlement-agreement';
+    if (lower.includes('stipulation')) return 'stipulation';
+    if (lower.includes('notice')) return 'notice';
+
+    // Default fallback
+    return 'general-draft';
   }
 
   // Get placeholder text based on selected task and document type
@@ -1554,13 +1944,31 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // For 'draft' task
     if (this.selectedTask === 'draft') {
       if (this.selectedDocTypePill) {
-        const selectedPill = this.documentTypePills.find(p => p.id === this.selectedDocTypePill);
-        return selectedPill?.placeholderExample || 'Describe the document you want to draft...';
+        // Find selected pill across all categories
+        for (const category of this.documentTypeCategories) {
+          const selectedPill = category.types.find(p => p.id === this.selectedDocTypePill);
+          if (selectedPill) {
+            return selectedPill.placeholderExample || 'Describe the document you want to draft...';
+          }
+        }
       }
       return 'Describe the document you want to draft...';
     }
 
     return 'Ask a legal question...';
+  }
+
+  // Check if Send button should be enabled
+  get canSend(): boolean {
+    const hasPromptText = this.customPrompt?.trim().length > 0;
+
+    // For draft task, require document type selection
+    if (this.selectedTask === 'draft') {
+      return this.selectedDocTypePill !== null && hasPromptText;
+    }
+
+    // For other tasks, only check prompt text
+    return hasPromptText;
   }
 
   // Get follow-up placeholder for bottom input bar based on active task
@@ -1673,14 +2081,26 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     console.log('🔵 Created temporary conversation for cancellation:', tempConvId);
 
+    // Determine document type: use selected pill OR auto-detect from prompt
+    let documentType: string;
+    if (this.selectedDocTypePill) {
+      documentType = this.selectedDocTypePill;
+      console.log('📋 Using selected document type:', documentType);
+    } else {
+      documentType = this.detectDocumentTypeFromPrompt(userPrompt);
+      console.log('🔍 Auto-detected document type from prompt:', documentType);
+      console.log('⚠️ No document type selected - using auto-detection fallback');
+    }
+
     // Prepare draft generation request
     const draftRequest = {
       userId: this.currentUser.id,
       caseId: this.selectedCaseId,
       prompt: userPrompt,
-      documentType: this.selectedDocTypePill || 'general-draft',
+      documentType: documentType,
       jurisdiction: this.selectedJurisdiction,
-      sessionName: title
+      sessionName: title,
+      researchMode: this.selectedResearchMode  // Pass selected research mode (FAST or THOROUGH)
     };
 
     // First, initialize the conversation to get backend ID immediately
@@ -1798,6 +2218,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             // ACTIVATE SPLIT-VIEW DRAFTING MODE
             this.stateService.setDraftingMode(true);
             this.stateService.setIsGenerating(false);
+
+            // Auto-switch to THOROUGH mode for drafting
+            this.setModeForDrafting();
 
             this.cdr.detectChanges();
           }, 0);
@@ -2125,46 +2548,32 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Convert Markdown to HTML
     const htmlContent = this.markdownConverter.convert(markdownContent);
+    console.log('📋 HTML content generated, length:', htmlContent.length);
+    console.log('📋 HTML preview (first 1000 chars):', htmlContent.substring(0, 1000));
 
     try {
-      console.log('📋 Converting HTML to Delta format...');
-      const delta = this.quillEditorInstance.clipboard.convert(htmlContent);
-      console.log('📋 Delta ops length:', delta.ops?.length || 0);
+      // CRITICAL: Use dangerouslyPasteHTML directly instead of clipboard.convert
+      // This properly handles lists, tables, and all HTML elements
+      console.log('📋 Using dangerouslyPasteHTML to insert content...');
 
-      // Check if Delta is empty (clipboard.convert returns empty Delta for incompatible HTML)
-      if (!delta.ops || delta.ops.length === 0) {
-        console.warn('⚠️ Delta is empty - clipboard.convert() failed to parse HTML');
-        console.log('⚠️ Using direct innerHTML insertion + Delta rebuild');
+      // Clear existing content first
+      this.quillEditorInstance.setText('');
 
-        // Set HTML in DOM
-        this.quillEditorInstance.root.innerHTML = htmlContent;
+      // Insert HTML at position 0 using dangerouslyPasteHTML
+      // This converts HTML to proper Quill Delta automatically
+      this.quillEditorInstance.clipboard.dangerouslyPasteHTML(0, htmlContent, 'silent');
 
-        // CRITICAL: Force Quill to rebuild its Delta from the DOM
-        // This syncs Quill's internal state with the HTML we just set
-        (this.quillEditorInstance as any).clipboard.dangerouslyPasteHTML(0, '', 'silent');
-        this.quillEditorInstance.setSelection(null as any);
-
-        // Get the Delta from the current DOM state
-        const currentContents = this.quillEditorInstance.getContents();
-        console.log('🔄 Rebuilt Delta from DOM, ops:', currentContents.ops?.length || 0);
-
-        // Force update to sync everything
-        this.quillEditorInstance.update('silent' as any);
-
-        console.log('✅ Content set via innerHTML + Delta rebuild');
-      } else {
-        console.log('📋 Setting contents with Delta...');
-        this.quillEditorInstance.setContents(delta);
-        console.log('✅ Content set via Delta API');
-      }
-
-      // Verify content was actually set
+      // Verify content was set
       const editorText = this.quillEditorInstance.getText();
-      console.log('✅ Editor text length after setting:', editorText.length);
+      const delta = this.quillEditorInstance.getContents();
+      console.log('✅ Content inserted successfully');
+      console.log('✅ Editor text length:', editorText.length);
+      console.log('✅ Delta ops count:', delta.ops?.length || 0);
+
     } catch (error) {
-      console.error('❌ Failed to convert/set content via Delta:', error);
+      console.error('❌ Failed to set content via dangerouslyPasteHTML:', error);
       console.log('⚠️ Fallback: Setting innerHTML directly');
-      // Fallback to direct innerHTML if Delta conversion fails
+      // Fallback to direct innerHTML if dangerouslyPasteHTML fails
       this.quillEditorInstance.root.innerHTML = htmlContent;
       console.log('✅ Content set via innerHTML fallback');
     }

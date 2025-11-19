@@ -66,6 +66,7 @@ export interface DraftGenerationRequest {
   documentType: string;
   jurisdiction: string;
   sessionName: string;
+  researchMode: string;  // Research mode: FAST or THOROUGH
 }
 
 export interface DraftGenerationResponse {

@@ -170,22 +170,81 @@
         </div>
       </div>
 
-      <!-- Document Type Pills (when Generate a draft is selected) -->
-      <div class="document-type-pills" *ngIf="selectedTask === 'draft'">
-        <div class="pills-label">Draft:</div>
-        <div class="pills-container">
+      <!-- Document Type Selector - Custom Dropdown (when Generate a draft is selected) -->
+      <div class="document-type-selector" *ngIf="selectedTask === 'draft'">
+        <div class="selector-header">
+          <div class="selector-label">Draft:</div>
+
+          <!-- Custom Dropdown Button -->
+          <div class="custom-dropdown-wrapper">
+            <button
+              type="button"
+              class="custom-dropdown-toggle"
+              (click)="toggleDocTypeDropdown()"
+              [class.active]="showDocTypeDropdown">
+              <span class="dropdown-text">{{selectedDocTypeName}}</span>
+              <i class="ri-arrow-down-s-line dropdown-arrow" [class.rotated]="showDocTypeDropdown"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div class="custom-dropdown-menu" *ngIf="showDocTypeDropdown">
+              <div class="dropdown-content">
+                <div class="dropdown-category" *ngFor="let category of documentTypeCategories">
+                  <div class="category-header" (click)="toggleCategory(category.id)">
+                    <span class="category-icon">{{category.icon}}</span>
+                    <span class="category-name">{{category.name}}</span>
+                    <i class="ri-arrow-down-s-line toggle-icon" [class.rotated]="category.expanded"></i>
+                  </div>
+
+                  <div class="category-items" *ngIf="category.expanded">
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      *ngFor="let type of category.types"
+                      [class.selected]="selectedDocTypePill === type.id"
+                      (click)="selectDocTypePill(type.id)">
+                      {{type.name}}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search input (optional filter) -->
+          <div class="doc-type-search-wrapper">
+            <i class="ri-search-line search-icon"></i>
+            <input
+              type="text"
+              class="form-control form-control-sm doc-type-search"
+              [(ngModel)]="documentTypeSearchText"
+              placeholder="Or search types..."
+              name="docTypeSearch">
+          </div>
+
+          <a (click)="showPromptTips()" class="prompt-tips-link">
+            <i class="ri-lightbulb-line"></i>
+            Prompt Tips
+          </a>
+        </div>
+
+        <!-- Quick access pills (filtered by search if active) -->
+        <div class="quick-pills" *ngIf="documentTypeSearchText && filteredDocumentTypes.length > 0">
           <button
             class="pill-btn"
-            *ngFor="let pill of documentTypePills"
-            [class.active]="selectedDocTypePill === pill.id"
-            (click)="selectDocTypePill(pill.id)">
-            {{pill.name}}
+            *ngFor="let type of filteredDocumentTypes"
+            [class.active]="selectedDocTypePill === type.id"
+            (click)="selectDocTypePill(type.id)">
+            {{type.name}}
           </button>
         </div>
-        <a href="javascript:void(0)" class="prompt-tips-link">
-          <i class="ri-lightbulb-line"></i>
-          Prompt Tips
-        </a>
+      </div>
+
+      <!-- Warning: Document Type Required (only show when user focuses prompt) -->
+      <div class="alert alert-warning doc-type-warning"
+           *ngIf="selectedTask === 'draft' && showDocTypeWarning && !selectedDocTypePill">
+        <i class="ri-alert-line me-1"></i>
+        <strong>Please select a document type above</strong> to ensure proper citation formatting
       </div>
 
       <!-- Main Prompt Input -->
@@ -195,6 +254,7 @@
             <textarea
               class="form-control prompt-textarea"
               [(ngModel)]="customPrompt"
+              (focus)="onPromptFocus()"
               name="customPrompt"
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
@@ -235,7 +295,7 @@
                           class="btn btn-light btn-sm mode-btn-compact"
                           [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
                     <span class="mode-name-compact">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
-                    <span class="mode-cost-compact">{{ selectedResearchMode === 'FAST' ? '$0.15' : '$2-4' }}</span>
+                    <span class="mode-cost-compact">{{ selectedResearchMode === 'FAST' ? '~15s' : '~90s' }}</span>
                   </button>
                   <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
                     <!-- FAST Mode Option -->
@@ -244,7 +304,7 @@
                        (click)="onResearchModeChange('FAST')">
                       <div class="mode-header-minimal">
                         <span class="mode-title">Fast</span>
-                        <span class="mode-meta">~15s • $0.15</span>
+                        <span class="mode-meta">~15s</span>
                       </div>
                       <p class="mode-desc-minimal">Quick guidance, no citations</p>
                     </a>
@@ -257,7 +317,7 @@
                        (click)="onResearchModeChange('THOROUGH')">
                       <div class="mode-header-minimal">
                         <span class="mode-title">Thorough</span>
-                        <span class="mode-meta">~90s • $2-4</span>
+                        <span class="mode-meta">~90s</span>
                       </div>
                       <p class="mode-desc-minimal">Verified citations via CourtListener</p>
                     </a>
@@ -265,7 +325,7 @@
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-submit">
+              <button type="submit" class="btn btn-primary btn-submit" [disabled]="!canSend">
                 <i class="ri-send-plane-fill"></i> Send
               </button>
             </div>
@@ -298,7 +358,7 @@
                   class="btn btn-light btn-sm mode-selector-btn"
                   [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
             <span class="mode-label">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
-            <span class="mode-badge">{{ selectedResearchMode === 'FAST' ? '$0.15' : '$2-4' }}</span>
+            <span class="mode-badge">{{ selectedResearchMode === 'FAST' ? '~15s' : '~90s' }}</span>
           </button>
           <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
             <!-- FAST Mode Option -->
@@ -307,7 +367,7 @@
                (click)="onResearchModeChange('FAST')">
               <div class="mode-header-minimal">
                 <span class="mode-title">Fast</span>
-                <span class="mode-meta">~15s • $0.15</span>
+                <span class="mode-meta">~15s</span>
               </div>
               <p class="mode-desc-minimal">Quick guidance, no citations</p>
             </a>
@@ -320,7 +380,7 @@
                (click)="onResearchModeChange('THOROUGH')">
               <div class="mode-header-minimal">
                 <span class="mode-title">Thorough</span>
-                <span class="mode-meta">~90s • $2-4</span>
+                <span class="mode-meta">~90s</span>
               </div>
               <p class="mode-desc-minimal">Verified citations via CourtListener</p>
             </a>
@@ -853,6 +913,40 @@
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-primary" (click)="modal.close()">Got it!</button>
+  </div>
+</ng-template>
+
+<!-- Prompt Tips Modal -->
+<ng-template #promptTipsModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">
+      <i class="ri-lightbulb-line"></i>
+      Prompt Tips & Examples
+    </h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p class="text-muted mb-3" style="font-size: 0.875rem;">
+      Get better results by providing clear, detailed prompts. Here are some examples for each document type:
+    </p>
+
+    <div class="tips-category" *ngFor="let category of promptTipsByCategory">
+      <div class="category-header">
+        <span class="category-icon">{{category.icon}}</span>
+        <h6>{{category.name}}</h6>
+      </div>
+
+      <div class="tip-item" *ngFor="let tip of category.tips">
+        <div class="tip-text">"{{tip}}"</div>
+        <button class="use-tip-btn" (click)="usePromptExample(tip); modal.dismiss()">
+          <i class="ri-file-copy-line"></i>
+          Use This Prompt
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
   </div>
 </ng-template>
 
