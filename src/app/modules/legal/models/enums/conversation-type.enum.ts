@@ -14,6 +14,5 @@ export enum TaskType {
 
 export enum ResearchMode {
   Fast = 'FAST',
-  Auto = 'AUTO',
   Thorough = 'THOROUGH'
 }

@@ -224,6 +224,47 @@
                   <option *ngFor="let jur of jurisdictions" [value]="jur">{{jur}}</option>
                 </select>
               </div>
+
+              <!-- Research Mode Selector (Compact) -->
+              <div class="mode-selector-compact">
+                <label>Mode:</label>
+                <div class="btn-group" ngbDropdown placement="top-start">
+                  <button id="mode-dropdown-compact"
+                          ngbDropdownToggle
+                          type="button"
+                          class="btn btn-light btn-sm mode-btn-compact"
+                          [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
+                    <span class="mode-name-compact">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
+                    <span class="mode-cost-compact">{{ selectedResearchMode === 'FAST' ? '$0.15' : '$2-4' }}</span>
+                  </button>
+                  <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
+                    <!-- FAST Mode Option -->
+                    <a class="dropdown-item mode-option-minimal"
+                       [class.active]="selectedResearchMode === 'FAST'"
+                       (click)="onResearchModeChange('FAST')">
+                      <div class="mode-header-minimal">
+                        <span class="mode-title">Fast</span>
+                        <span class="mode-meta">~15s • $0.15</span>
+                      </div>
+                      <p class="mode-desc-minimal">Quick guidance, no citations</p>
+                    </a>
+
+                    <div class="dropdown-divider"></div>
+
+                    <!-- THOROUGH Mode Option -->
+                    <a class="dropdown-item mode-option-minimal"
+                       [class.active]="selectedResearchMode === 'THOROUGH'"
+                       (click)="onResearchModeChange('THOROUGH')">
+                      <div class="mode-header-minimal">
+                        <span class="mode-title">Thorough</span>
+                        <span class="mode-meta">~90s • $2-4</span>
+                      </div>
+                      <p class="mode-desc-minimal">Verified citations via CourtListener</p>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" class="btn btn-primary btn-submit">
                 <i class="ri-send-plane-fill"></i> Send
               </button>
@@ -249,6 +290,43 @@
         </div>
       </div>
       <div class="action-bar-right">
+        <!-- Research Mode Selector -->
+        <div class="mode-selector" ngbDropdown>
+          <button id="mode-dropdown"
+                  ngbDropdownToggle
+                  type="button"
+                  class="btn btn-light btn-sm mode-selector-btn"
+                  [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
+            <span class="mode-label">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
+            <span class="mode-badge">{{ selectedResearchMode === 'FAST' ? '$0.15' : '$2-4' }}</span>
+          </button>
+          <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
+            <!-- FAST Mode Option -->
+            <a class="dropdown-item mode-option-minimal"
+               [class.active]="selectedResearchMode === 'FAST'"
+               (click)="onResearchModeChange('FAST')">
+              <div class="mode-header-minimal">
+                <span class="mode-title">Fast</span>
+                <span class="mode-meta">~15s • $0.15</span>
+              </div>
+              <p class="mode-desc-minimal">Quick guidance, no citations</p>
+            </a>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- THOROUGH Mode Option -->
+            <a class="dropdown-item mode-option-minimal"
+               [class.active]="selectedResearchMode === 'THOROUGH'"
+               (click)="onResearchModeChange('THOROUGH')">
+              <div class="mode-header-minimal">
+                <span class="mode-title">Thorough</span>
+                <span class="mode-meta">~90s • $2-4</span>
+              </div>
+              <p class="mode-desc-minimal">Verified citations via CourtListener</p>
+            </a>
+          </div>
+        </div>
+
         <!-- Export Dropdown Button -->
         <div class="btn-group" ngbDropdown>
           <button id="export-dropdown" ngbDropdownToggle type="button" class="btn btn-primary btn-sm">

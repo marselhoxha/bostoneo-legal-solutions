@@ -1,5 +1,5 @@
 {
-    "java.jdt.ls.vmargs": "-Xmx2G -XX:+UseG1GC",
+    "java.jdt.ls.vmargs": "-Xmx4G -XX:+UseG1GC",
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "automatic"
    }

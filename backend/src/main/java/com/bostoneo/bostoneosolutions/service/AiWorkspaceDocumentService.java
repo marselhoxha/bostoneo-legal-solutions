@@ -583,7 +583,7 @@ public class AiWorkspaceDocumentService {
             .sessionName(sessionName)
             .sessionType(caseId != null ? "case-specific" : "general")
             .taskType("GENERATE_DRAFT")
-            .researchMode("AUTO")
+            .researchMode("FAST")
             .jurisdiction(jurisdiction)
             .isActive(true)
             .build();
@@ -638,7 +638,7 @@ public class AiWorkspaceDocumentService {
                 .sessionName(sessionName)
                 .sessionType(caseId != null ? "case-specific" : "general")
                 .taskType("GENERATE_DRAFT")
-                .researchMode("AUTO")
+                .researchMode("FAST")
                 .jurisdiction(jurisdiction)
                 .isActive(true)
                 .build();

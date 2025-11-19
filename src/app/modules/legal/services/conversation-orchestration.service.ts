@@ -243,7 +243,7 @@ export class ConversationOrchestrationService {
             messageCount: conv.messageCount || 0,
             jurisdiction: conv.jurisdiction,
             backendConversationId: conv.id,
-            researchMode: (conv.researchMode as ResearchMode) || ResearchMode.Auto,
+            researchMode: (conv.researchMode as ResearchMode) || ResearchMode.Fast,
             taskType: conv.taskType as TaskType,
             documentId: conv.documentId,
             relatedDraftId: conv.relatedDraftId

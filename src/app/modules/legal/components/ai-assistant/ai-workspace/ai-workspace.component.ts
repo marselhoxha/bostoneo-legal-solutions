@@ -155,6 +155,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedJurisdiction = 'Massachusetts';
   jurisdictions = ['Massachusetts', 'Federal'];
 
+  // Research Mode (FAST or THOROUGH)
+  selectedResearchMode: ResearchMode = ResearchMode.Fast;
+
   // Document editor modal
   editorModalOpen = false;
   editorDocumentId = '';
@@ -753,6 +756,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Handle research mode change (FAST or THOROUGH)
+   */
+  onResearchModeChange(mode: 'FAST' | 'THOROUGH'): void {
+    this.selectedResearchMode = mode === 'FAST' ? ResearchMode.Fast : ResearchMode.Thorough;
+    console.log(`Research mode changed to: ${mode}`);
+
+    // Show notification to user
+    const modeInfo = mode === 'FAST'
+      ? { title: 'Fast Mode', msg: 'Quick answers without citations (~15s, $0.15)' }
+      : { title: 'Thorough Mode', msg: 'Verified citations via CourtListener (~90s, $2-4)' };
+
+    this.notificationService.success(modeInfo.title, modeInfo.msg);
+  }
+
+  /**
    * Opens the "How It Works" modal to explain AI Workspace features
    */
   openHowItWorksModal(): void {
@@ -969,7 +987,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             messageCount: conv.messageCount || 0, // Use for badge display after page refresh
             jurisdiction: conv.jurisdiction,
             backendConversationId: conv.id,
-            researchMode: conv.researchMode as ResearchMode || 'AUTO' as ResearchMode,
+            researchMode: conv.researchMode as ResearchMode || 'FAST' as ResearchMode,
             taskType: conv.taskType as TaskType,
             documentId: conv.documentId,
             relatedDraftId: conv.relatedDraftId
@@ -1646,7 +1664,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       relatedDraftId: undefined,
       taskType: TaskType.GenerateDraft,
       jurisdiction: this.selectedJurisdiction,
-      researchMode: ResearchMode.Auto
+      researchMode: this.selectedResearchMode
     };
 
     // Add temp conversation and set as active BEFORE making request
@@ -1849,7 +1867,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     const taskType = taskTypeMap[this.selectedTask];
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
-    const researchMode = 'AUTO'; // Default to AUTO mode
+    const researchMode = this.selectedResearchMode; // Use selected mode from UI
 
     // Create conversation
     this.legalResearchService.createGeneralConversation(title, researchMode, taskType)
@@ -1868,7 +1886,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             messageCount: this.stateService.getConversationMessages().length,
             jurisdiction: session.jurisdiction,
             backendConversationId: session.id,
-            researchMode: session.researchMode as ResearchMode || 'AUTO' as ResearchMode,
+            researchMode: session.researchMode as ResearchMode || 'FAST' as ResearchMode,
             taskType: session.taskType as TaskType,
             documentId: session.documentId,
             relatedDraftId: session.relatedDraftId
@@ -2764,7 +2782,7 @@ You can:
 
     // Send message to backend conversation
     this.stateService.setIsGenerating(true);
-    const researchMode = activeConv.researchMode || 'AUTO';
+    const researchMode = this.selectedResearchMode;
 
     // Initialize and animate workflow steps for the active task
     this.initializeWorkflowSteps(this.activeTask);

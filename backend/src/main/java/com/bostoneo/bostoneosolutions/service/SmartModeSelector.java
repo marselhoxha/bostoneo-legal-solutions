@@ -30,10 +30,11 @@ public class SmartModeSelector {
 
     /**
      * Select optimal mode for a query
+     * NOTE: AUTO mode has been deprecated. Users must choose FAST or THOROUGH explicitly.
      */
     public ModeRecommendation selectMode(String query, Long userId, String requestedMode) {
-        // If user explicitly requested a mode and has enough budget, respect it
-        if (requestedMode != null && !requestedMode.equalsIgnoreCase("AUTO")) {
+        // If user explicitly requested a mode, respect it
+        if (requestedMode != null && (requestedMode.equalsIgnoreCase("FAST") || requestedMode.equalsIgnoreCase("THOROUGH"))) {
             return new ModeRecommendation(
                 requestedMode,
                 1.0,

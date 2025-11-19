@@ -169,13 +169,34 @@ public class LegalResearchTools {
     private ToolDefinition verifyCitationTool() {
         return ToolDefinition.builder()
             .name("verify_citation")
-            .description("Verify if a case citation exists and is valid. Returns case details if found.")
+            .description("""
+                **MANDATORY: Verify EVERY citation before including in your response.**
+
+                Verifies a legal citation against CourtListener and Justia databases.
+                Prevents AI hallucinations by validating citations against primary sources.
+
+                Examples:
+                - verify_citation("550 U.S. 544") → Returns case name, court, year, URL
+                - verify_citation("Bell Atlantic v. Twombly") → Searches by case name
+
+                **IMPORTANT**: Always include citations in your response, even when verification fails.
+                - If verification SUCCEEDS: Use clickable link format with ✓ marker
+                - If verification FAILS: Include citation with ⚠️ warning marker
+
+                Attorneys need case law citations regardless of database verification status.
+
+                **Returns**: Full case details with URL if found, instruction to include with warning marker if not found.
+                """)
             .input_schema(Map.of(
                 "type", "object",
                 "properties", Map.of(
                     "citation", Map.of(
                         "type", "string",
-                        "description", "Case citation to verify (e.g., '550 U.S. 544' or 'Twombly')"
+                        "description", "Citation to verify (e.g., '550 U.S. 544', 'Twombly', 'Bell Atlantic v. Twombly')"
+                    ),
+                    "court", Map.of(
+                        "type", "string",
+                        "description", "Optional court filter (e.g., 'scotus', 'ca1', 'mad') to narrow search"
                     )
                 ),
                 "required", List.of("citation")
@@ -346,24 +367,63 @@ public class LegalResearchTools {
         }
 
         String citation = (String) input.get("citation");
+        String court = (String) input.get("court"); // Optional court filter
 
-        // Search CourtListener for this citation
-        List<Map<String, Object>> results = courtListenerService.searchOpinions(
-            citation, "", LocalDate.now().minusYears(50), null
-        );
+        log.info("🔍 Verifying citation via CourtListener: {}", citation);
+
+        // Pass the FULL citation string to CourtListenerService
+        // It will handle extraction of both citation number (for search) and case name (for filtering)
+        // Examples:
+        // - "McDonnell Douglas Corp. v. Green, 411 U.S. 792" → CourtListener filters by case name
+        // - "411 U.S. 792" → CourtListener searches without case name filtering
+        com.bostoneo.bostoneosolutions.dto.ai.CitationVerificationResult verificationResult;
+        verificationResult = courtListenerService.verifyCitation(citation);
 
         String result;
-        if (results.isEmpty()) {
-            result = "Citation not found or cannot be verified: " + citation;
+        if (!verificationResult.isFound()) {
+            result = String.format("⚠️ CITATION NOT VERIFIED: %s\n" +
+                "Status: Not found in CourtListener or Justia databases\n" +
+                "Action Required: INCLUDE this citation in your response with warning marker.\n" +
+                "Format: '⚠️ %s'\n" +
+                "Note: Attorneys need case law citations even when database verification is unavailable. Always include relevant citations.",
+                citation, citation);
+
+            if (verificationResult.getErrorMessage() != null) {
+                result += "\nError: " + verificationResult.getErrorMessage();
+            }
+
             saveToCache(cacheKey, result, 7); // Cache "not found" for 7 days
+            log.warn("⚠️ Citation verification failed: {}", citation);
         } else {
-            Map<String, Object> case0 = results.get(0);
-            result = String.format("✓ VERIFIED: %s\nCourt: %s\nDate: %s\nURL: %s",
-                case0.get("title"),
-                case0.get("court"),
-                case0.get("date"),
-                case0.get("url"));
+            // Build verified citation response with all details
+            StringBuilder verified = new StringBuilder();
+            verified.append("✅ CITATION VERIFIED\n\n");
+            verified.append("Case: ").append(verificationResult.getCaseName()).append("\n");
+            verified.append("Citation: ").append(verificationResult.getCitation()).append("\n");
+
+            if (verificationResult.getCourtId() != null) {
+                verified.append("Court: ").append(verificationResult.getCourtId()).append("\n");
+            }
+
+            if (verificationResult.getDateFiled() != null) {
+                verified.append("Date Filed: ").append(verificationResult.getDateFiled()).append("\n");
+            }
+
+            if (verificationResult.getUrl() != null) {
+                verified.append("CourtListener URL: ").append(verificationResult.getUrl()).append("\n");
+            }
+
+            if (verificationResult.isPartialMatch()) {
+                verified.append("\n⚠️ NOTE: Partial match - case name found but citation may differ. Verify citation format before using.\n");
+            }
+
+            verified.append("\nConfidence: ").append(String.format("%.0f%%", verificationResult.getConfidenceScore() * 100));
+            verified.append("\n\nYou may now cite this case in your response with the CourtListener URL as verification.");
+
+            result = verified.toString();
             saveToCache(cacheKey, result, 30); // Cache verified citations for 30 days
+
+            log.info("✅ Citation verified: {} -> {}", citation, verificationResult.getCaseName());
         }
 
         return result;

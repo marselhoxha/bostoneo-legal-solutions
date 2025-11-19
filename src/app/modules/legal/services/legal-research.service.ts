@@ -19,7 +19,7 @@ export interface AiConversationSession {
   caseId?: number;
   practiceArea?: string;
   taskType?: string; // LEGAL_QUESTION, GENERATE_DRAFT, SUMMARIZE_CASE, ANALYZE_DOCUMENT
-  researchMode?: string; // FAST, AUTO, THOROUGH
+  researchMode?: string; // FAST, THOROUGH
   documentId?: number;
   relatedDraftId?: string;
   jurisdiction?: string;
@@ -63,7 +63,7 @@ export interface LegalSearchRequest {
   userId?: number;
   sessionId?: string;
   caseId?: string;
-  researchMode?: 'FAST' | 'AUTO' | 'THOROUGH';  // FAST = 15s pre-fetch, AUTO = AI selects, THOROUGH = 2-3min agentic
+  researchMode?: 'FAST' | 'THOROUGH';  // FAST = 15s quick answers, THOROUGH = 60-180s verified citations
   conversationHistory?: ConversationMessage[];  // NEW: For context-aware follow-up responses
   filters?: {
     dateFrom?: string;

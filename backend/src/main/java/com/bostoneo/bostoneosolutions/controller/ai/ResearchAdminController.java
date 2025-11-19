@@ -279,7 +279,7 @@ public class ResearchAdminController {
     public ResponseEntity<Map<String, Object>> recommendMode(@RequestBody Map<String, Object> request) {
         try {
             String query = (String) request.get("query");
-            String requestedMode = (String) request.getOrDefault("requestedMode", "AUTO");
+            String requestedMode = (String) request.getOrDefault("requestedMode", "FAST");
             Long userId = request.containsKey("userId") ?
                 Long.valueOf(request.get("userId").toString()) : null;
 

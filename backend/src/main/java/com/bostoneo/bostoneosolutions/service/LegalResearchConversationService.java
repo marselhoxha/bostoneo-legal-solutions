@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,6 +31,7 @@ public class LegalResearchConversationService {
     private final AiConversationMessageRepository messageRepository;
     private final ClaudeSonnet4Service claudeService;
     private final GenerationCancellationService cancellationService;
+    private final AILegalResearchService aiLegalResearchService;
 
     /**
      * Get or create a conversation session for legal research
@@ -209,7 +211,7 @@ public class LegalResearchConversationService {
                 .sessionName(title != null ? title : "New Conversation")
                 .sessionType("general")
                 .taskType(taskType != null ? taskType : "LEGAL_QUESTION")
-                .researchMode(researchMode != null ? researchMode : "AUTO")
+                .researchMode(researchMode != null ? researchMode : "FAST")
                 .isActive(true)
                 .isPinned(false)
                 .isArchived(false)
@@ -264,8 +266,13 @@ public class LegalResearchConversationService {
             return CompletableFuture.failedFuture(new IllegalStateException("Query cancelled by user"));
         }
 
-        // Determine if we should use deep thinking based on research mode
-        boolean useDeepThinking = "THOROUGH".equalsIgnoreCase(researchMode);
+        // THOROUGH mode: Use full agentic research system with citation verification
+        if ("THOROUGH".equalsIgnoreCase(researchMode)) {
+            return handleThoroughModeQuery(session, sessionId, userId, query, messages);
+        }
+
+        // FAST mode: Use standard conversation flow
+        boolean useDeepThinking = false; // FAST mode doesn't use deep thinking
 
         // Get AI response
         String prompt = "You are a legal research assistant. Based on the following conversation history, "
@@ -363,5 +370,73 @@ public class LegalResearchConversationService {
 
                     throw new RuntimeException("Failed to generate AI response", ex);
                 });
+    }
+
+    /**
+     * Handle THOROUGH mode query using full agentic research system
+     * Delegates to AILegalResearchService for citation verification and tool usage
+     */
+    private CompletableFuture<AiConversationMessage> handleThoroughModeQuery(
+            AiConversationSession session,
+            Long sessionId,
+            Long userId,
+            String query,
+            List<AiConversationMessage> messages
+    ) {
+        log.info("🔍 THOROUGH mode activated for session {} - using full agentic research system", sessionId);
+
+        // Build conversation history for context
+        List<Map<String, String>> conversationHistory = new java.util.ArrayList<>();
+        for (AiConversationMessage msg : messages) {
+            Map<String, String> historyEntry = new java.util.HashMap<>();
+            historyEntry.put("role", msg.getRole());
+            historyEntry.put("content", msg.getContent());
+            conversationHistory.add(historyEntry);
+        }
+
+        // Build search request for AILegalResearchService
+        Map<String, Object> searchRequest = new java.util.HashMap<>();
+        searchRequest.put("query", query);
+        searchRequest.put("searchType", "ALL");
+        searchRequest.put("jurisdiction", "GENERAL");
+        searchRequest.put("userId", userId);
+        searchRequest.put("sessionId", String.valueOf(sessionId));
+        searchRequest.put("researchMode", "THOROUGH");
+        searchRequest.put("conversationHistory", conversationHistory);
+
+        try {
+            // Call AILegalResearchService for full agentic research with tools
+            Map<String, Object> result = aiLegalResearchService.performSearch(searchRequest);
+
+            // Extract AI response from result
+            String aiResponse = (String) result.get("aiAnalysis");
+
+            if (aiResponse == null || aiResponse.isEmpty()) {
+                throw new RuntimeException("No AI response received from research service");
+            }
+
+            // Save AI response to conversation
+            AiConversationMessage assistantMessage = AiConversationMessage.builder()
+                    .session(session)
+                    .role("assistant")
+                    .content(aiResponse)
+                    .ragContextUsed(true) // THOROUGH mode uses tools/research
+                    .modelUsed("claude-sonnet-4-thorough")
+                    .build();
+
+            AiConversationMessage savedMessage = messageRepository.save(assistantMessage);
+
+            // Update session message count
+            session.setMessageCount(session.getMessageCount() + 1);
+            sessionRepository.save(session);
+
+            log.info("✅ THOROUGH mode research complete for session {}", sessionId);
+
+            return CompletableFuture.completedFuture(savedMessage);
+
+        } catch (Exception e) {
+            log.error("❌ THOROUGH mode research failed for session {}: {}", sessionId, e.getMessage(), e);
+            throw new RuntimeException("THOROUGH mode research failed: " + e.getMessage(), e);
+        }
     }
 }

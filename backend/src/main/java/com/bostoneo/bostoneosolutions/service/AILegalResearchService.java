@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.dto.DeadlineInfo;
+import com.bostoneo.bostoneosolutions.dto.ai.CitationVerificationResult;
 import com.bostoneo.bostoneosolutions.dto.ai.ConversationMessage;
 import com.bostoneo.bostoneosolutions.enumeration.QueryType;
 import com.bostoneo.bostoneosolutions.enumeration.QuestionType;
@@ -96,18 +97,6 @@ public class AILegalResearchService {
 
         // Use sanitized query and include warnings/suggestions in response metadata
         query = validation.sanitizedQuery;
-
-        // Phase 5: Smart mode selection (if AUTO mode requested)
-        if ("AUTO".equalsIgnoreCase(researchModeStr)) {
-            SmartModeSelector.ModeRecommendation recommendation =
-                smartModeSelector.selectMode(query, userId, researchModeStr);
-
-            researchModeStr = recommendation.mode;
-            researchMode = ResearchMode.valueOf(researchModeStr.toUpperCase());
-
-            log.info("🤖 AUTO MODE: Selected {} mode (confidence: {:.0f}%) - {}",
-                researchModeStr, recommendation.confidence * 100, recommendation.reason);
-        }
 
         // Phase 4: Rate limiting check
         if (!rateLimitService.allowRequest(userId, researchModeStr)) {
@@ -2011,6 +2000,13 @@ public class AILegalResearchService {
         prompt.append("- For commercial cases: Reference whether BLS assignment is appropriate\n\n");
         prompt.append("GENERAL PRINCIPLE: Every piece of guidance must be jurisdiction-specific, practice-area-specific, case-stage-specific, and fact-specific (not generic).\n\n");
 
+        // FAST MODE CITATION POLICY - CRITICAL
+        prompt.append("⚠️⚠️⚠️ CITATION POLICY - FAST MODE ⚠️⚠️⚠️\n");
+        prompt.append("DO NOT include ANY case citations in FAST mode responses.\n");
+        prompt.append("FAST mode cannot verify citations → citing cases = hallucination risk (industry: 17-33%)\n");
+        prompt.append("Instead: Explain legal concepts, procedures, timelines WITHOUT citing specific cases\n");
+        prompt.append("If user asks for case law, suggest: 'For verified case citations, please switch to THOROUGH mode'\n\n");
+
         // Mode nudge: Suggest THOROUGH mode when query indicates need for deep research
         if (shouldSuggestThoroughMode(query)) {
             String nudge = getThoroughModeNudge(query);
@@ -3243,11 +3239,19 @@ public class AILegalResearchService {
         prompt.append("• get_cfr_text, verify_citation (validate legal authority)\n");
         prompt.append("• web_search (EXPENSIVE - use sparingly for case details/facts)\n\n");
 
-        prompt.append("**TOOL USAGE REQUIREMENTS** (BE EFFICIENT):\n");
+        prompt.append("**TOOL USAGE REQUIREMENTS** (CITATION VERIFICATION MANDATORY):\n");
         prompt.append("1. **MANDATORY**: Use search_case_law ONCE OR TWICE MAX to find 5+ controlling precedents\n");
         prompt.append("   - Use broad search terms to get 10+ results in one call\n");
         prompt.append("   - Don't keep searching - work with what you get (5-10 cases is enough)\n");
-        prompt.append("2. Use verify_citation ONLY if citation looks suspicious\n");
+        prompt.append("2. ⚠️ **CRITICAL - CITATION POLICY**:\n");
+        prompt.append("   - Include ALL relevant case citations you find via search_case_law tool\n");
+        prompt.append("   - Call verify_citation(CITATION_NUMBER) for EACH citation - use citation number like '326 U.S. 310', NOT case name alone\n");
+        prompt.append("   - CORRECT: verify_citation('326 U.S. 310') or verify_citation('International Shoe Co. v. Washington, 326 U.S. 310')\n");
+        prompt.append("   - WRONG: verify_citation('International Shoe v. Washington') - this will return wrong URLs\n");
+        prompt.append("   - If verification SUCCEEDS: Include as '✓ [Case Name, Citation](CourtListener URL)'\n");
+        prompt.append("   - If verification FAILS: STILL include citation with warning: '⚠️ Case Name, Citation'\n");
+        prompt.append("   - NEVER omit relevant citations - attorneys need case law even if CourtListener verification unavailable\n");
+        prompt.append("   - Note: Post-processing will verify any citations you missed and add markers for those\n");
         prompt.append("3. Use web_search ONLY if absolutely necessary for critical case-specific facts\n");
         prompt.append("4. Deadline status shown in context - trust it, don't validate\n");
         prompt.append("5. DO NOT request motion templates unless explicitly asked\n");
@@ -3319,7 +3323,11 @@ public class AILegalResearchService {
         prompt.append("4. **Risk Analysis**: Brief probability estimate + settlement range if applicable\n");
         prompt.append("5. **Action Items**: Top 3-5 next steps with deadlines (bullet points)\n");
         prompt.append("6. **Efficiency**: Complete in 2-3 tool calls. Don't over-research.\n");
-        prompt.append("7. **Conciseness**: Target 800-1200 words total. Use bullets, avoid repetition.\n\n");
+        prompt.append("7. **Conciseness**: Target 800-1200 words total. Use bullets, avoid repetition.\n");
+        prompt.append("8. **Federal Procedure Questions**: When answering questions about federal procedure (summary judgment, discovery, pleading, evidence), include:\n");
+        prompt.append("   - Specific FRCP rule requirements (e.g., Rule 56(c)(2) response requirement)\n");
+        prompt.append("   - How to cure procedural defects (e.g., supplemental affidavits, amended pleadings)\n");
+        prompt.append("   - Circuit-specific variations when relevant (e.g., 1st Cir. authentication standards)\n\n");
 
         // Add Practice-Area-Specific Guidance
         String practiceAreaGuidance = getPracticeAreaGuidance(caseTypeHolder[0]);
@@ -3373,11 +3381,22 @@ public class AILegalResearchService {
 
         prompt.append("**FORMATTING REQUIREMENTS** (Professional presentation):\n");
         prompt.append("- Use **bold** for section headers and emphasis\n");
-        prompt.append("- Use bullet points (- or •) for all lists\n");
         prompt.append("- Format dollar amounts: $50K, $150K, $2.0M (no decimals for round numbers)\n");
         prompt.append("- Format dates: Oct 25, 2025 (Month Day, Year)\n");
         prompt.append("- Use [statute name](URL) for clickable links to legal citations\n");
-        prompt.append("- Use proper indentation for sub-bullets\n\n");
+        prompt.append("- Use proper indentation for sub-bullets (3 spaces)\n\n");
+        prompt.append("**SUBSECTION FORMATTING** (for Strategic Analysis sections):\n");
+        prompt.append("When listing multiple standards/elements/requirements, use NUMBERED BOLD SUBSECTIONS:\n");
+        prompt.append("✅ CORRECT:\n");
+        prompt.append("**1. Proportionality (FRCP 26(b)(1))** - PRIMARY STANDARD\n");
+        prompt.append("   - Bullet point\n");
+        prompt.append("   - Bullet point\n\n");
+        prompt.append("**2. Not Reasonably Accessible (FRCP 26(b)(2)(B))**\n");
+        prompt.append("   - Bullet point\n\n");
+        prompt.append("❌ WRONG:\n");
+        prompt.append("Proportionality (FRCP 26(b)(1)) - PRIMARY STANDARD\n");
+        prompt.append("- Bullet point\n");
+        prompt.append("(Missing number and bold formatting)\n\n");
 
         prompt.append("**MARKDOWN SPACING STANDARDS** (Attorney-ready format - follow exactly):\n");
         prompt.append("1. **Section Headers**: Add 2 blank lines BEFORE ## headers, 1 blank line after\n");
@@ -3542,11 +3561,14 @@ public class AILegalResearchService {
 
             log.info("✅ Agentic research complete in {}ms", System.currentTimeMillis() - startTime);
 
-            // POST-PROCESSING Step 1: Convert bullets BEFORE citation injection
+            // POST-PROCESSING Step 1: Convert bullets BEFORE citation processing
             aiResponse = convertBulletsToNumberedLists(aiResponse);
 
-            // POST-PROCESSING Step 2: Add citation URLs AFTER bullet conversion
-            String processedResponse = citationUrlInjector.inject(aiResponse);
+            // POST-PROCESSING Step 2: SAFETY NET - Verify all case law citations via CourtListener
+            String processedResponse = verifyAllCitationsInResponse(aiResponse);
+
+            // POST-PROCESSING Step 3: Inject URLs for statutory/rule citations (FRCP, M.G.L., CFR, etc.)
+            processedResponse = citationUrlInjector.inject(processedResponse);
 
             // Validate response for temporal consistency
             ResponseValidator.ValidationResult validationResult =
@@ -3601,8 +3623,8 @@ public class AILegalResearchService {
                 result.put("validationErrors", validationResult.getErrors());
             }
 
-            // Save search history
-            saveSearchHistory(userId, sessionId, query, "thorough",
+            // Save search history (use "ALL" as queryType since QueryType enum doesn't have THOROUGH)
+            saveSearchHistory(userId, sessionId, query, "ALL",
                 0, System.currentTimeMillis() - startTime);
 
             // Cache the result (TTL: 24 hours for case-specific, 7 days for general)
@@ -3921,6 +3943,206 @@ public class AILegalResearchService {
     }
 
     /**
+     * POST-PROCESSING SAFETY NET: Verify all citations in the response
+     * This ensures EVERY citation is verified even if Claude forgets to use verify_citation tool
+     * Prevents hallucinations by validating against CourtListener database
+     */
+    private String verifyAllCitationsInResponse(String aiResponse) {
+        if (aiResponse == null || aiResponse.isBlank()) {
+            return aiResponse;
+        }
+
+        log.info("🔍 POST-PROCESSING: Verifying all citations in response (safety net)");
+
+        // Extract all citations using regex patterns
+        List<String> extractedCitations = courtListenerService.extractCitations(aiResponse);
+
+        if (extractedCitations.isEmpty()) {
+            log.info("✅ No citations found in response - nothing to verify");
+            return aiResponse;
+        }
+
+        log.info("📋 Found {} citations to verify: {}", extractedCitations.size(), extractedCitations);
+
+        String processedResponse = aiResponse;
+        int verifiedCount = 0;
+        int unverifiedCount = 0;
+
+        // Match full citation pattern with optional markers at start AND italic markdown
+        // Handles:
+        // - "⚠️ Case v. Case, Citation (Year)"
+        // - "✓ [Case v. Case, Citation](URL)"
+        // - "*Case v. Case*, Citation (Year)" (italic markdown)
+        // - "**Case v. Case**, Citation (Year)" (bold markdown - Claude's format)
+        // - "- ✓ [*Case v. Case*, Citation](URL)" (bullet + marker + italic + link)
+        // Formats: "(2003)", "(S.D.N.Y. 2003)", "(7th Cir. 2015)", "(D. Md. 2008)"
+        java.util.regex.Pattern fullCitationPattern = java.util.regex.Pattern.compile(
+            "(?:⚠️\\s*)?(?:✓\\s*)?\\[?\\*{0,2}([A-Z][\\w\\s\\.'&,-]+\\s+v\\.\\s+[A-Z][\\w\\s\\.'&,-]+)\\*{0,2},\\s*(" +
+            String.join("|", extractedCitations.stream()
+                .map(java.util.regex.Pattern::quote)
+                .collect(java.util.stream.Collectors.toList())) +
+            ")(?:\\]\\([^)]+\\))?\\s*\\((?:([A-Z][\\.\\w\\s]+)\\s+)?(\\d{4})\\)"  // Optional URL, court, year
+        );
+
+        java.util.regex.Matcher matcher = fullCitationPattern.matcher(processedResponse);
+        StringBuffer sb = new StringBuffer();
+
+        // Verify and replace each citation individually
+        while (matcher.find()) {
+            String fullMatch = matcher.group().trim();
+            String caseName = matcher.group(1).trim();
+            String citation = matcher.group(2).trim();
+            String court = matcher.group(3);  // Optional court abbreviation (e.g., "S.D.N.Y.", "7th Cir.")
+            String year = matcher.group(4);   // Year (moved to group 4 because court is group 3)
+
+            log.debug("📍 CITATION MATCH - fullMatch: '{}' | starts with ⚠️: {} | starts with ✓: {} | has markdown: {}",
+                fullMatch, fullMatch.startsWith("⚠️"), fullMatch.startsWith("✓"), fullMatch.contains("]("));
+
+            // Skip if already verified (has marker or markdown link) - avoid double markers: ⚠️ ✓
+            if (fullMatch.contains("](") || fullMatch.startsWith("✓")) {
+                log.debug("Citation already verified with link, skipping: {}", fullMatch);
+                matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullMatch));
+                continue;
+            }
+
+            // Search by citation number (most specific - "217 F.R.D. 309" → exact match)
+            log.debug("🔍 Verifying: {} - {}", caseName, citation);
+
+            CitationVerificationResult verification;
+            try {
+                // Search CourtListener by FULL CITATION (case name + citation number)
+                // This enables case name filtering to avoid wrong URLs
+                // Example: "McDonnell Douglas Corp. v. Green, 411 U.S. 792"
+                // CourtListener will filter results by case name match
+                verification = courtListenerService.verifyCitation(caseName + ", " + citation);
+            } catch (Exception e) {
+                log.warn("Verification error for {} {}: {}", caseName, citation, e.getMessage());
+                verification = CitationVerificationResult.builder()
+                    .found(false)
+                    .citation(citation)
+                    .build();
+            }
+
+            if (verification.isFound() && verification.getUrl() != null) {
+                // Verified - format as markdown link with checkmark
+                // Only case name is clickable, citation displays as text
+                // Preserve court identifier if present (e.g., "S.D.N.Y." for federal courts)
+                String fullCitation = court != null ?
+                    String.format("%s (%s %s)", citation, court.trim(), year) :
+                    String.format("%s (%s)", citation, year);
+
+                String replacement = String.format("✓ [%s](%s), %s",
+                    caseName, verification.getUrl(), fullCitation);
+
+                log.info("✅ VERIFICATION SUCCESS:");
+                log.info("   Citation searched: '{}'", citation);
+                log.info("   Case name: '{}'", caseName);
+                log.info("   URL from CourtListener: '{}'", verification.getUrl());
+                log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
+
+                matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                verifiedCount++;
+            } else {
+                // Not verified via CourtListener - check if this is a Supreme Court case
+                // Supreme Court patterns:
+                // - U.S. Reports: "355 U.S. 41" → https://supreme.justia.com/cases/federal/us/355/41/
+                // - S. Ct. Reporter: "137 S. Ct. 1773" → https://www.courtlistener.com/?q=...&type=o
+                java.util.regex.Pattern usReportsPattern = java.util.regex.Pattern.compile("(\\d+)\\s+U\\.S\\.\\s+(\\d+)");
+                java.util.regex.Pattern sCtPattern = java.util.regex.Pattern.compile("(\\d+)\\s+S\\.\\s*Ct\\.\\s+(\\d+)");
+
+                java.util.regex.Matcher usReportsMatcher = usReportsPattern.matcher(citation);
+                java.util.regex.Matcher sCtMatcher = sCtPattern.matcher(citation);
+
+                if (usReportsMatcher.find()) {
+                    // U.S. Reports citation - construct Justia URL directly
+                    // (Skip verification since Cloudflare blocks HEAD requests)
+                    String volume = usReportsMatcher.group(1);
+                    String page = usReportsMatcher.group(2);
+                    String justiaUrl = String.format("https://supreme.justia.com/cases/federal/us/%s/%s/", volume, page);
+
+                    String fullCitation = court != null ?
+                        String.format("%s (%s %s)", citation, court.trim(), year) :
+                        String.format("%s (%s)", citation, year);
+
+                    String replacement = String.format("✓ [%s](%s), %s",
+                        caseName, justiaUrl, fullCitation);
+
+                    log.info("✅ SUPREME COURT (U.S. Reports) - Justia URL constructed: {}", justiaUrl);
+                    log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
+
+                    matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                    verifiedCount++;
+                } else if (sCtMatcher.find()) {
+                    // S. Ct. Reporter citation - construct CourtListener search URL
+                    // S. Ct. citations don't map directly to Justia URLs, so we create a search link
+                    String courtListenerUrl = String.format("https://www.courtlistener.com/?q=%s&type=o",
+                        java.net.URLEncoder.encode(caseName + " " + citation, java.nio.charset.StandardCharsets.UTF_8));
+
+                    String fullCitation = court != null ?
+                        String.format("%s (%s %s)", citation, court.trim(), year) :
+                        String.format("%s (%s)", citation, year);
+
+                    String replacement = String.format("✓ [%s](%s), %s",
+                        caseName, courtListenerUrl, fullCitation);
+
+                    log.info("✅ SUPREME COURT (S. Ct. Reporter) - CourtListener search URL constructed: {}", courtListenerUrl);
+                    log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
+
+                    matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                    verifiedCount++;
+                } else {
+                    // Not a Supreme Court case - check if this is a Massachusetts case
+                    // Massachusetts pattern: "400 Mass. 425" → https://law.justia.com/cases/massachusetts/supreme-court/{year}/{volume}-mass-{page}.html
+                    java.util.regex.Pattern massPattern = java.util.regex.Pattern.compile("(\\d+)\\s+Mass\\.\\s+(\\d+)");
+                    java.util.regex.Matcher massMatcher = massPattern.matcher(citation);
+
+                    if (massMatcher.find()) {
+                        // Massachusetts case - construct Justia URL
+                        String volume = massMatcher.group(1);
+                        String page = massMatcher.group(2);
+                        String justiaUrl = String.format(
+                            "https://law.justia.com/cases/massachusetts/supreme-court/%s/%s-mass-%s.html",
+                            year, volume, page
+                        );
+
+                        String fullCitation = court != null ?
+                            String.format("%s (%s %s)", citation, court.trim(), year) :
+                            String.format("%s (%s)", citation, year);
+
+                        String replacement = String.format("✓ [%s](%s), %s",
+                            caseName, justiaUrl, fullCitation);
+
+                        log.info("✅ MASSACHUSETTS CASE - Justia URL constructed: {}", justiaUrl);
+                        log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
+
+                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                        verifiedCount++;
+                    } else {
+                        // Not a Supreme Court or Massachusetts case - keep original format with warning
+                        String fullCitation = court != null ?
+                            String.format("%s (%s %s)", citation, court.trim(), year) :
+                            String.format("%s (%s)", citation, year);
+
+                        String replacement = String.format("⚠️ %s, %s (could not verify)",
+                            caseName, fullCitation);
+
+                        log.warn("⚠️ Could not verify: {} | REPLACING: '{}' → '{}'", caseName, fullMatch, replacement);
+                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                        unverifiedCount++;
+                    }
+                }
+            }
+        }
+        matcher.appendTail(sb);
+        processedResponse = sb.toString();
+
+        log.info("📊 Citation verification complete: {} verified ✓, {} unverified ⚠️",
+                 verifiedCount, unverifiedCount);
+
+        return processedResponse;
+    }
+
+    /**
      * POST-PROCESSING: Convert ■ bullets to numbered lists
      * This ensures Claude ALWAYS uses numbered lists even if it ignores prompt instructions
      */
@@ -3983,14 +4205,29 @@ public class AILegalResearchService {
             if (inStrongestArguments) {
                 // Detect lines that start with various bullet characters or markdown bullets
                 // ■ = U+25A0, ▪ = U+25AA, • = U+2022, also handle - and *
-                if (line.matches("^\\s{0,2}[-*■▪•\\u25A0\\u25AA\\u2022]\\s+.*")) {
-                    // This is a main bullet - convert to numbered
-                    String content = line.replaceFirst("^\\s{0,2}[-*■▪•\\u25A0\\u25AA\\u2022]\\s+", "");
-                    result.append(argumentNumber).append(". ").append(content).append("\n");
+                // Allow up to 4 spaces leading whitespace (was 2)
+                if (line.matches("^\\s{0,4}[-*■▪•\\u25A0\\u25AA\\u2022●]\\s+.*")) {
+                    // This is a main bullet - convert to numbered with bold formatting
+                    String content = line.replaceFirst("^\\s{0,4}[-*■▪•\\u25A0\\u25AA\\u2022●]\\s+", "");
+
+                    // Add **bold** formatting to heading (text before first " - ")
+                    // Format: "Heading - Details" → "**Heading** - Details"
+                    String formattedContent;
+                    int dashIndex = content.indexOf(" - ");
+                    if (dashIndex > 0) {
+                        String heading = content.substring(0, dashIndex).trim();
+                        String details = content.substring(dashIndex);
+                        formattedContent = "**" + heading + "**" + details;
+                    } else {
+                        // No " - " separator, bold the entire content
+                        formattedContent = "**" + content.trim() + "**";
+                    }
+
+                    result.append(argumentNumber).append(". ").append(formattedContent).append("\n");
                     argumentNumber++;
                     convertedCount++;
-                    log.debug("Converted bullet #{}: {}", argumentNumber - 1,
-                             content.substring(0, Math.min(50, content.length())));
+                    log.debug("Converted bullet #{} with bold formatting: {}", argumentNumber - 1,
+                             formattedContent.substring(0, Math.min(50, formattedContent.length())));
                     continue;
                 }
             }

@@ -1088,7 +1088,7 @@ public class ClaudeSonnet4Service implements AIService {
 
         AIRequest request = new AIRequest();
         request.setModel("claude-sonnet-4-5-20250929");
-        request.setMax_tokens(8000);
+        request.setMax_tokens(12000); // Increased from 8000 to allow comprehensive analysis with full citation verification
 
         List<ToolDefinition> tools = legalResearchTools.getToolDefinitions();
         log.info("🔧 Setting {} tools on request", tools != null ? tools.size() : 0);
@@ -1281,11 +1281,19 @@ public class ClaudeSonnet4Service implements AIService {
         int maxTokens;
         String lowerPrompt = prompt.toLowerCase();
 
+        // Detect THOROUGH mode legal research - needs highest token limit for comprehensive analysis with citations
+        boolean isThoroughModeResearch = prompt.contains("Expert legal research assistant") ||
+                                         lowerPrompt.contains("**tool usage requirements** (citation verification mandatory)");
+
         // Detect draft generation - needs higher token limit for complete documents
         boolean isDraftGeneration = lowerPrompt.contains("generate a professional legal") ||
                                    lowerPrompt.contains("generate a complete, properly formatted legal document");
 
-        if (isDraftGeneration) {
+        if (isThoroughModeResearch) {
+            // THOROUGH mode: 12000 tokens for comprehensive analysis with verified citations
+            maxTokens = 12000;
+            log.info("🔍 THOROUGH mode research detected - allocating {} tokens for comprehensive citation-verified analysis", maxTokens);
+        } else if (isDraftGeneration) {
             // Legal documents need 8000-10000 tokens to avoid incomplete lists/sections
             maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ? 10000 : 8000;
             log.info("📄 Draft generation detected - allocating {} tokens for complete document", maxTokens);

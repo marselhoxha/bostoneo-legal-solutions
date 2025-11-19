@@ -108,38 +108,38 @@ public class CitationUrlInjector {
 
         // Mass. R. Crim. P. with complex subsections: Mass. R. Crim. P. 13(a)(2)
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)\\(([\\d])\\)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Crim. P. $1($2)($3) - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)\\(([\\d])\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Crim. P. $1($2)($3)](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
         );
 
         // Mass. R. Crim. P. with simple subsection: Mass. R. Crim. P. 13(a)
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Crim. P. $1($2) - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Crim. P. $1($2)](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
         );
 
         // Mass. R. Crim. P. rule only: Mass. R. Crim. P. 13
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)(?!\\()(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Crim. P. $1 - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)(?!\\()(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Crim. P. $1](https://www.mass.gov/supreme-judicial-court-rules/rules-of-criminal-procedure)"
         );
 
         // Mass. R. Civ. P. with complex subsections
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)\\(([\\d])\\)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Civ. P. $1($2)($3) - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)\\(([\\d])\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Civ. P. $1($2)($3)](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
         );
 
         // Mass. R. Civ. P. with simple subsection
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Civ. P. $1($2) - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)\\(([a-z])\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Civ. P. $1($2)](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
         );
 
         // Mass. R. Civ. P. rule only
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)(?!\\()(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Mass. R. Civ. P. $1 - View →](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
+            Pattern.compile("\\bMass\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)(?!\\()(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[Mass. R. Civ. P. $1](https://www.mass.gov/supreme-judicial-court-rules/rules-of-civil-procedure)"
         );
 
         // ===== MASSACHUSETTS COURT STANDING ORDERS & LOCAL RULES =====
@@ -168,64 +168,34 @@ public class CitationUrlInjector {
             "[Superior Court Standing Order $1 - View →](https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders)"
         );
 
-        // ===== MASSACHUSETTS CASE LAW =====
-
-        // Generic Massachusetts case pattern with pin cites: Commonwealth v. Name, 406 Mass. 343, 348-51
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b(Commonwealth\\s+v\\.?\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+Mass\\.?\\s+(\\d+),?\\s+([\\d-]+)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 Mass. $3, $4 [View →]](https://cite.case.law/mass/$2/$3/)"
-        );
-
-        // Generic Massachusetts case pattern without pin cites: Commonwealth v. Name, 406 Mass. 343
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b(Commonwealth\\s+v\\.?\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+Mass\\.?\\s+(\\d+)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 Mass. $3 [View →]](https://cite.case.law/mass/$2/$3/)"
-        );
-
-        // Other Massachusetts cases (non-Commonwealth): Name v. Name, 406 Mass. 343
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+Mass\\.?\\s+(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 Mass. $4 [View →]](https://cite.case.law/mass/$3/$4/)"
-        );
-
-        // ===== FEDERAL SUPREME COURT CASES =====
-
-        // Supreme Court with pin cites: Name v. Name, 496 U.S. 444, 450-55
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+U\\.S\\.\\s+(\\d+),?\\s+([\\d-]+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 U.S. $4, $5 [View →]](https://cite.case.law/us/$3/$4/)"
-        );
-
-        // Supreme Court without pin cites: Name v. Name, 496 U.S. 444
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+U\\.S\\.\\s+(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 U.S. $4 [View →]](https://cite.case.law/us/$3/$4/)"
-        );
-
         // ===== FEDERAL CIRCUIT COURT CASES =====
 
         // First Circuit with pin cites: United States v. Name, 963 F.3d 1, 12-15 (1st Cir. 2020)
+        // (?<!\\[) prevents matching case names already in markdown links
         CITATION_URL_MAP.put(
-            Pattern.compile("\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 F.3d $3, $4 (1st Cir.) [View →]](https://www.courtlistener.com/)"
+            Pattern.compile("(?<!\\[)\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[$1, $2 F.3d $3, $4 (1st Cir.)](https://www.courtlistener.com/)"
         );
 
         // First Circuit without pin cites: United States v. Name, 963 F.3d 1 (1st Cir. 2020)
+        // (?<!\\[) prevents matching case names already in markdown links
         CITATION_URL_MAP.put(
-            Pattern.compile("\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 F.3d $3 (1st Cir.) [View →]](https://www.courtlistener.com/)"
+            Pattern.compile("(?<!\\[)\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z][a-zA-Z-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[$1, $2 F.3d $3 (1st Cir.)](https://www.courtlistener.com/)"
         );
 
         // Other First Circuit cases with pin cites: Name v. Name, 728 F.3d 1, 5-8 (1st Cir. 2013)
+        // (?<!\\[) prevents matching case names already in markdown links
         CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 F.3d $4, $5 (1st Cir.) [View →]](https://www.courtlistener.com/)"
+            Pattern.compile("(?<!\\[)\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()"),
+            "[$1 v. $2, $3 F.3d $4, $5 (1st Cir.)](https://www.courtlistener.com/)"
         );
 
         // Other First Circuit cases without pin cites: Name v. Name, 728 F.3d 1 (1st Cir. 2013)
+        // (?<!\\[) prevents matching case names already in markdown links
         CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 F.3d $4 (1st Cir.) [View →]](https://www.courtlistener.com/)"
+            Pattern.compile("(?<!\\[)\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()"),
+            "[$1 v. $2, $3 F.3d $4 (1st Cir.)](https://www.courtlistener.com/)"
         );
 
         // General URLs
@@ -273,28 +243,41 @@ public class CitationUrlInjector {
             "[Tax Court Rule $1 - View →](https://www.ustaxcourt.gov/rules.html)"
         );
 
+        // FRCP abbreviation: FRCP 8(a), FRCP 12(b)(6)
+        // Must come BEFORE "Fed. R. Civ. P." pattern to match abbreviations first
+        CITATION_URL_MAP.put(
+            Pattern.compile("\\bFRCP\\s*(\\d+)(?:\\(([a-z0-9()]+)\\))?(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[FRCP $1](https://www.law.cornell.edu/rules/frcp/rule_$1)"
+        );
+
+        // FRCrP abbreviation: FRCrP 12(b), FRCrP 16(a)(1)
+        CITATION_URL_MAP.put(
+            Pattern.compile("\\bFRCrP\\s*(\\d+)(?:\\(([a-z0-9()]+)\\))?(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[FRCrP $1](https://www.law.cornell.edu/rules/frcrmp/rule_$1)"
+        );
+
         // Federal Rules of Civil Procedure: Fed. R. Civ. P. 56(c)
         CITATION_URL_MAP.put(
             Pattern.compile("\\bFed\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+)(?:\\(([a-z])\\))?(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Fed. R. Civ. P. $1 - View →](https://www.law.cornell.edu/rules/frcp/rule_$1)"
+            "[Fed. R. Civ. P. $1](https://www.law.cornell.edu/rules/frcp/rule_$1)"
         );
 
         // Federal Rules of Criminal Procedure: Fed. R. Crim. P. 12(b)
         CITATION_URL_MAP.put(
             Pattern.compile("\\bFed\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+)(?:\\(([a-z])\\))?(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[Fed. R. Crim. P. $1 - View →](https://www.law.cornell.edu/rules/frcrmp/rule_$1)"
+            "[Fed. R. Crim. P. $1](https://www.law.cornell.edu/rules/frcrmp/rule_$1)"
         );
 
         // U.S. Sentencing Guidelines: U.S.S.G. §2B1.1
         CITATION_URL_MAP.put(
             Pattern.compile("\\bU\\.S\\.S\\.G\\.\\s*§\\s*([\\d.A-Za-z]+)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[U.S.S.G. § $1 - View →](https://www.ussc.gov/guidelines)"
+            "[U.S.S.G. § $1](https://www.ussc.gov/guidelines)"
         );
 
         // D. Mass. Local Rules: D. Mass. Local Rule 7.1(b)(1)
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bD\\.?\\s*Mass\\.?\\s*Local Rule\\s*([\\d.()a-z]+)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[D. Mass. Local Rule $1 - View →](https://www.mad.uscourts.gov/general/pdf/LocalRules.pdf)"
+            Pattern.compile("\\bD\\.?\\s*Mass\\.?\\s*Local Rule\\s*([\\d.()a-z]+)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
+            "[D. Mass. Local Rule $1](https://www.mad.uscourts.gov/general/pdf/LocalRules.pdf)"
         );
 
         // ===== FEDERAL EMPLOYMENT LAW =====
@@ -362,12 +345,6 @@ public class CitationUrlInjector {
 
         // ===== FEDERAL CASE LAW =====
 
-        // Supreme Court: Name v. Name, 496 U.S. 444
-        CITATION_URL_MAP.put(
-            Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),\\s*(\\d+)\\s*U\\.S\\.\\s*(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 U.S. $4](https://supreme.justia.com/cases/federal/us/$3/$4/)"
-        );
-
         // Federal Circuit F.3d: Name v. Name, 123 F.3d 456
         CITATION_URL_MAP.put(
             Pattern.compile("\\b([A-Z][a-zA-Z\\s&.]+)\\s+v\\.\\s+([A-Z][a-zA-Z\\s&.]+),\\s*(\\d+)\\s*F\\.3d\\s*(\\d+)(?! - Source:)(?!\\]\\(http)"),
@@ -401,15 +378,17 @@ public class CitationUrlInjector {
 
         // Generic U.S.C. with subsection: 11 U.S.C. § 1191(b) or any title § section(subsection)
         // (?<!\\[) prevents matching inside existing markdown links like [11 U.S.C. § 1191(b)](url)
+        // (?!\\]\\() prevents matching if followed by markdown link syntax
         CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b(\\d+)\\s*U\\.S\\.C\\.\\s*§\\s*(\\d+)\\(([a-z])\\)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("(?<!\\[)\\b(\\d+)\\s*U\\.S\\.C\\.\\s*§\\s*(\\d+)\\(([a-z])\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
             "[$1 U.S.C. § $2($3)](https://www.law.cornell.edu/uscode/text/$1/$2#$3)"
         );
 
         // Generic U.S.C. without subsection: 11 U.S.C. § 1191 or any title § section
         // (?<!\\[) prevents matching inside existing markdown links
+        // (?!\\]\\() prevents matching if followed by markdown link syntax
         CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b(\\d+)\\s*U\\.S\\.C\\.\\s*§\\s*(\\d+)(?! - Source:)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("(?<!\\[)\\b(\\d+)\\s*U\\.S\\.C\\.\\s*§\\s*(\\d+)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
             "[$1 U.S.C. § $2](https://www.law.cornell.edu/uscode/text/$1/$2)"
         );
 

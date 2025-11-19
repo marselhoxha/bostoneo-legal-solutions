@@ -54,7 +54,7 @@ public class AiConversationSession {
 
     @Column(name = "research_mode", length = 20)
     @Builder.Default
-    private String researchMode = "AUTO";
+    private String researchMode = "FAST";
 
     @Column(name = "document_id")
     private Long documentId;
