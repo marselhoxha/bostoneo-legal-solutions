@@ -9,6 +9,7 @@ import { DocumentGenerationService } from '../../../services/document-generation
 import { LegalCaseService } from '../../../services/legal-case.service';
 import { MarkdownConverterService } from '../../../services/markdown-converter.service';
 import { FileManagerService } from '../../../../file-manager/services/file-manager.service';
+import { DocumentAnalyzerService } from '../../../services/document-analyzer.service';
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
@@ -36,6 +37,7 @@ import { DocumentTransformationService } from '../../../services/document-transf
 import { Conversation, Message } from '../../../models/conversation.model';
 import { ConversationType, ResearchMode, TaskType } from '../../../models/enums/conversation-type.enum';
 import { WorkflowStep } from '../../../models/workflow.model';
+import { WorkflowStepStatus } from '../../../models/enums/workflow-step-status.enum';
 import { DocumentState } from '../../../models/document.model';
 
 @Component({
@@ -110,10 +112,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       { id: 4, icon: 'ri-file-list-3-line', description: 'Creating summary...', status: 'pending' as const }
     ],
     upload: [
-      { id: 1, icon: 'ri-file-upload-line', description: 'Processing document...', status: 'pending' as const },
-      { id: 2, icon: 'ri-search-eye-line', description: 'Analyzing content...', status: 'pending' as const },
-      { id: 3, icon: 'ri-shield-check-line', description: 'Identifying risks...', status: 'pending' as const },
-      { id: 4, icon: 'ri-file-list-3-line', description: 'Generating analysis...', status: 'pending' as const }
+      { id: 1, icon: 'ri-upload-cloud-2-line', description: 'Uploading document...', status: 'pending' as const },
+      { id: 2, icon: 'ri-file-text-line', description: 'Extracting text with Apache Tika...', status: 'pending' as const },
+      { id: 3, icon: 'ri-user-search-line', description: 'Detecting metadata (parties, dates, court)...', status: 'pending' as const },
+      { id: 4, icon: 'ri-brain-line', description: 'Analyzing with Claude AI...', status: 'pending' as const },
+      { id: 5, icon: 'ri-check-double-line', description: 'Generating structured results...', status: 'pending' as const }
     ],
     transform: [
       { id: 1, icon: 'ri-file-search-line', description: 'Analyzing document...', status: 'pending' as const },
@@ -213,6 +216,29 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Case selection for draft generation
   selectedCaseId: number | null = null;
   userCases: any[] = [];
+
+  // Upload document functionality
+  uploadedFiles: Array<{
+    name: string;
+    size: number;
+    type: string;
+    status: 'ready' | 'uploading' | 'analyzing' | 'completed' | 'failed';
+    file?: File;
+    analysisId?: string;
+    progress?: number;
+    detectedType?: string;
+    isOCR?: boolean;
+    metadata?: {
+      parties?: string;
+      date?: string;
+      court?: string;
+      caseNumber?: string;
+    };
+  }> = [];
+  isDragover: boolean = false;
+  selectedAnalysisType: string = 'summarize';
+  documentUrl: string = '';
+  isFetchingUrl: boolean = false;
 
   // Quill Editor instance and config
   @ViewChild('documentEditor') documentEditor?: any;
@@ -656,6 +682,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private modalService: NgbModal,
     private fileManagerService: FileManagerService,
+    private documentAnalyzerService: DocumentAnalyzerService,
     // NEW: Refactored services
     private notificationService: NotificationService,
     private quillEditorService: QuillEditorService,
@@ -792,7 +819,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.selectedResearchMode = ResearchMode.Thorough;
 
     if (previousMode !== ResearchMode.Thorough) {
-      console.log('🎯 Drafting mode: Auto-switched to THOROUGH for verified citations');
+      console.log('⭐ Drafting mode: Auto-switched to THOROUGH for verified citations');
       this.notificationService.info(
         'THOROUGH Mode Active',
         'Drafting mode automatically uses THOROUGH mode for verified citations'
@@ -1169,13 +1196,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           } else {
             // Non-draft conversations: use regular chat mode
             console.log('💬 Loading non-draft conversation in regular chat mode');
-            console.log('📊 Setting state: showChat=true, showBottomSearchBar=true, draftingMode=false');
+            console.log('📈 Setting state: showChat=true, showBottomSearchBar=true, draftingMode=false');
 
             this.stateService.setShowChat(true);
             this.stateService.setShowBottomSearchBar(true);
             this.stateService.setDraftingMode(false);
 
-            console.log('📊 State after setting:', {
+            console.log('📈 State after setting:', {
               showChat: this.stateService.getShowChat(),
               showBottomSearchBar: this.stateService.getShowBottomSearchBar(),
               draftingMode: this.stateService.getDraftingMode(),
@@ -1482,7 +1509,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   activeTask: ConversationType = ConversationType.Draft;
 
   selectTask(task: ConversationType): void {
-    console.log('🎯 selectTask called:', task);
+    console.log('⭐ selectTask called:', task);
 
     this.selectedTask = task;
     this.activeTask = task;
@@ -1497,7 +1524,694 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.loadConversations();
   }
 
- 
+  // ========================================
+  // FILE UPLOAD HANDLERS
+  // ========================================
+
+  /**
+   * Handle file selection via input
+   */
+  onFileSelect(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      this.handleFiles(Array.from(input.files));
+    }
+  }
+
+  /**
+   * Handle drag over event
+   */
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragover = true;
+  }
+
+  /**
+   * Handle drag leave event
+   */
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragover = false;
+  }
+
+  /**
+   * Handle file drop event
+   */
+  onFileDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragover = false;
+
+    if (event.dataTransfer?.files) {
+      this.handleFiles(Array.from(event.dataTransfer.files));
+    }
+  }
+
+  /**
+   * Process selected files
+   */
+  private handleFiles(files: File[]): void {
+    const maxFiles = 10;
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    const allowedTypes = ['.pdf', '.docx', '.doc', '.txt'];
+
+    // Filter valid files
+    const validFiles = files.filter(file => {
+      // Check file type
+      const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedTypes.includes(extension)) {
+        this.notificationService.error('Invalid File Type', `${file.name} is not a supported format`);
+        return false;
+      }
+
+      // Check file size
+      if (file.size > maxSize) {
+        this.notificationService.error('File Too Large', `${file.name} exceeds 25MB limit`);
+        return false;
+      }
+
+      return true;
+    });
+
+    // Check total files limit
+    if (this.uploadedFiles.length + validFiles.length > maxFiles) {
+      this.notificationService.error('Too Many Files', `Maximum ${maxFiles} files allowed`);
+      return;
+    }
+
+    // Add files to uploaded list with auto-detection
+    validFiles.forEach(file => {
+      const detectedType = this.detectDocumentType(file.name);
+      const isOCR = this.needsOCR(file);
+
+      this.uploadedFiles.push({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        status: 'ready',
+        file: file,
+        detectedType: detectedType,
+        isOCR: isOCR
+      });
+
+      if (isOCR) {
+        this.notificationService.info('OCR Detected', `${file.name} may require OCR processing`);
+      }
+    });
+
+    // Don't auto-upload - wait for user to select analysis type and click "Analyze"
+    // this.uploadFiles(); // Removed - now triggered by handleUploadAnalysis()
+  }
+
+  /**
+   * Upload files to server
+   */
+  private uploadFiles(sessionId?: number): void {
+    const filesToUpload = this.uploadedFiles.filter(f => f.status === 'ready');
+
+    filesToUpload.forEach((fileItem, index) => {
+      if (!fileItem.file) return;
+
+      // Step 1: Uploading
+      fileItem.status = 'uploading';
+      if (index === 0) this.stateService.updateWorkflowStep(1, { status: WorkflowStepStatus.Active });
+
+      // Call document analyzer service with sessionId for cancellation support
+      this.documentAnalyzerService.analyzeDocument(
+        fileItem.file,
+        this.selectedAnalysisType,
+        sessionId
+      ).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (result) => {
+          if (result) {
+            // Update file status
+            fileItem.status = 'completed';
+            fileItem.analysisId = result.id;
+            console.log('✅ File analyzed successfully:', result);
+
+            // If this is the last file and analysis is complete
+            if (index === filesToUpload.length - 1) {
+              // Complete all workflow steps
+              this.completeAllWorkflowSteps();
+              this.stateService.setIsGenerating(false);
+
+              // Auto-display results in chat
+              this.displayAnalysisResults(result);
+            }
+          }
+        },
+        error: (error) => {
+          console.error('❌ File analysis failed:', error);
+          fileItem.status = 'failed';
+
+          // Mark workflow as failed
+          this.stateService.setIsGenerating(false);
+          this.stateService.addConversationMessage({
+            role: 'assistant',
+            content: `❌ Analysis failed: ${error.message || 'Unknown error'}`,
+            timestamp: new Date()
+          });
+
+          this.notificationService.error('Analysis Failed', `Failed to analyze ${fileItem.name}`);
+        }
+      });
+    });
+  }
+
+  /**
+   * Fetch document from URL
+   */
+  fetchFromUrl(): void {
+    if (!this.documentUrl.trim()) return;
+
+    this.isFetchingUrl = true;
+    this.notificationService.info('Fetching Document', 'Downloading from URL...');
+
+    // Use backend proxy to fetch document (supports cloud storage URLs and avoids CORS)
+    this.documentAnalyzerService.fetchDocumentFromUrl(this.documentUrl)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ blob, filename }) => {
+          // Convert blob to File object
+          const file = new File([blob], filename, { type: blob.type });
+          this.handleFiles([file]);
+          this.documentUrl = '';
+          this.isFetchingUrl = false;
+          this.notificationService.success('Download Complete', `Document "${filename}" fetched successfully`);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('URL fetch error:', error);
+          this.isFetchingUrl = false;
+          this.cdr.detectChanges();
+
+          // Show more specific error message if available
+          let errorMsg = 'Could not download document from URL';
+          if (error.error instanceof Blob) {
+            // Try to extract error message from blob
+            error.error.text().then((text: string) => {
+              try {
+                const errObj = JSON.parse(text);
+                if (errObj.error) errorMsg = errObj.error;
+              } catch (e) {
+                // Ignore parsing error, use default message
+              }
+              this.notificationService.error('Fetch Failed', errorMsg);
+            });
+          } else {
+            this.notificationService.error('Fetch Failed', errorMsg);
+          }
+        }
+      });
+  }
+
+  /**
+   * View analysis results for a file
+   */
+  viewAnalysis(file: any): void {
+    if (!file.analysisId) return;
+
+    this.documentAnalyzerService.getAnalysisById(file.analysisId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (analysis) => {
+          console.log('Analysis results:', analysis);
+
+          // Format structured analysis with Velzon HTML components
+          let formattedAnalysis = '';
+
+          // BEAUTIFUL DOCUMENT HEADER CARD
+          formattedAnalysis += `<div class="card border-0 shadow-sm mb-4 document-header-card">`;
+          formattedAnalysis += `<div class="card-body">`;
+          formattedAnalysis += `<div class="row align-items-center mb-3">`;
+          formattedAnalysis += `<div class="col-auto">`;
+          formattedAnalysis += `<div class="avatar-lg bg-primary-subtle rounded d-flex align-items-center justify-content-center" style="width: 4rem; height: 4rem;">`;
+          formattedAnalysis += `<i class="ri-file-text-line fs-1 text-primary"></i>`;
+          formattedAnalysis += `</div>`;
+          formattedAnalysis += `</div>`;
+          formattedAnalysis += `<div class="col">`;
+          formattedAnalysis += `<h3 class="mb-2 fw-bold">📄 Strategic Document Analysis</h3>`;
+          formattedAnalysis += `<p class="text-muted mb-0">${analysis.fileName}</p>`;
+          formattedAnalysis += `</div>`;
+          formattedAnalysis += `</div>`;
+
+          // Metadata grid
+          let metadata: any = {};
+          if (analysis.extractedMetadata) {
+            try {
+              metadata = JSON.parse(analysis.extractedMetadata);
+            } catch (e) {
+              console.warn('Failed to parse metadata:', e);
+            }
+          }
+
+          formattedAnalysis += `<div class="row g-3 mt-2">`;
+
+          // Document Type
+          if (analysis.detectedType) {
+            formattedAnalysis += `<div class="col-md-4">`;
+            formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+            formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Document Type</p>`;
+            formattedAnalysis += `<span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">${analysis.detectedType}</span>`;
+            formattedAnalysis += `</div>`;
+            formattedAnalysis += `</div>`;
+          }
+
+          // Case Number
+          if (metadata.caseNumber) {
+            formattedAnalysis += `<div class="col-md-4">`;
+            formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+            formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Case Number</p>`;
+            formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.caseNumber}</p>`;
+            formattedAnalysis += `</div>`;
+            formattedAnalysis += `</div>`;
+          }
+
+          // Date
+          if (metadata.primaryDate) {
+            formattedAnalysis += `<div class="col-md-4">`;
+            formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+            formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Date</p>`;
+            formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.primaryDate}</p>`;
+            formattedAnalysis += `</div>`;
+            formattedAnalysis += `</div>`;
+          }
+
+          // Court (if available)
+          if (metadata.court) {
+            formattedAnalysis += `<div class="col-md-6">`;
+            formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+            formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Court</p>`;
+            formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.court}</p>`;
+            formattedAnalysis += `</div>`;
+            formattedAnalysis += `</div>`;
+          }
+
+          // Parties (if available)
+          if (metadata.partiesDisplay) {
+            formattedAnalysis += `<div class="col-md-6">`;
+            formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+            formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Parties</p>`;
+            formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.partiesDisplay}</p>`;
+            formattedAnalysis += `</div>`;
+            formattedAnalysis += `</div>`;
+          }
+
+          formattedAnalysis += `</div>`; // Close row
+          formattedAnalysis += `</div>`; // Close card-body
+          formattedAnalysis += `</div>`; // Close card
+
+          // Add main strategic analysis with enhanced styling (RE-PROCESS OLD CONTENT)
+          if (analysis.analysis?.fullAnalysis) {
+            // Process the analysis to add Velzon styling classes
+            let processedAnalysis = this.enhanceAnalysisWithStyling(analysis.analysis.fullAnalysis);
+            formattedAnalysis += processedAnalysis;
+          } else if (analysis.analysis?.summary) {
+            formattedAnalysis += `<div class="card border-0 shadow-sm">\n`;
+            formattedAnalysis += `<div class="card-body">\n\n`;
+            formattedAnalysis += `## 📝 Summary\n\n`;
+            formattedAnalysis += analysis.analysis.summary;
+            formattedAnalysis += `\n\n</div></div>\n\n`;
+          }
+
+          // Parse sections for tab-based display
+          const parsedSections = this.parseStrategicSections(formattedAnalysis);
+          // Always set true for document analysis - content was enhanced with HTML
+          const hasStrategicAnalysis = true;
+
+          console.log('📈 viewAnalysis - hasStrategicAnalysis:', hasStrategicAnalysis);
+          console.log('📈 viewAnalysis - parsedSections keys:', Object.keys(parsedSections));
+          console.log('📈 viewAnalysis - contains ai-document-analysis:', formattedAnalysis.includes('ai-document-analysis'));
+
+          // Add to conversation as assistant message with proper flags
+          this.stateService.addConversationMessage({
+            role: 'assistant',
+            content: formattedAnalysis,
+            timestamp: new Date(),
+            hasStrategicAnalysis,
+            parsedSections
+          });
+
+          // Show chat
+          this.stateService.setShowChat(true);
+
+          this.notificationService.success('Analysis Loaded', 'Viewing analysis results');
+        },
+        error: (error) => {
+          console.error('Failed to load analysis:', error);
+          this.notificationService.error('Error', 'Failed to load analysis');
+        }
+      });
+  }
+
+  /**
+   * Remove file from list
+   */
+  removeFile(index: number): void {
+    this.uploadedFiles.splice(index, 1);
+  }
+
+  /**
+   * Display analysis results automatically in chat (called after analysis completes)
+   */
+  private displayAnalysisResults(result: any): void {
+    // Format structured analysis with PURE HTML (no markdown symbols)
+    let formattedAnalysis = '';
+
+    // BEAUTIFUL DOCUMENT HEADER CARD
+    formattedAnalysis += `<div class="card border-0 shadow-sm mb-4 document-header-card">`;
+    formattedAnalysis += `<div class="card-body">`;
+    formattedAnalysis += `<div class="row align-items-center mb-3">`;
+    formattedAnalysis += `<div class="col-auto">`;
+    formattedAnalysis += `<div class="avatar-lg bg-primary-subtle rounded d-flex align-items-center justify-content-center" style="width: 4rem; height: 4rem;">`;
+    formattedAnalysis += `<i class="ri-file-text-line fs-1 text-primary"></i>`;
+    formattedAnalysis += `</div>`;
+    formattedAnalysis += `</div>`;
+    formattedAnalysis += `<div class="col">`;
+    formattedAnalysis += `<h3 class="mb-2 fw-bold">📄 Strategic Document Analysis</h3>`;
+    formattedAnalysis += `<p class="text-muted mb-0">${result.fileName}</p>`;
+    formattedAnalysis += `</div>`;
+    formattedAnalysis += `</div>`;
+
+    // Metadata grid
+    let metadata: any = {};
+    if (result.extractedMetadata) {
+      try {
+        metadata = JSON.parse(result.extractedMetadata);
+      } catch (e) {
+        console.warn('Failed to parse metadata:', e);
+      }
+    }
+
+    formattedAnalysis += `<div class="row g-3 mt-2">`;
+
+    // Document Type
+    if (result.detectedType) {
+      formattedAnalysis += `<div class="col-md-4">`;
+      formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+      formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Document Type</p>`;
+      formattedAnalysis += `<span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">${result.detectedType}</span>`;
+      formattedAnalysis += `</div>`;
+      formattedAnalysis += `</div>`;
+    }
+
+    // Case Number
+    if (metadata.caseNumber) {
+      formattedAnalysis += `<div class="col-md-4">`;
+      formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+      formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Case Number</p>`;
+      formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.caseNumber}</p>`;
+      formattedAnalysis += `</div>`;
+      formattedAnalysis += `</div>`;
+    }
+
+    // Date
+    if (metadata.primaryDate) {
+      formattedAnalysis += `<div class="col-md-4">`;
+      formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+      formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Date</p>`;
+      formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.primaryDate}</p>`;
+      formattedAnalysis += `</div>`;
+      formattedAnalysis += `</div>`;
+    }
+
+    // Court (if available)
+    if (metadata.court) {
+      formattedAnalysis += `<div class="col-md-6">`;
+      formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+      formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Court</p>`;
+      formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.court}</p>`;
+      formattedAnalysis += `</div>`;
+      formattedAnalysis += `</div>`;
+    }
+
+    // Parties (if available)
+    if (metadata.partiesDisplay) {
+      formattedAnalysis += `<div class="col-md-6">`;
+      formattedAnalysis += `<div class="p-3 border rounded bg-light">`;
+      formattedAnalysis += `<p class="text-muted mb-2 text-uppercase fs-6 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Parties</p>`;
+      formattedAnalysis += `<p class="mb-0 fw-semibold">${metadata.partiesDisplay}</p>`;
+      formattedAnalysis += `</div>`;
+      formattedAnalysis += `</div>`;
+    }
+
+    formattedAnalysis += `</div>`; // Close row
+    formattedAnalysis += `</div>`; // Close card-body
+    formattedAnalysis += `</div>`; // Close card
+
+    // Add main strategic analysis with enhanced styling (RE-PROCESS CONTENT)
+    if (result.analysis?.fullAnalysis) {
+      // Process the analysis to add Velzon styling classes
+      let processedAnalysis = this.enhanceAnalysisWithStyling(result.analysis.fullAnalysis);
+      formattedAnalysis += processedAnalysis;
+    } else if (result.analysis?.summary) {
+      let processedSummary = this.enhanceAnalysisWithStyling(result.analysis.summary);
+      formattedAnalysis += processedSummary;
+    }
+
+    // Parse sections for tab-based display
+    const parsedSections = this.parseStrategicSections(formattedAnalysis);
+    // Always set true for document analysis - content was enhanced with HTML
+    const hasStrategicAnalysis = true;
+
+    console.log('📈 New analysis - hasStrategicAnalysis:', hasStrategicAnalysis);
+    console.log('📈 New analysis - parsedSections keys:', Object.keys(parsedSections));
+    console.log('📈 New analysis - contains ai-document-analysis:', formattedAnalysis.includes('ai-document-analysis'));
+
+    // Add to local state
+    const assistantMessage = {
+      role: 'assistant' as 'assistant',
+      content: formattedAnalysis,
+      timestamp: new Date(),
+      hasStrategicAnalysis,
+      parsedSections
+    };
+    this.stateService.addConversationMessage(assistantMessage);
+
+    // Persist to database and update conversation object
+    const activeConvId = this.stateService.getActiveConversationId();
+    if (activeConvId) {
+      const conv = this.stateService.getConversations().find(c => c.id === activeConvId);
+      if (conv && conv.backendConversationId) {
+        // Persist assistant message to database
+        this.legalResearchService.addMessageToSession(
+          conv.backendConversationId,
+          this.currentUser.id,
+          'assistant',
+          formattedAnalysis
+        ).pipe(takeUntil(this.destroy$))
+         .subscribe({
+           next: () => {
+             console.log('✅ Assistant message persisted to database');
+
+             // Update conversation object in sidebar for message count badge
+             conv.messages.push(assistantMessage);
+             conv.messageCount = (conv.messageCount || 0) + 1;
+             console.log(`Updated conversation ${activeConvId} messages count: ${conv.messages.length}, messageCount: ${conv.messageCount}`);
+
+             // Force change detection to update badge
+             this.cdr.detectChanges();
+           },
+           error: (err) => {
+             console.error('❌ Failed to persist assistant message:', err);
+             // Still update local state even if DB save fails
+             conv.messages.push(assistantMessage);
+             conv.messageCount = (conv.messageCount || 0) + 1;
+             this.cdr.detectChanges();
+           }
+         });
+      }
+    }
+  }
+
+  /**
+   * Format file size for display
+   */
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Auto-detect document type from filename or content
+   */
+  private detectDocumentType(filename: string): string {
+    const lower = filename.toLowerCase();
+    if (lower.includes('complaint')) return 'Complaint';
+    if (lower.includes('answer')) return 'Answer';
+    if (lower.includes('motion')) return 'Motion';
+    if (lower.includes('contract')) return 'Contract';
+    if (lower.includes('agreement')) return 'Agreement';
+    if (lower.includes('brief')) return 'Legal Brief';
+    if (lower.includes('memo')) return 'Memorandum';
+    return 'Document';
+  }
+
+  /**
+   * Check if file needs OCR (scanned PDF detection)
+   */
+  private needsOCR(file: File): boolean {
+    // Simple heuristic: PDFs larger than 5MB might be scanned
+    return file.type === 'application/pdf' && file.size > 5 * 1024 * 1024;
+  }
+
+  /**
+   * Enhance strategic analysis markdown with Velzon styling
+   * Uses the robust markdown-to-html pipe for conversion
+   */
+  private enhanceAnalysisWithStyling(markdown: string): string {
+    console.log('🔧 enhanceAnalysisWithStyling called');
+    console.log('📝 Input markdown length:', markdown.length);
+    console.log('📄 First 500 chars of input:', markdown.substring(0, 500));
+
+    // STEP 1: Process inline elements BEFORE converting markdown structure
+    let content = markdown;
+
+    // Process severity badges (before markdown conversion to avoid conflicts)
+    content = content.replace(/🔴\s*CRITICAL/gi, '<span class="badge bg-danger fs-6 px-3 py-2 me-2"><i class="ri-alert-fill me-1"></i>CRITICAL</span>');
+    content = content.replace(/🟡\s*HIGH/gi, '<span class="badge bg-warning text-dark fs-6 px-3 py-2 me-2"><i class="ri-error-warning-fill me-1"></i>HIGH</span>');
+    content = content.replace(/🔵\s*MEDIUM/gi, '<span class="badge bg-info fs-6 px-3 py-2 me-2"><i class="ri-information-fill me-1"></i>MEDIUM</span>');
+    content = content.replace(/🟢\s*LOW/gi, '<span class="badge bg-success fs-6 px-3 py-2 me-2"><i class="ri-checkbox-circle-fill me-1"></i>LOW</span>');
+
+    // Fallback warning badge format
+    content = content.replace(/⚠️\s*\[?(MAJOR|CRITICAL)\]?:/gi, '<span class="badge bg-danger fs-6 px-3 py-2 me-2"><i class="ri-alert-fill me-1"></i>CRITICAL</span>:');
+    content = content.replace(/⚠️\s*\[?HIGH\]?:/gi, '<span class="badge bg-warning text-dark fs-6 px-3 py-2 me-2"><i class="ri-error-warning-fill me-1"></i>HIGH</span>:');
+    content = content.replace(/⚠️\s*\[?MEDIUM\]?:/gi, '<span class="badge bg-info fs-6 px-3 py-2 me-2"><i class="ri-information-fill me-1"></i>MEDIUM</span>:');
+
+    // Process financial amounts
+    content = content.replace(/\$(\d+(?:,\d{3})*(?:\.\d+)?(?:M|K|B)?)\+?/gi, (match, amount) => {
+      const value = parseFloat(amount.replace(/,/g, '').replace(/[MKB]/g, ''));
+      const unit = amount.match(/[MKB]/)?.[0] || '';
+      const numValue = unit === 'M' ? value : unit === 'K' ? value / 1000 : unit === 'B' ? value * 1000 : value;
+
+      if (numValue >= 10) {
+        return `<span class="badge bg-danger-subtle text-danger fs-6 fw-bold px-2 py-1">$${amount}+</span>`;
+      } else if (numValue >= 1) {
+        return `<span class="badge bg-warning-subtle text-warning fs-6 fw-semibold px-2 py-1">$${amount}</span>`;
+      } else {
+        return `<span class="text-primary fw-semibold">$${amount}</span>`;
+      }
+    });
+
+    // STEP 2: Use the existing MarkdownConverterService for conversion
+    // This handles tables, lists, headers, bold, italic, links, legal highlighting
+    const htmlString = this.markdownConverter.convert(content);
+
+    // STEP 3: Wrap everything in analysis container for styling
+    const result = `<div class="ai-document-analysis">${htmlString}</div>`;
+
+    console.log('✅ Output HTML length:', result.length);
+    console.log('📄 First 1000 chars of output:', result.substring(0, 1000));
+    console.log('🔍 Contains .ai-document-analysis wrapper:', result.includes('ai-document-analysis'));
+    console.log('🔍 Contains tables:', result.includes('<table'));
+    console.log('🔍 Contains timelines:', result.includes('timeline'));
+
+    return result;
+  }
+
+  /**
+   * Parse strategic analysis into sections for tabbed display
+   */
+  private parseStrategicSections(markdown: string): any {
+    const sections: any = {};
+
+    // Check if this is strategic analysis (contains markers)
+    if (!markdown.includes('EXECUTIVE') && !markdown.includes('CRITICAL') && !markdown.includes('STRATEGIC')) {
+      return sections;
+    }
+
+    // Extract overview (everything up to first major section after executive summary)
+    const overviewMatch = markdown.match(/(.*?)(##\s*(⭐|💰|🚨|📈|⏱️|🛡️))/s);
+    if (overviewMatch) {
+      sections.overview = overviewMatch[1];
+    }
+
+    // Extract weaknesses/critical issues
+    const weaknessPatterns = [
+      /##\s*⭐\s*CRITICAL\s*(WEAKNESSES|ISSUES).*?(##\s*[^#]|$)/gis,
+      /##\s*🚨\s*(PROBLEMATIC|UNFAVORABLE|OBJECTIONABLE).*?(##\s*[^#]|$)/gis
+    ];
+    for (const pattern of weaknessPatterns) {
+      const match = markdown.match(pattern);
+      if (match) {
+        sections.weaknesses = match[0];
+        break;
+      }
+    }
+
+    // Extract timeline
+    const timelineMatch = markdown.match(/##\s*⏱️.*?TIMELINE.*?(##\s*[^#]|$)/gis);
+    if (timelineMatch) {
+      sections.timeline = timelineMatch[0];
+    }
+
+    // Extract evidence checklist
+    const evidenceMatch = markdown.match(/##\s*📝.*?(EVIDENCE|CHECKLIST|COMPLIANCE).*?(##\s*[^#]|$)/gis);
+    if (evidenceMatch) {
+      sections.evidence = evidenceMatch[0];
+    }
+
+    // Extract strategy/recommendations
+    const strategyMatch = markdown.match(/##\s*💡\s*STRATEGIC\s*RECOMMENDATIONS.*?(##\s*[^#]|$)/gis);
+    if (strategyMatch) {
+      sections.strategy = strategyMatch[0];
+    }
+
+    return sections;
+  }
+
+  /**
+   * Export strategic analysis to PDF
+   */
+  exportAnalysisToPDF(message: any): void {
+    this.notificationService.info('Export', 'Preparing PDF export...');
+    // TODO: Implement PDF export with strategic analysis formatting
+    // For now, show placeholder
+    setTimeout(() => {
+      this.notificationService.warning('Coming Soon', 'PDF export with strategic formatting will be available soon');
+    }, 500);
+  }
+
+  /**
+   * Create a draft document from strategic analysis
+   */
+  createDraftFromAnalysis(message: any): void {
+    this.notificationService.info('Draft', 'Creating draft from analysis...');
+    // TODO: Extract key points and create a draft response
+    setTimeout(() => {
+      this.notificationService.warning('Coming Soon', 'Automatic draft creation will be available soon');
+    }, 500);
+  }
+
+  /**
+   * Research citations mentioned in analysis
+   */
+  researchCitations(message: any): void {
+    this.notificationService.info('Research', 'Analyzing citations...');
+    // TODO: Extract case citations and launch research
+    setTimeout(() => {
+      this.notificationService.warning('Coming Soon', 'Citation research integration will be available soon');
+    }, 500);
+  }
+
+  /**
+   * Schedule reminders based on timeline
+   */
+  scheduleReminders(message: any): void {
+    this.notificationService.info('Reminders', 'Setting up timeline reminders...');
+    // TODO: Extract dates from timeline and create calendar events
+    setTimeout(() => {
+      this.notificationService.warning('Coming Soon', 'Automatic reminder scheduling will be available soon');
+    }, 500);
+  }
+
   // Protégé-style document type pills
   // Categorized document types with icons
   documentTypeCategories = [
@@ -1989,6 +2703,20 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return 'Enter drafting request here';
   }
 
+  // Get human-readable label for analysis type
+  private getAnalysisTypeLabel(analysisType: string): string {
+    const typeMap: { [key: string]: string } = {
+      'summarize': 'Summarize',
+      'risk-assessment': 'Risk Assessment',
+      'contract': 'Contract Analysis',
+      'legal-brief': 'Legal Brief Review',
+      'compliance': 'Compliance Check',
+      'due-diligence': 'Due Diligence',
+      'general': 'General Analysis'
+    };
+    return typeMap[analysisType] || analysisType;
+  }
+
   // Get user display name with proper fallbacks
   getUserDisplayName(): string {
     if (this.currentUser && this.currentUser.firstName && this.currentUser.firstName.trim()) {
@@ -2017,7 +2745,97 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Start custom draft with user's own prompt - REAL BACKEND CALL
+  /**
+   * Handle upload document analysis workflow
+   */
+  handleUploadAnalysis(): void {
+    // Check if there are files ready to analyze
+    const filesToAnalyze = this.uploadedFiles.filter(f => f.status === 'ready');
+
+    if (filesToAnalyze.length === 0) {
+      this.notificationService.warning('No Files', 'Please upload documents first');
+      return;
+    }
+
+    // Create conversation title from filename and analysis type
+    const firstFileName = filesToAnalyze[0].name;
+    const analysisTypeLabel = this.getAnalysisTypeLabel(this.selectedAnalysisType);
+    const title = `${firstFileName} - ${analysisTypeLabel}`;
+    const userMessage = `Analyzing ${filesToAnalyze.length} document(s) using ${analysisTypeLabel} mode`;
+
+    // Show chat panel for workflow progress
+    this.stateService.setShowChat(true);
+    this.stateService.setShowBottomSearchBar(false);
+    this.stateService.setIsGenerating(true);
+
+    // Initialize workflow steps
+    this.initializeWorkflowSteps('upload');
+    this.animateWorkflowSteps();
+
+    // Add user message to local state
+    this.stateService.addConversationMessage({
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date()
+    });
+
+    // Create conversation in backend first
+    this.legalResearchService.createGeneralConversation(title, this.selectedResearchMode, 'ANALYZE_DOCUMENT')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (session) => {
+          console.log('Created upload analysis conversation:', session);
+
+          // Persist user message to database
+          this.legalResearchService.addMessageToSession(
+            session.id,
+            this.currentUser.id,
+            'user',
+            userMessage
+          ).pipe(takeUntil(this.destroy$))
+           .subscribe({
+             next: () => console.log('✅ User message persisted to database'),
+             error: (err) => console.error('❌ Failed to persist user message:', err)
+           });
+
+          // Add to conversations list
+          const newConv: Conversation = {
+            id: `conv_${session.id}`,
+            title: session.sessionName || title,
+            date: new Date(session.createdAt || new Date()),
+            type: 'upload' as ConversationType,
+            messages: [...this.stateService.getConversationMessages()],
+            messageCount: this.stateService.getConversationMessages().length,
+            jurisdiction: session.jurisdiction,
+            backendConversationId: session.id,
+            researchMode: session.researchMode as ResearchMode || 'FAST' as ResearchMode,
+            taskType: session.taskType as TaskType,
+            documentId: session.documentId,
+            relatedDraftId: session.relatedDraftId
+          };
+
+          this.stateService.addConversation(newConv);
+          this.stateService.setActiveConversationId(newConv.id);
+
+          // Now proceed with document analysis - pass session.id for cancellation support
+          this.uploadFiles(session.id);
+        },
+        error: (error) => {
+          console.error('Error creating conversation:', error);
+          this.stateService.setIsGenerating(false);
+          this.notificationService.error('Error', 'Failed to create conversation for document analysis');
+        }
+      });
+  }
+
   startCustomDraft(): void {
+    // UPLOAD MODE: Use automated document analysis workflow
+    if (this.selectedTask === 'upload') {
+      this.handleUploadAnalysis();
+      return;
+    }
+
+    // For other modes, prompt is required
     if (!this.customPrompt.trim()) return;
 
     const userPrompt = this.customPrompt;
@@ -2663,7 +3481,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // CRITICAL: Load content here if pending - this is the ONLY reliable place
       // onEditorCreated fires when editor is actually ready, not based on setTimeout guessing
       if (this.pendingDocumentContent) {
-        console.log('🎯 Loading pending content (length: ' + this.pendingDocumentContent.length + ')');
+        console.log('⭐ Loading pending content (length: ' + this.pendingDocumentContent.length + ')');
         this.loadDocumentContent(this.pendingDocumentContent);
         this.pendingDocumentContent = null;
       }

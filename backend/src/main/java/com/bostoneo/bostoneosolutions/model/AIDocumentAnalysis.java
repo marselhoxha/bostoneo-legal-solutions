@@ -97,4 +97,16 @@ public class AIDocumentAnalysis {
     // Document metadata as JSON
     @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata;
+
+    // Detected document type (Complaint, Contract, Motion, etc.)
+    @Column(name = "detected_type")
+    private String detectedType;
+
+    // Extracted metadata (parties, dates, case numbers)
+    @Column(name = "extracted_metadata", columnDefinition = "TEXT")
+    private String extractedMetadata;
+
+    // OCR required flag
+    @Column(name = "requires_ocr")
+    private Boolean requiresOcr = false;
 }

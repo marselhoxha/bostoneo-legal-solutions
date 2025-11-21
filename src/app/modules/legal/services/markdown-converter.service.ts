@@ -142,6 +142,10 @@ export class MarkdownConverterService {
    * Note: No custom classes - Quill strips them. Style native HTML elements directly.
    */
   private convertMarkdownToHtml(text: string): string {
+    // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
+    text = text.replace(/^`\s*/gm, ''); // Backticks at start of lines
+    text = text.replace(/`{3,}/g, ''); // Triple+ backticks not in code blocks
+
     // Convert tables
     text = this.convertTablesToHtml(text);
 

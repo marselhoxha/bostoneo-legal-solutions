@@ -3,7 +3,7 @@ package com.bostoneo.bostoneosolutions.service.external;
 import com.bostoneo.bostoneosolutions.config.ExternalApiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.Loader;
+// PDFBox 2.x - no Loader class needed
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.cache.annotation.Cacheable;
@@ -252,7 +252,7 @@ public class MassachusettsLegalService {
     private String extractTextFromPDF(byte[] pdfBytes) {
         PDDocument document = null;
         try {
-            document = Loader.loadPDF(pdfBytes);
+            document = PDDocument.load(pdfBytes);
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
             log.info("Extracted {} characters from PDF", text.length());

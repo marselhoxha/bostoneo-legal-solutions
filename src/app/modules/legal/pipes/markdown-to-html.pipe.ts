@@ -985,6 +985,10 @@ export class MarkdownToHtmlPipe implements PipeTransform {
   }
 
   private convertMarkdownToHtml(text: string): string {
+    // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
+    text = text.replace(/^`\s*/gm, ''); // Backticks at start of lines
+    text = text.replace(/`{3,}/g, ''); // Triple+ backticks not in code blocks (already handled by inline code)
+
     // Convert timelines FIRST (before tables and other markdown)
     text = this.convertTimelinesToHtml(text);
 

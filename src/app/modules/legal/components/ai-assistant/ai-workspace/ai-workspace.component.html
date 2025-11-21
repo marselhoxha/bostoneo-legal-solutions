@@ -247,17 +247,138 @@
         <strong>Please select a document type above</strong> to ensure proper citation formatting
       </div>
 
+      <!-- Upload Document Section (when Upload task is selected) -->
+      <div class="upload-document-section card mb-4" *ngIf="selectedTask === 'upload'">
+        <div class="card-body">
+          <h6 class="mb-3">
+            <i class="ri-upload-cloud-line me-2"></i>
+            Upload Document for Analysis
+          </h6>
+
+          <!-- Auto-Detection Notice -->
+          <div class="alert alert-info mb-4" role="alert">
+            <i class="ri-information-line me-2"></i>
+            <strong>Automatic Strategic Analysis</strong>
+            <p class="mb-0 mt-1 small">
+              Our AI automatically detects your document type (Complaint, Contract, Lease, Motion, etc.)
+              and provides strategic, adversarial analysis tailored to the document - no configuration needed.
+            </p>
+          </div>
+
+          <!-- URL Fetch Input -->
+          <div class="url-fetch-section mb-3">
+            <div class="input-group">
+              <span class="input-group-text"><i class="ri-link"></i></span>
+              <input type="url"
+                     class="form-control"
+                     [(ngModel)]="documentUrl"
+                     name="documentUrl"
+                     placeholder="Or paste document URL (PDF, DOCX)...">
+              <button type="button"
+                      class="btn btn-primary"
+                      (click)="fetchFromUrl()"
+                      [disabled]="!documentUrl || isFetchingUrl">
+                <i class="ri-download-cloud-line me-1"></i>
+                {{ isFetchingUrl ? 'Fetching...' : 'Fetch' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Drag & Drop Zone -->
+          <div class="upload-drop-zone"
+               [class.dragover]="isDragover"
+               (drop)="onFileDrop($event)"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (click)="fileInput.click()">
+            <input #fileInput
+                   type="file"
+                   hidden
+                   (change)="onFileSelect($event)"
+                   accept=".pdf,.docx,.doc,.txt"
+                   multiple>
+
+            <div class="upload-icon">
+              <i class="ri-upload-cloud-2-line"></i>
+            </div>
+            <p class="upload-text">
+              <strong>Drop files here</strong> or click to browse
+            </p>
+            <p class="upload-formats text-muted">
+              Supports PDF, DOCX, DOC, TXT • Max 10 files • 25MB each • Auto-detection enabled
+            </p>
+          </div>
+
+          <!-- Uploaded Files List -->
+          <div class="uploaded-files-list" *ngIf="uploadedFiles.length > 0">
+            <h6 class="mt-4 mb-3">Uploaded Files ({{uploadedFiles.length}})</h6>
+            <div class="file-item" *ngFor="let file of uploadedFiles; let i = index">
+              <div class="file-info">
+                <i class="ri-file-text-line file-icon"></i>
+                <div class="file-details">
+                  <div class="file-name">
+                    {{file.name}}
+                    <span class="doc-type-badge" *ngIf="file.detectedType">
+                      {{file.detectedType}}
+                    </span>
+                  </div>
+                  <div class="file-meta">
+                    {{formatFileSize(file.size)}} •
+                    <span [class]="'file-status ' + file.status">{{file.status}}</span>
+                    <span *ngIf="file.isOCR" class="ocr-badge">
+                      <i class="ri-scan-line"></i> OCR
+                    </span>
+                  </div>
+                  <div class="file-metadata" *ngIf="file.metadata">
+                    <small class="text-muted">
+                      <span *ngIf="file.metadata.parties">{{file.metadata.parties}} •</span>
+                      <span *ngIf="file.metadata.date">{{file.metadata.date}} •</span>
+                      <span *ngIf="file.metadata.court">{{file.metadata.court}}</span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+              <div class="file-actions">
+                <button type="button"
+                        class="btn btn-sm btn-info me-1"
+                        (click)="viewAnalysis(file)"
+                        *ngIf="file.status === 'completed'"
+                        title="View Analysis">
+                  <i class="ri-eye-line"></i>
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-light"
+                        (click)="removeFile(i)"
+                        *ngIf="file.status !== 'uploading'">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Main Prompt Input -->
       <div class="main-prompt-area">
         <form (ngSubmit)="startCustomDraft()" class="prompt-form card">
           <div class="card-body">
+            <!-- Upload mode: Hide textarea, analysis is automatic -->
             <textarea
+              *ngIf="selectedTask !== 'upload'"
               class="form-control prompt-textarea"
               [(ngModel)]="customPrompt"
               (focus)="onPromptFocus()"
               name="customPrompt"
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
+
+            <!-- Upload mode: Show instructions instead -->
+            <div *ngIf="selectedTask === 'upload'" class="upload-instructions">
+              <p class="text-muted mb-2">
+                <i class="ri-information-line"></i>
+                Upload your documents above, then click <strong>Analyze Documents</strong> to process them using the selected analysis type.
+              </p>
+            </div>
 
             <!-- Case Selector (Draft task only) -->
             <div class="case-selector-section" *ngIf="selectedTask === 'draft'" style="margin-top: 1rem; margin-bottom: 1rem;">
@@ -278,15 +399,16 @@
             </div>
 
             <div class="prompt-footer">
-              <div class="jurisdiction-selector">
+              <!-- Hide jurisdiction and mode selectors for upload mode -->
+              <div class="jurisdiction-selector" *ngIf="selectedTask !== 'upload'">
                 <label>Jurisdiction:</label>
                 <select class="form-select" [(ngModel)]="selectedJurisdiction" name="jurisdiction">
                   <option *ngFor="let jur of jurisdictions" [value]="jur">{{jur}}</option>
                 </select>
               </div>
 
-              <!-- Research Mode Selector (Compact) -->
-              <div class="mode-selector-compact">
+              <!-- Research Mode Selector (Compact) - Hidden for upload mode -->
+              <div class="mode-selector-compact" *ngIf="selectedTask !== 'upload'">
                 <label>Mode:</label>
                 <div class="btn-group" ngbDropdown placement="top-start">
                   <button id="mode-dropdown-compact"
@@ -325,8 +447,10 @@
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-submit" [disabled]="!canSend">
-                <i class="ri-send-plane-fill"></i> Send
+              <button type="submit" class="btn btn-primary btn-submit"
+                      [disabled]="selectedTask === 'upload' ? (uploadedFiles.length === 0 || (isGenerating$ | async)) : !canSend">
+                <i [class]="selectedTask === 'upload' ? 'ri-file-search-line' : 'ri-send-plane-fill'"></i>
+                {{ selectedTask === 'upload' ? 'Analyze Documents' : 'Send' }}
               </button>
             </div>
           </div>
@@ -624,7 +748,73 @@
                       <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="message-bubble ai-message flex-grow-1">
-                      <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+                      <!-- Strategic Analysis Tabs (if present) -->
+                      <div class="strategic-analysis-tabs" *ngIf="message.hasStrategicAnalysis">
+                        <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">
+                          <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#overview-{{i}}" role="tab">
+                              <i class="ri-file-list-3-line me-1"></i> Overview
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#weaknesses-{{i}}" role="tab">
+                              <i class="ri-alert-line me-1"></i> Weaknesses
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#timeline-{{i}}" role="tab">
+                              <i class="ri-calendar-line me-1"></i> Timeline
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#evidence-{{i}}" role="tab">
+                              <i class="ri-checkbox-line me-1"></i> Evidence
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#strategy-{{i}}" role="tab">
+                              <i class="ri-lightbulb-line me-1"></i> Strategy
+                            </a>
+                          </li>
+                        </ul>
+
+                        <div class="tab-content">
+                          <div class="tab-pane fade show active" id="overview-{{i}}" role="tabpanel">
+                            <div [innerHTML]="message.parsedSections?.overview || message.content" apexChartsContainer></div>
+                          </div>
+                          <div class="tab-pane fade" id="weaknesses-{{i}}" role="tabpanel">
+                            <div [innerHTML]="message.parsedSections?.weaknesses || 'No weaknesses section found'" apexChartsContainer></div>
+                          </div>
+                          <div class="tab-pane fade" id="timeline-{{i}}" role="tabpanel">
+                            <div [innerHTML]="message.parsedSections?.timeline || 'No timeline section found'" apexChartsContainer></div>
+                          </div>
+                          <div class="tab-pane fade" id="evidence-{{i}}" role="tabpanel">
+                            <div [innerHTML]="message.parsedSections?.evidence || 'No evidence section found'" apexChartsContainer></div>
+                          </div>
+                          <div class="tab-pane fade" id="strategy-{{i}}" role="tabpanel">
+                            <div [innerHTML]="message.parsedSections?.strategy || 'No strategy section found'" apexChartsContainer></div>
+                          </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="analysis-quick-actions mt-3">
+                          <button class="btn btn-sm btn-soft-primary me-2" (click)="exportAnalysisToPDF(message)">
+                            <i class="ri-file-pdf-line me-1"></i> Export PDF
+                          </button>
+                          <button class="btn btn-sm btn-soft-success me-2" (click)="createDraftFromAnalysis(message)">
+                            <i class="ri-file-edit-line me-1"></i> Draft Response
+                          </button>
+                          <button class="btn btn-sm btn-soft-info me-2" (click)="researchCitations(message)">
+                            <i class="ri-search-line me-1"></i> Research Citations
+                          </button>
+                          <button class="btn btn-sm btn-soft-warning" (click)="scheduleReminders(message)">
+                            <i class="ri-calendar-check-line me-1"></i> Set Reminders
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Regular message content (if not strategic analysis) -->
+                      <div class="message-content" *ngIf="!message.hasStrategicAnalysis" [innerHTML]="message.hasStrategicAnalysis ? message.content : (message.content | markdownToHtml)" apexChartsContainer></div>
 
                       <!-- Transformation Comparison - Refactored Component -->
                       <app-transformation-preview
@@ -736,7 +926,7 @@
                   </div>
 
                   <div class="message-bubble ai-message flex-grow-1">
-                    <div class="message-content" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
+                    <div class="message-content" [innerHTML]="message.hasStrategicAnalysis ? message.content : (message.content | markdownToHtml)" apexChartsContainer></div>
 
                     <!-- Transformation Comparison - Refactored Component -->
                     <app-transformation-preview

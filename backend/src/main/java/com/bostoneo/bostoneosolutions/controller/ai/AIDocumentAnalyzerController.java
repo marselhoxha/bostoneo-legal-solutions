@@ -1,15 +1,17 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.service.AIDocumentAnalysisService;
+import com.bostoneo.bostoneosolutions.util.CloudStorageUrlConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,24 +23,27 @@ import java.util.Map;
 public class AIDocumentAnalyzerController {
 
     private final AIDocumentAnalysisService documentAnalysisService;
+    private final CloudStorageUrlConverter urlConverter;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public DeferredResult<ResponseEntity<Map<String, Object>>> analyzeDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("analysisType") String analysisType,
             @RequestParam(value = "userId", required = false) Long userId,
-            @RequestParam(value = "caseId", required = false) Long caseId) {
+            @RequestParam(value = "caseId", required = false) Long caseId,
+            @RequestParam(value = "sessionId", required = false) Long sessionId) {
 
-        log.info("Analyzing document: {}, type: {}, analysis: {}",
-                file.getOriginalFilename(), file.getContentType(), analysisType);
+        log.info("Analyzing document: {}, type: {}, analysis: {}, sessionId: {}",
+                file.getOriginalFilename(), file.getContentType(), analysisType, sessionId);
 
-        // Set timeout to 90 seconds for complex document analysis
-        DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(90000L);
+        // Set timeout to 300 seconds (5 minutes) for Claude Sonnet 4 extended thinking with complex documents
+        DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(300000L);
 
         // Use default user ID if not provided (for testing)
         Long effectiveUserId = userId != null ? userId : 1L;
 
-        documentAnalysisService.analyzeDocument(file, analysisType, effectiveUserId, caseId)
+        documentAnalysisService.analyzeDocument(file, analysisType, effectiveUserId, caseId, sessionId)
                 .thenApply(analysis -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("id", analysis.getAnalysisId());
@@ -47,6 +52,11 @@ public class AIDocumentAnalyzerController {
                     result.put("analysisType", analysis.getAnalysisType());
                     result.put("status", analysis.getStatus());
                     result.put("timestamp", analysis.getCreatedAt().toString());
+
+                    // Add detected type and metadata
+                    result.put("detectedType", analysis.getDetectedType());
+                    result.put("extractedMetadata", analysis.getExtractedMetadata());
+                    result.put("requiresOcr", analysis.getRequiresOcr());
 
                     if ("completed".equals(analysis.getStatus())) {
                         Map<String, Object> analysisData = new HashMap<>();
@@ -109,6 +119,11 @@ public class AIDocumentAnalyzerController {
                     result.put("status", analysis.getStatus());
                     result.put("timestamp", analysis.getCreatedAt().toString());
 
+                    // Add detected type and metadata
+                    result.put("detectedType", analysis.getDetectedType());
+                    result.put("extractedMetadata", analysis.getExtractedMetadata());
+                    result.put("requiresOcr", analysis.getRequiresOcr());
+
                     if ("completed".equals(analysis.getStatus())) {
                         Map<String, Object> analysisData = new HashMap<>();
                         analysisData.put("fullAnalysis", analysis.getAnalysisResult());
@@ -131,6 +146,122 @@ public class AIDocumentAnalyzerController {
         Long effectiveUserId = userId != null ? userId : 1L;
 
         return ResponseEntity.ok(documentAnalysisService.getAnalysisStats(effectiveUserId));
+    }
+
+    /**
+     * Fetches a document from a URL (supports cloud storage URLs and direct URLs).
+     * This endpoint acts as a proxy to avoid CORS issues and supports cloud storage URL conversion.
+     */
+    @PostMapping("/fetch-url")
+    public ResponseEntity<?> fetchDocumentFromUrl(@RequestBody Map<String, String> request) {
+        String url = request.get("url");
+
+        if (url == null || url.trim().isEmpty()) {
+            log.warn("Fetch URL request with empty URL");
+            return ResponseEntity.badRequest().body(
+                    Map.of("error", "URL is required")
+            );
+        }
+
+        log.info("Fetching document from URL: {}", url);
+
+        // Validate URL safety (SSRF protection)
+        if (!urlConverter.isSafeUrl(url)) {
+            log.warn("Blocked unsafe URL: {}", url);
+            return ResponseEntity.badRequest().body(
+                    Map.of("error", "URL is not allowed (private/internal addresses blocked)")
+            );
+        }
+
+        try {
+            // Convert cloud storage sharing URLs to direct download URLs
+            String directUrl = urlConverter.convertToDirectUrl(url);
+            String provider = urlConverter.getProviderName(url);
+            log.info("Provider: {}, Direct URL: {}", provider, directUrl);
+
+            // Set up request headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            headers.setAccept(java.util.List.of(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            // Fetch the document
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    directUrl,
+                    HttpMethod.GET,
+                    entity,
+                    byte[].class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch document: HTTP {}", response.getStatusCode());
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(
+                        Map.of("error", "Failed to fetch document from URL")
+                );
+            }
+
+            byte[] fileBytes = response.getBody();
+            log.info("Successfully fetched {} bytes from {}", fileBytes.length, provider);
+
+            // Detect content type
+            String contentType = "application/octet-stream";
+            if (response.getHeaders().getContentType() != null) {
+                contentType = response.getHeaders().getContentType().toString();
+            } else {
+                // Try to detect from URL
+                String lowerUrl = url.toLowerCase();
+                if (lowerUrl.endsWith(".pdf")) contentType = "application/pdf";
+                else if (lowerUrl.endsWith(".doc")) contentType = "application/msword";
+                else if (lowerUrl.endsWith(".docx")) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                else if (lowerUrl.endsWith(".txt")) contentType = "text/plain";
+            }
+
+            // Extract filename from URL
+            String filename = extractFilename(url);
+
+            // Return the file bytes with appropriate headers
+            HttpHeaders responseHeaders = new HttpHeaders();
+            responseHeaders.setContentType(MediaType.parseMediaType(contentType));
+            responseHeaders.setContentLength(fileBytes.length);
+            responseHeaders.setContentDisposition(
+                    ContentDisposition.builder("attachment")
+                            .filename(filename)
+                            .build()
+            );
+
+            return ResponseEntity.ok()
+                    .headers(responseHeaders)
+                    .body(fileBytes);
+
+        } catch (Exception e) {
+            log.error("Error fetching document from URL: {}", url, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of("error", "Failed to fetch document: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Extracts a reasonable filename from a URL.
+     */
+    private String extractFilename(String url) {
+        try {
+            // Try to get filename from URL path
+            String path = new java.net.URI(url).getPath();
+            String[] parts = path.split("/");
+            String lastPart = parts[parts.length - 1];
+
+            if (lastPart != null && !lastPart.isEmpty() && lastPart.contains(".")) {
+                return lastPart;
+            }
+
+            // Fallback to a generic name
+            return "document.pdf";
+
+        } catch (Exception e) {
+            return "document.pdf";
+        }
     }
 
 }

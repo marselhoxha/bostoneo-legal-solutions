@@ -8,6 +8,8 @@ export interface Message {
   documentGenerated?: boolean;
   documentId?: string;
   transformationComparison?: TransformationComparison;
+  hasStrategicAnalysis?: boolean;
+  parsedSections?: any;
 }
 
 export interface TransformationComparison {

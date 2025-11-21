@@ -1281,6 +1281,20 @@ public class ClaudeSonnet4Service implements AIService {
         int maxTokens;
         String lowerPrompt = prompt.toLowerCase();
 
+        // Detect strategic document analysis - needs 12000 tokens for complete strategic response
+        // Strategic prompts include comprehensive sections: executive summary, weaknesses, timeline,
+        // evidence checklists, and strategic recommendations that require ~8000-12000 tokens
+        boolean isStrategicDocumentAnalysis =
+            prompt.contains("You are an expert legal strategist and document analyst") ||
+            prompt.contains("ASSUME YOU ARE DEFENSE COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE BUSINESS COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE EMPLOYEE'S COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE COMPLIANCE COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE RESPONDING COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE OPPOSING COUNSEL") ||
+            prompt.contains("ASSUME YOU ARE TENANT'S COUNSEL") ||
+            lowerPrompt.contains("strategic document analysis");
+
         // Detect THOROUGH mode legal research - needs highest token limit for comprehensive analysis with citations
         boolean isThoroughModeResearch = prompt.contains("Expert legal research assistant") ||
                                          lowerPrompt.contains("**tool usage requirements** (citation verification mandatory)");
@@ -1300,7 +1314,13 @@ public class ClaudeSonnet4Service implements AIService {
                                      (prompt.contains("**tool usage requirements** (citation verification mandatory)") ||
                                       lowerPrompt.contains("verified citations"));
 
-        if (isThoroughModeResearch) {
+        if (isStrategicDocumentAnalysis) {
+            // Strategic document analysis: 12000 tokens for complete response
+            // Prevents truncation of evidence checklists, timelines, strategic recommendations
+            // Covers all document types: Complaints, Contracts, Leases, Employment, NDA, Discovery, etc.
+            maxTokens = 12000;
+            log.info("📄⚖️ Strategic document analysis detected - allocating {} tokens for complete adversarial analysis", maxTokens);
+        } else if (isThoroughModeResearch) {
             // THOROUGH mode: 12000 tokens for comprehensive analysis with verified citations
             maxTokens = 12000;
             log.info("🔍 THOROUGH mode research detected - allocating {} tokens for comprehensive citation-verified analysis", maxTokens);

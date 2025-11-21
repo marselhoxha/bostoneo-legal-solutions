@@ -5,7 +5,7 @@ import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
 import com.bostoneo.bostoneosolutions.repository.AIPDFFormFieldRepository;
 import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.Loader;
+// PDFBox 2.x - no Loader class needed
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
@@ -198,7 +198,7 @@ public class AIPDFFormService {
         File outputFile = new File(outputDir, outputFilename);
         Path outputPath = outputFile.toPath();
 
-        try (PDDocument document = Loader.loadPDF(sourceFile)) {
+        try (PDDocument document = PDDocument.load(sourceFile)) {
             // Handle encrypted PDFs
             if (document.isEncrypted()) {
                 document.setAllSecurityToBeRemoved(true);
@@ -286,7 +286,7 @@ public class AIPDFFormService {
     public List<String> extractPDFFieldNames(String pdfPath) throws IOException {
         List<String> fieldNames = new ArrayList<>();
 
-        try (PDDocument document = Loader.loadPDF(new File(pdfPath))) {
+        try (PDDocument document = PDDocument.load(new File(pdfPath))) {
             // Handle encrypted PDFs
             if (document.isEncrypted()) {
                 document.setAllSecurityToBeRemoved(true);
