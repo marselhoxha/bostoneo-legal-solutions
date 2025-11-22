@@ -715,7 +715,7 @@
         <div class="chat-messages-area-side">
           <ul class="list-unstyled chat-conversation-list">
             <!-- User & AI Messages -->
-            <ng-container *ngFor="let message of (conversationMessages$ | async)">
+            <ng-container *ngFor="let message of (conversationMessages$ | async); let i = index">
               <li class="chat-list" [ngClass]="{ 'right': message.role === 'user', 'left': message.role === 'assistant' }">
 
                 <!-- User Message -->
@@ -757,13 +757,18 @@
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#weaknesses-{{i}}" role="tab">
-                              <i class="ri-alert-line me-1"></i> Weaknesses
+                            <a class="nav-link" data-bs-toggle="tab" href="#action-items-{{i}}" role="tab">
+                              <i class="bi bi-check2-square me-1"></i> Action Items
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#timeline-{{i}}" role="tab">
-                              <i class="ri-calendar-line me-1"></i> Timeline
+                            <a class="nav-link" data-bs-toggle="tab" href="#timeline-view-{{i}}" role="tab">
+                              <i class="bi bi-calendar-event me-1"></i> Timeline
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#weaknesses-{{i}}" role="tab">
+                              <i class="ri-alert-line me-1"></i> Weaknesses
                             </a>
                           </li>
                           <li class="nav-item">
@@ -782,11 +787,16 @@
                           <div class="tab-pane fade show active" id="overview-{{i}}" role="tabpanel">
                             <div [innerHTML]="message.parsedSections?.overview || message.content" apexChartsContainer></div>
                           </div>
+                          <div class="tab-pane fade" id="action-items-{{i}}" role="tabpanel">
+                            <app-action-items-list *ngIf="message.analysisId" [analysisId]="message.analysisId"></app-action-items-list>
+                            <p *ngIf="!message.analysisId" class="text-muted">No action items available</p>
+                          </div>
+                          <div class="tab-pane fade" id="timeline-view-{{i}}" role="tabpanel">
+                            <app-timeline-view *ngIf="message.analysisId" [analysisId]="message.analysisId"></app-timeline-view>
+                            <p *ngIf="!message.analysisId" class="text-muted">No timeline available</p>
+                          </div>
                           <div class="tab-pane fade" id="weaknesses-{{i}}" role="tabpanel">
                             <div [innerHTML]="message.parsedSections?.weaknesses || 'No weaknesses section found'" apexChartsContainer></div>
-                          </div>
-                          <div class="tab-pane fade" id="timeline-{{i}}" role="tabpanel">
-                            <div [innerHTML]="message.parsedSections?.timeline || 'No timeline section found'" apexChartsContainer></div>
                           </div>
                           <div class="tab-pane fade" id="evidence-{{i}}" role="tabpanel">
                             <div [innerHTML]="message.parsedSections?.evidence || 'No evidence section found'" apexChartsContainer></div>
@@ -926,7 +936,67 @@
                   </div>
 
                   <div class="message-bubble ai-message flex-grow-1">
-                    <div class="message-content" [innerHTML]="message.hasStrategicAnalysis ? message.content : (message.content | markdownToHtml)" apexChartsContainer></div>
+                    <!-- Strategic Analysis Tabs (if present) -->
+                    <div class="strategic-analysis-tabs" *ngIf="message.hasStrategicAnalysis">
+                      <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">
+                        <li class="nav-item">
+                          <a class="nav-link active" data-bs-toggle="tab" href="#overview-main-{{i}}" role="tab">
+                            <i class="ri-file-list-3-line me-1"></i> Overview
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" data-bs-toggle="tab" href="#action-items-main-{{i}}" role="tab">
+                            <i class="bi bi-check2-square me-1"></i> Action Items
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" data-bs-toggle="tab" href="#timeline-view-main-{{i}}" role="tab">
+                            <i class="bi bi-calendar-event me-1"></i> Timeline
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" data-bs-toggle="tab" href="#weaknesses-main-{{i}}" role="tab">
+                            <i class="ri-alert-line me-1"></i> Weaknesses
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" data-bs-toggle="tab" href="#evidence-main-{{i}}" role="tab">
+                            <i class="ri-checkbox-line me-1"></i> Evidence
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" data-bs-toggle="tab" href="#strategy-main-{{i}}" role="tab">
+                            <i class="ri-lightbulb-line me-1"></i> Strategy
+                          </a>
+                        </li>
+                      </ul>
+
+                      <div class="tab-content">
+                        <div class="tab-pane fade show active" id="overview-main-{{i}}" role="tabpanel">
+                          <div [innerHTML]="(message.parsedSections?.overview || message.content) | markdownToHtml" apexChartsContainer></div>
+                        </div>
+                        <div class="tab-pane fade" id="action-items-main-{{i}}" role="tabpanel">
+                          <app-action-items-list *ngIf="message.analysisId" [analysisId]="message.analysisId"></app-action-items-list>
+                          <p *ngIf="!message.analysisId" class="text-muted">No action items available</p>
+                        </div>
+                        <div class="tab-pane fade" id="timeline-view-main-{{i}}" role="tabpanel">
+                          <app-timeline-view *ngIf="message.analysisId" [analysisId]="message.analysisId"></app-timeline-view>
+                          <p *ngIf="!message.analysisId" class="text-muted">No timeline available</p>
+                        </div>
+                        <div class="tab-pane fade" id="weaknesses-main-{{i}}" role="tabpanel">
+                          <div [innerHTML]="(message.parsedSections?.weaknesses || 'No weaknesses section found') | markdownToHtml" apexChartsContainer></div>
+                        </div>
+                        <div class="tab-pane fade" id="evidence-main-{{i}}" role="tabpanel">
+                          <div [innerHTML]="(message.parsedSections?.evidence || 'No evidence section found') | markdownToHtml" apexChartsContainer></div>
+                        </div>
+                        <div class="tab-pane fade" id="strategy-main-{{i}}" role="tabpanel">
+                          <div [innerHTML]="(message.parsedSections?.strategy || 'No strategy section found') | markdownToHtml" apexChartsContainer></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Regular message content (if not strategic analysis) -->
+                    <div class="message-content" *ngIf="!message.hasStrategicAnalysis" [innerHTML]="message.content | markdownToHtml" apexChartsContainer></div>
 
                     <!-- Transformation Comparison - Refactored Component -->
                     <app-transformation-preview

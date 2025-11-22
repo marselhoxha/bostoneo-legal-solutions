@@ -1,5 +1,9 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.model.ActionItem;
+import com.bostoneo.bostoneosolutions.model.TimelineEvent;
+import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
+import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.bostoneo.bostoneosolutions.service.AIDocumentAnalysisService;
 import com.bostoneo.bostoneosolutions.util.CloudStorageUrlConverter;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -23,6 +28,8 @@ import java.util.Map;
 public class AIDocumentAnalyzerController {
 
     private final AIDocumentAnalysisService documentAnalysisService;
+    private final ActionItemRepository actionItemRepository;
+    private final TimelineEventRepository timelineEventRepository;
     private final CloudStorageUrlConverter urlConverter;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -37,8 +44,8 @@ public class AIDocumentAnalyzerController {
         log.info("Analyzing document: {}, type: {}, analysis: {}, sessionId: {}",
                 file.getOriginalFilename(), file.getContentType(), analysisType, sessionId);
 
-        // Set timeout to 300 seconds (5 minutes) for Claude Sonnet 4 extended thinking with complex documents
-        DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(300000L);
+        // Set timeout to 600 seconds (10 minutes) for Claude Sonnet 4 extended thinking with complex documents
+        DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(600000L);
 
         // Use default user ID if not provided (for testing)
         Long effectiveUserId = userId != null ? userId : 1L;
@@ -47,6 +54,7 @@ public class AIDocumentAnalyzerController {
                 .thenApply(analysis -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("id", analysis.getAnalysisId());
+                    result.put("databaseId", analysis.getId()); // Numeric database ID for action items
                     result.put("fileName", analysis.getFileName());
                     result.put("fileSize", analysis.getFileSize());
                     result.put("analysisType", analysis.getAnalysisType());
@@ -113,6 +121,7 @@ public class AIDocumentAnalyzerController {
                 .map(analysis -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("id", analysis.getAnalysisId());
+                    result.put("databaseId", analysis.getId()); // Numeric database ID for action items
                     result.put("fileName", analysis.getFileName());
                     result.put("fileSize", analysis.getFileSize());
                     result.put("analysisType", analysis.getAnalysisType());
@@ -262,6 +271,42 @@ public class AIDocumentAnalyzerController {
         } catch (Exception e) {
             return "document.pdf";
         }
+    }
+
+    @GetMapping("/analysis/{analysisId}/action-items")
+    public ResponseEntity<List<ActionItem>> getActionItems(@PathVariable Long analysisId) {
+        log.info("Fetching action items for analysis ID: {}", analysisId);
+        List<ActionItem> items = actionItemRepository.findByAnalysisIdOrderByDeadlineAsc(analysisId);
+        log.info("Found {} action items", items.size());
+        return ResponseEntity.ok(items);
+    }
+
+    @PutMapping("/action-items/{id}")
+    public ResponseEntity<ActionItem> updateActionItem(
+            @PathVariable Long id,
+            @RequestBody ActionItem updates) {
+        log.info("Updating action item {}: {}", id, updates);
+        return actionItemRepository.findById(id)
+                .map(item -> {
+                    if (updates.getStatus() != null) {
+                        item.setStatus(updates.getStatus());
+                    }
+                    if (updates.getPriority() != null) {
+                        item.setPriority(updates.getPriority());
+                    }
+                    ActionItem saved = actionItemRepository.save(item);
+                    log.info("Updated action item: {}", saved);
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/analysis/{analysisId}/timeline-events")
+    public ResponseEntity<List<TimelineEvent>> getTimelineEvents(@PathVariable Long analysisId) {
+        log.info("Fetching timeline events for analysis ID: {}", analysisId);
+        List<TimelineEvent> events = timelineEventRepository.findByAnalysisIdOrderByEventDateAsc(analysisId);
+        log.info("Found {} timeline events", events.size());
+        return ResponseEntity.ok(events);
     }
 
 }

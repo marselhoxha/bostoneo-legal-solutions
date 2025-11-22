@@ -73,19 +73,35 @@ public class LegalResearchConversationService {
      * Add a message to a session
      */
     @Transactional
-    public AiConversationMessage addMessage(Long sessionId, Long userId, String role, String content) {
+    public AiConversationMessage addMessage(Long sessionId, Long userId, String role, String content, String metadata) {
         AiConversationSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found or access denied"));
+
+        // Parse metadata JSON if provided
+        Map<String, Object> metadataMap = null;
+        if (metadata != null && !metadata.isEmpty()) {
+            try {
+                metadataMap = new com.fasterxml.jackson.databind.ObjectMapper().readValue(metadata, Map.class);
+            } catch (Exception e) {
+                log.warn("Failed to parse metadata JSON: {}", e.getMessage());
+            }
+        }
 
         AiConversationMessage message = AiConversationMessage.builder()
                 .session(session)
                 .role(role)
                 .content(content)
+                .metadata(metadataMap)
                 .ragContextUsed(false)
                 .build();
 
+        log.info("💾 About to save message with metadata: {} (Map: {})", metadata, metadataMap);
+
         // Save message directly to avoid cascade issues
         AiConversationMessage savedMessage = messageRepository.save(message);
+
+        log.info("✅ Saved message {} with metadata from DB: {} (original map: {})",
+                savedMessage.getId(), savedMessage.getMetadata(), metadataMap);
 
         // Update session message count
         session.setMessageCount(session.getMessageCount() != null ? session.getMessageCount() + 1 : 1);

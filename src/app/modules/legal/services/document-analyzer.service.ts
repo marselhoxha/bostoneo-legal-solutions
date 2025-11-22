@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 
 export interface DocumentAnalysisResult {
   id: string;
+  databaseId: number;  // Numeric database ID for action items/timeline
   fileName: string;
   fileSize: number;
   analysisType: string;
@@ -79,7 +80,7 @@ export class DocumentAnalyzerService {
         withCredentials: true
       }
     ).pipe(
-      timeout(320000), // 320 second timeout (backend has 300s = 5 min, this gives 20s buffer)
+      timeout(620000), // 620 second timeout (backend has 600s = 10 min, this gives 20s buffer)
       map(event => {
         switch (event.type) {
           case HttpEventType.UploadProgress:

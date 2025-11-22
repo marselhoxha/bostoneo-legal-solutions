@@ -25,6 +25,8 @@ import { TransformationPreviewComponent } from './transformation-preview/transfo
 import { DocumentEditorComponent } from './document-editor/document-editor.component';
 import { ConversationListComponent } from './conversation-list/conversation-list.component';
 import { VersionHistoryComponent } from './version-history/version-history.component';
+import { ActionItemsListComponent } from '../action-items-list/action-items-list.component';
+import { TimelineViewComponent } from '../timeline-view/timeline-view.component';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
@@ -59,7 +61,9 @@ import { DocumentState } from '../../../models/document.model';
     TransformationPreviewComponent,
     DocumentEditorComponent,
     ConversationListComponent,
-    VersionHistoryComponent
+    VersionHistoryComponent,
+    ActionItemsListComponent,
+    TimelineViewComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -1102,25 +1106,84 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.stateService.setActiveConversationId(conversationId);
           this.stateService.clearFollowUpQuestions(); // Clear old follow-up questions from previous conversation
 
-          const messages = response.messages.map(msg => ({
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            timestamp: new Date(msg.createdAt || new Date())
-          }));
-          this.stateService.setConversationMessages(messages);
+          const messages = response.messages.map(msg => {
+            const baseMessage: any = {
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+              timestamp: new Date(msg.createdAt || new Date())
+            };
 
+            // Detect document analysis messages and restore properties
+            // Use two-tier detection: metadata first, then content patterns
+            let hasAnalysisId = false;
+            if (msg.metadata && typeof msg.metadata === 'object') {
+              const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+              hasAnalysisId = !!metadata.analysisId;
+            }
+            const hasStrategicContent = msg.content.includes('EXECUTIVE') ||
+              msg.content.includes('CRITICAL') ||
+              msg.content.includes('STRATEGIC');
+
+            if (msg.role === 'assistant' && (hasAnalysisId || hasStrategicContent)) {
+              console.log('🎯 Detected Strategic Document Analysis message (metadata:', hasAnalysisId, 'content:', hasStrategicContent, ')');
+              baseMessage.hasStrategicAnalysis = true;
+              baseMessage.parsedSections = this.parseStrategicSections(msg.content);
+
+              // Extract analysisId from message metadata if available
+              if (msg.metadata && typeof msg.metadata === 'object') {
+                const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                if (metadata.analysisId) {
+                  baseMessage.analysisId = metadata.analysisId;
+                  console.log('🎯 Found analysisId in metadata:', metadata.analysisId);
+                }
+              }
+
+              console.log('🎯 Final message with strategic analysis:', baseMessage);
+            }
+
+            return baseMessage;
+          });
+
+          console.log('🎯 All mapped messages:', messages);
           console.log('✅ Messages loaded:', messages.length);
 
-          // Extract follow-up questions from last assistant message (if any)
-          const lastAssistantMsg = this.stateService.getConversationMessages()
-            .slice()
-            .reverse()
-            .find(msg => msg.role === 'assistant');
+          // CRITICAL: Use setTimeout to ensure Angular processes the observable emission in next tick
+          setTimeout(() => {
+            // Extract follow-up questions from last assistant message (if any)
+            const lastAssistantMsg = messages
+              .slice()
+              .reverse()
+              .find(msg => msg.role === 'assistant');
 
-          if (lastAssistantMsg) {
-            const cleanedContent = this.extractAndRemoveFollowUpQuestions(lastAssistantMsg.content);
-            lastAssistantMsg.content = cleanedContent;
-          }
+            if (lastAssistantMsg) {
+              const cleanedContent = this.extractAndRemoveFollowUpQuestions(lastAssistantMsg.content);
+              lastAssistantMsg.content = cleanedContent;
+              console.log('🔥 After cleaning follow-ups, hasStrategicAnalysis:', lastAssistantMsg.hasStrategicAnalysis);
+            }
+
+            this.stateService.setConversationMessages(messages);
+            console.log('🔥 Messages being set to state:', messages);
+
+            // Add another setTimeout to ensure Angular has time to process
+            setTimeout(() => {
+              this.cdr.markForCheck();
+              this.cdr.detectChanges();
+
+              // Debug: Check what the observable is emitting
+              this.conversationMessages$.subscribe(msgs => {
+                console.log('🔥 Observable value after setting:', msgs);
+                msgs.forEach((msg, idx) => {
+                  if (msg.hasStrategicAnalysis) {
+                    console.log(`🔥 Message ${idx} has hasStrategicAnalysis:`, msg.hasStrategicAnalysis);
+                  }
+                });
+              }).unsubscribe();
+
+              console.log('🔥 FINAL: Change detection triggered after delay');
+            }, 100);
+
+            console.log('🔥 Messages set and first timeout complete');
+          }, 0);
 
           // Check if this is a draft conversation - activate drafting mode
           if (conv.type === 'draft' && conv.relatedDraftId) {
@@ -1190,7 +1253,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   this.stateService.setShowChat(true);
                   this.stateService.setShowBottomSearchBar(true);
                   this.stateService.setDraftingMode(false);
-                  this.cdr.detectChanges();
+                  setTimeout(() => {
+                    this.cdr.detectChanges();
+                  }, 0);
                 }
               });
           } else {
@@ -1209,8 +1274,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               isGenerating: this.stateService.getIsGenerating()
             });
 
-            this.cdr.detectChanges();
-            console.log('✅ Change detection triggered');
+            // Use setTimeout to ensure change detection runs after observable emits
+            setTimeout(() => {
+              this.cdr.detectChanges();
+              console.log('✅ Change detection triggered for loaded conversation');
+            }, 0);
           }
         },
         error: (error) => {
@@ -1825,6 +1893,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           formattedAnalysis += `</div>`; // Close card-body
           formattedAnalysis += `</div>`; // Close card
 
+          // Parse sections BEFORE HTML formatting (parse from original markdown)
+          const originalAnalysis = analysis.analysis?.fullAnalysis || analysis.analysis?.summary || '';
+          const parsedSections = this.parseStrategicSections(originalAnalysis);
+
           // Add main strategic analysis with enhanced styling (RE-PROCESS OLD CONTENT)
           if (analysis.analysis?.fullAnalysis) {
             // Process the analysis to add Velzon styling classes
@@ -1837,23 +1909,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             formattedAnalysis += analysis.analysis.summary;
             formattedAnalysis += `\n\n</div></div>\n\n`;
           }
-
-          // Parse sections for tab-based display
-          const parsedSections = this.parseStrategicSections(formattedAnalysis);
           // Always set true for document analysis - content was enhanced with HTML
           const hasStrategicAnalysis = true;
 
           console.log('📈 viewAnalysis - hasStrategicAnalysis:', hasStrategicAnalysis);
           console.log('📈 viewAnalysis - parsedSections keys:', Object.keys(parsedSections));
-          console.log('📈 viewAnalysis - contains ai-document-analysis:', formattedAnalysis.includes('ai-document-analysis'));
+          console.log('📈 viewAnalysis - originalAnalysis preview:', originalAnalysis.substring(0, 500));
 
           // Add to conversation as assistant message with proper flags
+          console.log('🔍 Setting analysisId from analysis.databaseId:', analysis.databaseId);
           this.stateService.addConversationMessage({
             role: 'assistant',
             content: formattedAnalysis,
             timestamp: new Date(),
             hasStrategicAnalysis,
-            parsedSections
+            parsedSections,
+            analysisId: analysis.databaseId
           });
 
           // Show chat
@@ -1963,6 +2034,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     formattedAnalysis += `</div>`; // Close card-body
     formattedAnalysis += `</div>`; // Close card
 
+    // Parse sections BEFORE HTML formatting (parse from original markdown)
+    const originalAnalysis = result.analysis?.fullAnalysis || result.analysis?.summary || '';
+    const parsedSections = this.parseStrategicSections(originalAnalysis);
+
     // Add main strategic analysis with enhanced styling (RE-PROCESS CONTENT)
     if (result.analysis?.fullAnalysis) {
       // Process the analysis to add Velzon styling classes
@@ -1972,41 +2047,61 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       let processedSummary = this.enhanceAnalysisWithStyling(result.analysis.summary);
       formattedAnalysis += processedSummary;
     }
-
-    // Parse sections for tab-based display
-    const parsedSections = this.parseStrategicSections(formattedAnalysis);
     // Always set true for document analysis - content was enhanced with HTML
     const hasStrategicAnalysis = true;
 
     console.log('📈 New analysis - hasStrategicAnalysis:', hasStrategicAnalysis);
     console.log('📈 New analysis - parsedSections keys:', Object.keys(parsedSections));
-    console.log('📈 New analysis - contains ai-document-analysis:', formattedAnalysis.includes('ai-document-analysis'));
+    console.log('📈 New analysis - originalAnalysis preview:', originalAnalysis.substring(0, 500));
 
     // Add to local state
+    console.log('🔍 Setting analysisId from result.databaseId:', result.databaseId);
     const assistantMessage = {
       role: 'assistant' as 'assistant',
       content: formattedAnalysis,
       timestamp: new Date(),
       hasStrategicAnalysis,
-      parsedSections
+      parsedSections,
+      analysisId: result.databaseId
     };
     this.stateService.addConversationMessage(assistantMessage);
+    console.log('🔍 Message added to state:', assistantMessage);
+    console.log('🔍 All messages after add:', this.stateService.getConversationMessages());
+
+    // Show chat panel to display the analysis tabs
+    this.stateService.setShowChat(true);
+
+    // Use setTimeout to ensure change detection runs after observable emits
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('🔍 Forced change detection after message add');
+    }, 0);
 
     // Persist to database and update conversation object
     const activeConvId = this.stateService.getActiveConversationId();
     if (activeConvId) {
       const conv = this.stateService.getConversations().find(c => c.id === activeConvId);
       if (conv && conv.backendConversationId) {
-        // Persist assistant message to database
+        // Persist assistant message to database with metadata
+        // IMPORTANT: Save ORIGINAL MARKDOWN (not HTML) so tabs can parse sections on reload
+        console.log('💾 Saving to database:', {
+          sessionId: conv.backendConversationId,
+          contentLength: originalAnalysis.length,
+          contentPreview: originalAnalysis.substring(0, 100),
+          metadata: { analysisId: result.databaseId }
+        });
+
         this.legalResearchService.addMessageToSession(
           conv.backendConversationId,
           this.currentUser.id,
           'assistant',
-          formattedAnalysis
+          originalAnalysis,  // ← Save markdown, not formattedAnalysis
+          { analysisId: result.databaseId }
         ).pipe(takeUntil(this.destroy$))
          .subscribe({
-           next: () => {
-             console.log('✅ Assistant message persisted to database');
+           next: (response) => {
+             console.log('✅ Assistant message persisted to database:', response);
+             console.log('✅ Metadata in response:', response.metadata);
 
              // Update conversation object in sidebar for message count badge
              conv.messages.push(assistantMessage);
@@ -2122,48 +2217,90 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private parseStrategicSections(markdown: string): any {
     const sections: any = {};
 
+    console.log('🔍 parseStrategicSections - Input markdown length:', markdown.length);
+    console.log('🔍 parseStrategicSections - First 200 chars:', markdown.substring(0, 200));
+
     // Check if this is strategic analysis (contains markers)
     if (!markdown.includes('EXECUTIVE') && !markdown.includes('CRITICAL') && !markdown.includes('STRATEGIC')) {
+      console.log('⚠️ Not strategic analysis - no markers found');
       return sections;
     }
 
-    // Extract overview (everything up to first major section after executive summary)
-    const overviewMatch = markdown.match(/(.*?)(##\s*(⭐|💰|🚨|📈|⏱️|🛡️))/s);
+    // Extract overview/executive section (includes the ## ⚡ EXECUTIVE section)
+    // Using [\s\S] instead of . for browser compatibility (. doesn't match newlines without 's' flag)
+    const overviewMatch = markdown.match(/##\s*⚡[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/i);
     if (overviewMatch) {
-      sections.overview = overviewMatch[1];
+      sections.overview = overviewMatch[0];
+      console.log('✅ Overview matched, length:', sections.overview.length, 'preview:', sections.overview.substring(0, 100));
+    } else {
+      // Fallback: extract content up to first major section (or full content if no sections)
+      const firstSectionMatch = markdown.match(/([\s\S]*?)(?=\n##\s+[🎯💰🚨📈⏱️🛡️📝💡]|$)/);
+      sections.overview = firstSectionMatch ? firstSectionMatch[1] : markdown;
+      console.log('⚠️ Overview fallback used, length:', sections.overview.length);
     }
 
-    // Extract weaknesses/critical issues
+    // Extract weaknesses/critical issues (more flexible patterns with lookahead)
+    // Using [\s\S] instead of . for cross-line matching
     const weaknessPatterns = [
-      /##\s*⭐\s*CRITICAL\s*(WEAKNESSES|ISSUES).*?(##\s*[^#]|$)/gis,
-      /##\s*🚨\s*(PROBLEMATIC|UNFAVORABLE|OBJECTIONABLE).*?(##\s*[^#]|$)/gis
+      /##\s*🎯[\s\S]*?(WEAKNESSES|ISSUES|ARGUMENTS)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi,
+      /##\s*⭐[\s\S]*?CRITICAL[\s\S]*(WEAKNESSES|ISSUES)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi,
+      /##\s*🚨[\s\S]*(PROBLEMATIC|UNFAVORABLE|OBJECTIONABLE)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi
     ];
     for (const pattern of weaknessPatterns) {
       const match = markdown.match(pattern);
       if (match) {
         sections.weaknesses = match[0];
+        console.log('✅ Weaknesses matched, length:', sections.weaknesses.length, 'preview:', sections.weaknesses.substring(0, 100));
         break;
       }
     }
+    if (!sections.weaknesses) {
+      console.log('❌ No weaknesses section matched');
+    }
 
-    // Extract timeline
-    const timelineMatch = markdown.match(/##\s*⏱️.*?TIMELINE.*?(##\s*[^#]|$)/gis);
+    // Extract timeline (flexible for all document types)
+    const timelineMatch = markdown.match(/##\s*⏱️[\s\S]*?(ACTION\s+)?TIMELINE[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi);
     if (timelineMatch) {
       sections.timeline = timelineMatch[0];
+      console.log('✅ Timeline matched, length:', sections.timeline.length);
     }
 
-    // Extract evidence checklist
-    const evidenceMatch = markdown.match(/##\s*📝.*?(EVIDENCE|CHECKLIST|COMPLIANCE).*?(##\s*[^#]|$)/gis);
-    if (evidenceMatch) {
-      sections.evidence = evidenceMatch[0];
+    // Extract evidence checklist (more flexible, with lookahead)
+    const evidencePatterns = [
+      /##\s*📝[\s\S]*?EVIDENCE[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi,
+      /##\s*☑[\s\S]*?(CHECKLIST|COMPLIANCE|EVIDENCE)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi,
+      /##\s*✓[\s\S]*?(CHECKLIST|COMPLIANCE|EVIDENCE)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi
+    ];
+    for (const pattern of evidencePatterns) {
+      const match = markdown.match(pattern);
+      if (match && !match[0].includes('STRATEGY')) {  // Exclude strategy sections
+        sections.evidence = match[0];
+        console.log('✅ Evidence matched, length:', sections.evidence.length, 'preview:', sections.evidence.substring(0, 100));
+        break;
+      }
+    }
+    if (!sections.evidence) {
+      console.log('❌ No evidence section matched');
     }
 
-    // Extract strategy/recommendations
-    const strategyMatch = markdown.match(/##\s*💡\s*STRATEGIC\s*RECOMMENDATIONS.*?(##\s*[^#]|$)/gis);
-    if (strategyMatch) {
-      sections.strategy = strategyMatch[0];
+    // Extract strategy/recommendations (flexible with lookahead to avoid capturing next section)
+    const strategyPatterns = [
+      /##\s*💡[\s\S]*?(RECOMMENDATIONS|STRATEGY)[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi,
+      /##\s*📝[\s\S]*?STRATEGY[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi
+    ];
+    for (const pattern of strategyPatterns) {
+      const match = markdown.match(pattern);
+      if (match) {
+        sections.strategy = match[0];
+        console.log('✅ Strategy matched, length:', sections.strategy.length, 'preview:', sections.strategy.substring(0, 100));
+        break;
+      }
+    }
+    if (!sections.strategy) {
+      console.log('❌ No strategy section matched');
     }
 
+    console.log('🔍 Final sections keys:', Object.keys(sections));
     return sections;
   }
 

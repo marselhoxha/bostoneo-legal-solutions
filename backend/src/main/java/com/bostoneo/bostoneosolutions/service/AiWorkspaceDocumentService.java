@@ -603,7 +603,7 @@ public class AiWorkspaceDocumentService {
         conversation = conversationRepository.save(conversation);
 
         // Add user message
-        conversationService.addMessage(conversation.getId(), userId, "user", prompt);
+        conversationService.addMessage(conversation.getId(), userId, "user", prompt, null);
 
         log.info("✅ Created conversation session {} for draft generation", conversation.getId());
 
@@ -660,7 +660,7 @@ public class AiWorkspaceDocumentService {
             conversation = conversationRepository.save(conversation);
 
             // Add user message (only for new conversation)
-            conversationService.addMessage(conversation.getId(), userId, "user", prompt);
+            conversationService.addMessage(conversation.getId(), userId, "user", prompt, null);
         }
 
         // 4. Build AI prompt with case context
@@ -782,7 +782,7 @@ public class AiWorkspaceDocumentService {
         String aiResponse = "I've generated your " + documentType +
             (caseId != null && legalCase != null ? " for Case #" + legalCase.getCaseNumber() : "") +
             ". You can view it in the document preview panel.";
-        conversationService.addMessage(conversation.getId(), userId, "assistant", aiResponse);
+        conversationService.addMessage(conversation.getId(), userId, "assistant", aiResponse, null);
 
         // 11. Build response
         return DraftGenerationResponse.builder()

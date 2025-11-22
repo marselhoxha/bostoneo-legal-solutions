@@ -10,6 +10,7 @@ export interface Message {
   transformationComparison?: TransformationComparison;
   hasStrategicAnalysis?: boolean;
   parsedSections?: any;
+  analysisId?: number; // For document analysis
 }
 
 export interface TransformationComparison {

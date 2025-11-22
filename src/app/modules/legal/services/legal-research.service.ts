@@ -500,11 +500,17 @@ export class LegalResearchService {
     sessionId: number,
     userId: number,
     role: 'user' | 'assistant',
-    content: string
+    content: string,
+    metadata?: any
   ): Observable<AiConversationMessage> {
+    const body: any = { userId, role, content };
+    if (metadata) {
+      body.metadata = JSON.stringify(metadata);
+    }
+
     return this.http.post<any>(
       `${this.conversationApiUrl}/${sessionId}/messages`,
-      { userId, role, content },
+      body,
       { withCredentials: true }
     ).pipe(
       map(response => response.data.message),

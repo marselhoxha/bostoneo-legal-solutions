@@ -28,6 +28,7 @@ public class AIDocumentAnalysisService {
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
     private final DocumentMetadataExtractor metadataExtractor;
+    private final ActionItemExtractionService extractionService;
     private final Tika tika = new Tika();
 
     public CompletableFuture<AIDocumentAnalysis> analyzeDocument(
@@ -113,7 +114,21 @@ public class AIDocumentAnalysisService {
                         savedAnalysis.setTokensUsed(estimatedTokens);
                         savedAnalysis.setCostEstimate(estimatedTokens * 0.00003); // Rough estimate
 
-                        return repository.save(savedAnalysis);
+                        AIDocumentAnalysis finalAnalysis = repository.save(savedAnalysis);
+
+                        // Extract action items and timeline events synchronously
+                        // Uses hybrid approach: tries embedded JSON first, falls back to separate AI calls
+                        // Returns cleaned text with JSON block removed
+                        String cleanedAnalysisText = extractionService.extractAndSaveStructuredData(finalAnalysis.getId(), response);
+
+                        // Update analysis with cleaned text (JSON block removed)
+                        if (!cleanedAnalysisText.equals(response)) {
+                            finalAnalysis.setAnalysisResult(cleanedAnalysisText);
+                            finalAnalysis = repository.save(finalAnalysis);
+                            log.info("Updated analysis {} with cleaned text (removed JSON block)", finalAnalysis.getId());
+                        }
+
+                        return finalAnalysis;
                     })
                     .exceptionally(ex -> {
                         log.error("Error analyzing document: {}", ex.getMessage(), ex);
@@ -1024,6 +1039,29 @@ public class AIDocumentAnalysisService {
     private String getLegalBriefAnalysisPrompt() {
         return """
 
+            ⚠️⚠️⚠️ MANDATORY OUTPUT REQUIREMENT ⚠️⚠️⚠️
+
+            YOU MUST INCLUDE A JSON BLOCK AT THE END OF YOUR ANALYSIS.
+            Your response is INCOMPLETE without the structured data.
+
+            Expected JSON format (place at the VERY END after all analysis):
+            ```json
+            {
+              "actionItems": [
+                {"description": "...", "deadline": "YYYY-MM-DD", "priority": "HIGH|MODERATE|CRITICAL", "relatedSection": "..."}
+              ],
+              "timelineEvents": [
+                {"title": "...", "eventDate": "YYYY-MM-DD", "eventType": "DEADLINE|FILING|MILESTONE", "priority": "...", "description": "..."}
+              ]
+            }
+            ```
+
+            Include ALL deadlines and tasks mentioned in your analysis as structured JSON.
+
+            ⚠️⚠️⚠️ DO NOT FORGET THE JSON BLOCK ⚠️⚠️⚠️
+
+            ---
+
             ASSUME YOU ARE OPPOSING COUNSEL analyzing this brief to develop counter-arguments.
             Identify weaknesses in legal reasoning, unsupported facts, and missing authorities.
 
@@ -1109,6 +1147,15 @@ public class AIDocumentAnalysisService {
             - Recommended Action: [Oppose / Don't oppose / Seek oral argument]
 
             Focus on exploiting legal and factual weaknesses. Cite controlling authority movant missed.
+
+            ---
+
+            🚨🚨🚨 CRITICAL REMINDER 🚨🚨🚨
+
+            End your response with the JSON block containing actionItems and timelineEvents.
+            Format: ```json { "actionItems": [...], "timelineEvents": [...] } ```
+
+            This is MANDATORY. Your analysis is INCOMPLETE without it.
             """;
     }
 
