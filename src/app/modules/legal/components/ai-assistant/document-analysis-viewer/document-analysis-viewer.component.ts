@@ -397,7 +397,7 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     this.parsedSections.weaknesses = weaknessMatch ? weaknessMatch[0] : '';
 
     // Evidence / Unsupported Claims
-    const evidenceMatch = fullAnalysis.match(/##\s*[📊📝]*\s*(EVIDENCE|UNSUPPORTED\s*FACTUAL|FACTUAL)[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
+    const evidenceMatch = fullAnalysis.match(/##\s*[📑📝]*\s*(EVIDENCE|UNSUPPORTED\s*FACTUAL|FACTUAL)[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
     this.parsedSections.evidence = evidenceMatch ? evidenceMatch[0] : '';
 
     // Strategy / Recommendations

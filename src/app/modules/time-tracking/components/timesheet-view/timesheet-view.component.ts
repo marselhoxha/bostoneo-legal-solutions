@@ -288,7 +288,7 @@ export class TimesheetViewComponent implements OnInit {
       // Apply additional filters (user can still filter by status if needed)
       if (this.selectedStatus) {
         filters.statuses = [this.selectedStatus];
-        console.log('📊 Applying status filter:', this.selectedStatus);
+        console.log('📑 Applying status filter:', this.selectedStatus);
       }
 
       console.log('🔧 Final filters:', filters);
@@ -1563,7 +1563,7 @@ export class TimesheetViewComponent implements OnInit {
       return `💡 Consider logging more detailed time entries for better insights`;
     }
     
-    return `📊 <strong>${this.totalEntries}</strong> entries tracked this period`;
+    return `📑 <strong>${this.totalEntries}</strong> entries tracked this period`;
   }
 
   // Enhanced user experience methods
@@ -1702,7 +1702,7 @@ export class TimesheetViewComponent implements OnInit {
         
       case 'entries':
         return {
-          title: '📊 Activity Analysis',
+          title: '📑 Activity Analysis',
           content: `
             <div class="stats-breakdown">
               <div class="row g-4">

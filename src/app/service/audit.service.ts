@@ -80,7 +80,7 @@ export class AuditService {
               weekCount: response.data.weekCount || 0,
               statistics: response.data.statistics
             };
-            console.log('📊 Processed audit data:', auditData);
+            console.log('📑 Processed audit data:', auditData);
             this.auditSubject.next(auditData);
           } else {
             console.warn('⚠️ No data in audit response');
@@ -141,7 +141,7 @@ export class AuditService {
               weekCount: response.data.weekCount || 0,
               statistics: response.data.statistics
             };
-            console.log('📊 Fresh audit data processed:', auditData);
+            console.log('📑 Fresh audit data processed:', auditData);
             this.auditSubject.next(auditData);
           } else {
             console.warn('⚠️ No data in fresh audit response');
@@ -328,12 +328,12 @@ export class AuditService {
   getActivitiesForPage$(limit: number = 50): Observable<CustomHttpResponse<any>> {
     const params = new HttpParams().set('limit', limit.toString());
     
-    console.log('📊 Making request for activities page:', `${this.apiUrl}/activities/recent`);
+    console.log('📑 Making request for activities page:', `${this.apiUrl}/activities/recent`);
     
     return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, { params })
       .pipe(
         tap(response => {
-          console.log('📊 Activities page API response:', response);
+          console.log('📑 Activities page API response:', response);
         }),
         catchError((error: HttpErrorResponse) => {
           console.error('❌ Activities Page API Error:', error);

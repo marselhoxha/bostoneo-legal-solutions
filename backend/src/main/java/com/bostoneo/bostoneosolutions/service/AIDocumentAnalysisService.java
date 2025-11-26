@@ -1558,15 +1558,17 @@ public class AIDocumentAnalysisService {
             ```json
             {
               "actionItems": [
-                {"description": "...", "deadline": "YYYY-MM-DD", "priority": "HIGH|MODERATE|CRITICAL", "relatedSection": "..."}
+                {"description": "Draft response to motion", "deadline": "YYYY-MM-DD", "priority": "HIGH", "relatedSection": "..."}
               ],
               "timelineEvents": [
-                {"title": "...", "eventDate": "YYYY-MM-DD", "eventType": "DEADLINE|FILING|MILESTONE", "priority": "...", "description": "..."}
+                {"title": "Motion Hearing", "eventDate": "YYYY-MM-DD", "eventType": "HEARING|DEADLINE|FILING|DEPOSITION", "priority": "HIGH", "description": "..."}
               ]
             }
             ```
 
-            Include ALL deadlines and tasks mentioned in your analysis as structured JSON.
+            IMPORTANT DISTINCTION:
+            - actionItems = TASKS to do (verbs: draft, research, review, prepare, file)
+            - timelineEvents = CALENDAR DATES to track (hearings, court deadlines, depositions)
 
             ⚠️⚠️⚠️ DO NOT FORGET THE JSON BLOCK ⚠️⚠️⚠️
 

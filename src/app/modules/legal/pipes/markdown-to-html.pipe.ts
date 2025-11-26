@@ -260,25 +260,42 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       text = text.replace(/^(LOW\s+SEVERITY)\s*:?\s*/gm,
         (_match, label) => createMeter('low', label.toUpperCase().replace(/\s+/g, ' ')) + ' ');
 
-      // Single severity words at line start (only when NOT followed by SEVERITY)
-      text = text.replace(/^(CRITICAL)\s*:?\s*(?!SEVERITY)/gm,
+      // Compound severity phrases at line start (HIGH RISK, MODERATE RISK, etc.) - match these BEFORE single words
+      text = text.replace(/^(CRITICAL|HIGH|MODERATE|MEDIUM|LOW)\s+(RISK|PRIORITY|EXPOSURE|IMPACT)\s*[-—:]/gm,
+        (_match, level, suffix) => {
+          const levelLower = level.toLowerCase();
+          const meterLevel = levelLower === 'critical' ? 'critical' :
+                            levelLower === 'high' ? 'high' :
+                            (levelLower === 'medium' || levelLower === 'moderate') ? 'medium' : 'low';
+          return createMeter(meterLevel, `${level.toUpperCase()} ${suffix.toUpperCase()}`) + ' ';
+        });
+
+      // Single severity words at line start (only when NOT followed by SEVERITY or RISK)
+      text = text.replace(/^(CRITICAL)\s*:?\s*(?!SEVERITY|RISK)/gm,
         (_match, label) => createMeter('critical', label) + ' ');
-      text = text.replace(/^(MAJOR)\s*:?\s*(?!SEVERITY)/gm,
+      text = text.replace(/^(MAJOR)\s*:?\s*(?!SEVERITY|RISK)/gm,
         (_match, label) => createMeter('high', label) + ' ');
-      text = text.replace(/^(HIGH)\s*:?\s*(?!SEVERITY)/gm,
+      text = text.replace(/^(HIGH)\s*:?\s*(?!SEVERITY|RISK)/gm,
         (_match, label) => createMeter('high', label) + ' ');
-      text = text.replace(/^(MODERATE|MEDIUM)\s*:?\s*(?!SEVERITY)/gm,
+      text = text.replace(/^(MODERATE|MEDIUM)\s*:?\s*(?!SEVERITY|RISK)/gm,
         (_match, label) => createMeter('medium', label) + ' ');
-      text = text.replace(/^(LOW|MINOR)\s*:?\s*(?!SEVERITY)/gm,
+      text = text.replace(/^(LOW|MINOR)\s*:?\s*(?!SEVERITY|RISK)/gm,
         (_match, label) => createMeter('low', label) + ' ');
 
       // Generic severity pattern: ⚠️ [SEVERITY]:
       text = text.replace(new RegExp(warnEmoji + '\\s*\\[SEVERITY\\]:?', 'gi'),
         createMeter('medium', 'SEVERITY'));
 
-      // Threat level meters: ⚠️ [THREAT LEVEL - X]:
-      text = text.replace(new RegExp(warnEmoji + '\\s*\\[THREAT\\s*LEVEL\\s*-\\s*(HIGH|MEDIUM|LOW)\\]:?', 'gi'),
-        (_match, level) => createMeter(level.toLowerCase(), `${level} THREAT`));
+      // Bracketed severity patterns: ⚠️ [CATEGORY - LEVEL]: (VALIDITY, THREAT LEVEL, STRENGTH, IMPORTANCE, VIABILITY, etc.)
+      // Match pattern: ⚠️ [WORD(S) - HIGH/MEDIUM/LOW/CRITICAL]:
+      text = text.replace(new RegExp(warnEmoji + '\\s*\\[([A-Z\\s]+)\\s*-\\s*(CRITICAL|HIGH|MEDIUM|MODERATE|LOW)\\]:?', 'gi'),
+        (_match, category, level) => {
+          const levelLower = level.toLowerCase();
+          const meterLevel = levelLower === 'critical' ? 'critical' :
+                            levelLower === 'high' ? 'high' :
+                            (levelLower === 'medium' || levelLower === 'moderate') ? 'medium' : 'low';
+          return createMeter(meterLevel, `${level.toUpperCase()} ${category.trim().toUpperCase()}`);
+        });
 
       // Urgency meters: ⚠️ [URGENCY - X]:
       text = text.replace(new RegExp(warnEmoji + '\\s*\\[URGENCY\\s*-\\s*(IMMEDIATE|HIGH|STANDARD)\\]:?', 'gi'),
@@ -286,6 +303,27 @@ export class MarkdownToHtmlPipe implements PipeTransform {
           const meterLevel = level.toLowerCase() === 'immediate' ? 'critical' :
                             level.toLowerCase() === 'high' ? 'high' : 'medium';
           return createMeter(meterLevel, level);
+        });
+
+      // Compound severity phrases WITH emoji: ⚠️ HIGH RISK, ⚠️ MODERATE RISK, etc.
+      text = text.replace(new RegExp(warnEmoji + '\\s*(CRITICAL|HIGH|MODERATE|MEDIUM|LOW)\\s+(RISK|PRIORITY|EXPOSURE|IMPACT)\\s*:?', 'gi'),
+        (_match, level, suffix) => {
+          const levelLower = level.toLowerCase();
+          const meterLevel = levelLower === 'critical' ? 'critical' :
+                            levelLower === 'high' ? 'high' :
+                            (levelLower === 'medium' || levelLower === 'moderate') ? 'medium' : 'low';
+          return createMeter(meterLevel, `${level.toUpperCase()} ${suffix.toUpperCase()}`);
+        });
+
+      // Inline compound phrases: "Assessment: HIGH RISK —" or "Level: MODERATE PRIORITY:"
+      // Match after colon/space, capture full compound phrase
+      text = text.replace(/:\s*(CRITICAL|HIGH|MODERATE|MEDIUM|LOW)\s+(RISK|PRIORITY|EXPOSURE|IMPACT)\s*([—\-:])/gi,
+        (_match, level, suffix, separator) => {
+          const levelLower = level.toLowerCase();
+          const meterLevel = levelLower === 'critical' ? 'critical' :
+                            levelLower === 'high' ? 'high' :
+                            (levelLower === 'medium' || levelLower === 'moderate') ? 'medium' : 'low';
+          return ': ' + createMeter(meterLevel, `${level.toUpperCase()} ${suffix.toUpperCase()}`) + ' ' + separator;
         });
 
       // Positive outcome badges (✅ [HELPFUL], ✅ Favorable, etc.)
@@ -837,7 +875,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    * Removes CHART:BAR prefix and returns as markdown table for normal table rendering
    */
   private convertChartToTable(chartText: string): string {
-    console.log('📊 Converting chart to table:', chartText.substring(0, 100));
+    console.log('📑 Converting chart to table:', chartText.substring(0, 100));
     // Remove CHART:BAR prefix, return remainder as markdown table
     const tableMarkdown = chartText.replace(/^CHART:BAR\s*\n/i, '');
     // The table will be processed by convertTablesToHtml() in the normal flow
@@ -850,7 +888,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    */
   private parseChartValue(text: string): number {
     if (!text) {
-      console.log('📊 parseChartValue: Empty text → 0');
+      console.log('📑 parseChartValue: Empty text → 0');
       return 0;
     }
 
@@ -866,7 +904,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       const min = parseFloat(rangeMatch[1]);
       const max = parseFloat(rangeMatch[2]);
       const result = (min + max) / 2;
-      console.log(`📊 parseChartValue: "${text}" (range) → ${result}`);
+      console.log(`📑 parseChartValue: "${text}" (range) → ${result}`);
       return result;
     }
 
@@ -877,7 +915,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       // Multiple numbers found - take the maximum (usually the actual fee, not upfront)
       const values = numbers.map(n => parseFloat(n));
       const result = Math.max(...values);
-      console.log(`📊 parseChartValue: "${text}" (multi-number) → ${result}`);
+      console.log(`📑 parseChartValue: "${text}" (multi-number) → ${result}`);
       return result;
     }
 
@@ -887,7 +925,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     if (result === 0 && text.trim() !== '0') {
       console.warn(`⚠️ parseChartValue: "${text}" → 0 (TEXT, not number!)`);
     } else {
-      console.log(`📊 parseChartValue: "${text}" → ${result}`);
+      console.log(`📑 parseChartValue: "${text}" → ${result}`);
     }
     return result;
   }
@@ -900,16 +938,16 @@ export class MarkdownToHtmlPipe implements PipeTransform {
   private createBarChart(chartText: string): string {
     const lines = chartText.trim().split('\n').filter(l => l.trim());
 
-    console.log('📊 BAR CHART DEBUG - Raw Input:', chartText.substring(0, 200));
+    console.log('📑 BAR CHART DEBUG - Raw Input:', chartText.substring(0, 200));
 
     // Find the separator row (markdown table structure: |---|---|)
     const separatorIndex = lines.findIndex(l => l.match(/^\|[-\s|]+\|$/));
-    console.log('📊 Separator index:', separatorIndex);
+    console.log('📑 Separator index:', separatorIndex);
 
     // If separator found, start from the row after it; otherwise start from row 1 (skip CHART:BAR)
     const startIndex = separatorIndex >= 0 ? separatorIndex + 1 : 1;
     const dataRows = lines.slice(startIndex);
-    console.log('📊 Data rows to parse:', dataRows);
+    console.log('📑 Data rows to parse:', dataRows);
 
     if (dataRows.length === 0) return chartText;
 
@@ -941,7 +979,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       }
     });
 
-    console.log('📊 Parsed chart data:', chartData);
+    console.log('📑 Parsed chart data:', chartData);
 
     if (chartData.length === 0) return chartText;
 

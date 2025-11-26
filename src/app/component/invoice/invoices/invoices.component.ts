@@ -62,11 +62,11 @@ export class InvoicesComponent implements OnInit {
     console.log('🔍 Loading invoices for page:', page);
     return this.invoiceService.getInvoices(page, 10).pipe(
       map(response => {
-        console.log('📊 Raw invoice service response:', response);
-        console.log('📊 Response data:', response.data);
-        console.log('📊 Response data content:', response.data?.content);
-        console.log('📊 Response data totalPages:', response.data?.totalPages);
-        console.log('📊 Response data structure:', {
+        console.log('📑 Raw invoice service response:', response);
+        console.log('📑 Response data:', response.data);
+        console.log('📑 Response data content:', response.data?.content);
+        console.log('📑 Response data totalPages:', response.data?.totalPages);
+        console.log('📑 Response data structure:', {
           hasData: !!response.data,
           hasContent: !!response.data?.content,
           contentLength: response.data?.content?.length,

@@ -270,27 +270,23 @@ public class ActionItemExtractionService {
         try {
             // Extract timeline events using Claude
             String extractionPrompt = String.format("""
-                Extract all timeline events (deadlines, hearings, filings, milestones) from this legal document analysis.
-                Return ONLY a JSON array with this exact format (no other text):
-                [
-                  {
-                    "title": "Short title of event",
-                    "eventDate": "YYYY-MM-DD",
-                    "eventType": "DEADLINE|FILING|HEARING|MILESTONE",
-                    "priority": "CRITICAL|HIGH|MEDIUM|LOW",
-                    "description": "Brief description",
-                    "relatedSection": "Section name if mentioned"
-                  }
-                ]
+                Extract CALENDAR EVENTS (not tasks) from this legal document analysis.
+
+                INCLUDE (calendar dates to track):
+                - Court hearings, trials, oral arguments, status conferences
+                - Filing deadlines (court-imposed due dates)
+                - Depositions, mediations, scheduled proceedings
+                - Statutory deadlines
+
+                EXCLUDE (these go to Action Items, not Timeline):
+                - Tasks with verbs: "draft X", "research Y", "review Z", "prepare W"
+                - Work items: "complete analysis", "finish brief"
+
+                Return ONLY JSON array:
+                [{"title": "Motion Hearing", "eventDate": "YYYY-MM-DD", "eventType": "HEARING|DEADLINE|FILING|DEPOSITION", "priority": "CRITICAL|HIGH|MEDIUM|LOW", "description": "Brief desc"}]
 
                 Analysis text:
                 %s
-
-                Important:
-                - Extract ALL dates and deadlines mentioned
-                - eventType: DEADLINE for response/filing deadlines, HEARING for court dates, FILING for filing dates, MILESTONE for other dates
-                - Priority: CRITICAL for immediate/urgent, HIGH for important, MEDIUM for standard, LOW for informational
-                - Return valid JSON array only
                 """, analysisText);
 
             String response = claudeService.generateCompletion(extractionPrompt, null, false, null).join();

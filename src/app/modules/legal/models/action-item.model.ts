@@ -19,6 +19,7 @@ export interface TimelineEvent {
   priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   description?: string;
   relatedSection?: string;
+  calendarEventId?: number;
   createdDate?: string;
   updatedDate?: string;
 }

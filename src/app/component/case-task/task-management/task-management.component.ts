@@ -195,7 +195,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.caseTaskService.getTasksByCaseId(caseId).subscribe({
       next: (response) => {
         console.log('✅ TaskManagementComponent - API Response received:', response);
-        console.log('📊 Response structure analysis:');
+        console.log('📑 Response structure analysis:');
         console.log('  - response:', !!response);
         console.log('  - response.data:', !!response.data);
         console.log('  - response.data.tasks:', !!response.data?.tasks);
@@ -222,7 +222,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
         }
         
         console.log('📋 All tasks after processing:', this.allTasks);
-        console.log('📊 Total tasks loaded:', this.allTasks.length);
+        console.log('📑 Total tasks loaded:', this.allTasks.length);
         
         this.filterTasksByStatus();
         this.loading.tasks = false;
@@ -239,7 +239,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       },
       error: (error) => {
         console.error('❌ TaskManagementComponent - Error loading tasks:', error);
-        console.error('📊 Error details:', {
+        console.error('📑 Error details:', {
           status: error.status,
           statusText: error.statusText,
           message: error.message,
@@ -297,7 +297,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.caseTaskService.getAllTasks().subscribe({
       next: (response) => {
         console.log('✅ TaskManagementComponent - API Response received for all tasks:', response);
-        console.log('📊 Response structure analysis:');
+        console.log('📑 Response structure analysis:');
         console.log('  - response:', !!response);
         console.log('  - response.data:', !!response.data);
         console.log('  - response.data.tasks:', !!response.data?.tasks);
@@ -324,7 +324,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
         }
         
         console.log('📋 All tasks after processing:', this.allTasks);
-        console.log('📊 Total tasks loaded:', this.allTasks.length);
+        console.log('📑 Total tasks loaded:', this.allTasks.length);
         
         this.filterTasksByStatus();
         this.loading.tasks = false;
@@ -341,7 +341,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       },
       error: (error) => {
         console.error('❌ TaskManagementComponent - Error loading all tasks:', error);
-        console.error('📊 Error details:', {
+        console.error('📑 Error details:', {
           status: error.status,
           statusText: error.statusText,
           message: error.message,
@@ -641,7 +641,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    */
   private filterTasksByStatus(): void {
     console.log('🔍 FilterTasksByStatus called with allTasks:', this.allTasks);
-    console.log('📊 Total tasks to filter:', this.allTasks.length);
+    console.log('📑 Total tasks to filter:', this.allTasks.length);
     
     // Log sample task data
     if (this.allTasks.length > 0) {

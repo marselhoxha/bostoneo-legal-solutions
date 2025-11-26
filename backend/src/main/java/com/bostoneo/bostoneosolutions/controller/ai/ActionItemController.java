@@ -51,4 +51,18 @@ public class ActionItemController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PatchMapping("/timeline-events/{id}/calendar")
+    public ResponseEntity<TimelineEvent> linkTimelineEventToCalendar(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Long> body) {
+        return timelineEventRepository.findById(id)
+                .map(event -> {
+                    Long calendarEventId = body.get("calendarEventId");
+                    event.setCalendarEventId(calendarEventId);
+                    TimelineEvent saved = timelineEventRepository.save(event);
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

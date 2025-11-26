@@ -108,7 +108,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDataSimply(): void {
-    console.log('📊 Loading data with simple approach');
+    console.log('📑 Loading data with simple approach');
     
     // Load activities with proper error handling and loading state management
     this.setLoading(true);
@@ -636,7 +636,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         const backendTime = new Date(data.data.serverLocalDateTime);
         const backendTimestamp = data.data.serverTimestamp;
         
-        console.log('📊 Time Comparison:');
+        console.log('📑 Time Comparison:');
         console.log('  Frontend time:', frontendNow.toString());
         console.log('  Backend time: ', backendTime.toString());
         console.log('  Time difference (seconds):', Math.floor((frontendNow.getTime() - backendTime.getTime()) / 1000));
@@ -1057,7 +1057,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Log all unique actions for verification
     const uniqueActions = [...new Set(this.activities.map(a => a.action))];
-    console.log('📊 Current audit actions in frontend:', uniqueActions);
+    console.log('📑 Current audit actions in frontend:', uniqueActions);
   }
 
   // Comprehensive debug method for infinite loading issues
@@ -1066,7 +1066,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     console.log('====================================');
     
     // Check component state
-    console.log('📊 Component State:');
+    console.log('📑 Component State:');
     console.log('  - Loading:', this.loading);
     console.log('  - Activities length:', this.activities.length);
     console.log('  - Filtered activities length:', this.filteredActivities.length);

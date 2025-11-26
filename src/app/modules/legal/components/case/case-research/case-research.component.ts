@@ -357,11 +357,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     ).subscribe({
       next: (actions) => {
         console.log('✅ Loaded actions from backend:', actions);
-        console.log('📊 Number of loaded actions:', actions?.length || 0);
+        console.log('📑 Number of loaded actions:', actions?.length || 0);
 
         // Filter to only show PENDING actions (exclude COMPLETED and DISMISSED)
         const pendingActions = (actions || []).filter(a => a.actionStatus === 'PENDING');
-        console.log('📊 Pending actions after filtering:', pendingActions.length);
+        console.log('📑 Pending actions after filtering:', pendingActions.length);
 
         this.actionSuggestions = pendingActions;
         this.loadingActions = false;
@@ -860,7 +860,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     ).subscribe({
       next: (suggestions) => {
         console.log('✅ Action suggestions received:', suggestions);
-        console.log('📊 Number of suggestions:', suggestions?.length || 0);
+        console.log('📑 Number of suggestions:', suggestions?.length || 0);
         console.log('🔍 Raw suggestions data:', JSON.stringify(suggestions, null, 2));
 
         // Replace with new suggestions (already cleared in performSearch)
@@ -966,7 +966,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     ).subscribe({
       next: (suggestions) => {
         console.log('✅ Action suggestions from analysis received:', suggestions);
-        console.log('📊 Number of suggestions:', suggestions?.length || 0);
+        console.log('📑 Number of suggestions:', suggestions?.length || 0);
         // Replace with new suggestions (already cleared in performSearch)
         this.actionSuggestions = suggestions || [];
         this.loadingActions = false;
@@ -1584,7 +1584,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       next: () => {
         console.log('✅ Action marked as completed on backend, removing from UI');
         this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
-        console.log('📊 Remaining actions:', this.actionSuggestions.length);
+        console.log('📑 Remaining actions:', this.actionSuggestions.length);
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -1906,7 +1906,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('📨 SSE message received:', event);
       try {
         const data = JSON.parse(event.data);
-        console.log('📊 Parsed SSE data:', data);
+        console.log('📑 Parsed SSE data:', data);
       } catch (error) {
         console.error('Error parsing SSE message:', error);
       }
@@ -1915,7 +1915,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.eventSource.addEventListener('progress', (event: MessageEvent) => {
       try {
         const progressEvent = JSON.parse(event.data);
-        console.log('📊 Progress event:', progressEvent);
+        console.log('📑 Progress event:', progressEvent);
         this.handleProgressEvent(progressEvent);
       } catch (error) {
         console.error('Error parsing progress event:', error, event);

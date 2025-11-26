@@ -234,20 +234,20 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
     this.clientService.allClients$().subscribe({
       next: (response: any) => {
         console.log('✅ All clients response received:', response);
-        console.log('📊 Response type:', typeof response);
-        console.log('📊 Response keys:', response ? Object.keys(response) : 'null');
+        console.log('📑 Response type:', typeof response);
+        console.log('📑 Response keys:', response ? Object.keys(response) : 'null');
         
         // Handle the actual response structure
         if (response && response.data) {
-          console.log('📊 Response.data:', response.data);
-          console.log('📊 Response.data type:', typeof response.data);
-          console.log('📊 Response.data keys:', Object.keys(response.data));
+          console.log('📑 Response.data:', response.data);
+          console.log('📑 Response.data type:', typeof response.data);
+          console.log('📑 Response.data keys:', Object.keys(response.data));
           
           // Based on the logs, it looks like response.data has {page: {...}, user: {...}}
           // Let's specifically check for the page structure
           if (response.data.page) {
-            console.log('📊 Response.data.page:', response.data.page);
-            console.log('📊 Response.data.page keys:', Object.keys(response.data.page));
+            console.log('📑 Response.data.page:', response.data.page);
+            console.log('📑 Response.data.page keys:', Object.keys(response.data.page));
             
             if (response.data.page.content && Array.isArray(response.data.page.content)) {
               console.log('✅ Found clients in response.data.page.content:', response.data.page.content.length, 'clients');
@@ -565,7 +565,7 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
     const taxAmount = subtotal * (taxRate / 100);
     const totalAmount = subtotal + taxAmount;
 
-    console.log('📊 Manual totals calculation:', { 
+    console.log('📑 Manual totals calculation:', { 
       lineItemsCount: this.lineItems.length,
       subtotal, 
       taxRate, 

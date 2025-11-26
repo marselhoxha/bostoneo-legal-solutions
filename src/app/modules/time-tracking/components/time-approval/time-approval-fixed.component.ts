@@ -146,7 +146,7 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (data) => {
-        console.log('📊 Time Approval Data loaded:', data);
+        console.log('📑 Time Approval Data loaded:', data);
         this.timeEntries = Array.isArray(data.timeEntries) ? data.timeEntries : data.timeEntries.content || [];
         this.attorneys = data.attorneys;
         this.legalCases = data.cases;
@@ -157,7 +157,7 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
           acc[entry.status] = (acc[entry.status] || 0) + 1;
           return acc;
         }, {});
-        console.log('📊 Time entry status breakdown:', statusCounts);
+        console.log('📑 Time entry status breakdown:', statusCounts);
         
         this.applyFilters();
         this.calculateStats();

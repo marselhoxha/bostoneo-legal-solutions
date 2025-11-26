@@ -1,0 +1,123 @@
+<div class="action-items-container">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <div class="avatar-xs">
+        <div class="avatar-title bg-primary-subtle text-primary rounded fs-16">
+          <i class="ri-checkbox-multiple-line"></i>
+        </div>
+      </div>
+      <div>
+        <h5 class="mb-0 fw-semibold">Action Items</h5>
+        <small class="text-muted">{{ getFilteredItems().length }} items</small>
+      </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="d-flex gap-2" *ngIf="actionItems.length > 0">
+      <button class="btn btn-soft-success btn-sm" (click)="markAllComplete()"
+              *ngIf="getPendingCount() > 0" title="Mark all as complete">
+        <i class="ri-check-double-line me-1"></i>Complete All
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <ul class="nav nav-tabs nav-tabs-custom mb-3" *ngIf="actionItems.length > 0">
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filter === 'all'" (click)="filter = 'all'" href="javascript:void(0);">
+        All <span class="badge bg-secondary-subtle text-secondary ms-1">{{ actionItems.length }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filter === 'pending'" (click)="filter = 'pending'" href="javascript:void(0);">
+        Pending <span class="badge bg-warning-subtle text-warning ms-1">{{ getPendingCount() }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filter === 'completed'" (click)="filter = 'completed'" href="javascript:void(0);">
+        Completed <span class="badge bg-success-subtle text-success ms-1">{{ getCompletedCount() }}</span>
+      </a>
+    </li>
+  </ul>
+
+  <!-- Empty State -->
+  <div class="text-center py-4" *ngIf="actionItems.length === 0">
+    <div class="avatar-md mx-auto mb-3">
+      <div class="avatar-title bg-light text-secondary rounded-circle fs-24">
+        <i class="ri-checkbox-line"></i>
+      </div>
+    </div>
+    <h6 class="text-muted mb-1">No Action Items</h6>
+    <p class="text-muted fs-13 mb-0">Action items will appear here once extracted from the document</p>
+  </div>
+
+  <!-- Action Items List -->
+  <div class="list-group list-group-flush" *ngIf="actionItems.length > 0">
+    <div class="list-group-item action-item px-0 py-3"
+         *ngFor="let item of getFilteredItems()"
+         [class.completed]="item.status === 'COMPLETED'"
+         [class.overdue]="isOverdue(item.deadline) && item.status !== 'COMPLETED'">
+
+      <div class="d-flex align-items-start gap-3">
+        <!-- Checkbox -->
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 [id]="'item-' + item.id"
+                 [checked]="item.status === 'COMPLETED'"
+                 (change)="toggleStatus(item)">
+        </div>
+
+        <!-- Priority Indicator -->
+        <div class="priority-dot" [ngClass]="getPriorityDotClass(item.priority)"
+             [title]="item.priority + ' priority'"></div>
+
+        <!-- Content -->
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between align-items-start">
+            <label class="form-check-label mb-0 cursor-pointer"
+                   [for]="'item-' + item.id"
+                   [class.text-decoration-line-through]="item.status === 'COMPLETED'"
+                   [class.text-muted]="item.status === 'COMPLETED'">
+              {{ item.description }}
+            </label>
+            <span class="badge rounded-pill fs-10 ms-2" [ngClass]="getPriorityBadgeClass(item.priority)">
+              {{ item.priority }}
+            </span>
+          </div>
+
+          <!-- Meta Info -->
+          <div class="d-flex align-items-center gap-3 mt-1 flex-wrap">
+            <small class="text-muted" *ngIf="item.deadline"
+                   [class.text-danger]="isOverdue(item.deadline) && item.status !== 'COMPLETED'">
+              <i class="ri-calendar-line me-1"></i>
+              {{ item.deadline | date: 'MMM d, yyyy' }}
+              <span class="badge bg-danger-subtle text-danger ms-1"
+                    *ngIf="isOverdue(item.deadline) && item.status !== 'COMPLETED'">Overdue</span>
+              <span class="badge bg-warning-subtle text-warning ms-1"
+                    *ngIf="isDueSoon(item.deadline) && item.status !== 'COMPLETED'">Due soon</span>
+            </small>
+            <small class="text-muted" *ngIf="item.relatedSection">
+              <i class="ri-links-line me-1"></i>{{ item.relatedSection }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Footer -->
+  <div class="border-top pt-3 mt-3" *ngIf="actionItems.length > 0 && (getOverdueCount() > 0 || getPendingCount() > 0)">
+    <div class="d-flex gap-3 fs-12">
+      <span *ngIf="getOverdueCount() > 0" class="text-danger">
+        <i class="ri-error-warning-line me-1"></i>{{ getOverdueCount() }} overdue
+      </span>
+      <span *ngIf="getPendingCount() > 0" class="text-warning">
+        <i class="ri-time-line me-1"></i>{{ getPendingCount() }} pending
+      </span>
+      <span class="text-success">
+        <i class="ri-check-line me-1"></i>{{ getCompletedCount() }} completed
+      </span>
+    </div>
+  </div>
+</div>

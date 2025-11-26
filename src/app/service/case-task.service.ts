@@ -74,7 +74,7 @@ export class CaseTaskService {
       .pipe(
         tap(response => {
           console.log('✅ CaseTaskService - Response received:', response);
-          console.log('📊 CaseTaskService - Response analysis:', {
+          console.log('📑 CaseTaskService - Response analysis:', {
             hasData: !!response.data,
             hasTasks: !!response.data?.tasks,
             hasContent: !!response.data?.tasks?.content,
@@ -105,7 +105,7 @@ export class CaseTaskService {
       .pipe(
         tap(response => {
           console.log('✅ CaseTaskService - Response received for getAllTasks:', response);
-          console.log('📊 CaseTaskService - Response analysis:', {
+          console.log('📑 CaseTaskService - Response analysis:', {
             hasData: !!response.data,
             hasTasks: !!response.data?.tasks,
             hasContent: !!response.data?.tasks?.content,

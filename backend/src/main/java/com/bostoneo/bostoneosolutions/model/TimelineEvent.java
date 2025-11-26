@@ -40,6 +40,9 @@ public class TimelineEvent {
     @Column(name = "related_section")
     private String relatedSection;
 
+    @Column(name = "calendar_event_id")
+    private Long calendarEventId;
+
     @Column(name = "created_date")
     private LocalDateTime createdDate;
 

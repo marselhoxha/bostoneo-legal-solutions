@@ -1,0 +1,175 @@
+<div class="timeline-container">
+  <!-- Header with count and view controls -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="avatar-sm flex-shrink-0">
+        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-18">
+          <i class="ri-calendar-event-line"></i>
+        </div>
+      </div>
+      <div>
+        <h5 class="mb-1 fw-semibold">Timeline Events</h5>
+        <p class="text-muted mb-0 fs-13">{{ timelineEvents.length }} events extracted from document</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2" *ngIf="timelineEvents.length > 0">
+      <button class="btn btn-soft-success btn-sm" (click)="addAllToCalendar()" title="Add all upcoming events to calendar">
+        <i class="ri-calendar-check-line me-1"></i>
+        Sync All
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="card" *ngIf="timelineEvents.length === 0">
+    <div class="card-body text-center py-5">
+      <div class="avatar-md mx-auto mb-3">
+        <div class="avatar-title bg-light text-secondary rounded-circle fs-24">
+          <i class="ri-calendar-line"></i>
+        </div>
+      </div>
+      <h6 class="text-muted mb-2">No Timeline Events</h6>
+      <p class="text-muted fs-13 mb-0">Timeline events will appear here once extracted from the document</p>
+    </div>
+  </div>
+
+  <!-- Timeline using Velzon acitivity-timeline pattern -->
+  <div class="card" *ngIf="timelineEvents.length > 0">
+    <div class="card-body">
+      <div class="acitivity-timeline acitivity-main">
+        <div class="acitivity-item d-flex"
+             *ngFor="let event of timelineEvents; let last = last"
+             [class.event-past]="isPast(event.eventDate)"
+             [class.event-today]="isToday(event.eventDate)"
+             [class.event-critical]="event.priority === 'CRITICAL' && !isPast(event.eventDate)"
+             [class.event-high]="event.priority === 'HIGH' && !isPast(event.eventDate)">
+
+          <!-- Timeline marker/avatar -->
+          <div class="flex-shrink-0 me-3">
+            <div class="avatar-sm">
+              <div class="avatar-title rounded-circle fs-16"
+                   [ngClass]="getAvatarBgClass(event.priority, event.eventDate)">
+                <i [class]="getEventIcon(event.eventType)"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-grow-1 ms-1">
+            <!-- Event header -->
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="mb-1 lh-base fw-semibold">{{ event.title }}</h6>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <span class="text-muted fs-12">
+                    <i class="ri-time-line me-1 align-middle"></i>
+                    {{ event.eventDate | date: 'EEE, MMM d, yyyy' }}
+                  </span>
+                  <span class="badge rounded-pill fs-10"
+                        [ngClass]="getDaysUntilBadgeClass(getDaysUntil(event.eventDate))"
+                        *ngIf="getDaysUntil(event.eventDate) !== null">
+                    {{ formatDaysUntil(getDaysUntil(event.eventDate)!) }}
+                  </span>
+                </div>
+              </div>
+              <span class="badge rounded-pill fs-10" [ngClass]="getPriorityBadgeClass(event.priority)">
+                <i class="ri-flag-line me-1"></i>{{ event.priority }}
+              </span>
+            </div>
+
+            <!-- Description -->
+            <p class="text-muted fs-13 mb-2" *ngIf="event.description">{{ event.description }}</p>
+
+            <!-- Event meta & actions -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge fs-11" [ngClass]="getEventTypeBadgeClass(event.eventType)">
+                  <i [class]="getEventTypeIcon(event.eventType) + ' me-1 align-middle'"></i>
+                  {{ formatEventType(event.eventType) }}
+                </span>
+                <span class="badge bg-light text-body fs-11" *ngIf="event.relatedSection">
+                  <i class="ri-links-line me-1 align-middle"></i>{{ event.relatedSection }}
+                </span>
+              </div>
+
+              <!-- Calendar actions - only show for actionable future events -->
+              <div class="btn-group btn-group-sm" ngbDropdown placement="bottom-end" container="body" *ngIf="isCalendarWorthy(event) || event.addedToCalendar">
+                <button ngbDropdownToggle
+                        class="btn btn-sm"
+                        [ngClass]="event.addedToCalendar ? 'btn-soft-success' : 'btn-ghost-primary'"
+                        [disabled]="event.addedToCalendar">
+                  <i [class]="event.addedToCalendar ? 'ri-check-line' : 'ri-calendar-check-line'"></i>
+                  <span class="ms-1 d-none d-sm-inline">{{ event.addedToCalendar ? 'Added' : 'Add' }}</span>
+                </button>
+                <div ngbDropdownMenu class="dropdown-menu-end shadow-lg">
+                  <div class="dropdown-header fs-12 text-muted">Add to Calendar</div>
+                  <button ngbDropdownItem (click)="addToInternalCalendar(event)" class="d-flex align-items-center">
+                    <i class="ri-calendar-line me-2 text-primary fs-16"></i>
+                    <div>
+                      <span class="d-block">Internal Calendar</span>
+                      <small class="text-muted">Add to your workspace</small>
+                    </div>
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <div class="dropdown-header fs-12 text-muted">External Calendars</div>
+                  <a ngbDropdownItem [href]="getGoogleCalendarUrl(event)" target="_blank" class="d-flex align-items-center">
+                    <i class="ri-google-fill me-2 text-danger fs-16"></i>
+                    Google Calendar
+                  </a>
+                  <a ngbDropdownItem [href]="getOutlookCalendarUrl(event)" target="_blank" class="d-flex align-items-center">
+                    <i class="ri-microsoft-fill me-2 text-info fs-16"></i>
+                    Outlook Calendar
+                  </a>
+                  <a ngbDropdownItem [href]="getYahooCalendarUrl(event)" target="_blank" class="d-flex align-items-center">
+                    <i class="ri-mail-fill me-2 text-purple fs-16"></i>
+                    Yahoo Calendar
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <button ngbDropdownItem (click)="downloadIcs(event)" class="d-flex align-items-center">
+                    <i class="ri-download-2-line me-2 text-success fs-16"></i>
+                    <div>
+                      <span class="d-block">Download .ics</span>
+                      <small class="text-muted">For Apple Calendar & others</small>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress indicator for upcoming deadlines -->
+            <div class="mt-2" *ngIf="!isPast(event.eventDate) && getDaysUntil(event.eventDate) !== null && getDaysUntil(event.eventDate)! <= 14 && event.eventType === 'DEADLINE'">
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress progress-sm flex-grow-1" style="height: 4px;">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated"
+                       [ngClass]="getProgressBarClass(event.priority)"
+                       [style.width.%]="getProgressWidth(event.eventDate)">
+                  </div>
+                </div>
+                <small class="text-muted fs-11">{{ getProgressWidth(event.eventDate) | number:'1.0-0' }}% elapsed</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card footer with summary -->
+    <div class="card-footer bg-light-subtle border-top" *ngIf="getUpcomingCount() > 0 || getOverdueCount() > 0">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3">
+          <span class="fs-12" *ngIf="getOverdueCount() > 0">
+            <i class="ri-error-warning-line text-danger me-1"></i>
+            <span class="text-danger fw-medium">{{ getOverdueCount() }} overdue</span>
+          </span>
+          <span class="fs-12" *ngIf="getUpcomingCount() > 0">
+            <i class="ri-calendar-todo-line text-warning me-1"></i>
+            <span class="text-warning fw-medium">{{ getUpcomingCount() }} upcoming</span>
+          </span>
+        </div>
+        <a href="javascript:void(0);" class="link-primary fs-12" (click)="addAllToCalendar()">
+          Sync all to calendar <i class="ri-arrow-right-line ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

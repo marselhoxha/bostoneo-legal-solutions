@@ -1547,7 +1547,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private processTeamData(assignments: CaseAssignment[]): void {
-    console.log('📊 Processing team data:', assignments);
+    console.log('📑 Processing team data:', assignments);
     if (assignments && assignments.length > 0) {
       this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
         id: assignment.userId,
@@ -2189,7 +2189,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           tasks = response.data;
         }
         
-        console.log('📊 Parsed tasks:', {
+        console.log('📑 Parsed tasks:', {
           count: tasks.length,
           unassignedCount: tasks.filter((t: any) => !t.assignedToId).length,
           tasks: tasks
@@ -2778,7 +2778,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       return isUnassigned;
     });
     
-    console.log('📊 Unassigned tasks result:', {
+    console.log('📑 Unassigned tasks result:', {
       total: this.recentTasks.length,
       unassigned: unassigned.length,
       unassignedTasks: unassigned

@@ -98,7 +98,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
           arr.findIndex(u => u.id === user.id) === index
         );
         
-        console.log(`📊 Found ${uniqueUsers.length} total unique users in database (from ${allUsers.length} role assignments)`);
+        console.log(`📑 Found ${uniqueUsers.length} total unique users in database (from ${allUsers.length} role assignments)`);
         
         recipients = {
           primaryUsers: uniqueUsers, // Send to everyone for testing

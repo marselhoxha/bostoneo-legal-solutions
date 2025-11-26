@@ -143,7 +143,7 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         this.attorneys = data.attorneys;
         this.legalCases = data.cases;
         
-        console.log('📊 All time entries loaded:', this.allTimeEntries.length);
+        console.log('📑 All time entries loaded:', this.allTimeEntries.length);
         console.log('👥 Time entries sample user IDs:', this.allTimeEntries.slice(0, 3).map(e => ({ userId: e.userId, userName: e.userName })));
         console.log('👥 Available attorneys:', this.attorneys);
         
@@ -152,7 +152,7 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
           acc[entry.status] = (acc[entry.status] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
-        console.log('📊 Status distribution:', statusCounts);
+        console.log('📑 Status distribution:', statusCounts);
         
         this.applyFilters();
         this.calculateStats();

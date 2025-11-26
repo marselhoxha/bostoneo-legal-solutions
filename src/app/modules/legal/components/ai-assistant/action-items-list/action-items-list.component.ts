@@ -1,89 +1,25 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActionItem } from '../../../models/action-item.model';
 import { ActionItemService } from '../../../services/action-item.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-action-items-list',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="action-items-container">
-      <h5 class="mb-3"><i class="bi bi-check2-square me-2"></i>Action Items</h5>
-
-      @if (actionItems.length === 0) {
-        <p class="text-muted">No action items extracted</p>
-      }
-
-      @for (item of actionItems; track item.id) {
-        <div class="card mb-2" [class.item-completed]="item.status === 'COMPLETED'">
-          <div class="card-body p-3">
-            <div class="d-flex align-items-start">
-              <input
-                type="checkbox"
-                class="form-check-input me-3 mt-1"
-                [checked]="item.status === 'COMPLETED'"
-                (change)="toggleStatus(item)">
-
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                  <p class="mb-1" [class.text-decoration-line-through]="item.status === 'COMPLETED'">
-                    {{item.description}}
-                  </p>
-                  <span class="badge ms-2" [class]="getPriorityClass(item.priority)">
-                    {{item.priority}}
-                  </span>
-                </div>
-
-                @if (item.deadline) {
-                  <small class="text-muted" [class.text-danger]="isOverdue(item.deadline)">
-                    <i class="bi bi-calendar3 me-1"></i>
-                    {{item.deadline | date: 'MMM d, yyyy'}}
-                    @if (isOverdue(item.deadline)) {
-                      <span class="badge bg-danger ms-1">OVERDUE</span>
-                    }
-                  </small>
-                }
-
-                @if (item.relatedSection) {
-                  <small class="d-block text-muted mt-1">
-                    <i class="bi bi-link-45deg me-1"></i>{{item.relatedSection}}
-                  </small>
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: [`
-    .action-items-container {
-      margin-bottom: 1.5rem;
-    }
-
-    .item-completed {
-      opacity: 0.7;
-    }
-
-    .form-check-input {
-      width: 1.2em;
-      height: 1.2em;
-      cursor: pointer;
-    }
-
-    .badge.bg-success { background-color: #28a745 !important; }
-    .badge.bg-danger { background-color: #dc3545 !important; }
-    .badge.bg-warning { background-color: #ffc107 !important; color: #000; }
-    .badge.bg-info { background-color: #17a2b8 !important; }
-  `]
+  templateUrl: './action-items-list.component.html',
+  styleUrls: ['./action-items-list.component.scss']
 })
 export class ActionItemsListComponent implements OnInit {
   @Input() analysisId!: number;
 
   private actionItemService = inject(ActionItemService);
+  private toastr = inject(ToastrService);
+  private cdr = inject(ChangeDetectorRef);
 
   actionItems: ActionItem[] = [];
+  filter: 'all' | 'pending' | 'completed' = 'all';
 
   ngOnInit() {
     this.loadActionItems();
@@ -92,27 +28,109 @@ export class ActionItemsListComponent implements OnInit {
   loadActionItems() {
     this.actionItemService.getActionItems(this.analysisId).subscribe(items => {
       this.actionItems = items;
+      this.cdr.detectChanges();
     });
+  }
+
+  getFilteredItems(): ActionItem[] {
+    switch (this.filter) {
+      case 'pending':
+        return this.actionItems.filter(i => i.status !== 'COMPLETED');
+      case 'completed':
+        return this.actionItems.filter(i => i.status === 'COMPLETED');
+      default:
+        return this.actionItems;
+    }
   }
 
   toggleStatus(item: ActionItem) {
     const newStatus = item.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
-    this.actionItemService.updateActionItem(item.id!, { status: newStatus }).subscribe(updated => {
-      item.status = updated.status;
+    this.actionItemService.updateActionItem(item.id!, { status: newStatus }).subscribe({
+      next: (updated) => {
+        item.status = updated.status;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toastr.error('Failed to update status', 'Error');
+      }
     });
   }
 
-  getPriorityClass(priority: string): string {
-    switch (priority) {
-      case 'CRITICAL': return 'bg-danger';
-      case 'HIGH': return 'bg-warning';
-      case 'MEDIUM': return 'bg-info';
-      case 'LOW': return 'bg-success';
-      default: return 'bg-secondary';
+  markAllComplete() {
+    const pendingItems = this.actionItems.filter(i => i.status !== 'COMPLETED');
+    let completed = 0;
+
+    pendingItems.forEach(item => {
+      this.actionItemService.updateActionItem(item.id!, { status: 'COMPLETED' }).subscribe({
+        next: (updated) => {
+          item.status = updated.status;
+          completed++;
+          if (completed === pendingItems.length) {
+            this.toastr.success(`${completed} items marked complete`, 'Success');
+            this.cdr.detectChanges();
+          }
+        }
+      });
+    });
+  }
+
+  // ==================== Count Helpers ====================
+
+  getPendingCount(): number {
+    return this.actionItems.filter(i => i.status !== 'COMPLETED').length;
+  }
+
+  getCompletedCount(): number {
+    return this.actionItems.filter(i => i.status === 'COMPLETED').length;
+  }
+
+  getOverdueCount(): number {
+    return this.actionItems.filter(i =>
+      i.status !== 'COMPLETED' && i.deadline && this.isOverdue(i.deadline)
+    ).length;
+  }
+
+  // ==================== Date Helpers ====================
+
+  isOverdue(deadline: string | undefined): boolean {
+    if (!deadline) return false;
+    const deadlineDate = new Date(deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(0, 0, 0, 0);
+    return deadlineDate < today;
+  }
+
+  isDueSoon(deadline: string | undefined): boolean {
+    if (!deadline) return false;
+    const deadlineDate = new Date(deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 3;
+  }
+
+  // ==================== Styling Helpers ====================
+
+  getPriorityDotClass(priority: string): string {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return 'priority-critical';
+      case 'HIGH': return 'priority-high';
+      case 'MEDIUM': return 'priority-medium';
+      case 'LOW': return 'priority-low';
+      default: return 'priority-medium';
     }
   }
 
-  isOverdue(deadline: string): boolean {
-    return new Date(deadline) < new Date();
+  getPriorityBadgeClass(priority: string): string {
+    switch (priority?.toUpperCase()) {
+      case 'CRITICAL': return 'priority-critical';
+      case 'HIGH': return 'priority-high';
+      case 'MEDIUM': return 'priority-medium';
+      case 'LOW': return 'priority-low';
+      default: return 'bg-secondary-subtle text-secondary';
+    }
   }
 }

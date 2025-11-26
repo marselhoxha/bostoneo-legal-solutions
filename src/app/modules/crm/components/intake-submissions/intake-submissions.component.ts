@@ -171,7 +171,7 @@ export class IntakeSubmissionsComponent implements OnInit {
     
     this.crmService.getIntakeSubmissions$(params).subscribe({
       next: (response: any) => {
-        console.log('📊 Raw Backend Response:', response);
+        console.log('📑 Raw Backend Response:', response);
         
         // Handle different response structures
         let dataArray: any[] = [];

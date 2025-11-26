@@ -1,0 +1,341 @@
+// Timeline View - Velzon Theme Styling
+// Uses Velzon's acitivity-timeline pattern from _timeline.scss
+
+.timeline-container {
+  padding: 0;
+}
+
+// Enhanced activity timeline for document analysis
+.acitivity-main {
+  // Remove the default dashed line from Velzon's activity timeline
+  &.acitivity-timeline {
+    .acitivity-item::before {
+      display: none !important;
+      border: none !important;
+    }
+  }
+
+  .acitivity-item {
+    padding: 16px;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+    background-color: var(--vz-secondary-bg);
+    border: 1px solid var(--vz-border-color);
+    border-radius: 8px;
+    position: relative;
+    overflow: visible; // Allow dropdown to overflow
+
+    // Hover effect on items
+    &:hover {
+      border-color: rgba(var(--vz-primary-rgb), 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+      .avatar-title {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    // Remove last item margin
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    // Past events - subtle styling
+    &.event-past {
+      opacity: 0.7;
+      background-color: var(--vz-light);
+      border-color: var(--vz-border-color);
+
+      .avatar-title {
+        background-color: var(--vz-light) !important;
+        color: var(--vz-secondary) !important;
+      }
+
+      h6 {
+        text-decoration: line-through;
+        text-decoration-color: rgba(var(--vz-secondary-rgb), 0.5);
+      }
+    }
+
+    // Today's events - highlight with pulse animation and accent border
+    &.event-today {
+      border-left: 3px solid var(--vz-primary);
+      background-color: rgba(var(--vz-primary-rgb), 0.03);
+
+      .avatar-title {
+        animation: pulse-ring 2s infinite;
+      }
+    }
+
+    // Critical/High priority events
+    &.event-critical {
+      border-left: 3px solid var(--vz-danger);
+    }
+
+    &.event-high {
+      border-left: 3px solid var(--vz-warning);
+    }
+
+    // Avatar styling
+    .avatar-sm {
+      .avatar-title {
+        transition: all 0.2s ease;
+        font-size: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    // Content area
+    .flex-grow-1 {
+      h6 {
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--vz-heading-color);
+      }
+
+      p {
+        line-height: 1.6;
+      }
+    }
+  }
+}
+
+// Pulse animation for today's events
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--vz-primary-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0);
+  }
+}
+
+// Avatar background classes based on priority/status
+.avatar-title {
+  &.bg-danger-subtle {
+    background-color: rgba(var(--vz-danger-rgb), 0.18) !important;
+    color: var(--vz-danger) !important;
+  }
+  &.bg-warning-subtle {
+    background-color: rgba(var(--vz-warning-rgb), 0.18) !important;
+    color: var(--vz-warning) !important;
+  }
+  &.bg-info-subtle {
+    background-color: rgba(var(--vz-info-rgb), 0.18) !important;
+    color: var(--vz-info) !important;
+  }
+  &.bg-success-subtle {
+    background-color: rgba(var(--vz-success-rgb), 0.18) !important;
+    color: var(--vz-success) !important;
+  }
+  &.bg-primary-subtle {
+    background-color: rgba(var(--vz-primary-rgb), 0.18) !important;
+    color: var(--vz-primary) !important;
+  }
+  &.bg-secondary-subtle {
+    background-color: rgba(var(--vz-secondary-rgb), 0.18) !important;
+    color: var(--vz-secondary) !important;
+  }
+}
+
+// Priority badge classes
+.badge {
+  &.priority-critical {
+    background-color: rgba(var(--vz-danger-rgb), 0.12) !important;
+    color: var(--vz-danger) !important;
+  }
+  &.priority-high {
+    background-color: rgba(var(--vz-warning-rgb), 0.12) !important;
+    color: var(--vz-warning) !important;
+  }
+  &.priority-medium {
+    background-color: rgba(var(--vz-info-rgb), 0.12) !important;
+    color: var(--vz-info) !important;
+  }
+  &.priority-low {
+    background-color: rgba(var(--vz-success-rgb), 0.12) !important;
+    color: var(--vz-success) !important;
+  }
+}
+
+// Days-until badge classes
+.badge {
+  &.days-overdue {
+    background-color: rgba(var(--vz-danger-rgb), 0.15) !important;
+    color: var(--vz-danger) !important;
+  }
+  &.days-today {
+    background-color: rgba(var(--vz-primary-rgb), 0.15) !important;
+    color: var(--vz-primary) !important;
+    font-weight: 600;
+  }
+  &.days-soon {
+    background-color: rgba(var(--vz-warning-rgb), 0.15) !important;
+    color: var(--vz-warning) !important;
+  }
+  &.days-upcoming {
+    background-color: rgba(var(--vz-info-rgb), 0.15) !important;
+    color: var(--vz-info) !important;
+  }
+  &.days-future {
+    background-color: rgba(var(--vz-success-rgb), 0.15) !important;
+    color: var(--vz-success) !important;
+  }
+}
+
+// Event type badges
+.badge {
+  &.event-deadline {
+    background-color: rgba(var(--vz-danger-rgb), 0.12) !important;
+    color: var(--vz-danger) !important;
+  }
+  &.event-filing {
+    background-color: rgba(var(--vz-primary-rgb), 0.12) !important;
+    color: var(--vz-primary) !important;
+  }
+  &.event-hearing {
+    background-color: rgba(var(--vz-warning-rgb), 0.12) !important;
+    color: var(--vz-warning) !important;
+  }
+  &.event-milestone {
+    background-color: rgba(var(--vz-success-rgb), 0.12) !important;
+    color: var(--vz-success) !important;
+  }
+  &.event-default {
+    background-color: rgba(var(--vz-secondary-rgb), 0.12) !important;
+    color: var(--vz-secondary) !important;
+  }
+}
+
+// Ghost button style
+.btn-ghost-primary {
+  color: var(--vz-primary);
+  background-color: transparent;
+  border-color: transparent;
+
+  &:hover {
+    color: var(--vz-primary);
+    background-color: rgba(var(--vz-primary-rgb), 0.1);
+  }
+
+  &:disabled {
+    color: var(--vz-secondary);
+    opacity: 0.5;
+  }
+}
+
+// Card body needs overflow visible for dropdown
+.card-body {
+  overflow: visible;
+}
+
+// Enhanced dropdown styling
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  padding: 8px 0;
+  min-width: 220px;
+  z-index: 1050 !important; // Ensure dropdown appears above other elements
+  position: absolute;
+
+  .dropdown-header {
+    padding: 8px 16px 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 10px;
+  }
+
+  .dropdown-item {
+    padding: 10px 16px;
+    font-size: 13px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background-color: var(--vz-light);
+    }
+
+    &:active {
+      background-color: rgba(var(--vz-primary-rgb), 0.1);
+      color: var(--vz-primary);
+    }
+
+    small {
+      font-size: 11px;
+      display: block;
+      margin-top: 2px;
+    }
+  }
+
+  .dropdown-divider {
+    margin: 6px 0;
+    border-top-color: var(--vz-border-color);
+  }
+}
+
+// Progress bar enhancements
+.progress {
+  border-radius: 4px;
+  background-color: var(--vz-light);
+  overflow: hidden;
+
+  .progress-bar {
+    border-radius: 4px;
+  }
+}
+
+// Card footer styling
+.card-footer {
+  &.bg-light-subtle {
+    background-color: rgba(var(--vz-light-rgb), 0.5) !important;
+  }
+}
+
+// Link styling
+.link-primary {
+  font-weight: 500;
+  transition: all 0.15s ease;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Text purple for Yahoo icon
+.text-purple {
+  color: #6f42c1 !important;
+}
+
+// Responsive adjustments
+@media (max-width: 575.98px) {
+  .acitivity-main {
+    .acitivity-item {
+      .flex-grow-1 {
+        h6 {
+          font-size: 13px;
+        }
+      }
+
+      .d-flex.gap-2 {
+        flex-wrap: wrap;
+      }
+    }
+  }
+
+  .btn-group-sm {
+    .btn {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+  }
+
+  .dropdown-menu {
+    min-width: 200px;
+  }
+}

@@ -22,4 +22,11 @@ export class ActionItemService {
   updateActionItem(id: number, item: Partial<ActionItem>): Observable<ActionItem> {
     return this.http.put<ActionItem>(`${this.apiUrl}/action-items/${id}`, item);
   }
+
+  linkTimelineEventToCalendar(timelineEventId: number, calendarEventId: number): Observable<TimelineEvent> {
+    return this.http.patch<TimelineEvent>(
+      `${environment.apiUrl}/api/ai/document-analysis/timeline-events/${timelineEventId}/calendar`,
+      { calendarEventId }
+    );
+  }
 }

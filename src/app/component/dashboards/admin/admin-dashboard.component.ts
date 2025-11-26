@@ -474,7 +474,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response: any) => {
           this.activitiesLoading = false;
-          console.log('📊 Raw audit response:', response);
+          console.log('📑 Raw audit response:', response);
           
           // Handle the CustomHttpResponse structure
           if (response?.data?.activities && Array.isArray(response.data.activities)) {
@@ -488,7 +488,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           } else {
             this.recentActivities = [];
             console.warn('⚠️ No activities found in response');
-            console.log('📊 Response structure:', response);
+            console.log('📑 Response structure:', response);
           }
           
           this.cdr.detectChanges();
@@ -497,7 +497,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.activitiesLoading = false;
           this.recentActivities = [];
           console.error('❌ Error loading activities:', error);
-          console.error('📊 Error details:', {
+          console.error('📑 Error details:', {
             status: error.status,
             message: error.message,
             url: error.url
