@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -10,6 +10,7 @@ import { LegalCaseService } from '../../../services/legal-case.service';
 import { MarkdownConverterService } from '../../../services/markdown-converter.service';
 import { FileManagerService } from '../../../../file-manager/services/file-manager.service';
 import { DocumentAnalyzerService } from '../../../services/document-analyzer.service';
+import { DocumentCollectionService, DocumentCollection } from '../../../services/document-collection.service';
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
@@ -27,11 +28,12 @@ import { ConversationListComponent } from './conversation-list/conversation-list
 import { VersionHistoryComponent } from './version-history/version-history.component';
 import { ActionItemsListComponent } from '../action-items-list/action-items-list.component';
 import { TimelineViewComponent } from '../timeline-view/timeline-view.component';
+import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../document-analysis-viewer/document-analysis-viewer.component';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
 import { QuillEditorService } from '../../../services/quill-editor.service';
-import { AiWorkspaceStateService } from '../../../services/ai-workspace-state.service';
+import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-workspace-state.service';
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
 
@@ -63,7 +65,8 @@ import { DocumentState } from '../../../models/document.model';
     ConversationListComponent,
     VersionHistoryComponent,
     ActionItemsListComponent,
-    TimelineViewComponent
+    TimelineViewComponent,
+    DocumentAnalysisViewerComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -87,6 +90,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   showBottomSearchBar$ = this.stateService.showBottomSearchBar$;
   isGenerating$ = this.stateService.isGenerating$;
   draftingMode$ = this.stateService.draftingMode$;
+
+  // Document Analysis Viewer state
+  analyzedDocuments$ = this.stateService.analyzedDocuments$;
+  activeDocumentId$ = this.stateService.activeDocumentId$;
+  documentViewerMode$ = this.stateService.documentViewerMode$;
+  viewerSidebarCollapsed$ = this.stateService.viewerSidebarCollapsed$;
+
+  // Collections state
+  collections$ = this.collectionService.collections$;
+  loadingCollections = false;
+  showNewCollectionModal = false;
 
   // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
@@ -138,15 +152,39 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Search query for filtering conversations
   conversationSearchQuery = '';
 
+  // Search query for filtering document analyses
+  documentSearchQuery = '';
+
+  // Loading state for analyses
+  loadingAnalyses = false;
+
+  // Filtered analyzed documents based on search query
+  get filteredAnalyzedDocuments() {
+    const docs = this.stateService.getAnalyzedDocuments();
+    if (!this.documentSearchQuery.trim()) {
+      return docs;
+    }
+    const query = this.documentSearchQuery.toLowerCase();
+    return docs.filter(doc =>
+      doc.fileName.toLowerCase().includes(query) ||
+      doc.detectedType?.toLowerCase().includes(query)
+    );
+  }
+
   // Filtered conversations based on search query (computed from observable)
+  // Also filters out document analysis conversations (Upload/Summarize) since they appear in Recent Documents
   get filteredConversations() {
-    // This will be replaced with combineLatest in template for reactive approach
+    // First, filter out document analysis types (they appear in Recent Documents section)
+    const nonAnalysisConversations = this.stateService.getConversations().filter(conv =>
+      conv.type !== ConversationType.Upload && conv.type !== ConversationType.Summarize
+    );
+
     if (!this.conversationSearchQuery.trim()) {
-      return this.stateService.getConversations();
+      return nonAnalysisConversations;
     }
 
     const query = this.conversationSearchQuery.toLowerCase();
-    return this.stateService.getConversations().filter(conv =>
+    return nonAnalysisConversations.filter(conv =>
       conv.title.toLowerCase().includes(query)
     );
   }
@@ -296,6 +334,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
   @ViewChild('howItWorksModal') howItWorksModal!: TemplateRef<any>;
   @ViewChild('promptTipsModal') promptTipsModal!: TemplateRef<any>;
+  @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
@@ -687,6 +726,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private modalService: NgbModal,
     private fileManagerService: FileManagerService,
     private documentAnalyzerService: DocumentAnalyzerService,
+    private collectionService: DocumentCollectionService,
     // NEW: Refactored services
     private notificationService: NotificationService,
     private quillEditorService: QuillEditorService,
@@ -772,6 +812,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Load conversations for the default task type
     this.loadConversations();
 
+    // Load analysis history for sidebar (Recent Documents section)
+    this.loadAnalysisHistory();
+
+    // Load collections for sidebar
+    this.loadCollections();
+
     // Load user's cases for case selector if user already available
     if (this.currentUser && this.currentUser.id) {
       this.loadUserCases();
@@ -797,6 +843,128 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.userCases = [];
         }
       });
+  }
+
+  /**
+   * Load analysis history from database and populate the sidebar
+   */
+  loadAnalysisHistory(): void {
+    this.loadingAnalyses = true;
+    this.documentAnalyzerService.getAnalysisHistory()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (history) => {
+          console.log('📄 Loaded analysis history:', history.length, 'documents');
+
+          // Map AnalysisHistory to AnalyzedDocument format
+          const analyzedDocs = history.map(h => ({
+            id: `analysis_${h.id}`,
+            databaseId: h.id,
+            fileName: h.fileName,
+            fileSize: 0, // Not available in history, will be loaded on demand
+            detectedType: h.detectedType || 'Document',
+            riskLevel: h.riskLevel,
+            analysis: h.summary ? {
+              fullAnalysis: '',
+              summary: h.summary
+            } : undefined,
+            timestamp: new Date(h.createdAt).getTime(),
+            status: (h.status?.toLowerCase() === 'completed' ? 'completed' : 'failed') as 'completed' | 'failed'
+          }));
+
+          // Set to state service (this populates the sidebar)
+          this.stateService.setAnalyzedDocuments(analyzedDocs);
+          this.loadingAnalyses = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load analysis history:', error);
+          this.loadingAnalyses = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Delete an analysis from history
+   */
+  deleteAnalysis(doc: any): void {
+    // TODO: Add backend endpoint for deletion
+    // For now, just remove from local state
+    this.stateService.removeAnalyzedDocument(doc.id);
+    this.notificationService.success('Deleted', `Analysis for "${doc.fileName}" removed`);
+  }
+
+  /**
+   * Open modal showing full analysis history
+   */
+  openAnalysisHistoryModal(): void {
+    // TODO: Implement analysis history modal
+    this.notificationService.info('Coming Soon', 'Full analysis history view will be available soon');
+  }
+
+  /**
+   * Load collections from database
+   */
+  loadCollections(): void {
+    this.loadingCollections = true;
+    this.collectionService.getCollections()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (collections) => {
+          console.log('📁 Loaded collections:', collections.length);
+          this.loadingCollections = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load collections:', error);
+          this.loadingCollections = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Create a new collection
+   */
+  createCollection(name: string, description?: string): void {
+    if (!name.trim()) return;
+
+    this.collectionService.createCollection(name, description)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (collection) => {
+          this.notificationService.success('Collection Created', `"${name}" has been created`);
+          this.showNewCollectionModal = false;
+        },
+        error: (error) => {
+          this.notificationService.error('Error', 'Failed to create collection');
+        }
+      });
+  }
+
+  /**
+   * Delete a collection
+   */
+  deleteCollection(collection: DocumentCollection): void {
+    this.collectionService.deleteCollection(collection.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Deleted', `Collection "${collection.name}" has been removed`);
+        },
+        error: (error) => {
+          this.notificationService.error('Error', 'Failed to delete collection');
+        }
+      });
+  }
+
+  /**
+   * Open a collection (placeholder - will implement collection viewer)
+   */
+  openCollection(collection: DocumentCollection): void {
+    // TODO: Implement collection viewer
+    this.notificationService.info('Coming Soon', `Collection "${collection.name}" viewer will be available soon`);
   }
 
   /**
@@ -1095,6 +1263,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       backendId: conv.backendConversationId,
       relatedDraftId: conv.relatedDraftId
     });
+
+    // Check if this is a document analysis conversation (Summarize or Upload)
+    if (conv.type === ConversationType.Summarize || conv.type === ConversationType.Upload) {
+      console.log('📄 Document analysis conversation detected, loading analysis...');
+      this.loadDocumentAnalysisFromConversation(conv);
+      return;
+    }
 
     this.legalResearchService.getConversationById(conv.backendConversationId)
       .pipe(takeUntil(this.destroy$))
@@ -1597,6 +1772,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // ========================================
 
   /**
+   * Trigger file upload dialog from sidebar button
+   */
+  triggerFileUpload(): void {
+    if (this.fileInputRef?.nativeElement) {
+      this.fileInputRef.nativeElement.click();
+    } else {
+      // Fallback: find file input in DOM
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.click();
+      }
+    }
+  }
+
+  /**
    * Handle file selection via input
    */
   onFileSelect(event: Event): void {
@@ -1727,7 +1917,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.completeAllWorkflowSteps();
               this.stateService.setIsGenerating(false);
 
-              // Auto-display results in chat
+              // Save assistant message to backend with analysis metadata
+              // This allows the conversation to be loaded later and open the viewer
+              const activeConvId = this.stateService.getActiveConversationId();
+              if (activeConvId && sessionId) {
+                const assistantContent = `Document analysis completed for ${result.fileName}`;
+                this.legalResearchService.addMessageToSession(
+                  sessionId,
+                  this.currentUser?.id || 1,
+                  'assistant',
+                  assistantContent,
+                  { analysisId: result.id, databaseId: result.databaseId }
+                ).pipe(takeUntil(this.destroy$))
+                 .subscribe({
+                   next: () => console.log('✅ Analysis metadata saved to conversation'),
+                   error: (err) => console.error('❌ Failed to save analysis metadata:', err)
+                 });
+              }
+
+              // Auto-display results in viewer
               this.displayAnalysisResults(result);
             }
           }
@@ -1947,9 +2155,257 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Display analysis results automatically in chat (called after analysis completes)
+   * Display analysis results - opens Document Analysis Viewer
    */
   private displayAnalysisResults(result: any): void {
+    // Create analyzed document object for state
+    const analyzedDoc: AnalyzedDocument = {
+      id: result.id,
+      databaseId: result.databaseId,
+      fileName: result.fileName,
+      fileSize: result.fileSize,
+      detectedType: result.detectedType || 'Document',
+      riskLevel: result.analysis?.riskLevel,
+      riskScore: result.analysis?.riskScore,
+      analysis: result.analysis,
+      extractedMetadata: result.extractedMetadata,
+      timestamp: Date.now(),
+      status: 'completed'
+    };
+
+    // Add to analyzed documents state
+    this.stateService.addAnalyzedDocument(analyzedDoc);
+
+    // Open document viewer
+    this.stateService.openDocumentViewer(result.id);
+
+    // Show success notification
+    this.notificationService.success(
+      'Analysis Complete',
+      `${result.fileName} has been analyzed successfully`
+    );
+
+    // Force change detection
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Load document analysis from a conversation (when clicking sidebar item)
+   */
+  loadDocumentAnalysisFromConversation(conv: Conversation): void {
+    // First, load the conversation to get the analysis ID from messages
+    this.legalResearchService.getConversationById(conv.backendConversationId!)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('📄 Loaded conversation for analysis ID extraction:', response);
+
+          // Find the analysis ID from message metadata
+          // Try analysisId (UUID string) first, then databaseId (number) as fallback
+          let analysisId: string | null = null;
+          let databaseId: number | null = null;
+
+          for (const msg of response.messages) {
+            if (msg.metadata) {
+              const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+              console.log('📄 Message metadata:', metadata);
+
+              // Prefer the UUID analysisId for API calls
+              if (metadata.analysisId && typeof metadata.analysisId === 'string') {
+                analysisId = metadata.analysisId;
+                databaseId = metadata.databaseId || null;
+                break;
+              }
+              // Fallback: if only databaseId exists (old format), we can't use getAnalysisById
+              if (metadata.analysisId && typeof metadata.analysisId === 'number') {
+                databaseId = metadata.analysisId;
+              }
+              if (metadata.databaseId) {
+                databaseId = metadata.databaseId;
+              }
+            }
+          }
+
+          if (!analysisId && !databaseId) {
+            console.warn('No analysis ID found in conversation messages, showing chat view instead');
+            // Fall back to regular chat view
+            this.loadConversationAsChat(conv, response);
+            return;
+          }
+
+          console.log('📄 Found analysis ID (UUID):', analysisId, 'databaseId:', databaseId);
+
+          // Load the analysis from the backend
+          // Use UUID if available, otherwise use database ID
+          const analysisObservable = analysisId
+            ? this.documentAnalyzerService.getAnalysisById(analysisId)
+            : this.documentAnalyzerService.getAnalysisByDatabaseId(databaseId!);
+
+          analysisObservable
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (analysisResult) => {
+                console.log('📄 Loaded analysis result:', analysisResult);
+
+                // Create AnalyzedDocument and add to state
+                const analyzedDoc: AnalyzedDocument = {
+                  id: `analysis_${analysisResult.databaseId}`,
+                  databaseId: analysisResult.databaseId,
+                  fileName: analysisResult.fileName || conv.title,
+                  fileSize: analysisResult.fileSize || 0,
+                  detectedType: analysisResult.detectedType || 'Document',
+                  extractedMetadata: analysisResult.extractedMetadata,
+                  analysis: analysisResult.analysis,
+                  timestamp: analysisResult.timestamp || Date.now(),
+                  status: 'completed'
+                };
+
+                // Add to state if not already present
+                const existingDoc = this.stateService.getAnalyzedDocumentById(analyzedDoc.id);
+                if (!existingDoc) {
+                  this.stateService.addAnalyzedDocument(analyzedDoc);
+                }
+
+                // Open in viewer
+                this.stateService.openDocumentViewer(analyzedDoc.id);
+                this.cdr.detectChanges();
+              },
+              error: (error) => {
+                console.error('Failed to load analysis:', error);
+                this.notificationService.error('Error', 'Failed to load document analysis');
+                // Fall back to chat view
+                this.loadConversationAsChat(conv, response);
+              }
+            });
+        },
+        error: (error) => {
+          console.error('Failed to load conversation:', error);
+          this.notificationService.error('Error', 'Failed to load conversation');
+        }
+      });
+  }
+
+  /**
+   * Load conversation as regular chat (fallback for document analysis without analysis ID)
+   */
+  private loadConversationAsChat(conv: Conversation, response: any): void {
+    this.stateService.setActiveConversationId(conv.id);
+    this.stateService.clearFollowUpQuestions();
+
+    const messages = response.messages.map((msg: any) => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      timestamp: new Date(msg.createdAt || new Date())
+    }));
+
+    this.stateService.setConversationMessages(messages);
+    this.stateService.setShowChat(true);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Open document in viewer (from sidebar)
+   * If fullAnalysis is empty, fetch it from backend first
+   */
+  openDocumentInViewer(document: AnalyzedDocument): void {
+    // Check if we need to fetch full analysis
+    if (!document.analysis?.fullAnalysis && document.databaseId) {
+      // Fetch full analysis from backend
+      this.documentAnalyzerService.getAnalysisByDatabaseId(document.databaseId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (result) => {
+            console.log('📄 Loaded full analysis for document:', result.fileName);
+
+            // Update the document with full analysis
+            const updatedDoc: AnalyzedDocument = {
+              ...document,
+              analysis: result.analysis ? {
+                fullAnalysis: result.analysis.fullAnalysis || '',
+                summary: result.analysis.summary,
+                riskScore: result.analysis.riskScore,
+                riskLevel: result.analysis.riskLevel,
+                keyFindings: result.analysis.keyFindings,
+                recommendations: result.analysis.recommendations
+              } : document.analysis,
+              extractedMetadata: result.extractedMetadata || document.extractedMetadata,
+              fileSize: result.fileSize || document.fileSize
+            };
+
+            // Update in state
+            this.stateService.updateAnalyzedDocument(document.id, updatedDoc);
+
+            // Open viewer
+            this.stateService.openDocumentViewer(document.id);
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Failed to load full analysis:', error);
+            // Still open viewer with partial data
+            this.stateService.openDocumentViewer(document.id);
+            this.cdr.detectChanges();
+          }
+        });
+    } else {
+      // Full analysis already available, open directly
+      this.stateService.openDocumentViewer(document.id);
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Close document viewer and return to upload screen
+   */
+  closeDocumentViewer(): void {
+    this.stateService.closeDocumentViewer();
+
+    // Reset state to show welcome screen (not the chat with user prompt)
+    this.stateService.setShowChat(false);
+    this.stateService.clearConversationMessages();
+    this.stateService.setActiveConversationId(null);
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Get active document for viewer
+   */
+  getActiveDocument(): AnalyzedDocument | undefined {
+    return this.stateService.getActiveDocument();
+  }
+
+  /**
+   * Export document analysis as PDF
+   */
+  onExportPdf(document: AnalyzedDocumentData): void {
+    // TODO: Implement PDF export
+    console.log('Exporting as PDF:', document.fileName);
+    this.notificationService.info('Coming Soon', 'PDF export will be available soon');
+  }
+
+  /**
+   * Export document analysis as Word
+   */
+  onExportWord(document: AnalyzedDocumentData): void {
+    // TODO: Implement Word export
+    console.log('Exporting as Word:', document.fileName);
+    this.notificationService.info('Coming Soon', 'Word export will be available soon');
+  }
+
+  /**
+   * Save analysis to File Manager
+   */
+  onSaveToFileManager(document: AnalyzedDocumentData): void {
+    // TODO: Implement File Manager integration
+    console.log('Saving to File Manager:', document.fileName);
+    this.notificationService.info('Coming Soon', 'File Manager integration will be available soon');
+  }
+
+  /**
+   * LEGACY: Display analysis results in chat (kept for backwards compatibility)
+   * This method is no longer used but kept for reference
+   */
+  private displayAnalysisResultsLegacy(result: any): void {
     // Format structured analysis with PURE HTML (no markdown symbols)
     let formattedAnalysis = '';
 
@@ -2055,7 +2511,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     console.log('📈 New analysis - originalAnalysis preview:', originalAnalysis.substring(0, 500));
 
     // Add to local state
-    console.log('🔍 Setting analysisId from result.databaseId:', result.databaseId);
+    // Store BOTH IDs: result.id (UUID string for API) and result.databaseId (number for action items)
+    console.log('🔍 Setting analysisId from result.id:', result.id, 'databaseId:', result.databaseId);
     const assistantMessage = {
       role: 'assistant' as 'assistant',
       content: formattedAnalysis,
@@ -2084,11 +2541,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       if (conv && conv.backendConversationId) {
         // Persist assistant message to database with metadata
         // IMPORTANT: Save ORIGINAL MARKDOWN (not HTML) so tabs can parse sections on reload
+        // Store result.id (UUID) for API calls, result.databaseId (number) for action items
         console.log('💾 Saving to database:', {
           sessionId: conv.backendConversationId,
           contentLength: originalAnalysis.length,
           contentPreview: originalAnalysis.substring(0, 100),
-          metadata: { analysisId: result.databaseId }
+          metadata: { analysisId: result.id, databaseId: result.databaseId }
         });
 
         this.legalResearchService.addMessageToSession(
@@ -2096,7 +2554,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.currentUser.id,
           'assistant',
           originalAnalysis,  // ← Save markdown, not formattedAnalysis
-          { analysisId: result.databaseId }
+          { analysisId: result.id, databaseId: result.databaseId }
         ).pipe(takeUntil(this.destroy$))
          .subscribe({
            next: (response) => {
@@ -2132,6 +2590,59 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Get badge color class based on document type
+   */
+  getDocTypeColorClass(docType: string): string {
+    if (!docType) return 'bg-secondary text-white';
+
+    const type = docType.toLowerCase();
+
+    // Pleadings - Red
+    if (type.includes('complaint') || type.includes('answer') || type.includes('counterclaim') ||
+        type.includes('petition') || type.includes('pleading')) {
+      return 'bg-danger-subtle text-danger';
+    }
+
+    // Motions - Purple
+    if (type.includes('motion') || type.includes('suppress') || type.includes('dismiss') ||
+        type.includes('compel') || type.includes('protective')) {
+      return 'bg-purple-subtle text-purple';
+    }
+
+    // Discovery - Teal/Cyan
+    if (type.includes('discovery') || type.includes('interrogator') || type.includes('deposition') ||
+        type.includes('subpoena') || type.includes('request for')) {
+      return 'bg-info-subtle text-info';
+    }
+
+    // Court Orders - Yellow/Warning
+    if (type.includes('order') || type.includes('judgment') || type.includes('decree') ||
+        type.includes('injunction') || type.includes('ruling')) {
+      return 'bg-warning-subtle text-warning';
+    }
+
+    // Contracts - Green
+    if (type.includes('contract') || type.includes('agreement') || type.includes('lease') ||
+        type.includes('nda') || type.includes('settlement')) {
+      return 'bg-success-subtle text-success';
+    }
+
+    // Briefs/Appellate - Indigo
+    if (type.includes('brief') || type.includes('appellate') || type.includes('appeal') ||
+        type.includes('memo')) {
+      return 'bg-indigo-subtle text-indigo';
+    }
+
+    // Correspondence - Orange
+    if (type.includes('letter') || type.includes('correspondence') || type.includes('notice')) {
+      return 'bg-orange-subtle text-orange';
+    }
+
+    // Default - Secondary
+    return 'bg-secondary-subtle text-secondary';
   }
 
   /**

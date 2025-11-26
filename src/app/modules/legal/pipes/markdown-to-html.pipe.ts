@@ -219,6 +219,83 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       text = text.replace(/⚠️\s*\*\*Assumption\*\*:/g,
         `<span class="assumption-badge">⚠️ <strong>Assumption</strong>:</span>`);
 
+      // Helper function to generate meter HTML
+      const createMeter = (level: string, label: string): string => {
+        const meterClass = level.toLowerCase();
+        return `<span class="severity-meter meter-${meterClass}"><span class="meter-bars"><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span></span><span class="meter-label">${label}</span></span>`;
+      };
+
+      // Emoji pattern: Match warning emoji (with or without variation selector)
+      // ⚠️ is U+26A0 + U+FE0F, ⚠ is just U+26A0
+      const warnEmoji = '(?:⚠️|⚠)';
+
+      // Severity meters WITH ⚠️ prefix - match full phrases like "HIGH SEVERITY"
+      // Order matters: match longer phrases first (HIGH SEVERITY before HIGH)
+      text = text.replace(new RegExp(warnEmoji + '\\s*(CRITICAL)\\s*:?', 'gi'),
+        (_match, label) => createMeter('critical', label.toUpperCase()));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(HIGH\\s+SEVERITY)\\s*:?', 'gi'),
+        (_match, label) => createMeter('critical', label.toUpperCase().replace(/\s+/g, ' ')));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(MAJOR)\\s*:?', 'gi'),
+        (_match, label) => createMeter('high', label.toUpperCase()));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(HIGH)\\s*:?', 'gi'),
+        (_match, label) => createMeter('high', label.toUpperCase()));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(MODERATE\\s+SEVERITY)\\s*:?', 'gi'),
+        (_match, label) => createMeter('medium', label.toUpperCase().replace(/\s+/g, ' ')));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(MEDIUM\\s+SEVERITY)\\s*:?', 'gi'),
+        (_match, label) => createMeter('medium', label.toUpperCase().replace(/\s+/g, ' ')));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(MODERATE|MEDIUM)\\s*:?', 'gi'),
+        (_match, label) => createMeter('medium', label.toUpperCase()));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(LOW\\s+SEVERITY)\\s*:?', 'gi'),
+        (_match, label) => createMeter('low', label.toUpperCase().replace(/\s+/g, ' ')));
+      text = text.replace(new RegExp(warnEmoji + '\\s*(LOW|MINOR)\\s*:?', 'gi'),
+        (_match, label) => createMeter('low', label.toUpperCase()));
+
+      // Severity meters WITHOUT ⚠️ - standalone at line start
+      // Match full phrases first, then single words
+      // HIGH SEVERITY / MODERATE SEVERITY / LOW SEVERITY at line start
+      text = text.replace(/^(HIGH\s+SEVERITY)\s*:?\s*/gm,
+        (_match, label) => createMeter('critical', label.toUpperCase().replace(/\s+/g, ' ')) + ' ');
+      text = text.replace(/^(MODERATE\s+SEVERITY|MEDIUM\s+SEVERITY)\s*:?\s*/gm,
+        (_match, label) => createMeter('medium', label.toUpperCase().replace(/\s+/g, ' ')) + ' ');
+      text = text.replace(/^(LOW\s+SEVERITY)\s*:?\s*/gm,
+        (_match, label) => createMeter('low', label.toUpperCase().replace(/\s+/g, ' ')) + ' ');
+
+      // Single severity words at line start (only when NOT followed by SEVERITY)
+      text = text.replace(/^(CRITICAL)\s*:?\s*(?!SEVERITY)/gm,
+        (_match, label) => createMeter('critical', label) + ' ');
+      text = text.replace(/^(MAJOR)\s*:?\s*(?!SEVERITY)/gm,
+        (_match, label) => createMeter('high', label) + ' ');
+      text = text.replace(/^(HIGH)\s*:?\s*(?!SEVERITY)/gm,
+        (_match, label) => createMeter('high', label) + ' ');
+      text = text.replace(/^(MODERATE|MEDIUM)\s*:?\s*(?!SEVERITY)/gm,
+        (_match, label) => createMeter('medium', label) + ' ');
+      text = text.replace(/^(LOW|MINOR)\s*:?\s*(?!SEVERITY)/gm,
+        (_match, label) => createMeter('low', label) + ' ');
+
+      // Generic severity pattern: ⚠️ [SEVERITY]:
+      text = text.replace(new RegExp(warnEmoji + '\\s*\\[SEVERITY\\]:?', 'gi'),
+        createMeter('medium', 'SEVERITY'));
+
+      // Threat level meters: ⚠️ [THREAT LEVEL - X]:
+      text = text.replace(new RegExp(warnEmoji + '\\s*\\[THREAT\\s*LEVEL\\s*-\\s*(HIGH|MEDIUM|LOW)\\]:?', 'gi'),
+        (_match, level) => createMeter(level.toLowerCase(), `${level} THREAT`));
+
+      // Urgency meters: ⚠️ [URGENCY - X]:
+      text = text.replace(new RegExp(warnEmoji + '\\s*\\[URGENCY\\s*-\\s*(IMMEDIATE|HIGH|STANDARD)\\]:?', 'gi'),
+        (_match, level) => {
+          const meterLevel = level.toLowerCase() === 'immediate' ? 'critical' :
+                            level.toLowerCase() === 'high' ? 'high' : 'medium';
+          return createMeter(meterLevel, level);
+        });
+
+      // Positive outcome badges (✅ [HELPFUL], ✅ Favorable, etc.)
+      text = text.replace(/✅\s*\[?(HELPFUL|FAVORABLE|GOOD|POSITIVE)\]?:?/gi,
+        `<span class="outcome-positive"><i class="ri-checkbox-circle-fill"></i> $1</span>`);
+
+      // Negative outcome badges (❌ [SEVERITY], ❌ Unfavorable, etc.)
+      text = text.replace(/❌\s*\[?(SEVERITY|UNFAVORABLE|BAD|NEGATIVE|DENIED)\]?:?/gi,
+        `<span class="outcome-negative"><i class="ri-close-circle-fill"></i> $1</span>`);
+
       // REMOVED: Citation highlighting (redundant - citations are now clickable links)
       // The following citation types are now handled by createCitationLinks() and styled as links:
       // - Mass. R. Civ. P., Mass. R. Crim. P., M.G.L.
@@ -260,7 +337,14 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       parts[i] = text;
     }
 
-    return parts.join('');
+    // Join parts back together
+    let finalHtml = parts.join('');
+
+    // Cleanup: Remove orphaned warning emojis that appear before severity meters
+    // (This happens when emoji and severity text were in separate HTML elements due to bold/italic formatting)
+    finalHtml = finalHtml.replace(/(?:⚠️|⚠)\s*(?:<[^>]*>\s*)*(<span class="severity-meter)/g, '$1');
+
+    return finalHtml;
   }
 
   /**

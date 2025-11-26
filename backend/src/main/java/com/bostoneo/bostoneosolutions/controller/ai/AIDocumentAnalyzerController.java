@@ -1,8 +1,10 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.model.ActionItem;
+import com.bostoneo.bostoneosolutions.model.AIAnalysisMessage;
 import com.bostoneo.bostoneosolutions.model.TimelineEvent;
 import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
+import com.bostoneo.bostoneosolutions.repository.AIAnalysisMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.bostoneo.bostoneosolutions.service.AIDocumentAnalysisService;
 import com.bostoneo.bostoneosolutions.util.CloudStorageUrlConverter;
@@ -30,6 +32,7 @@ public class AIDocumentAnalyzerController {
     private final AIDocumentAnalysisService documentAnalysisService;
     private final ActionItemRepository actionItemRepository;
     private final TimelineEventRepository timelineEventRepository;
+    private final AIAnalysisMessageRepository analysisMessageRepository;
     private final CloudStorageUrlConverter urlConverter;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -129,6 +132,37 @@ public class AIDocumentAnalyzerController {
                     result.put("timestamp", analysis.getCreatedAt().toString());
 
                     // Add detected type and metadata
+                    result.put("detectedType", analysis.getDetectedType());
+                    result.put("extractedMetadata", analysis.getExtractedMetadata());
+                    result.put("requiresOcr", analysis.getRequiresOcr());
+
+                    if ("completed".equals(analysis.getStatus())) {
+                        Map<String, Object> analysisData = new HashMap<>();
+                        analysisData.put("fullAnalysis", analysis.getAnalysisResult());
+                        analysisData.put("summary", analysis.getSummary());
+                        analysisData.put("riskScore", analysis.getRiskScore());
+                        analysisData.put("riskLevel", analysis.getRiskLevel());
+                        result.put("analysis", analysisData);
+                    }
+
+                    return ResponseEntity.ok(result);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/analysis/db/{databaseId}")
+    public ResponseEntity<Map<String, Object>> getAnalysisByDatabaseId(@PathVariable Long databaseId) {
+        return documentAnalysisService.getAnalysisByDatabaseId(databaseId)
+                .map(analysis -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("id", analysis.getAnalysisId());
+                    result.put("databaseId", analysis.getId());
+                    result.put("fileName", analysis.getFileName());
+                    result.put("fileSize", analysis.getFileSize());
+                    result.put("analysisType", analysis.getAnalysisType());
+                    result.put("status", analysis.getStatus());
+                    result.put("timestamp", analysis.getCreatedAt().toString());
+
                     result.put("detectedType", analysis.getDetectedType());
                     result.put("extractedMetadata", analysis.getExtractedMetadata());
                     result.put("requiresOcr", analysis.getRequiresOcr());
@@ -307,6 +341,87 @@ public class AIDocumentAnalyzerController {
         List<TimelineEvent> events = timelineEventRepository.findByAnalysisIdOrderByEventDateAsc(analysisId);
         log.info("Found {} timeline events", events.size());
         return ResponseEntity.ok(events);
+    }
+
+    // ==========================================
+    // Ask AI Message Endpoints
+    // ==========================================
+
+    /**
+     * Get all messages for a specific document analysis (Ask AI tab history)
+     */
+    @GetMapping("/analysis/{analysisId}/messages")
+    public ResponseEntity<Map<String, Object>> getAnalysisMessages(@PathVariable Long analysisId) {
+        log.info("Fetching Ask AI messages for analysis ID: {}", analysisId);
+        List<AIAnalysisMessage> messages = analysisMessageRepository.findByAnalysisIdOrderByCreatedAtAsc(analysisId);
+        log.info("Found {} messages", messages.size());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("messages", messages);
+        response.put("count", messages.size());
+        response.put("analysisId", analysisId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Add a new message to a document analysis (Ask AI tab)
+     */
+    @PostMapping("/analysis/{analysisId}/messages")
+    public ResponseEntity<AIAnalysisMessage> addAnalysisMessage(
+            @PathVariable Long analysisId,
+            @RequestBody Map<String, Object> request) {
+
+        String role = (String) request.get("role");
+        String content = (String) request.get("content");
+        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+
+        if (role == null || content == null) {
+            log.warn("Invalid message request: role and content are required");
+            return ResponseEntity.badRequest().build();
+        }
+
+        log.info("Adding {} message to analysis {}", role, analysisId);
+
+        AIAnalysisMessage message = new AIAnalysisMessage();
+        message.setAnalysisId(analysisId);
+        message.setRole(role);
+        message.setContent(content);
+        message.setUserId(userId);
+
+        AIAnalysisMessage saved = analysisMessageRepository.save(message);
+        log.info("Saved message with ID: {}", saved.getId());
+
+        return ResponseEntity.ok(saved);
+    }
+
+    /**
+     * Get message count for a specific analysis (for sidebar indicator)
+     */
+    @GetMapping("/analysis/{analysisId}/messages/count")
+    public ResponseEntity<Map<String, Object>> getMessageCount(@PathVariable Long analysisId) {
+        long count = analysisMessageRepository.countByAnalysisId(analysisId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("count", count);
+        response.put("analysisId", analysisId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Delete all messages for a specific analysis
+     */
+    @DeleteMapping("/analysis/{analysisId}/messages")
+    public ResponseEntity<Map<String, Object>> deleteAnalysisMessages(@PathVariable Long analysisId) {
+        log.info("Deleting all messages for analysis ID: {}", analysisId);
+        analysisMessageRepository.deleteByAnalysisId(analysisId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("analysisId", analysisId);
+
+        return ResponseEntity.ok(response);
     }
 
 }

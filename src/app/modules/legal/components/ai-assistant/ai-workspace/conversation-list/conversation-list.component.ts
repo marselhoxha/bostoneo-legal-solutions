@@ -27,15 +27,43 @@ export class ConversationListComponent {
   // Expose enum to template
   ConversationType = ConversationType;
 
+  /**
+   * Filter out document analysis conversations (Upload/Summarize)
+   * since they appear in Recent Documents section instead
+   */
   get filteredConversations(): Conversation[] {
+    // First filter out document analysis types
+    const nonAnalysisConversations = this.conversations.filter(conv =>
+      conv.type !== ConversationType.Upload && conv.type !== ConversationType.Summarize
+    );
+
     if (!this.searchQuery.trim()) {
-      return this.conversations;
+      return nonAnalysisConversations;
     }
 
     const query = this.searchQuery.toLowerCase();
-    return this.conversations.filter(conv =>
+    return nonAnalysisConversations.filter(conv =>
       conv.title.toLowerCase().includes(query)
     );
+  }
+
+  /**
+   * Filtered grouped conversations (excluding document analysis types)
+   */
+  get filteredGroupedConversations(): GroupedConversations {
+    if (!this.groupedConversations) {
+      return { past90Days: [], older: [] };
+    }
+
+    const filterAnalysis = (convs: Conversation[]) =>
+      convs.filter(conv =>
+        conv.type !== ConversationType.Upload && conv.type !== ConversationType.Summarize
+      );
+
+    return {
+      past90Days: filterAnalysis(this.groupedConversations.past90Days || []),
+      older: filterAnalysis(this.groupedConversations.older || [])
+    };
   }
 
   onConversationClick(conversation: Conversation): void {

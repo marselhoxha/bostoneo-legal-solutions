@@ -33,11 +33,22 @@ export interface AnalysisHistory {
   analysisId: string;
   fileName: string;
   fileType: string;
+  detectedType?: string;  // AI-detected legal document type (Complaint, Motion, etc.)
   analysisType: string;
   status: string;
   riskLevel?: string;
   summary?: string;
   createdAt: string;
+}
+
+export interface AnalysisMessage {
+  id: number;
+  analysisId: number;
+  role: 'user' | 'assistant';
+  content: string;
+  userId?: number;
+  createdAt: string;
+  metadata?: string;
 }
 
 export interface UploadProgress {
@@ -204,6 +215,18 @@ export class DocumentAnalyzerService {
     );
   }
 
+  getAnalysisByDatabaseId(databaseId: number): Observable<DocumentAnalysisResult> {
+    return this.http.get<DocumentAnalysisResult>(
+      `${this.apiUrl}/analysis/db/${databaseId}`,
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to fetch analysis by database ID:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
   downloadAnalysisReport(analysisId: string): Observable<Blob> {
     return this.http.get(
       `${this.apiUrl}/download/${analysisId}`,
@@ -298,5 +321,72 @@ export class DocumentAnalyzerService {
   resetAnalysisState(): void {
     this.analysisStatusSubject.next('idle');
     this.uploadProgressSubject.next({ loaded: 0, total: 0, percentage: 0 });
+  }
+
+  // ==========================================
+  // Ask AI Message Methods
+  // ==========================================
+
+  /**
+   * Get all messages for a specific document analysis
+   */
+  getAnalysisMessages(analysisId: number): Observable<AnalysisMessage[]> {
+    return this.http.get<{ messages: AnalysisMessage[], count: number }>(
+      `${this.apiUrl}/analysis/${analysisId}/messages`,
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.messages || []),
+      catchError(error => {
+        console.error('Failed to fetch analysis messages:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Add a message to a document analysis (Ask AI tab)
+   */
+  addAnalysisMessage(analysisId: number, role: 'user' | 'assistant', content: string, userId?: number): Observable<AnalysisMessage> {
+    return this.http.post<AnalysisMessage>(
+      `${this.apiUrl}/analysis/${analysisId}/messages`,
+      { role, content, userId: userId || 1 },
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to add analysis message:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get message count for a specific analysis (for sidebar indicator)
+   */
+  getMessageCount(analysisId: number): Observable<number> {
+    return this.http.get<{ count: number }>(
+      `${this.apiUrl}/analysis/${analysisId}/messages/count`,
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.count || 0),
+      catchError(error => {
+        console.error('Failed to get message count:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Delete all messages for a specific analysis
+   */
+  deleteAnalysisMessages(analysisId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/analysis/${analysisId}/messages`,
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to delete analysis messages:', error);
+        return throwError(() => error);
+      })
+    );
   }
 }

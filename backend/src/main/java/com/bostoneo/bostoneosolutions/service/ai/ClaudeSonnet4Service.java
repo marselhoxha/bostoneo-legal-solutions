@@ -1087,7 +1087,7 @@ public class ClaudeSonnet4Service implements AIService {
         log.info("🔄 Agentic iteration {}/{}", iteration + 1, MAX_ITERATIONS);
 
         AIRequest request = new AIRequest();
-        request.setModel("claude-sonnet-4-5-20250929");
+        request.setModel("claude-opus-4-5-20251101");
         request.setMax_tokens(12000); // Increased from 8000 to allow comprehensive analysis with full citation verification
 
         List<ToolDefinition> tools = legalResearchTools.getToolDefinitions();
@@ -1275,7 +1275,7 @@ public class ClaudeSonnet4Service implements AIService {
 
     private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking) {
         AIRequest request = new AIRequest();
-        request.setModel("claude-sonnet-4-5-20250929");
+        request.setModel("claude-opus-4-5-20251101");
 
         // Smart token allocation based on query complexity
         int maxTokens;

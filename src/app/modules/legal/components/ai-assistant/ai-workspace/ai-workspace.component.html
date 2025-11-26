@@ -14,9 +14,181 @@
   <div class="sidebar-backdrop" [class.show]="sidebarOpen$ | async" (click)="closeSidebar()"></div>
 
   <!-- ========================================== -->
-  <!-- LEFT SIDEBAR: Conversation History -->
+  <!-- LEFT SIDEBAR: Document Analysis (Upload mode) -->
   <!-- ========================================== -->
-  <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async" *ngIf="!(draftingMode$ | async)">
+  <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
+         *ngIf="!(draftingMode$ | async) && selectedTask === 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
+    <div class="conversation-sidebar-header">
+      <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
+              (click)="triggerFileUpload()">
+        <i class="ri-add-line fs-16 me-2"></i>New Analysis
+      </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="conversation-search">
+      <div class="search-input-wrapper">
+        <i class="ri-search-line search-icon"></i>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Search documents..."
+          [(ngModel)]="documentSearchQuery">
+      </div>
+    </div>
+
+    <!-- Document Analyses Section -->
+    <div class="document-analyses-section">
+      <div class="section-header">
+        <i class="ri-file-search-line me-2"></i>
+        <span>Document Analyses</span>
+      </div>
+
+      <!-- Loading State -->
+      <div class="conversation-loading" *ngIf="loadingAnalyses">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted small">Loading analyses...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="conversation-empty" *ngIf="!loadingAnalyses && (analyzedDocuments$ | async)?.length === 0">
+        <i class="ri-file-text-line empty-icon"></i>
+        <p class="empty-title">No documents analyzed yet</p>
+        <p class="empty-description">Upload a document to get started</p>
+      </div>
+
+      <!-- Documents List -->
+      <div class="documents-list" *ngIf="(analyzedDocuments$ | async)?.length > 0">
+        <div
+          *ngFor="let doc of filteredAnalyzedDocuments"
+          class="document-item"
+          [class.active]="(activeDocumentId$ | async) === doc.id"
+          (click)="openDocumentInViewer(doc)">
+          <div class="document-icon">
+            <i class="ri-file-text-line"></i>
+          </div>
+          <div class="document-info">
+            <div class="document-name" [title]="doc.fileName">
+              {{ doc.fileName | slice:0:22 }}{{ doc.fileName.length > 22 ? '...' : '' }}
+            </div>
+            <div class="document-meta">
+              <span class="badge me-1" [ngClass]="getDocTypeColorClass(doc.detectedType)" style="font-size: 0.65rem;">
+                {{ doc.detectedType }}
+              </span>
+              <span class="document-date">
+                {{ doc.timestamp | date:'MMM d' }}
+              </span>
+            </div>
+          </div>
+          <div class="document-actions" (click)="$event.stopPropagation()">
+            <button class="action-btn" (click)="deleteAnalysis(doc)" title="Delete analysis">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View All Link -->
+      <div class="view-all-link" *ngIf="(analyzedDocuments$ | async)?.length > 10">
+        <button class="btn btn-link btn-sm" (click)="openAnalysisHistoryModal()">
+          <i class="ri-history-line me-1"></i>
+          View All Analyses
+        </button>
+      </div>
+    </div>
+
+    <!-- Collections Section -->
+    <div class="collections-section">
+      <div class="section-header">
+        <i class="ri-folder-line me-2"></i>
+        <span>Collections</span>
+        <button class="btn btn-sm btn-link ms-auto p-0"
+                (click)="showNewCollectionModal = true"
+                title="Create new collection">
+          <i class="ri-add-line"></i>
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div class="text-center py-2" *ngIf="loadingCollections">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="collection-empty" *ngIf="!loadingCollections && (collections$ | async)?.length === 0">
+        <p class="text-muted small mb-2">No collections yet</p>
+        <button class="btn btn-sm btn-soft-primary" (click)="showNewCollectionModal = true">
+          <i class="ri-add-line me-1"></i>Create Collection
+        </button>
+      </div>
+
+      <!-- Collections List -->
+      <div class="collections-list" *ngIf="!loadingCollections && (collections$ | async)?.length > 0">
+        <div class="collection-item"
+             *ngFor="let collection of (collections$ | async)"
+             (click)="openCollection(collection)">
+          <div class="collection-icon" [style.background-color]="collection.color + '20'">
+            <i [class]="collection.icon || 'ri-folder-line'" [style.color]="collection.color"></i>
+          </div>
+          <div class="collection-info">
+            <div class="collection-name">{{ collection.name }}</div>
+            <div class="collection-meta">
+              <span class="doc-count">{{ collection.documentCount }} doc{{ collection.documentCount !== 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+          <div class="collection-actions" (click)="$event.stopPropagation()">
+            <button class="action-btn" (click)="deleteCollection(collection)" title="Delete collection">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Collection Modal -->
+    <div class="new-collection-modal-backdrop" *ngIf="showNewCollectionModal" (click)="showNewCollectionModal = false">
+      <div class="new-collection-modal card" (click)="$event.stopPropagation()">
+        <div class="card-header">
+          <h6 class="mb-0">Create New Collection</h6>
+          <button type="button" class="btn-close" (click)="showNewCollectionModal = false"></button>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Collection Name</label>
+            <input type="text"
+                   class="form-control"
+                   #collectionNameInput
+                   placeholder="e.g., Smith v. Jones Case">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description (optional)</label>
+            <textarea class="form-control"
+                      #collectionDescInput
+                      rows="2"
+                      placeholder="Brief description..."></textarea>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-light" (click)="showNewCollectionModal = false">Cancel</button>
+          <button type="button" class="btn btn-primary"
+                  (click)="createCollection(collectionNameInput.value, collectionDescInput.value)">
+            Create Collection
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ========================================== -->
+  <!-- LEFT SIDEBAR: Conversations (Non-Upload modes) -->
+  <!-- ========================================== -->
+  <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
+         *ngIf="!(draftingMode$ | async) && selectedTask !== 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
     <div class="conversation-sidebar-header">
       <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
               (click)="startNewConversation()">
@@ -92,24 +264,31 @@
         </div>
       </div>
     </div>
-
-  
   </aside>
 
   <!-- ========================================== -->
   <!-- MAIN CONTENT AREA -->
   <!-- ========================================== -->
-  <main class="main-content-area">
+  <main class="main-content-area" [class.full-width]="(documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async)">
+
+    <!-- Document Analysis Viewer (Full-width when viewing document) -->
+    <app-document-analysis-viewer
+      *ngIf="(documentViewerMode$ | async) && getActiveDocument()"
+      [document]="getActiveDocument()!"
+      (close)="closeDocumentViewer()"
+      (exportPdf)="onExportPdf($event)"
+      (exportWord)="onExportWord($event)"
+      (saveToFileManager)="onSaveToFileManager($event)">
+    </app-document-analysis-viewer>
 
     <!-- Welcome Screen (No active conversation) -->
-    <div class="welcome-screen" *ngIf="!(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
+    <div class="welcome-screen" *ngIf="!(documentViewerMode$ | async) && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
       <div class="welcome-header">
-
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
-        <p class="welcome-subtitle">Which legal task can AI accelerate for you today?</p>
+        <p class="welcome-subtitle">AI-Powered Document Analysis for Legal Professionals</p>
       </div>
 
-      <!-- Action Cards Grid -->
+      <!-- Action Cards Grid (always shown for navigation) -->
       <div class="action-cards-main mb-4">
         <div
           class="action-card"
@@ -166,6 +345,81 @@
           <h6 class="mb-3">{{ getExamplesTitle() }}</h6>
           <div class="example-list">
             <p class="text-muted mb-2" *ngFor="let example of getExamples()">• {{ example }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Document Section (shown when Upload task is selected) -->
+      <div class="primary-upload-section mb-4" *ngIf="selectedTask === 'upload'">
+        <div class="upload-card card">
+          <div class="card-body">
+            <!-- Drag & Drop Zone -->
+            <div class="upload-drop-zone-primary"
+                 [class.dragover]="isDragover"
+                 (drop)="onFileDrop($event)"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (click)="fileInput.click()">
+              <input #fileInput
+                     type="file"
+                     hidden
+                     (change)="onFileSelect($event)"
+                     accept=".pdf,.docx,.doc,.txt"
+                     multiple>
+
+              <div class="upload-icon-large">
+                <i class="ri-upload-cloud-2-line"></i>
+              </div>
+              <h5 class="upload-title">Drop documents here or click to upload</h5>
+              <p class="upload-description text-muted">
+                Supports PDF, DOCX, DOC, TXT • Auto-detection enabled
+              </p>
+            </div>
+
+            <!-- URL Fetch Input -->
+            <div class="url-fetch-section mt-3">
+              <div class="input-group">
+                <span class="input-group-text"><i class="ri-link"></i></span>
+                <input type="url"
+                       class="form-control"
+                       [(ngModel)]="documentUrl"
+                       name="documentUrl"
+                       placeholder="Or paste document URL...">
+                <button type="button"
+                        class="btn btn-primary"
+                        (click)="fetchFromUrl()"
+                        [disabled]="!documentUrl || isFetchingUrl">
+                  <i class="ri-download-cloud-line me-1"></i>
+                  {{ isFetchingUrl ? 'Fetching...' : 'Fetch' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Uploaded Files List -->
+            <div class="uploaded-files-list mt-3" *ngIf="uploadedFiles.length > 0">
+              <h6 class="mb-2">Ready to analyze ({{uploadedFiles.length}})</h6>
+              <div class="file-item" *ngFor="let file of uploadedFiles; let i = index">
+                <div class="file-info">
+                  <i class="ri-file-text-line file-icon"></i>
+                  <div class="file-details">
+                    <div class="file-name">{{file.name}}</div>
+                    <div class="file-meta">{{formatFileSize(file.size)}}</div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-light" (click)="removeFile(i)">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+
+              <!-- Analyze Button -->
+              <button type="button"
+                      class="btn btn-primary w-100 mt-3"
+                      (click)="startCustomDraft()"
+                      [disabled]="uploadedFiles.length === 0 || (isGenerating$ | async)">
+                <i class="ri-file-search-line me-2"></i>
+                Analyze {{ uploadedFiles.length }} Document{{ uploadedFiles.length > 1 ? 's' : '' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -245,117 +499,6 @@
            *ngIf="selectedTask === 'draft' && showDocTypeWarning && !selectedDocTypePill">
         <i class="ri-alert-line me-1"></i>
         <strong>Please select a document type above</strong> to ensure proper citation formatting
-      </div>
-
-      <!-- Upload Document Section (when Upload task is selected) -->
-      <div class="upload-document-section card mb-4" *ngIf="selectedTask === 'upload'">
-        <div class="card-body">
-          <h6 class="mb-3">
-            <i class="ri-upload-cloud-line me-2"></i>
-            Upload Document for Analysis
-          </h6>
-
-          <!-- Auto-Detection Notice -->
-          <div class="alert alert-info mb-4" role="alert">
-            <i class="ri-information-line me-2"></i>
-            <strong>Automatic Strategic Analysis</strong>
-            <p class="mb-0 mt-1 small">
-              Our AI automatically detects your document type (Complaint, Contract, Lease, Motion, etc.)
-              and provides strategic, adversarial analysis tailored to the document - no configuration needed.
-            </p>
-          </div>
-
-          <!-- URL Fetch Input -->
-          <div class="url-fetch-section mb-3">
-            <div class="input-group">
-              <span class="input-group-text"><i class="ri-link"></i></span>
-              <input type="url"
-                     class="form-control"
-                     [(ngModel)]="documentUrl"
-                     name="documentUrl"
-                     placeholder="Or paste document URL (PDF, DOCX)...">
-              <button type="button"
-                      class="btn btn-primary"
-                      (click)="fetchFromUrl()"
-                      [disabled]="!documentUrl || isFetchingUrl">
-                <i class="ri-download-cloud-line me-1"></i>
-                {{ isFetchingUrl ? 'Fetching...' : 'Fetch' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Drag & Drop Zone -->
-          <div class="upload-drop-zone"
-               [class.dragover]="isDragover"
-               (drop)="onFileDrop($event)"
-               (dragover)="onDragOver($event)"
-               (dragleave)="onDragLeave($event)"
-               (click)="fileInput.click()">
-            <input #fileInput
-                   type="file"
-                   hidden
-                   (change)="onFileSelect($event)"
-                   accept=".pdf,.docx,.doc,.txt"
-                   multiple>
-
-            <div class="upload-icon">
-              <i class="ri-upload-cloud-2-line"></i>
-            </div>
-            <p class="upload-text">
-              <strong>Drop files here</strong> or click to browse
-            </p>
-            <p class="upload-formats text-muted">
-              Supports PDF, DOCX, DOC, TXT • Max 10 files • 25MB each • Auto-detection enabled
-            </p>
-          </div>
-
-          <!-- Uploaded Files List -->
-          <div class="uploaded-files-list" *ngIf="uploadedFiles.length > 0">
-            <h6 class="mt-4 mb-3">Uploaded Files ({{uploadedFiles.length}})</h6>
-            <div class="file-item" *ngFor="let file of uploadedFiles; let i = index">
-              <div class="file-info">
-                <i class="ri-file-text-line file-icon"></i>
-                <div class="file-details">
-                  <div class="file-name">
-                    {{file.name}}
-                    <span class="doc-type-badge" *ngIf="file.detectedType">
-                      {{file.detectedType}}
-                    </span>
-                  </div>
-                  <div class="file-meta">
-                    {{formatFileSize(file.size)}} •
-                    <span [class]="'file-status ' + file.status">{{file.status}}</span>
-                    <span *ngIf="file.isOCR" class="ocr-badge">
-                      <i class="ri-scan-line"></i> OCR
-                    </span>
-                  </div>
-                  <div class="file-metadata" *ngIf="file.metadata">
-                    <small class="text-muted">
-                      <span *ngIf="file.metadata.parties">{{file.metadata.parties}} •</span>
-                      <span *ngIf="file.metadata.date">{{file.metadata.date}} •</span>
-                      <span *ngIf="file.metadata.court">{{file.metadata.court}}</span>
-                    </small>
-                  </div>
-                </div>
-              </div>
-              <div class="file-actions">
-                <button type="button"
-                        class="btn btn-sm btn-info me-1"
-                        (click)="viewAnalysis(file)"
-                        *ngIf="file.status === 'completed'"
-                        title="View Analysis">
-                  <i class="ri-eye-line"></i>
-                </button>
-                <button type="button"
-                        class="btn btn-sm btn-light"
-                        (click)="removeFile(i)"
-                        *ngIf="file.status !== 'uploading'">
-                  <i class="ri-delete-bin-line"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Main Prompt Input -->
@@ -896,8 +1039,8 @@
       </div>
     </div>
 
-    <!-- Chat Container (Active conversation - full width when not in drafting mode) -->
-    <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async)">
+    <!-- Chat Container (Active conversation - full width when not in drafting mode, hidden when document viewer is open) -->
+    <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async) && !(documentViewerMode$ | async)">
       <div class="chat-messages-area">
         <ul class="list-unstyled chat-conversation-list">
 

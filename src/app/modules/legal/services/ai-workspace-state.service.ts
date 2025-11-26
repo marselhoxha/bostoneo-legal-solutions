@@ -6,10 +6,41 @@ import { WorkflowStep } from '../models/workflow.model';
 import { ConversationType } from '../models/enums/conversation-type.enum';
 import { WorkflowStepStatus } from '../models/enums/workflow-step-status.enum';
 
+// Interface for analyzed documents
+export interface AnalyzedDocument {
+  id: string;
+  databaseId: number;
+  fileName: string;
+  fileSize: number;
+  detectedType: string;
+  riskLevel?: string;
+  riskScore?: number;
+  analysis?: {
+    fullAnalysis: string;
+    summary?: string;
+    riskScore?: number;
+    riskLevel?: string;
+    keyFindings?: string[];
+    recommendations?: string[];
+  };
+  extractedMetadata?: string;
+  timestamp: number;
+  status: 'analyzing' | 'completed' | 'failed';
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AiWorkspaceStateService {
+
+  // ===== ANALYZED DOCUMENTS STATE =====
+  private analyzedDocumentsSubject = new BehaviorSubject<AnalyzedDocument[]>([]);
+  private activeDocumentIdSubject = new BehaviorSubject<string | null>(null);
+  private documentViewerModeSubject = new BehaviorSubject<boolean>(false);
+
+  public analyzedDocuments$ = this.analyzedDocumentsSubject.asObservable();
+  public activeDocumentId$ = this.activeDocumentIdSubject.asObservable();
+  public documentViewerMode$ = this.documentViewerModeSubject.asObservable();
 
   // ===== CONVERSATION STATE =====
   private conversationsSubject = new BehaviorSubject<Conversation[]>([]);
@@ -46,6 +77,7 @@ export class AiWorkspaceStateService {
   private selectedTaskSubject = new BehaviorSubject<ConversationType>(ConversationType.Draft);
   private showVersionHistorySubject = new BehaviorSubject<boolean>(false);
   private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
+  private viewerSidebarCollapsedSubject = new BehaviorSubject<boolean>(false);
 
   public showChat$ = this.showChatSubject.asObservable();
   public showBottomSearchBar$ = this.showBottomSearchBarSubject.asObservable();
@@ -54,6 +86,7 @@ export class AiWorkspaceStateService {
   public selectedTask$ = this.selectedTaskSubject.asObservable();
   public showVersionHistory$ = this.showVersionHistorySubject.asObservable();
   public sidebarOpen$ = this.sidebarOpenSubject.asObservable();
+  public viewerSidebarCollapsed$ = this.viewerSidebarCollapsedSubject.asObservable();
 
   // ===== WORKFLOW STATE =====
   private workflowStepsSubject = new BehaviorSubject<WorkflowStep[]>([]);
@@ -206,6 +239,18 @@ export class AiWorkspaceStateService {
     this.sidebarOpenSubject.next(open);
   }
 
+  setViewerSidebarCollapsed(collapsed: boolean): void {
+    this.viewerSidebarCollapsedSubject.next(collapsed);
+  }
+
+  toggleViewerSidebarCollapsed(): void {
+    this.viewerSidebarCollapsedSubject.next(!this.viewerSidebarCollapsedSubject.value);
+  }
+
+  getViewerSidebarCollapsed(): boolean {
+    return this.viewerSidebarCollapsedSubject.value;
+  }
+
   getIsGenerating(): boolean {
     return this.isGeneratingSubject.value;
   }
@@ -277,6 +322,73 @@ export class AiWorkspaceStateService {
     this.followUpQuestionsSubject.next([]);
   }
 
+  // ===== ANALYZED DOCUMENTS METHODS =====
+
+  setAnalyzedDocuments(documents: AnalyzedDocument[]): void {
+    this.analyzedDocumentsSubject.next(documents);
+  }
+
+  getAnalyzedDocuments(): AnalyzedDocument[] {
+    return this.analyzedDocumentsSubject.value;
+  }
+
+  addAnalyzedDocument(document: AnalyzedDocument): void {
+    // Add new document at the beginning (most recent first)
+    const documents = [document, ...this.analyzedDocumentsSubject.value];
+    // Keep only the last 20 documents
+    this.analyzedDocumentsSubject.next(documents.slice(0, 20));
+  }
+
+  updateAnalyzedDocument(id: string, updates: Partial<AnalyzedDocument>): void {
+    const documents = this.analyzedDocumentsSubject.value.map(doc =>
+      doc.id === id ? { ...doc, ...updates } : doc
+    );
+    this.analyzedDocumentsSubject.next(documents);
+  }
+
+  removeAnalyzedDocument(id: string): void {
+    const documents = this.analyzedDocumentsSubject.value.filter(doc => doc.id !== id);
+    this.analyzedDocumentsSubject.next(documents);
+  }
+
+  getAnalyzedDocumentById(id: string): AnalyzedDocument | undefined {
+    return this.analyzedDocumentsSubject.value.find(doc => doc.id === id);
+  }
+
+  setActiveDocumentId(id: string | null): void {
+    this.activeDocumentIdSubject.next(id);
+  }
+
+  getActiveDocumentId(): string | null {
+    return this.activeDocumentIdSubject.value;
+  }
+
+  getActiveDocument(): AnalyzedDocument | undefined {
+    const id = this.activeDocumentIdSubject.value;
+    if (!id) return undefined;
+    return this.getAnalyzedDocumentById(id);
+  }
+
+  setDocumentViewerMode(show: boolean): void {
+    this.documentViewerModeSubject.next(show);
+  }
+
+  getDocumentViewerMode(): boolean {
+    return this.documentViewerModeSubject.value;
+  }
+
+  // Open document in viewer
+  openDocumentViewer(documentId: string): void {
+    this.activeDocumentIdSubject.next(documentId);
+    this.documentViewerModeSubject.next(true);
+  }
+
+  // Close document viewer
+  closeDocumentViewer(): void {
+    this.activeDocumentIdSubject.next(null);
+    this.documentViewerModeSubject.next(false);
+  }
+
   // ===== RESET ALL STATE =====
 
   resetAllState(): void {
@@ -292,5 +404,9 @@ export class AiWorkspaceStateService {
     this.sidebarOpenSubject.next(false);
     this.workflowStepsSubject.next([]);
     this.followUpQuestionsSubject.next([]);
+    // Reset analyzed documents state
+    this.analyzedDocumentsSubject.next([]);
+    this.activeDocumentIdSubject.next(null);
+    this.documentViewerModeSubject.next(false);
   }
 }

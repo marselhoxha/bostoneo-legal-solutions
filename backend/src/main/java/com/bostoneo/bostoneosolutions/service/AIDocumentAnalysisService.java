@@ -8,9 +8,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.ocr.TesseractOCRConfig;
+import org.apache.tika.parser.pdf.PDFParserConfig;
+import org.apache.tika.sax.BodyContentHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +35,7 @@ public class AIDocumentAnalysisService {
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
     private final DocumentMetadataExtractor metadataExtractor;
-    private final ActionItemExtractionService extractionService;
+    private final AnalysisTextParser analysisTextParser;
     private final Tika tika = new Tika();
 
     public CompletableFuture<AIDocumentAnalysis> analyzeDocument(
@@ -65,9 +72,10 @@ public class AIDocumentAnalysisService {
             String content = extractTextFromFile(file);
             savedAnalysis.setDocumentContent(content.substring(0, Math.min(content.length(), 5000))); // Store first 5000 chars
 
-            // Detect document type
-            String detectedType = metadataExtractor.detectDocumentType(content, file.getOriginalFilename());
+            // Detect document type using AI (more accurate than regex)
+            String detectedType = classifyDocumentType(content, file.getOriginalFilename());
             savedAnalysis.setDetectedType(detectedType);
+            log.info("AI classified document as: {}", detectedType);
 
             // Extract metadata
             String extractedMetadata = metadataExtractor.extractMetadata(content, file.getOriginalFilename());
@@ -116,16 +124,27 @@ public class AIDocumentAnalysisService {
 
                         AIDocumentAnalysis finalAnalysis = repository.save(savedAnalysis);
 
-                        // Extract action items and timeline events synchronously
-                        // Uses hybrid approach: tries embedded JSON first, falls back to separate AI calls
-                        // Returns cleaned text with JSON block removed
-                        String cleanedAnalysisText = extractionService.extractAndSaveStructuredData(finalAnalysis.getId(), response);
+                        // Extract action items and timeline events using hybrid parsing
+                        // (tries JSON first, then regex patterns)
+                        // Skip for contract-type documents - they don't have actionItems/timelineEvents
+                        if (!isContractType(detectedType)) {
+                            try {
+                                analysisTextParser.parseAndSaveStructuredData(finalAnalysis.getId(), response);
+                            } catch (Exception e) {
+                                log.warn("Failed to extract structured data from analysis {}: {}",
+                                         finalAnalysis.getId(), e.getMessage());
+                            }
+                        } else {
+                            log.info("Skipping structured data extraction for contract-type document: {}", detectedType);
+                        }
 
-                        // Update analysis with cleaned text (JSON block removed)
-                        if (!cleanedAnalysisText.equals(response)) {
-                            finalAnalysis.setAnalysisResult(cleanedAnalysisText);
+                        // Strip JSON block from stored analysis for cleaner display
+                        String cleanedAnalysis = stripJsonBlock(response);
+                        if (!cleanedAnalysis.equals(response)) {
+                            finalAnalysis.setAnalysisResult(cleanedAnalysis);
                             finalAnalysis = repository.save(finalAnalysis);
-                            log.info("Updated analysis {} with cleaned text (removed JSON block)", finalAnalysis.getId());
+                            log.info("Stripped JSON block from analysis {} ({}->{}chars)",
+                                     finalAnalysis.getId(), response.length(), cleanedAnalysis.length());
                         }
 
                         return finalAnalysis;
@@ -159,6 +178,10 @@ public class AIDocumentAnalysisService {
         return repository.findByAnalysisId(analysisId);
     }
 
+    public Optional<AIDocumentAnalysis> getAnalysisByDatabaseId(Long id) {
+        return repository.findById(id);
+    }
+
     public List<AIDocumentAnalysis> getHighRiskDocuments(Integer minScore) {
         return repository.findHighRiskDocuments(minScore != null ? minScore : 70);
     }
@@ -175,29 +198,189 @@ public class AIDocumentAnalysisService {
         return stats;
     }
 
+    /**
+     * Check if document type is a contract/agreement type (not litigation)
+     * Contract types don't need actionItems/timelineEvents extraction
+     */
+    private boolean isContractType(String docType) {
+        if (docType == null) return false;
+        String lower = docType.toLowerCase();
+        return lower.contains("contract") || lower.contains("agreement") ||
+               lower.contains("lease") || lower.contains("nda") ||
+               lower.contains("non-disclosure") || lower.contains("employment") ||
+               lower.contains("settlement") || lower.contains("confidentiality");
+    }
+
+    /**
+     * Strip JSON block from analysis text for cleaner storage/display
+     */
+    private String stripJsonBlock(String text) {
+        if (text == null) return null;
+
+        // Remove ```json ... ``` code blocks
+        String cleaned = text.replaceAll("```json\\s*[\\s\\S]*?```", "");
+
+        // Remove standalone JSON objects at end (actionItems/timelineEvents)
+        int jsonObjStart = cleaned.lastIndexOf('{');
+        if (jsonObjStart > 0) {
+            String potential = cleaned.substring(jsonObjStart);
+            if (potential.contains("actionItems") || potential.contains("timelineEvents")) {
+                cleaned = cleaned.substring(0, jsonObjStart);
+            }
+        }
+
+        return cleaned.trim();
+    }
+
     private String extractTextFromFile(MultipartFile file) throws IOException {
         try (InputStream inputStream = file.getInputStream()) {
             // Use Apache Tika to extract text from any document type
             String content = tika.parseToString(inputStream);
 
-            // Validate extraction
-            if (content == null || content.trim().isEmpty()) {
-                log.warn("No text extracted from file: {}", file.getOriginalFilename());
+            // If content extracted successfully, return it
+            if (content != null && !content.trim().isEmpty()) {
+                log.info("Text extracted successfully from {}: {} chars", file.getOriginalFilename(), content.length());
+                return content.trim();
+            }
+
+            // Try OCR extraction for scanned documents
+            log.info("No text found, attempting OCR extraction for: {}", file.getOriginalFilename());
+            return extractTextWithOCR(file);
+
+        } catch (TikaException e) {
+            log.error("Tika extraction error for file {}: {}", file.getOriginalFilename(), e.getMessage());
+            // Try OCR as fallback
+            log.info("Attempting OCR fallback for: {}", file.getOriginalFilename());
+            return extractTextWithOCR(file);
+        }
+    }
+
+    /**
+     * Extract text using OCR for scanned documents.
+     * Requires Tesseract to be installed on the system:
+     * - macOS: brew install tesseract
+     * - Ubuntu: sudo apt-get install tesseract-ocr
+     * - Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+     */
+    private String extractTextWithOCR(MultipartFile file) throws IOException {
+        try (InputStream inputStream = file.getInputStream()) {
+            // Configure Tesseract OCR
+            TesseractOCRConfig ocrConfig = new TesseractOCRConfig();
+            ocrConfig.setLanguage("eng");
+
+            // Configure PDF parser for OCR
+            PDFParserConfig pdfConfig = new PDFParserConfig();
+            pdfConfig.setExtractInlineImages(true);
+            pdfConfig.setOcrStrategy(PDFParserConfig.OCR_STRATEGY.OCR_AND_TEXT_EXTRACTION);
+
+            // Set up parse context
+            ParseContext context = new ParseContext();
+            context.set(TesseractOCRConfig.class, ocrConfig);
+            context.set(PDFParserConfig.class, pdfConfig);
+
+            // Parse with OCR
+            AutoDetectParser parser = new AutoDetectParser();
+            BodyContentHandler handler = new BodyContentHandler(-1); // No limit
+            Metadata metadata = new Metadata();
+
+            parser.parse(inputStream, handler, metadata, context);
+            String content = handler.toString().trim();
+
+            if (content.isEmpty()) {
+                log.warn("OCR extraction also returned empty for: {}", file.getOriginalFilename());
                 return String.format("""
-                    [Empty Document]
+                    [Document Analysis Failed]
                     File: %s
                     Type: %s
                     Size: %d bytes
 
-                    Note: No text could be extracted. File may be empty, corrupted, or require OCR.
+                    Unable to extract text. Possible causes:
+                    - Document is a scanned image and Tesseract OCR is not installed
+                    - PDF is encrypted or protected
+                    - Document contains only graphics/charts
+
+                    To enable OCR: Install Tesseract (brew install tesseract on macOS)
                     """, file.getOriginalFilename(), file.getContentType(), file.getSize());
             }
 
-            return content.trim();
+            log.info("OCR extraction successful for {}: {} chars", file.getOriginalFilename(), content.length());
+            return content;
 
-        } catch (TikaException e) {
-            log.error("Tika extraction error for file {}: {}", file.getOriginalFilename(), e.getMessage());
-            throw new IOException("Failed to extract text from document: " + e.getMessage(), e);
+        } catch (TikaException | SAXException e) {
+            log.error("OCR extraction failed for {}: {}", file.getOriginalFilename(), e.getMessage());
+            return String.format("""
+                [OCR Extraction Failed]
+                File: %s
+                Error: %s
+
+                Ensure Tesseract OCR is installed:
+                - macOS: brew install tesseract
+                - Ubuntu: sudo apt-get install tesseract-ocr
+                """, file.getOriginalFilename(), e.getMessage());
+        }
+    }
+
+    /**
+     * Use AI to classify document type (more accurate than regex patterns)
+     */
+    private String classifyDocumentType(String content, String fileName) {
+        // Use first 3000 chars for classification (enough context, saves tokens)
+        String sample = content.substring(0, Math.min(content.length(), 3000));
+
+        String classificationPrompt = String.format("""
+            Classify this legal document into ONE of these types:
+            - Complaint
+            - Petition
+            - Answer
+            - Motion
+            - Brief
+            - Memorandum
+            - Discovery
+            - Order
+            - Contract
+            - Employment Agreement
+            - Lease
+            - NDA
+            - Settlement Agreement
+            - Demand Letter
+            - Cease and Desist
+            - Notice
+            - Regulatory Notice
+            - Document (if none match)
+
+            Filename: %s
+
+            Content (first 3000 chars):
+            %s
+
+            Reply with ONLY the document type, nothing else.
+            """, fileName, sample);
+
+        try {
+            // Synchronous call for classification (blocking but fast)
+            String result = claudeService.generateCompletion(classificationPrompt, null, false, null)
+                .get(30, java.util.concurrent.TimeUnit.SECONDS);
+
+            // Clean up response (remove quotes, trim, take first line)
+            String docType = result.trim().replaceAll("\"", "").split("\n")[0].trim();
+
+            // Validate it's a known type, fallback to "Document"
+            if (docType.length() > 50 || docType.contains(" is ")) {
+                log.warn("AI returned unexpected classification: {}, using 'Document'", docType);
+                return "Document";
+            }
+
+            return docType;
+        } catch (Exception e) {
+            log.error("AI classification failed, falling back to filename-based: {}", e.getMessage());
+            // Simple fallback based on filename
+            String lower = fileName.toLowerCase();
+            if (lower.contains("demand")) return "Demand Letter";
+            if (lower.contains("complaint")) return "Complaint";
+            if (lower.contains("contract")) return "Contract";
+            if (lower.contains("agreement")) return "Agreement";
+            if (lower.contains("motion")) return "Motion";
+            return "Document";
         }
     }
 
@@ -218,6 +401,8 @@ public class AIDocumentAnalysisService {
         // Litigation Documents
         if (lowerType.contains("complaint") || lowerType.contains("petition")) {
             return basePrompt + getComplaintStrategicPrompt();
+        } else if (lowerType.contains("answer") && !lowerType.contains("interrogator")) {
+            return basePrompt + getAnswerStrategicPrompt();
         } else if (lowerType.contains("motion")) {
             return basePrompt + getMotionAnalysisPrompt();
         } else if (lowerType.contains("brief") || lowerType.contains("memorandum")) {
@@ -225,6 +410,8 @@ public class AIDocumentAnalysisService {
         } else if (lowerType.contains("discovery") || lowerType.contains("interrogator") ||
                    lowerType.contains("request for production") || lowerType.contains("admission")) {
             return basePrompt + getDiscoveryRequestPrompt();
+        } else if (lowerType.contains("order") || lowerType.contains("judgment") || lowerType.contains("decree")) {
+            return basePrompt + getCourtOrderAnalysisPrompt();
         }
         // Contract Documents
         else if (lowerType.contains("employment") && (lowerType.contains("agreement") || lowerType.contains("contract"))) {
@@ -239,10 +426,16 @@ public class AIDocumentAnalysisService {
         } else if (lowerType.contains("contract") || lowerType.contains("agreement")) {
             return basePrompt + getContractStrategicPrompt();
         }
-        // Regulatory
-        else if (lowerType.contains("regulatory") || lowerType.contains("compliance") ||
-                 lowerType.contains("notice") || lowerType.contains("demand letter")) {
+        // Correspondence/Notice Documents (check specific types FIRST)
+        else if (lowerType.contains("demand letter") || lowerType.equals("demand")) {
+            return basePrompt + getDemandLetterPrompt();
+        } else if (lowerType.contains("cease") && lowerType.contains("desist")) {
+            return basePrompt + getCeaseAndDesistPrompt();
+        } else if (lowerType.contains("regulatory") || lowerType.contains("compliance") ||
+                   lowerType.contains("violation")) {
             return basePrompt + getRegulatoryNoticePrompt();
+        } else if (lowerType.contains("notice")) {
+            return basePrompt + getNoticePrompt();
         }
         // Default
         else {
@@ -1036,6 +1229,323 @@ public class AIDocumentAnalysisService {
             """;
     }
 
+    private String getDemandLetterPrompt() {
+        return """
+
+            ASSUME YOU ARE RECIPIENT'S COUNSEL analyzing this demand letter to develop response strategy.
+            Assess validity of claims, evaluate leverage, and develop negotiation approach.
+
+            ## ⚡ EXECUTIVE SUMMARY (3 sentences)
+            - Who is demanding what (and for how much)
+            - VALIDITY ASSESSMENT: Are the claims legally supportable?
+            - CRITICAL DEADLINE: Response required by [date]
+
+            ## 💰 DEMAND ANALYSIS
+            - Amount Demanded: $X
+            - Basis for Demand: [Contract breach / Tort / Statutory violation]
+            - Supporting Evidence Cited: [What they claim to have]
+            - Validity Assessment: [Strong / Moderate / Weak] + reasoning
+
+            ## 🎯 CLAIMS EVALUATION
+            For each claim made:
+            ⚠️ [VALIDITY - HIGH/MEDIUM/LOW]: Claim Description
+            - Their Allegation: [What they're claiming]
+            - Legal Basis: [Applicable law/contract provision]
+            - Weaknesses: [Holes in their argument]
+            - Our Defense: [How to counter]
+
+            ## ⚖️ LIABILITY EXPOSURE
+            - Maximum Exposure: $X (if all claims succeed)
+            - Likely Exposure: $Y (realistic assessment)
+            - Statutory Damages/Penalties: [If applicable]
+            - Attorney's Fees: [Are they recoverable?]
+
+            ## 🛡️ DEFENSE OPTIONS
+            **Strongest Defenses:**
+            1. [Defense] - [Why it works]
+            2. [Defense] - [Supporting facts]
+
+            **Procedural Issues:**
+            - Statute of Limitations: [Analysis]
+            - Standing: [Does sender have right to sue?]
+            - Jurisdiction: [Proper venue?]
+
+            ## 📝 RESPONSE STRATEGY
+            **OPTION 1: Negotiate**
+            - Counteroffer: $X (X% of demand)
+            - Leverage Points: [Weaknesses to exploit]
+            - Settlement Terms: [What to require]
+
+            **OPTION 2: Reject & Defend**
+            - Response Letter: [Key points to make]
+            - Preserve Defenses: [What NOT to admit]
+            - Prepare for Litigation: [Evidence to gather]
+
+            **OPTION 3: Ignore**
+            - Risk Assessment: [Consequences]
+            - When Appropriate: [If claims are frivolous]
+
+            ## ⏱️ RESPONSE TIMELINE
+            📅 DEADLINE: [X days from letter date]
+            📅 DAY 1-3: Gather facts, review contracts
+            📅 DAY 3-7: Draft response strategy
+            📅 DAY 7-X: Send response before deadline
+
+            ## 🎯 RECOMMENDED APPROACH
+            [Negotiate / Reject / Partial Settlement] + detailed reasoning
+            Target Settlement: $X (X% of demand)
+            Key Negotiation Points: [What to concede vs. fight]
+
+            Focus on liability assessment and negotiation leverage.
+            """;
+    }
+
+    private String getCeaseAndDesistPrompt() {
+        return """
+
+            ASSUME YOU ARE RECIPIENT'S COUNSEL analyzing this cease and desist letter.
+            Assess validity of claims, evaluate compliance options, and develop response strategy.
+
+            ## ⚡ EXECUTIVE SUMMARY (3 sentences)
+            - What activity they want stopped
+            - VALIDITY: Is their claim legally supportable?
+            - URGENCY: Response deadline and consequences
+
+            ## 🚫 DEMAND ANALYSIS
+            - Activity to Cease: [Specific conduct]
+            - Legal Basis Claimed: [Trademark / Copyright / Contract / Tort]
+            - Evidence of Infringement: [What they cite]
+            - Validity Assessment: [Strong / Moderate / Weak]
+
+            ## ⚖️ LEGAL EVALUATION
+            ⚠️ [STRENGTH]: Their Primary Claim
+            - Legal Theory: [IP infringement / Breach / Defamation]
+            - Elements Required: [What they must prove]
+            - Weaknesses in Claim: [Gaps / Missing elements]
+            - Our Position: [Why we may continue / must stop]
+
+            ## 🛡️ DEFENSE OPTIONS
+            **If Claim is Weak:**
+            - Fair Use Defense: [Applicability]
+            - First Amendment: [If speech-related]
+            - Prior Rights: [If we have them]
+            - Laches/Estoppel: [Delay arguments]
+
+            **If Claim has Merit:**
+            - Compliance Cost: [Effort to stop activity]
+            - Modification Options: [Can we change approach?]
+            - License Negotiation: [Can we pay to continue?]
+
+            ## 💰 RISK ASSESSMENT
+            - Statutory Damages: $X-$Y range
+            - Actual Damages: [Their provable losses]
+            - Attorney's Fees: [Recoverable?]
+            - Injunction Risk: [Likelihood]
+            - Reputational Risk: [Business impact]
+
+            ## 📝 RESPONSE OPTIONS
+            **OPTION 1: Comply Fully**
+            - Stop activity immediately
+            - Confirm compliance in writing
+            - Preserve goodwill
+
+            **OPTION 2: Partial Compliance**
+            - Modify activity to address concerns
+            - Negotiate acceptable terms
+            - Seek license if needed
+
+            **OPTION 3: Reject & Defend**
+            - Assert our rights
+            - Challenge their claims
+            - Prepare for litigation
+
+            ## 🏆 RECOMMENDED APPROACH
+            [Comply / Negotiate / Reject] + reasoning
+            Risk Level: [Low/Medium/High]
+            Next Steps: [Specific actions]
+
+            Focus on balancing legal risk against business needs.
+            """;
+    }
+
+    private String getNoticePrompt() {
+        return """
+
+            ASSUME YOU ARE COUNSEL analyzing this notice document for legal implications and required actions.
+
+            ## ⚡ EXECUTIVE SUMMARY (3 sentences)
+            - Type and purpose of notice
+            - KEY OBLIGATION or information conveyed
+            - DEADLINE for any required action
+
+            ## 📋 NOTICE DETAILS
+            - From: [Sender and capacity]
+            - To: [Recipient]
+            - Subject Matter: [What it concerns]
+            - Effective Date: [When it takes effect]
+
+            ## 🎯 KEY PROVISIONS
+            For each material provision:
+            ⚠️ [IMPORTANCE]: Provision
+            - Content: [What it says]
+            - Implication: [Legal effect]
+            - Required Action: [What must be done]
+
+            ## ⏱️ DEADLINES & OBLIGATIONS
+            📅 [DATE]: [Required action]
+            📅 [DATE]: [Response deadline]
+
+            ## ⚖️ LEGAL IMPLICATIONS
+            - Rights Affected: [What rights are triggered/terminated]
+            - Obligations Created: [What must be done]
+            - Consequences of Inaction: [What happens if ignored]
+
+            ## 📝 RECOMMENDED RESPONSE
+            - Acknowledge Receipt: [If required]
+            - Required Actions: [Steps to take]
+            - Preserve Rights: [Objections to make]
+
+            ## 🎯 NEXT STEPS
+            1. [Immediate action]
+            2. [Short-term action]
+            3. [Long-term consideration]
+
+            Focus on identifying obligations and deadlines.
+            """;
+    }
+
+    private String getAnswerStrategicPrompt() {
+        return """
+
+            ASSUME YOU ARE PLAINTIFF'S COUNSEL analyzing defendant's answer to identify weaknesses and develop trial strategy.
+
+            ## ⚡ EXECUTIVE BRIEF (3 sentences)
+            - What defendant admits vs denies
+            - STRONGEST AFFIRMATIVE DEFENSE to overcome
+            - IMMEDIATE ACTION required
+
+            ## 🎯 ADMISSION ANALYSIS
+            For each significant admission:
+            ✅ [HELPFUL]: Admitted Fact
+            - What defendant admitted: [Quote or paraphrase]
+            - Why it helps: [Strategic value]
+            - How to use: [At trial/settlement/motion]
+
+            ## ⚠️ DENIAL ANALYSIS
+            For each critical denial:
+            ❌ [SEVERITY]: Denied Allegation (Paragraph X)
+            - Plaintiff's allegation: [What we claimed]
+            - Defendant's denial: [General/Specific]
+            - Evidence needed: [To prove our allegation]
+            - Strategy: [How to overcome denial]
+
+            ## 🛡️ AFFIRMATIVE DEFENSES ASSESSMENT
+            For each affirmative defense raised:
+            ⚠️ [THREAT LEVEL - HIGH/MEDIUM/LOW]: Defense Name
+            - Defendant's theory: [Their argument]
+            - Elements they must prove: [Legal requirements]
+            - Our counter: [How to defeat it]
+            - Evidence they likely lack: [Weaknesses]
+
+            ## 📊 COUNTERCLAIMS (if any)
+            ⚠️ [SEVERITY]: Counterclaim
+            - Nature of claim: [What defendant alleges]
+            - Exposure: $X potential liability
+            - Defenses available: [Our responses]
+            - Strategy: [Dismiss/defend/settle]
+
+            ## 📝 DISCOVERY PRIORITIES
+            Based on denials and defenses, prioritize discovery:
+            ☐ URGENT: [Evidence to obtain for denied facts]
+            ☐ HIGH: [Evidence to defeat affirmative defenses]
+            ☐ MEDIUM: [Supporting evidence]
+
+            ## ⏱️ ACTION TIMELINE
+            📅 DAY 1-7: [Immediate actions based on answer]
+            📅 DAY 7-14: [Discovery planning]
+            📅 DAY 14-30: [Motion practice if applicable]
+
+            ## 💡 STRATEGIC RECOMMENDATIONS
+            🎯 PRIMARY STRATEGY: [Main approach given answer]
+            🎯 WEAKEST DEFENSE: [Which affirmative defense to attack first]
+            🎯 SETTLEMENT LEVERAGE: [How answer affects negotiation position]
+
+            Focus on actionable insights. Identify what defendant failed to deny.
+            """;
+    }
+
+    private String getCourtOrderAnalysisPrompt() {
+        return """
+
+            ASSUME YOU ARE COUNSEL analyzing this court order for compliance requirements and strategic implications.
+
+            ## ⚡ EXECUTIVE SUMMARY (3 sentences)
+            - What the court ordered
+            - CRITICAL DEADLINE for compliance
+            - IMMEDIATE ACTION required
+
+            ## 📋 ORDER REQUIREMENTS
+            For each requirement/directive:
+            ⚠️ [URGENCY - IMMEDIATE/HIGH/STANDARD]: Requirement
+            - Court's directive: [What must be done]
+            - Deadline: [Date/timeframe]
+            - Consequence of non-compliance: [Sanctions/contempt/dismissal]
+            - Responsible party: [Who must act]
+
+            ## ⏱️ COMPLIANCE TIMELINE
+            📅 IMMEDIATE (24-48 hours):
+            ☐ [Urgent compliance items]
+
+            📅 SHORT-TERM (7 days):
+            ☐ [Near-term requirements]
+
+            📅 STANDARD (30 days):
+            ☐ [Longer-term obligations]
+
+            ## 💰 FINANCIAL IMPLICATIONS
+            - Monetary awards/sanctions: $X
+            - Cost shifting: [Who pays what]
+            - Bond requirements: [If any]
+            - Fee awards: [Attorney's fees]
+
+            ## ⚖️ LEGAL ANALYSIS
+            **Favorable Rulings:**
+            ✅ [What court ruled in our favor]
+            - Impact: [How it helps]
+
+            **Unfavorable Rulings:**
+            ❌ [What court ruled against us]
+            - Impact: [How it hurts]
+            - Options: [Appeal/reconsideration]
+
+            ## 🔄 APPEAL CONSIDERATIONS
+            - Appealable order: [Yes - final/interlocutory / No]
+            - Appeal deadline: [X days from entry]
+            - Likelihood of success: [Assessment]
+            - Stay pending appeal: [Available/advisable?]
+
+            ## 📝 MOTION FOR RECONSIDERATION
+            - Grounds available: [Legal basis if any]
+            - Deadline: [Usually 10-14 days]
+            - Recommended: [Yes/No with reasoning]
+
+            ## 🎯 STRATEGIC NEXT STEPS
+            1. [Immediate compliance action]
+            2. [Assess appeal/reconsideration]
+            3. [Adjust case strategy based on ruling]
+            4. [Client communication points]
+
+            ## 📄 COMPLIANCE CHECKLIST
+            ☐ Calendar all deadlines immediately
+            ☐ Notify client of order
+            ☐ Prepare compliance documentation
+            ☐ Evaluate appeal options
+            ☐ Update case strategy
+
+            Focus on compliance deadlines and strategic implications of ruling.
+            """;
+    }
+
     private String getLegalBriefAnalysisPrompt() {
         return """
 
@@ -1162,8 +1672,8 @@ public class AIDocumentAnalysisService {
     private Map<String, Object> parseAnalysisResponse(String response, String analysisType) {
         Map<String, Object> parsed = new HashMap<>();
 
-        // Extract summary
-        String summary = extractSection(response, "SUMMARY", "OVERVIEW");
+        // Extract summary - prioritize EXECUTIVE headers used in AI prompts
+        String summary = extractExecutiveSummary(response);
         parsed.put("summary", summary != null ? summary : response.substring(0, Math.min(500, response.length())));
 
         // Extract key findings
@@ -1179,6 +1689,58 @@ public class AIDocumentAnalysisService {
         parsed.put("complianceIssues", complianceIssues);
 
         return parsed;
+    }
+
+    /**
+     * Extract executive summary from AI response.
+     * Looks for ## ⚡ EXECUTIVE headers first (matches AI prompt structure),
+     * then falls back to generic SUMMARY/OVERVIEW sections.
+     */
+    private String extractExecutiveSummary(String text) {
+        // First, look for the structured header pattern: ## ⚡ EXECUTIVE
+        java.util.regex.Pattern execPattern = java.util.regex.Pattern.compile(
+            "##\\s*⚡?\\s*EXECUTIVE[^\\n]*\\n([\\s\\S]*?)(?=\\n##|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+        java.util.regex.Matcher matcher = execPattern.matcher(text);
+        if (matcher.find()) {
+            String content = matcher.group(1).trim();
+            // Take up to the first few lines (the brief section)
+            String[] lines = content.split("\n");
+            StringBuilder summary = new StringBuilder();
+            for (int i = 0; i < Math.min(5, lines.length); i++) {
+                String line = lines[i].trim();
+                if (!line.isEmpty() && !line.startsWith("##")) {
+                    summary.append(line.replaceAll("^[-•*]\\s*", "")).append(" ");
+                }
+            }
+            if (summary.length() > 0) {
+                return summary.toString().trim();
+            }
+        }
+
+        // Fallback: Look for section headers containing SUMMARY or OVERVIEW
+        java.util.regex.Pattern sectionPattern = java.util.regex.Pattern.compile(
+            "(?:^|\\n)##?\\s*[^\\n]*(SUMMARY|OVERVIEW)[^\\n]*\\n([\\s\\S]*?)(?=\\n##|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+        matcher = sectionPattern.matcher(text);
+        if (matcher.find()) {
+            String content = matcher.group(2).trim();
+            String[] lines = content.split("\n");
+            StringBuilder summary = new StringBuilder();
+            for (int i = 0; i < Math.min(5, lines.length); i++) {
+                String line = lines[i].trim();
+                if (!line.isEmpty() && !line.startsWith("##")) {
+                    summary.append(line.replaceAll("^[-•*]\\s*", "")).append(" ");
+                }
+            }
+            if (summary.length() > 0) {
+                return summary.toString().trim();
+            }
+        }
+
+        return null;
     }
 
     private String extractSection(String text, String... keywords) {

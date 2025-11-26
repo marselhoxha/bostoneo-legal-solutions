@@ -29,19 +29,24 @@ public class ActionItemExtractionService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Hybrid extraction: Try embedded JSON first, fallback to separate AI call
+     * Hybrid extraction: Try embedded JSON first, skip if not found to save tokens
      * Returns cleaned text with JSON block removed
+     *
+     * NOTE: Fallback AI calls have been DISABLED to save tokens.
+     * The main analysis prompt already requests embedded JSON.
+     * If Claude doesn't include it, we skip extraction rather than make expensive extra calls.
      */
     public String extractAndSaveStructuredData(Long analysisId, String analysisText) {
         // Try to parse embedded JSON from analysis
         boolean success = parseEmbeddedStructuredData(analysisId, analysisText);
 
         if (!success) {
-            // Fallback: Use separate AI calls
-            log.warn("No embedded JSON found for analysis {}, falling back to separate extraction calls", analysisId);
-            extractAndSaveActionItems(analysisId, analysisText);
-            extractAndSaveTimelineEvents(analysisId, analysisText);
-            return analysisText; // No JSON to remove
+            // DISABLED: Fallback AI calls waste tokens
+            // The main analysis prompt already asks for structured data
+            // If it's not there, we just skip extraction
+            log.warn("No embedded JSON found for analysis {}. Skipping separate extraction to save tokens.", analysisId);
+            log.info("Hint: The main analysis should include ```json {{ \"actionItems\": [...], \"timelineEvents\": [...] }} ```");
+            return analysisText; // No JSON to remove, no fallback calls
         }
 
         // Remove JSON block from analysis text

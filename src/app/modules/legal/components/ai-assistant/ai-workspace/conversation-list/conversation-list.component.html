@@ -37,10 +37,10 @@
     </div>
 
     <!-- Past 90 Days -->
-    <div class="conversation-group" *ngIf="!searchQuery && groupedConversations?.past90Days?.length > 0">
+    <div class="conversation-group" *ngIf="!searchQuery && filteredGroupedConversations?.past90Days?.length > 0">
       <div class="conversation-group-header">Recent</div>
       <div class="conversation-item"
-           *ngFor="let conv of groupedConversations.past90Days"
+           *ngFor="let conv of filteredGroupedConversations.past90Days"
            [class.active]="conv.id === activeConversationId"
            (click)="onConversationClick(conv)">
         <div class="conversation-icon">
@@ -62,10 +62,10 @@
     </div>
 
     <!-- Older -->
-    <div class="conversation-group" *ngIf="!searchQuery && groupedConversations?.older?.length > 0">
+    <div class="conversation-group" *ngIf="!searchQuery && filteredGroupedConversations?.older?.length > 0">
       <div class="conversation-group-header">Older</div>
       <div class="conversation-item"
-           *ngFor="let conv of groupedConversations.older"
+           *ngFor="let conv of filteredGroupedConversations.older"
            [class.active]="conv.id === activeConversationId"
            (click)="onConversationClick(conv)">
         <div class="conversation-icon">

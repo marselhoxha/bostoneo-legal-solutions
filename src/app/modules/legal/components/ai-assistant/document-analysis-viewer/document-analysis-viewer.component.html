@@ -1,0 +1,414 @@
+<div class="document-analysis-viewer" #viewerContainer (scroll)="onScroll($event)">
+  <!-- Top Action Bar -->
+  <div class="viewer-action-bar">
+    <div class="action-bar-left">
+      <button class="btn btn-link back-btn" (click)="onClose()" title="Back to upload">
+        <i class="ri-arrow-left-line"></i>
+      </button>
+
+      <div class="document-info">
+        <h5 class="document-title mb-0">
+          <i class="ri-file-text-line me-2"></i>
+          {{ document.fileName }}
+        </h5>
+        <div class="document-meta">
+          <span class="badge me-2" [ngClass]="getDocTypeColorClass(document.detectedType)">
+            {{ document.detectedType || 'Document' }}
+          </span>
+          <span class="meta-item text-muted">
+            <i class="ri-file-info-line me-1"></i>
+            {{ formatFileSize(document.fileSize) }}
+          </span>
+          <span class="meta-item text-muted ms-2">
+            <i class="ri-time-line me-1"></i>
+            {{ formatDate(document.timestamp) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar-right">
+      <!-- Toggle Sidebar Button -->
+      <button class="btn btn-soft-secondary btn-sm me-2"
+              (click)="toggleSidebarCollapsed()"
+              [title]="(viewerSidebarCollapsed$ | async) ? 'Show sidebar' : 'Hide sidebar for full width'">
+        <i [class]="(viewerSidebarCollapsed$ | async) ? 'ri-layout-right-line' : 'ri-layout-left-line'"></i>
+      </button>
+
+      <!-- Compare Button (future feature) -->
+      <button class="btn btn-soft-secondary btn-sm me-2" disabled title="Compare with another document (coming soon)">
+        <i class="ri-file-copy-2-line me-1"></i>
+        Compare
+      </button>
+
+      <!-- Export Dropdown -->
+      <div class="btn-group" ngbDropdown>
+        <button id="export-dropdown" ngbDropdownToggle type="button" class="btn btn-primary btn-sm">
+          <i class="ri-download-line me-1"></i>
+          Export
+        </button>
+        <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end">
+          <a class="dropdown-item" (click)="onExportPdf()">
+            <i class="ri-file-pdf-line me-2 text-danger"></i>
+            Export as PDF
+          </a>
+          <a class="dropdown-item" (click)="onExportWord()">
+            <i class="ri-file-word-line me-2 text-primary"></i>
+            Export as Word
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" (click)="onSaveToFileManager()">
+            <i class="ri-folder-upload-line me-2 text-success"></i>
+            Save to File Manager
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="viewer-tabs">
+    <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav nav-tabs nav-tabs-custom">
+      <li [ngbNavItem]="'overview'" *ngIf="visibleTabs.overview">
+        <a ngbNavLink>
+          <i class="ri-file-list-3-line me-1"></i>
+          Overview
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="analysis-content card">
+              <div class="card-body">
+                <!-- Summary Card -->
+                <div class="summary-card mb-4" *ngIf="document.analysis?.summary">
+                  <div class="summary-header">
+                    <i class="ri-lightbulb-flash-line"></i>
+                    <h6>Executive Summary</h6>
+                  </div>
+                  <div class="summary-text" [innerHTML]="document.analysis.summary | markdownToHtml"></div>
+                </div>
+
+                <!-- Key Insights Grid -->
+                <div class="insights-grid mb-4" *ngIf="partiesInfo || timelineEventsCount > 0 || actionItemsCount > 0">
+                  <div class="insight-card" *ngIf="partiesInfo">
+                    <div class="insight-icon bg-soft-primary text-primary">
+                      <i class="ri-user-line"></i>
+                    </div>
+                    <div class="insight-content">
+                      <span class="insight-label">Parties</span>
+                      <span class="insight-value">{{ partiesInfo }}</span>
+                    </div>
+                  </div>
+                  <div class="insight-card" *ngIf="timelineEventsCount > 0">
+                    <div class="insight-icon bg-soft-info text-info">
+                      <i class="ri-calendar-line"></i>
+                    </div>
+                    <div class="insight-content">
+                      <span class="insight-label">Timeline Events</span>
+                      <span class="insight-value">{{ timelineEventsCount }} events</span>
+                    </div>
+                  </div>
+                  <div class="insight-card" *ngIf="actionItemsCount > 0">
+                    <div class="insight-icon bg-soft-success text-success">
+                      <i class="ri-checkbox-circle-line"></i>
+                    </div>
+                    <div class="insight-content">
+                      <span class="insight-label">Action Items</span>
+                      <span class="insight-value">{{ actionItemsCount }} items</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Full Analysis -->
+                <div class="full-analysis">
+                  <h6 class="section-title">
+                    <i class="ri-file-text-line me-2"></i>
+                    Strategic Analysis
+                  </h6>
+                  <div class="analysis-text"
+                       [innerHTML]="parsedSections.overview | markdownToHtml">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'actions'" *ngIf="visibleTabs.actions">
+        <a ngbNavLink>
+          <i class="ri-checkbox-multiple-line me-1"></i>
+          Action Items
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <app-action-items-list
+                  *ngIf="document.databaseId"
+                  [analysisId]="document.databaseId">
+                </app-action-items-list>
+                <div class="empty-state" *ngIf="!document.databaseId">
+                  <i class="ri-checkbox-circle-line empty-icon"></i>
+                  <p>No action items available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'timeline'" *ngIf="visibleTabs.timeline">
+        <a ngbNavLink>
+          <i class="ri-calendar-event-line me-1"></i>
+          Timeline
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <app-timeline-view
+                  *ngIf="document.databaseId"
+                  [analysisId]="document.databaseId">
+                </app-timeline-view>
+                <div class="empty-state" *ngIf="!document.databaseId">
+                  <i class="ri-calendar-line empty-icon"></i>
+                  <p>No timeline events available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'risk'" *ngIf="visibleTabs.keyFindings">
+        <a ngbNavLink>
+          <i class="ri-focus-3-line me-1"></i>
+          Key Findings
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <!-- Weaknesses Section -->
+                <div class="risk-section mb-4" *ngIf="parsedSections.weaknesses">
+                  <h6 class="section-title text-danger">
+                    <i class="ri-alert-line me-2"></i>
+                    Identified Weaknesses
+                  </h6>
+                  <div class="section-content" [innerHTML]="parsedSections.weaknesses | markdownToHtml"></div>
+                </div>
+
+                <!-- Evidence Section -->
+                <div class="risk-section mb-4" *ngIf="parsedSections.evidence">
+                  <h6 class="section-title text-info">
+                    <i class="ri-file-search-line me-2"></i>
+                    Evidence Analysis
+                  </h6>
+                  <div class="section-content" [innerHTML]="parsedSections.evidence | markdownToHtml"></div>
+                </div>
+
+                <!-- Strategy Section -->
+                <div class="risk-section" *ngIf="parsedSections.strategy">
+                  <h6 class="section-title text-success">
+                    <i class="ri-lightbulb-line me-2"></i>
+                    Recommended Strategy
+                  </h6>
+                  <div class="section-content" [innerHTML]="parsedSections.strategy | markdownToHtml"></div>
+                </div>
+
+                <!-- Empty state if no sections found -->
+                <div class="empty-state" *ngIf="!parsedSections.weaknesses && !parsedSections.evidence && !parsedSections.strategy">
+                  <i class="ri-focus-3-line empty-icon"></i>
+                  <p>Key findings will be extracted from specific document types (complaints, motions, briefs)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <!-- Contract-specific tabs -->
+      <li [ngbNavItem]="'key-terms'" *ngIf="visibleTabs.keyTerms">
+        <a ngbNavLink>
+          <i class="ri-money-dollar-circle-line me-1"></i>
+          Key Terms
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <div class="contract-section" *ngIf="contractSections.keyTerms">
+                  <h6 class="section-title text-primary">
+                    <i class="ri-money-dollar-circle-line me-2"></i>
+                    Financial &amp; Key Terms
+                  </h6>
+                  <div class="section-content" [innerHTML]="contractSections.keyTerms | markdownToHtml"></div>
+                </div>
+                <div class="empty-state" *ngIf="!contractSections.keyTerms">
+                  <i class="ri-money-dollar-circle-line empty-icon"></i>
+                  <p>No key terms section found in this contract analysis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'risk-assessment'" *ngIf="visibleTabs.riskAssessment">
+        <a ngbNavLink>
+          <i class="ri-shield-check-line me-1"></i>
+          Risk Assessment
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <div class="contract-section" *ngIf="contractSections.riskAssessment">
+                  <h6 class="section-title text-danger">
+                    <i class="ri-error-warning-line me-2"></i>
+                    Unfavorable Clauses &amp; Risks
+                  </h6>
+                  <div class="section-content" [innerHTML]="contractSections.riskAssessment | markdownToHtml"></div>
+                </div>
+                <div class="empty-state" *ngIf="!contractSections.riskAssessment">
+                  <i class="ri-shield-check-line empty-icon"></i>
+                  <p>No risk assessment section found in this contract analysis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'obligations'" *ngIf="visibleTabs.obligations">
+        <a ngbNavLink>
+          <i class="ri-file-list-2-line me-1"></i>
+          Obligations
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper">
+            <div class="card">
+              <div class="card-body">
+                <div class="contract-section" *ngIf="contractSections.obligations">
+                  <h6 class="section-title text-warning">
+                    <i class="ri-door-open-line me-2"></i>
+                    Termination &amp; Obligations
+                  </h6>
+                  <div class="section-content" [innerHTML]="contractSections.obligations | markdownToHtml"></div>
+                </div>
+                <div class="empty-state" *ngIf="!contractSections.obligations">
+                  <i class="ri-file-list-2-line empty-icon"></i>
+                  <p>No obligations section found in this contract analysis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="'ask-ai'" *ngIf="visibleTabs.askAi">
+        <a ngbNavLink>
+          <i class="ri-question-answer-line me-1"></i>
+          Ask AI
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper ask-ai-tab">
+            <div class="card h-100">
+              <div class="card-body d-flex flex-column">
+                <!-- Chat Messages Area -->
+                <div class="chat-messages-area flex-grow-1">
+                  <!-- Empty State -->
+                  <div class="ask-ai-empty" *ngIf="askAiMessages.length === 0">
+                    <div class="empty-icon">
+                      <i class="ri-question-answer-line"></i>
+                    </div>
+                    <h6>Ask questions about this document</h6>
+                    <p class="text-muted">
+                      I can help you understand specific clauses, identify risks,
+                      or explain legal implications of {{ document.fileName }}.
+                    </p>
+                    <div class="suggested-questions">
+                      <button class="suggested-btn" (click)="askAiQuestion = 'What are the main risks in this document?'; askQuestion()">
+                        <i class="ri-shield-line me-1"></i>
+                        What are the main risks?
+                      </button>
+                      <button class="suggested-btn" (click)="askAiQuestion = 'Summarize the key obligations'; askQuestion()">
+                        <i class="ri-file-list-line me-1"></i>
+                        Summarize key obligations
+                      </button>
+                      <button class="suggested-btn" (click)="askAiQuestion = 'What deadlines should I be aware of?'; askQuestion()">
+                        <i class="ri-calendar-check-line me-1"></i>
+                        What are the deadlines?
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Messages List -->
+                  <div class="messages-list" *ngIf="askAiMessages.length > 0">
+                    <div *ngFor="let msg of askAiMessages"
+                         class="message-item"
+                         [ngClass]="{'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant'}">
+                      <div class="message-avatar">
+                        <i *ngIf="msg.role === 'user'" class="ri-user-line"></i>
+                        <img *ngIf="msg.role === 'assistant'" src="/assets/images/new-legal-ai.gif" alt="AI">
+                      </div>
+                      <div class="message-content">
+                        <div class="message-text" [innerHTML]="msg.content | markdownToHtml"></div>
+                        <div class="message-time">{{ formatDate(msg.timestamp) }}</div>
+                      </div>
+                    </div>
+
+                    <!-- Typing Indicator -->
+                    <div class="message-item ai-message" *ngIf="isAskingAi">
+                      <div class="message-avatar">
+                        <img src="/assets/images/new-legal-ai.gif" alt="AI">
+                      </div>
+                      <div class="message-content">
+                        <div class="typing-indicator">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="chat-input-area">
+                  <div class="input-wrapper">
+                    <textarea
+                      class="form-control"
+                      [(ngModel)]="askAiQuestion"
+                      placeholder="Ask a question about this document..."
+                      rows="2"
+                      (keydown.enter)="onEnterPress($event)"
+                      [disabled]="isAskingAi">
+                    </textarea>
+                    <button
+                      class="btn btn-primary send-btn"
+                      (click)="askQuestion()"
+                      [disabled]="!askAiQuestion.trim() || isAskingAi">
+                      <i class="ri-send-plane-fill"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Tab Content -->
+  <div [ngbNavOutlet]="nav" class="nav-content"></div>
+
+  <!-- Scroll to Top Button -->
+  <button class="scroll-to-top-btn"
+          *ngIf="showScrollToTop"
+          (click)="scrollToTop()"
+          title="Back to top">
+    <i class="ri-arrow-up-line"></i>
+  </button>
+</div>
