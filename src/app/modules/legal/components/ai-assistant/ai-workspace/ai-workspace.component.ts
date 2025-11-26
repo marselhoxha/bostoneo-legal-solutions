@@ -773,6 +773,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
+    // ===== STATE SYNCHRONIZATION =====
+    // Restore selectedTask based on current state mode
+    // This ensures sidebar shows correct content when navigating back to workspace
+    this.syncSelectedTaskWithState();
+
     // Subscribe to UserService userData$ observable for reactive updates
     this.userService.userData$
       .pipe(takeUntil(this.destroy$))
@@ -821,6 +826,35 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Load user's cases for case selector if user already available
     if (this.currentUser && this.currentUser.id) {
       this.loadUserCases();
+    }
+  }
+
+  /**
+   * Synchronize selectedTask with the current state mode
+   * Called on init and when state changes to ensure sidebar shows correct content
+   */
+  private syncSelectedTaskWithState(): void {
+    // If in document viewer mode OR there's an active document, ensure we're in upload mode
+    if (this.stateService.getDocumentViewerMode() || this.stateService.getActiveDocumentId()) {
+      this.selectedTask = ConversationType.Upload;
+      this.activeTask = ConversationType.Upload;
+      console.log('📋 State sync: Document viewer mode - setting selectedTask to upload');
+    }
+    // If in drafting mode, ensure task is set appropriately
+    else if (this.stateService.getDraftingMode()) {
+      this.selectedTask = ConversationType.Draft;
+      this.activeTask = ConversationType.Draft;
+      console.log('📋 State sync: Drafting mode - setting selectedTask to draft');
+    }
+    // Otherwise keep current selectedTask or use default
+    else {
+      // Keep the previously selected task (stored in state service)
+      const storedTask = this.stateService.getSelectedTask();
+      if (storedTask) {
+        this.selectedTask = storedTask;
+        this.activeTask = storedTask;
+        console.log('📋 State sync: Restored selectedTask from state:', storedTask);
+      }
     }
   }
 
@@ -889,10 +923,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Delete an analysis from history
    */
   deleteAnalysis(doc: any): void {
-    // TODO: Add backend endpoint for deletion
-    // For now, just remove from local state
-    this.stateService.removeAnalyzedDocument(doc.id);
-    this.notificationService.success('Deleted', `Analysis for "${doc.fileName}" removed`);
+    if (!doc.databaseId) {
+      // No database ID, just remove from local state
+      this.stateService.removeAnalyzedDocument(doc.id);
+      this.notificationService.success('Deleted', `Analysis for "${doc.fileName}" removed`);
+      return;
+    }
+
+    // Call backend to delete analysis and all related data
+    this.documentAnalyzerService.deleteAnalysis(doc.databaseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // Remove from local state after successful backend deletion
+          this.stateService.removeAnalyzedDocument(doc.id);
+          this.notificationService.success('Deleted', `Analysis for "${doc.fileName}" deleted successfully`);
+        },
+        error: (error) => {
+          console.error('Failed to delete analysis:', error);
+          this.notificationService.error('Error', 'Failed to delete analysis. Please try again.');
+        }
+      });
   }
 
   /**
@@ -1756,8 +1807,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     this.selectedTask = task;
     this.activeTask = task;
+
+    // Persist task selection to state service for restoration on navigation
+    this.stateService.setSelectedTask(task);
+
     this.stateService.setActiveConversationId(null);
     this.stateService.clearConversationMessages();
+
+    // Close document viewer if switching away from upload mode
+    if (task !== ConversationType.Upload && this.stateService.getDocumentViewerMode()) {
+      this.stateService.closeDocumentViewer();
+    }
 
     // Don't set showChat or showBottomSearchBar here - let them be set when:
     // 1. User sends first message (handled in startCustomDraft)
@@ -1784,6 +1844,31 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         fileInput.click();
       }
     }
+  }
+
+  /**
+   * Open new analysis - returns to welcome screen with Upload taskcard selected
+   * Used by "New Analysis" button in document analysis sidebar
+   */
+  openNewAnalysis(): void {
+    // Close document viewer if open
+    if (this.stateService.getDocumentViewerMode()) {
+      this.stateService.closeDocumentViewer();
+    }
+
+    // Reset chat state
+    this.stateService.setShowChat(false);
+    this.stateService.clearConversationMessages();
+    this.stateService.setActiveConversationId(null);
+
+    // Select upload task (shows welcome screen with upload taskcard active)
+    this.selectedTask = ConversationType.Upload;
+    this.activeTask = ConversationType.Upload;
+
+    // Expand sidebar if collapsed
+    this.stateService.setViewerSidebarCollapsed(false);
+
+    this.cdr.detectChanges();
   }
 
   /**
@@ -2176,7 +2261,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Add to analyzed documents state
     this.stateService.addAnalyzedDocument(analyzedDoc);
 
-    // Open document viewer
+    // Clear uploaded files from upload zone after successful analysis
+    this.uploadedFiles = [];
+
+    // Open document viewer in full-page mode (sidebar collapsed)
+    this.stateService.setViewerSidebarCollapsed(true);
     this.stateService.openDocumentViewer(result.id);
 
     // Show success notification
@@ -2306,8 +2395,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   /**
    * Open document in viewer (from sidebar)
    * If fullAnalysis is empty, fetch it from backend first
+   * Auto-collapses sidebar for full-page viewer by default
    */
   openDocumentInViewer(document: AnalyzedDocument): void {
+    // Auto-collapse sidebar for full-page view when clicking from sidebar
+    this.stateService.setViewerSidebarCollapsed(true);
+
     // Check if we need to fetch full analysis
     if (!document.analysis?.fullAnalysis && document.databaseId) {
       // Fetch full analysis from backend

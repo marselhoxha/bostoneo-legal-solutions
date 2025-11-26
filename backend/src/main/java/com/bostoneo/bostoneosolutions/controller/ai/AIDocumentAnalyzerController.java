@@ -424,4 +424,90 @@ public class AIDocumentAnalyzerController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Delete a document analysis and all related data (messages, action items, timeline events)
+     */
+    @DeleteMapping("/analysis/{analysisId}")
+    public ResponseEntity<Map<String, Object>> deleteAnalysis(@PathVariable Long analysisId) {
+        log.info("🗑️ Deleting analysis ID: {}", analysisId);
+
+        try {
+            // Delete related data first
+            analysisMessageRepository.deleteByAnalysisId(analysisId);
+            actionItemRepository.deleteByAnalysisId(analysisId);
+            timelineEventRepository.deleteByAnalysisId(analysisId);
+
+            // Delete the analysis itself
+            documentAnalysisService.deleteAnalysis(analysisId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("analysisId", analysisId);
+            response.put("message", "Analysis and all related data deleted successfully");
+
+            log.info("✅ Analysis {} deleted successfully", analysisId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Failed to delete analysis {}: {}", analysisId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to delete analysis: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Ask AI a question about a specific document analysis
+     * This endpoint calls Claude with the full document context
+     */
+    @PostMapping("/analysis/{analysisId}/ask")
+    public ResponseEntity<Map<String, Object>> askAboutDocument(
+            @PathVariable Long analysisId,
+            @RequestBody Map<String, Object> request) {
+
+        String question = (String) request.get("question");
+        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+
+        if (question == null || question.trim().isEmpty()) {
+            log.warn("Invalid ask request: question is required");
+            return ResponseEntity.badRequest().body(Map.of("error", "Question is required"));
+        }
+
+        log.info("🤖 Ask AI request for analysis {}: {}", analysisId, question.substring(0, Math.min(50, question.length())));
+
+        try {
+            // Get the AI response from the service
+            String aiResponse = documentAnalysisService.askAboutDocument(analysisId, question, userId);
+
+            // Save user message
+            AIAnalysisMessage userMessage = new AIAnalysisMessage();
+            userMessage.setAnalysisId(analysisId);
+            userMessage.setRole("user");
+            userMessage.setContent(question);
+            userMessage.setUserId(userId);
+            analysisMessageRepository.save(userMessage);
+
+            // Save AI response
+            AIAnalysisMessage assistantMessage = new AIAnalysisMessage();
+            assistantMessage.setAnalysisId(analysisId);
+            assistantMessage.setRole("assistant");
+            assistantMessage.setContent(aiResponse);
+            assistantMessage.setUserId(userId);
+            AIAnalysisMessage savedResponse = analysisMessageRepository.save(assistantMessage);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("answer", aiResponse);
+            response.put("messageId", savedResponse.getId());
+            response.put("analysisId", analysisId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Failed to process Ask AI request: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Failed to process question: " + e.getMessage(),
+                "analysisId", analysisId
+            ));
+        }
+    }
+
 }

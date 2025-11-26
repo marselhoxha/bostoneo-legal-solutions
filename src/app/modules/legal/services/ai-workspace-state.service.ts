@@ -381,6 +381,9 @@ export class AiWorkspaceStateService {
   openDocumentViewer(documentId: string): void {
     this.activeDocumentIdSubject.next(documentId);
     this.documentViewerModeSubject.next(true);
+    // Automatically set task to Upload when opening document viewer
+    // This ensures sidebar shows document analyses, not drafting conversations
+    this.selectedTaskSubject.next(ConversationType.Upload);
   }
 
   // Close document viewer

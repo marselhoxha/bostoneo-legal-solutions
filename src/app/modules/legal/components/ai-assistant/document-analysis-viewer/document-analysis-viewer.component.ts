@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
@@ -120,11 +120,18 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     obligations?: string;
   } = {};
 
+  // Dynamic suggested questions based on document type
+  suggestedQuestions: Array<{ icon: string; text: string; question: string }> = [];
+
+  // Follow-up action chips shown after AI response
+  followUpActions: Array<{ icon: string; text: string; question: string }> = [];
+
   constructor(
     private documentAnalyzerService: DocumentAnalyzerService,
     private notificationService: NotificationService,
     private actionItemService: ActionItemService,
-    private stateService: AiWorkspaceStateService
+    private stateService: AiWorkspaceStateService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   // Toggle sidebar collapsed state
@@ -151,6 +158,7 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     // Determine document category and visible tabs
     this.determineDocumentCategory();
     this.configureTabsForCategory();
+    this.generateSuggestedQuestions();
 
     if (this.document?.analysis?.fullAnalysis) {
       // Strip JSON block from analysis before parsing/displaying
@@ -280,6 +288,67 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
   }
 
   /**
+   * Generate suggested questions based on document category
+   */
+  private generateSuggestedQuestions(): void {
+    switch (this.documentCategory) {
+      case 'litigation':
+        this.suggestedQuestions = [
+          { icon: 'ri-focus-3-line', text: 'What are the weaknesses?', question: 'What are the critical weaknesses in this complaint/pleading that could be exploited?' },
+          { icon: 'ri-shield-line', text: 'Defense strategies', question: 'What are the strongest defense strategies against the claims made?' },
+          { icon: 'ri-file-search-line', text: 'Missing evidence', question: 'What evidence or documents should be requested to support our position?' },
+          { icon: 'ri-calendar-check-line', text: 'Key deadlines', question: 'What are all the important deadlines and response requirements?' }
+        ];
+        break;
+
+      case 'contract':
+        this.suggestedQuestions = [
+          { icon: 'ri-money-dollar-circle-line', text: 'Key financial terms', question: 'Summarize all the key financial terms and payment obligations in this contract.' },
+          { icon: 'ri-alert-line', text: 'Unfavorable clauses', question: 'What are the most unfavorable or risky clauses for our side?' },
+          { icon: 'ri-door-open-line', text: 'Termination options', question: 'What are the termination conditions and exit options available?' },
+          { icon: 'ri-edit-line', text: 'Negotiation points', question: 'What are the top priority items that should be negotiated or modified?' }
+        ];
+        break;
+
+      case 'court':
+        this.suggestedQuestions = [
+          { icon: 'ri-gavel-line', text: 'Order requirements', question: 'What specific actions or compliance requirements does this order mandate?' },
+          { icon: 'ri-calendar-event-line', text: 'Compliance deadlines', question: 'What are the deadlines and timing requirements specified in this order?' },
+          { icon: 'ri-error-warning-line', text: 'Penalties for non-compliance', question: 'What are the consequences or penalties for failing to comply with this order?' },
+          { icon: 'ri-arrow-go-forward-line', text: 'Appeal options', question: 'What are the options for appealing or modifying this order?' }
+        ];
+        break;
+
+      case 'discovery':
+        this.suggestedQuestions = [
+          { icon: 'ri-calendar-check-line', text: 'Response deadline', question: 'When is the response due and what is the required format?' },
+          { icon: 'ri-file-list-3-line', text: 'Items requested', question: 'Summarize all the specific items or information being requested.' },
+          { icon: 'ri-shield-check-line', text: 'Objection grounds', question: 'What are valid grounds for objecting to any of these requests?' },
+          { icon: 'ri-error-warning-line', text: 'Privileged matters', question: 'Are there any requests that may involve privileged or protected information?' }
+        ];
+        break;
+
+      case 'correspondence':
+        this.suggestedQuestions = [
+          { icon: 'ri-focus-3-line', text: 'Key demands', question: 'What are the specific demands or requests being made in this letter?' },
+          { icon: 'ri-calendar-event-line', text: 'Response deadline', question: 'Is there a deadline for responding and what happens if we don\'t respond?' },
+          { icon: 'ri-scales-3-line', text: 'Legal merit', question: 'What is the legal merit of the claims or threats made in this correspondence?' },
+          { icon: 'ri-chat-3-line', text: 'Response strategy', question: 'What would be the best strategy for responding to this letter?' }
+        ];
+        break;
+
+      default:
+        this.suggestedQuestions = [
+          { icon: 'ri-lightbulb-line', text: 'Key takeaways', question: 'What are the most important takeaways from this document?' },
+          { icon: 'ri-shield-line', text: 'Main risks', question: 'What are the main risks or concerns identified in this document?' },
+          { icon: 'ri-file-list-line', text: 'Key obligations', question: 'Summarize the key obligations and responsibilities outlined here.' },
+          { icon: 'ri-calendar-check-line', text: 'Important dates', question: 'What are the important dates or deadlines mentioned?' }
+        ];
+        break;
+    }
+  }
+
+  /**
    * Parse contract-specific sections from analysis
    */
   private parseContractSections(fullAnalysis: string): void {
@@ -321,19 +390,32 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
   }
 
   private extractPartiesInfo(): void {
-    // Try to extract parties from metadata or analysis
+    // Try to extract parties from metadata
     if (this.document.extractedMetadata) {
       try {
         const metadata = JSON.parse(this.document.extractedMetadata);
-        if (metadata.parties) {
+
+        // Check for direct plaintiff/defendant fields (AI-extracted)
+        if (metadata.plaintiff || metadata.defendant) {
+          const plaintiff = metadata.plaintiff?.trim();
+          const defendant = metadata.defendant?.trim();
+
+          if (plaintiff && defendant) {
+            this.partiesInfo = `${plaintiff} vs ${defendant}`;
+          } else if (plaintiff) {
+            this.partiesInfo = plaintiff;
+          } else if (defendant) {
+            this.partiesInfo = defendant;
+          }
+        }
+        // Legacy: Check for parties object/array
+        else if (metadata.parties) {
           if (Array.isArray(metadata.parties)) {
-            // Array of party names or objects
             const names = metadata.parties.map((p: any) =>
               typeof p === 'string' ? p : (p.name || p.party || Object.values(p)[0])
             ).filter(Boolean);
             this.partiesInfo = names.length > 0 ? `${names.length} parties` : '';
           } else if (typeof metadata.parties === 'object') {
-            // Object format like {plaintiff: "Name", defendant: "Name"}
             const values = Object.values(metadata.parties).filter(v => v && typeof v === 'string') as string[];
             this.partiesInfo = values.length > 0 ? values.join(' vs ') : 'Parties identified';
           } else if (typeof metadata.parties === 'string') {
@@ -349,16 +431,16 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
       }
     }
 
-    // Fallback: scan analysis for party names
+    // Fallback: scan analysis for party names (only if no parties found above)
     if (!this.partiesInfo && this.document.analysis?.fullAnalysis) {
       const analysis = this.document.analysis.fullAnalysis;
       // Look for "Plaintiff" and "Defendant" mentions
       const hasPlaintiff = /plaintiff/i.test(analysis);
       const hasDefendant = /defendant/i.test(analysis);
       if (hasPlaintiff && hasDefendant) {
-        this.partiesInfo = 'Plaintiff vs Defendant';
-      } else if (hasPlaintiff || hasDefendant) {
         this.partiesInfo = 'Parties identified';
+      } else if (hasPlaintiff || hasDefendant) {
+        this.partiesInfo = 'Party identified';
       }
     }
   }
@@ -452,69 +534,55 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
       });
   }
 
-  // Ask AI functionality
-  async askQuestion(): Promise<void> {
+  // Ask AI functionality - calls real backend AI
+  askQuestion(): void {
     if (!this.askAiQuestion.trim() || this.isAskingAi) return;
+    if (!this.document?.databaseId) {
+      this.notificationService.error('Error', 'Document not properly loaded');
+      return;
+    }
 
     const question = this.askAiQuestion.trim();
     this.askAiQuestion = '';
 
-    // Add user message locally
+    // Add user message locally (optimistic UI update)
     this.askAiMessages.push({
       role: 'user',
       content: question,
       timestamp: new Date()
     });
 
-    // Save user message to backend
-    if (this.document?.databaseId) {
-      this.documentAnalyzerService.addAnalysisMessage(
-        this.document.databaseId,
-        'user',
-        question
-      ).pipe(takeUntil(this.destroy$)).subscribe();
-    }
-
     this.isAskingAi = true;
 
-    try {
-      // For now, create a contextual prompt using the analysis
-      const context = `
-Document: ${this.document.fileName}
-Type: ${this.document.detectedType}
-Analysis Summary: ${this.document.analysis?.summary || 'N/A'}
+    // Call the real AI backend endpoint
+    this.documentAnalyzerService.askAboutDocument(this.document.databaseId, question)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Add AI response to messages
+          this.askAiMessages.push({
+            role: 'assistant',
+            content: response.answer,
+            timestamp: new Date()
+          });
+          this.isAskingAi = false;
 
-User Question: ${question}
+          // Generate contextual follow-up actions
+          this.generateFollowUpActions(question);
 
-Please answer based on the document analysis above.`;
-
-      // TODO: Call backend AI API for document-specific Q&A
-      // For now, show a placeholder response with document context
-      setTimeout(() => {
-        const assistantResponse = `I understand you're asking about "${question}" regarding **${this.document.fileName}**.\n\nBased on the ${this.document.detectedType} analysis, I would need to review the specific details. This feature will be enhanced with a dedicated document Q&A AI endpoint.\n\nIn the meantime, you can review the analysis tabs for detailed information.`;
-
-        this.askAiMessages.push({
-          role: 'assistant',
-          content: assistantResponse,
-          timestamp: new Date()
-        });
-
-        // Save assistant response to backend
-        if (this.document?.databaseId) {
-          this.documentAnalyzerService.addAnalysisMessage(
-            this.document.databaseId,
-            'assistant',
-            assistantResponse
-          ).pipe(takeUntil(this.destroy$)).subscribe();
+          // Force change detection to update view immediately
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Ask AI error:', error);
+          this.notificationService.error('Error', 'Failed to get AI response. Please try again.');
+          // Remove the optimistic user message on error
+          this.askAiMessages.pop();
+          this.askAiQuestion = question; // Restore the question
+          this.isAskingAi = false;
+          this.cdr.detectChanges();
         }
-
-        this.isAskingAi = false;
-      }, 1500);
-
-    } catch (error) {
-      this.notificationService.error('Error', 'Failed to process your question');
-      this.isAskingAi = false;
-    }
+      });
   }
 
   onEnterPress(event: KeyboardEvent): void {
@@ -522,6 +590,66 @@ Please answer based on the document analysis above.`;
       event.preventDefault();
       this.askQuestion();
     }
+  }
+
+  // Ask a suggested question
+  askSuggestedQuestion(question: string): void {
+    this.askAiQuestion = question;
+    this.askQuestion();
+  }
+
+  /**
+   * Generate follow-up action chips based on last AI response
+   */
+  private generateFollowUpActions(lastQuestion: string): void {
+    // Base follow-ups that work for any document type
+    const baseFollowUps = [
+      { icon: 'ri-more-line', text: 'Tell me more', question: 'Can you elaborate on that with more specific details?' },
+      { icon: 'ri-file-list-line', text: 'Action items', question: 'What specific action items should I take based on this information?' }
+    ];
+
+    // Category-specific follow-ups
+    let categoryFollowUps: Array<{ icon: string; text: string; question: string }> = [];
+
+    switch (this.documentCategory) {
+      case 'litigation':
+        categoryFollowUps = [
+          { icon: 'ri-scales-3-line', text: 'Counter-arguments', question: 'What counter-arguments can be made against this?' },
+          { icon: 'ri-file-search-line', text: 'Required evidence', question: 'What evidence would I need to gather to support this position?' }
+        ];
+        break;
+
+      case 'contract':
+        categoryFollowUps = [
+          { icon: 'ri-edit-line', text: 'Suggested edits', question: 'What specific language changes would you recommend for these terms?' },
+          { icon: 'ri-shield-check-line', text: 'Protection clauses', question: 'What additional protective clauses should be negotiated?' }
+        ];
+        break;
+
+      case 'court':
+        categoryFollowUps = [
+          { icon: 'ri-calendar-todo-line', text: 'Compliance steps', question: 'What are the step-by-step compliance requirements?' },
+          { icon: 'ri-time-line', text: 'Timing details', question: 'Can you break down the specific timing requirements?' }
+        ];
+        break;
+
+      case 'discovery':
+        categoryFollowUps = [
+          { icon: 'ri-draft-line', text: 'Draft response', question: 'Can you help outline a response to these requests?' },
+          { icon: 'ri-lock-line', text: 'Privilege concerns', question: 'Are there privilege or work-product concerns I should be aware of?' }
+        ];
+        break;
+
+      default:
+        categoryFollowUps = [
+          { icon: 'ri-question-line', text: 'Key concerns', question: 'What should I be most concerned about in this document?' },
+          { icon: 'ri-lightbulb-line', text: 'Recommendations', question: 'What are your top recommendations for proceeding?' }
+        ];
+        break;
+    }
+
+    // Combine: 2 base + 2 category-specific = 4 chips
+    this.followUpActions = [...baseFollowUps, ...categoryFollowUps];
   }
 
   // Helper methods
@@ -607,14 +735,14 @@ Please answer based on the document analysis above.`;
     return 'bg-secondary-subtle text-secondary';
   }
 
-  // Scroll handling
-  onScroll(event: Event): void {
-    const target = event.target as HTMLElement;
-    this.showScrollToTop = target.scrollTop > 300;
+  // Scroll handling - listen to window scroll since we use main page scrolling
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.showScrollToTop = window.scrollY > 300;
   }
 
   scrollToTop(): void {
-    this.viewerContainer?.nativeElement?.scrollTo({
+    window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });

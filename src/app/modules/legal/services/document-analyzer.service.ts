@@ -389,4 +389,41 @@ export class DocumentAnalyzerService {
       })
     );
   }
+
+  /**
+   * Delete a document analysis and all related data
+   */
+  deleteAnalysis(analysisId: number): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      `${this.apiUrl}/analysis/${analysisId}`,
+      { withCredentials: true }
+    ).pipe(
+      catchError(error => {
+        console.error('Failed to delete analysis:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Ask AI a question about a specific document analysis
+   * Uses the full document context and analysis for accurate responses
+   */
+  askAboutDocument(analysisId: number, question: string, userId?: number): Observable<{ answer: string; userMessage: AnalysisMessage; assistantMessage: AnalysisMessage }> {
+    return this.http.post<{ success: boolean; answer: string; userMessage: AnalysisMessage; assistantMessage: AnalysisMessage }>(
+      `${this.apiUrl}/analysis/${analysisId}/ask`,
+      { question, userId: userId || 1 },
+      { withCredentials: true }
+    ).pipe(
+      map(response => ({
+        answer: response.answer,
+        userMessage: response.userMessage,
+        assistantMessage: response.assistantMessage
+      })),
+      catchError(error => {
+        console.error('Failed to ask about document:', error);
+        return throwError(() => error);
+      })
+    );
+  }
 }

@@ -1,4 +1,4 @@
-<div class="document-analysis-viewer" #viewerContainer (scroll)="onScroll($event)">
+<div class="document-analysis-viewer" #viewerContainer>
   <!-- Top Action Bar -->
   <div class="viewer-action-bar">
     <div class="action-bar-left">
@@ -328,50 +328,94 @@
                       or explain legal implications of {{ document.fileName }}.
                     </p>
                     <div class="suggested-questions">
-                      <button class="suggested-btn" (click)="askAiQuestion = 'What are the main risks in this document?'; askQuestion()">
-                        <i class="ri-shield-line me-1"></i>
-                        What are the main risks?
-                      </button>
-                      <button class="suggested-btn" (click)="askAiQuestion = 'Summarize the key obligations'; askQuestion()">
-                        <i class="ri-file-list-line me-1"></i>
-                        Summarize key obligations
-                      </button>
-                      <button class="suggested-btn" (click)="askAiQuestion = 'What deadlines should I be aware of?'; askQuestion()">
-                        <i class="ri-calendar-check-line me-1"></i>
-                        What are the deadlines?
+                      <button class="suggested-btn"
+                              *ngFor="let sq of suggestedQuestions"
+                              (click)="askSuggestedQuestion(sq.question)">
+                        <i [class]="sq.icon + ' me-1'"></i>
+                        {{ sq.text }}
                       </button>
                     </div>
                   </div>
 
-                  <!-- Messages List -->
-                  <div class="messages-list" *ngIf="askAiMessages.length > 0">
-                    <div *ngFor="let msg of askAiMessages"
-                         class="message-item"
-                         [ngClass]="{'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant'}">
-                      <div class="message-avatar">
-                        <i *ngIf="msg.role === 'user'" class="ri-user-line"></i>
-                        <img *ngIf="msg.role === 'assistant'" src="/assets/images/new-legal-ai.gif" alt="AI">
-                      </div>
-                      <div class="message-content">
-                        <div class="message-text" [innerHTML]="msg.content | markdownToHtml"></div>
-                        <div class="message-time">{{ formatDate(msg.timestamp) }}</div>
-                      </div>
-                    </div>
+                  <!-- Messages List (same style as ai-workspace) -->
+                  <ul class="list-unstyled chat-conversation-list" *ngIf="askAiMessages.length > 0">
+                    <li *ngFor="let msg of askAiMessages"
+                        class="chat-list"
+                        [ngClass]="{ 'right': msg.role === 'user', 'left': msg.role === 'assistant' }">
 
-                    <!-- Typing Indicator -->
-                    <div class="message-item ai-message" *ngIf="isAskingAi">
-                      <div class="message-avatar">
-                        <img src="/assets/images/new-legal-ai.gif" alt="AI">
-                      </div>
-                      <div class="message-content">
-                        <div class="typing-indicator">
-                          <span></span>
-                          <span></span>
-                          <span></span>
+                      <!-- User Message -->
+                      <div class="conversation-list" *ngIf="msg.role === 'user'">
+                        <div class="user-chat-content mb-4">
+                          <div class="message-bubble bg-soft-info text-info">
+                            <div class="message-content">
+                              <p class="mb-0" [innerHTML]="msg.content | markdownToHtml"></p>
+                            </div>
+                            <div class="message-meta">
+                              <small class="text-muted">{{ formatDate(msg.timestamp) }}</small>
+                              <i class="ri-check-double-line ms-1 text-success"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- User Avatar (right side) -->
+                        <div class="chat-avatar ms-3">
+                          <div class="avatar-sm">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                              <i class="ri-user-3-fill"></i>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+
+                      <!-- AI Message -->
+                      <div class="ai-message-container" *ngIf="msg.role === 'assistant'">
+                        <div class="d-flex align-items-start gap-3">
+                          <div class="chat-avatar flex-shrink-0">
+                            <img src="/assets/images/new-legal-ai.gif" alt="AI">
+                          </div>
+                          <div class="message-bubble ai-message flex-grow-1">
+                            <div class="message-content" [innerHTML]="msg.content | markdownToHtml"></div>
+                            <div class="message-meta">
+                              <small class="text-muted">{{ formatDate(msg.timestamp) }}</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+
+                    <!-- Typing Indicator -->
+                    <li class="chat-list left" *ngIf="isAskingAi">
+                      <div class="ai-message-container">
+                        <div class="d-flex align-items-start gap-3">
+                          <div class="chat-avatar flex-shrink-0">
+                            <img src="/assets/images/new-legal-ai.gif" alt="AI">
+                          </div>
+                          <div class="message-bubble ai-message flex-grow-1">
+                            <div class="typing-indicator">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+
+                    <!-- Follow-up Action Chips -->
+                    <li class="follow-up-actions" *ngIf="followUpActions.length > 0 && !isAskingAi">
+                      <div class="follow-up-label">
+                        <i class="ri-arrow-right-line me-1"></i>
+                        Quick follow-ups:
+                      </div>
+                      <div class="follow-up-chips">
+                        <button class="follow-up-chip"
+                                *ngFor="let action of followUpActions"
+                                (click)="askSuggestedQuestion(action.question)">
+                          <i [class]="action.icon + ' me-1'"></i>
+                          {{ action.text }}
+                        </button>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
 
                 <!-- Chat Input -->

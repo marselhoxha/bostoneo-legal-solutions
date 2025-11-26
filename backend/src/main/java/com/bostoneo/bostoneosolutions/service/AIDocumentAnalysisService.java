@@ -72,13 +72,16 @@ public class AIDocumentAnalysisService {
             String content = extractTextFromFile(file);
             savedAnalysis.setDocumentContent(content.substring(0, Math.min(content.length(), 5000))); // Store first 5000 chars
 
-            // Detect document type using AI (more accurate than regex)
-            String detectedType = classifyDocumentType(content, file.getOriginalFilename());
-            savedAnalysis.setDetectedType(detectedType);
-            log.info("AI classified document as: {}", detectedType);
+            // Detect document type AND extract parties using AI (single cheap call)
+            DocumentClassification classification = classifyDocumentAndExtractParties(content, file.getOriginalFilename());
+            savedAnalysis.setDetectedType(classification.documentType);
+            log.info("AI classified document as: {}, parties: {} vs {}",
+                     classification.documentType, classification.plaintiff, classification.defendant);
 
-            // Extract metadata
+            // Extract metadata and merge with AI-extracted parties
             String extractedMetadata = metadataExtractor.extractMetadata(content, file.getOriginalFilename());
+            // Merge AI-extracted parties into metadata JSON
+            extractedMetadata = mergePartiesToMetadata(extractedMetadata, classification);
             savedAnalysis.setExtractedMetadata(extractedMetadata);
 
             // Check if OCR is needed
@@ -86,7 +89,7 @@ public class AIDocumentAnalysisService {
             savedAnalysis.setRequiresOcr(requiresOcr);
 
             // Use detected type for strategic analysis (ignore user-selected analysisType)
-            String prompt = buildAnalysisPrompt(content, detectedType, file.getOriginalFilename());
+            String prompt = buildAnalysisPrompt(content, classification.documentType, file.getOriginalFilename());
 
             // Pass sessionId to enable cancellation support (like LegalResearchConversationService)
             return claudeService.generateCompletion(prompt, null, true, sessionId)
@@ -97,7 +100,7 @@ public class AIDocumentAnalysisService {
                         int estimatedResponseTokens = response.length() / 4;
                         int estimatedPromptTokens = (content.length() + prompt.length()) / 4;
                         log.info("✅ Document analysis complete: type={}, responseTokens≈{}, promptTokens≈{}, time={}ms, file={}",
-                                detectedType, estimatedResponseTokens, estimatedPromptTokens, processingTime, file.getOriginalFilename());
+                                classification.documentType, estimatedResponseTokens, estimatedPromptTokens, processingTime, file.getOriginalFilename());
 
                         savedAnalysis.setAnalysisResult(response);
                         savedAnalysis.setStatus("completed");
@@ -127,7 +130,7 @@ public class AIDocumentAnalysisService {
                         // Extract action items and timeline events using hybrid parsing
                         // (tries JSON first, then regex patterns)
                         // Skip for contract-type documents - they don't have actionItems/timelineEvents
-                        if (!isContractType(detectedType)) {
+                        if (!isContractType(classification.documentType)) {
                             try {
                                 analysisTextParser.parseAndSaveStructuredData(finalAnalysis.getId(), response);
                             } catch (Exception e) {
@@ -135,7 +138,7 @@ public class AIDocumentAnalysisService {
                                          finalAnalysis.getId(), e.getMessage());
                             }
                         } else {
-                            log.info("Skipping structured data extraction for contract-type document: {}", detectedType);
+                            log.info("Skipping structured data extraction for contract-type document: {}", classification.documentType);
                         }
 
                         // Strip JSON block from stored analysis for cleaner display
@@ -321,66 +324,162 @@ public class AIDocumentAnalysisService {
     }
 
     /**
-     * Use AI to classify document type (more accurate than regex patterns)
+     * Result class for document classification with parties
      */
-    private String classifyDocumentType(String content, String fileName) {
+    private static class DocumentClassification {
+        String documentType = "Document";
+        String plaintiff = "";
+        String defendant = "";
+        String caseNumber = "";
+        String court = "";
+    }
+
+    /**
+     * Use AI to classify document type AND extract parties (single cheap call)
+     */
+    private DocumentClassification classifyDocumentAndExtractParties(String content, String fileName) {
         // Use first 3000 chars for classification (enough context, saves tokens)
         String sample = content.substring(0, Math.min(content.length(), 3000));
 
         String classificationPrompt = String.format("""
-            Classify this legal document into ONE of these types:
-            - Complaint
-            - Petition
-            - Answer
-            - Motion
-            - Brief
-            - Memorandum
-            - Discovery
-            - Order
-            - Contract
-            - Employment Agreement
-            - Lease
-            - NDA
-            - Settlement Agreement
-            - Demand Letter
-            - Cease and Desist
-            - Notice
-            - Regulatory Notice
-            - Document (if none match)
+            Analyze this legal document and extract:
+
+            1. Document Type - Choose the MOST SPECIFIC match from this list:
+
+               PLEADINGS: Complaint, Petition, Answer, Counterclaim
+               MOTIONS: Motion to Dismiss, Motion for Summary Judgment, Motion to Compel, Motion to Suppress, Protective Order, Motion
+               DISCOVERY: Interrogatories, Request for Production, Request for Admission, Deposition Notice, Subpoena
+               BRIEFS: Legal Brief, Appellate Brief, Reply Brief, Memorandum
+               CORRESPONDENCE: Demand Letter, Settlement Offer, Opinion Letter, Cease and Desist, Letter, Notice
+               CONTRACTS: Employment Agreement, Non-Disclosure Agreement, NDA, Purchase Agreement, Service Agreement, Lease, Contract Amendment, Settlement Agreement, Contract
+               COURT DOCUMENTS: Order, Judgment, Decree, Stipulation
+               FAMILY LAW: Divorce Petition, Custody Agreement
+               OTHER: Legal Memo, Affidavit, Document
+
+            2. Parties (from caption/header):
+               - Plaintiff/Petitioner name(s)
+               - Defendant/Respondent name(s)
+
+            3. Case number (if visible)
+            4. Court name (if visible)
 
             Filename: %s
 
-            Content (first 3000 chars):
+            Content:
             %s
 
-            Reply with ONLY the document type, nothing else.
+            Reply in this EXACT JSON format only:
+            {"documentType":"Motion to Dismiss","plaintiff":"John Smith","defendant":"ABC Corp","caseNumber":"1:24-cv-12345","court":"US District Court"}
+
+            If party not found, use empty string. Use "et al." for multiple parties.
             """, fileName, sample);
+
+        DocumentClassification result = new DocumentClassification();
 
         try {
             // Synchronous call for classification (blocking but fast)
-            String result = claudeService.generateCompletion(classificationPrompt, null, false, null)
+            String response = claudeService.generateCompletion(classificationPrompt, null, false, null)
                 .get(30, java.util.concurrent.TimeUnit.SECONDS);
 
-            // Clean up response (remove quotes, trim, take first line)
-            String docType = result.trim().replaceAll("\"", "").split("\n")[0].trim();
-
-            // Validate it's a known type, fallback to "Document"
-            if (docType.length() > 50 || docType.contains(" is ")) {
-                log.warn("AI returned unexpected classification: {}, using 'Document'", docType);
-                return "Document";
+            // Parse JSON response
+            String jsonStr = extractJsonFromResponse(response);
+            if (jsonStr != null) {
+                com.fasterxml.jackson.databind.JsonNode json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(jsonStr);
+                result.documentType = json.has("documentType") ? json.get("documentType").asText("Document") : "Document";
+                result.plaintiff = json.has("plaintiff") ? json.get("plaintiff").asText("") : "";
+                result.defendant = json.has("defendant") ? json.get("defendant").asText("") : "";
+                result.caseNumber = json.has("caseNumber") ? json.get("caseNumber").asText("") : "";
+                result.court = json.has("court") ? json.get("court").asText("") : "";
             }
 
-            return docType;
+            // Validate document type
+            if (result.documentType.length() > 50 || result.documentType.contains(" is ")) {
+                log.warn("AI returned unexpected classification: {}, using 'Document'", result.documentType);
+                result.documentType = "Document";
+            }
+
+            log.info("AI classified document as '{}', parties: {} vs {}", result.documentType, result.plaintiff, result.defendant);
+            return result;
+
         } catch (Exception e) {
             log.error("AI classification failed, falling back to filename-based: {}", e.getMessage());
             // Simple fallback based on filename
             String lower = fileName.toLowerCase();
-            if (lower.contains("demand")) return "Demand Letter";
-            if (lower.contains("complaint")) return "Complaint";
-            if (lower.contains("contract")) return "Contract";
-            if (lower.contains("agreement")) return "Agreement";
-            if (lower.contains("motion")) return "Motion";
-            return "Document";
+            if (lower.contains("demand")) result.documentType = "Demand Letter";
+            else if (lower.contains("complaint")) result.documentType = "Complaint";
+            else if (lower.contains("contract")) result.documentType = "Contract";
+            else if (lower.contains("agreement")) result.documentType = "Agreement";
+            else if (lower.contains("motion")) result.documentType = "Motion";
+            else result.documentType = "Document";
+            return result;
+        }
+    }
+
+    /**
+     * Extract JSON string from AI response (may be wrapped in markdown code blocks)
+     */
+    private String extractJsonFromResponse(String response) {
+        if (response == null) return null;
+
+        // Try to find JSON in code block first
+        int jsonStart = response.indexOf("```json");
+        if (jsonStart != -1) {
+            int contentStart = response.indexOf('\n', jsonStart) + 1;
+            int jsonEnd = response.indexOf("```", contentStart);
+            if (jsonEnd != -1) {
+                return response.substring(contentStart, jsonEnd).trim();
+            }
+        }
+
+        // Try plain code block
+        jsonStart = response.indexOf("```");
+        if (jsonStart != -1) {
+            int contentStart = response.indexOf('\n', jsonStart) + 1;
+            int jsonEnd = response.indexOf("```", contentStart);
+            if (jsonEnd != -1) {
+                String content = response.substring(contentStart, jsonEnd).trim();
+                if (content.startsWith("{")) return content;
+            }
+        }
+
+        // Try to find raw JSON object
+        int braceStart = response.indexOf('{');
+        int braceEnd = response.lastIndexOf('}');
+        if (braceStart != -1 && braceEnd > braceStart) {
+            return response.substring(braceStart, braceEnd + 1);
+        }
+
+        return null;
+    }
+
+    /**
+     * Merge AI-extracted party information into metadata JSON.
+     * If parties were extracted by AI, they override regex-based extraction.
+     */
+    private String mergePartiesToMetadata(String existingMetadata, DocumentClassification classification) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(existingMetadata);
+            com.fasterxml.jackson.databind.node.ObjectNode mutableNode =
+                (com.fasterxml.jackson.databind.node.ObjectNode) node;
+
+            // Only override if AI extracted non-empty values
+            if (classification.plaintiff != null && !classification.plaintiff.isEmpty()) {
+                mutableNode.put("plaintiff", classification.plaintiff);
+            }
+            if (classification.defendant != null && !classification.defendant.isEmpty()) {
+                mutableNode.put("defendant", classification.defendant);
+            }
+            if (classification.caseNumber != null && !classification.caseNumber.isEmpty()) {
+                mutableNode.put("caseNumber", classification.caseNumber);
+            }
+            if (classification.court != null && !classification.court.isEmpty()) {
+                mutableNode.put("court", classification.court);
+            }
+
+            return objectMapper.writeValueAsString(mutableNode);
+        } catch (Exception e) {
+            log.warn("Failed to merge parties into metadata: {}", e.getMessage());
+            return existingMetadata;
         }
     }
 
@@ -653,7 +752,7 @@ public class AIDocumentAnalysisService {
 
             Find 3-5 weaknesses minimum.
 
-            ## 📊 UNSUPPORTED FACTUAL CLAIMS
+            ## 📑 UNSUPPORTED FACTUAL CLAIMS
             - Claim: [Quote allegation]
             - Problem: [Why lacks support]
             - Defense: [How to challenge]
@@ -826,7 +925,7 @@ public class AIDocumentAnalysisService {
             - Problem: [Inapplicable/distinguished/misread]
             - Our argument: [How to challenge]
 
-            ## 📊 FACTUAL DISPUTES
+            ## 📑 FACTUAL DISPUTES
             - Movant's assertion: [Claim]
             - Dispute: [Why factually wrong]
             - Evidence needed: [What to gather]
@@ -931,7 +1030,7 @@ public class AIDocumentAnalysisService {
             - Change of Control Acceleration: [None ⚠️ / Single-trigger / Double-trigger]
             - MUST NEGOTIATE: Add [12-month severance + equity acceleration]
 
-            ## 📊 EQUITY VALUE ANALYSIS
+            ## 📑 EQUITY VALUE ANALYSIS
             - Grant Value: $X (at current FMV)
             - Vesting: [4 years with 1-year cliff ⚠️]
             - Exit Scenario (Base Case): $Y potential value
@@ -1034,7 +1133,7 @@ public class AIDocumentAnalysisService {
             - Work product: [Requests for trial preparation materials]
             - STRATEGY: Assert privilege log for [X] documents
 
-            ## 📊 BURDEN ANALYSIS
+            ## 📑 BURDEN ANALYSIS
             - Time estimate to respond: [X hours]
             - Documents to review: [Estimated volume]
             - Cost estimate: $X (attorney time) + $Y (vendor costs)
@@ -1447,7 +1546,7 @@ public class AIDocumentAnalysisService {
             - Our counter: [How to defeat it]
             - Evidence they likely lack: [Weaknesses]
 
-            ## 📊 COUNTERCLAIMS (if any)
+            ## 📑 COUNTERCLAIMS (if any)
             ⚠️ [SEVERITY]: Counterclaim
             - Nature of claim: [What defendant alleges]
             - Exposure: $X potential liability
@@ -1600,7 +1699,7 @@ public class AIDocumentAnalysisService {
             - [Case Name]: [Directly contradicts movant's position]
             - [Statute]: [Overlooked provision undermining argument]
 
-            ## 📊 UNSUPPORTED FACTUAL ASSERTIONS
+            ## 📑 UNSUPPORTED FACTUAL ASSERTIONS
             ⚠️ Factual Claim: [Quote from brief]
             - Problem: [No evidence cited / Contradicted by record]
             - Record Citation: [Where record shows otherwise]
@@ -1743,6 +1842,94 @@ public class AIDocumentAnalysisService {
         }
 
         return null;
+    }
+
+    // ==========================================
+    // ASK AI - Document Q&A
+    // ==========================================
+
+    /**
+     * Delete a document analysis by ID
+     */
+    public void deleteAnalysis(Long analysisId) {
+        log.info("🗑️ Deleting analysis with ID: {}", analysisId);
+        repository.deleteById(analysisId);
+    }
+
+    /**
+     * Answer a user question about a specific document analysis.
+     * Uses the full analysis context to provide accurate, cited responses.
+     */
+    public String askAboutDocument(Long analysisId, String question, Long userId) {
+        log.info("🤖 Processing Ask AI question for analysis {}", analysisId);
+
+        // Load the analysis from database
+        AIDocumentAnalysis analysis = repository.findById(analysisId)
+            .orElseThrow(() -> new RuntimeException("Analysis not found: " + analysisId));
+
+        // Build context from the analysis
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("DOCUMENT INFORMATION:\n");
+        contextBuilder.append("- File Name: ").append(analysis.getFileName()).append("\n");
+        contextBuilder.append("- Document Type: ").append(analysis.getDetectedType()).append("\n");
+
+        // Add metadata if available
+        if (analysis.getExtractedMetadata() != null) {
+            try {
+                var metadata = objectMapper.readTree(analysis.getExtractedMetadata());
+                if (metadata.has("plaintiff")) {
+                    contextBuilder.append("- Plaintiff: ").append(metadata.get("plaintiff").asText()).append("\n");
+                }
+                if (metadata.has("defendant")) {
+                    contextBuilder.append("- Defendant: ").append(metadata.get("defendant").asText()).append("\n");
+                }
+                if (metadata.has("caseNumber")) {
+                    contextBuilder.append("- Case Number: ").append(metadata.get("caseNumber").asText()).append("\n");
+                }
+                if (metadata.has("court")) {
+                    contextBuilder.append("- Court: ").append(metadata.get("court").asText()).append("\n");
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse metadata: {}", e.getMessage());
+            }
+        }
+
+        // Add the full analysis
+        contextBuilder.append("\n\nFULL DOCUMENT ANALYSIS:\n");
+        contextBuilder.append(analysis.getAnalysisResult());
+
+        String context = contextBuilder.toString();
+
+        // Build the prompt
+        String prompt = String.format("""
+            You are a legal AI assistant helping an attorney understand a document that has already been analyzed.
+
+            %s
+
+            ---
+
+            USER QUESTION: %s
+
+            ---
+
+            INSTRUCTIONS:
+            1. Answer the question based ONLY on the document analysis provided above
+            2. **CITE YOUR SOURCES**: When referencing information, include citations like [See: SECTION NAME]
+            3. Use clear formatting: bullet points, bold for emphasis, numbered lists for steps
+            4. **BE SPECIFIC**: Always provide actual content, descriptions, and details - never use generic labels like "Action Item" or "Risk" without explaining what the specific action/risk is
+            5. If listing action items, always include the specific task description and deadline if available
+            6. If the analysis doesn't contain the requested information, say so clearly
+            7. Keep responses focused (2-4 paragraphs unless more detail is needed)
+            8. End with "📌 Key Takeaway:" followed by the single most important point
+
+            Provide your answer:
+            """, context, question);
+
+        // Call Claude for the response (blocking call)
+        String response = claudeService.generateCompletion(prompt, false).join();
+
+        log.info("✅ Ask AI response generated for analysis {}", analysisId);
+        return response;
     }
 
     private String extractSection(String text, String... keywords) {

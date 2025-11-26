@@ -127,10 +127,9 @@ $main-content-flex: 1;
 
 .drafting-container {
   display: flex;
-  height: calc(100vh - 100px); // Fixed height to prevent body scroll
+  min-height: calc(100vh - 100px);
   background: var(--vz-body-bg);
   position: relative;
-  overflow: hidden; // Container doesn't scroll - children handle their own scrolling
 }
 
 // ===========================
@@ -907,7 +906,6 @@ $main-content-flex: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   background: var(--vz-body-bg);
   margin-left: $sidebar-width;
   width: calc(100% - #{$sidebar-width});
@@ -917,12 +915,6 @@ $main-content-flex: 1;
   &.full-width {
     margin-left: 0;
     width: 100%;
-  }
-
-  // When document viewer is active
-  &:has(app-document-analysis-viewer) {
-    overflow: hidden;
-    height: 100%;
   }
 
   // Document analysis viewer takes full height and scrolls internally

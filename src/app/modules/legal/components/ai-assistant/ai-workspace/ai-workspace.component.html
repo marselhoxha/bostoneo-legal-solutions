@@ -20,7 +20,7 @@
          *ngIf="!(draftingMode$ | async) && selectedTask === 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
     <div class="conversation-sidebar-header">
       <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light w-100"
-              (click)="triggerFileUpload()">
+              (click)="openNewAnalysis()">
         <i class="ri-add-line fs-16 me-2"></i>New Analysis
       </button>
     </div>
@@ -501,8 +501,8 @@
         <strong>Please select a document type above</strong> to ensure proper citation formatting
       </div>
 
-      <!-- Main Prompt Input -->
-      <div class="main-prompt-area">
+      <!-- Main Prompt Input (hidden for upload mode - uses upload zone instead) -->
+      <div class="main-prompt-area" *ngIf="selectedTask !== 'upload'">
         <form (ngSubmit)="startCustomDraft()" class="prompt-form card">
           <div class="card-body">
             <!-- Upload mode: Hide textarea, analysis is automatic -->
@@ -514,14 +514,6 @@
               name="customPrompt"
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
-
-            <!-- Upload mode: Show instructions instead -->
-            <div *ngIf="selectedTask === 'upload'" class="upload-instructions">
-              <p class="text-muted mb-2">
-                <i class="ri-information-line"></i>
-                Upload your documents above, then click <strong>Analyze Documents</strong> to process them using the selected analysis type.
-              </p>
-            </div>
 
             <!-- Case Selector (Draft task only) -->
             <div class="case-selector-section" *ngIf="selectedTask === 'draft'" style="margin-top: 1rem; margin-bottom: 1rem;">

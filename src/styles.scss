@@ -517,3 +517,183 @@ body.dark-mode .mobile-file-manager-sidebar * {
   font-size: 0.8rem;
   font-weight: 500;
 }
+
+// =============================================
+// Toastr - Velzon Theme Styling
+// No hover effects, no shadows, clean flat design
+// =============================================
+.toast-container {
+  // Position adjustments
+  &.toast-top-right {
+    top: 70px;
+    right: 12px;
+  }
+
+  .ngx-toastr {
+    // Base styles - flat design, no shadows
+    box-shadow: none !important;
+    border-radius: 0.25rem;
+    padding: 0.75rem 1rem;
+    width: 320px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    background-position: 15px center;
+    background-repeat: no-repeat;
+    padding-left: 50px;
+
+    // Remove all hover/focus effects
+    &:hover {
+      box-shadow: none !important;
+      cursor: default;
+      opacity: 1 !important;
+    }
+
+    // Toast title
+    .toast-title {
+      font-weight: 600;
+      font-size: 0.8125rem;
+      margin-bottom: 0.25rem;
+    }
+
+    // Toast message
+    .toast-message {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    // Close button - Velzon style
+    .toast-close-button {
+      position: absolute;
+      right: 0.5rem;
+      top: 0.5rem;
+      font-size: 1rem;
+      font-weight: 400;
+      color: inherit;
+      opacity: 0.5;
+      text-shadow: none;
+      background: transparent;
+      border: none;
+      padding: 0;
+
+      &:hover {
+        opacity: 0.8;
+        color: inherit;
+      }
+    }
+
+    // Progress bar
+    .toast-progress {
+      height: 3px;
+      opacity: 0.3;
+      background-color: currentColor;
+    }
+  }
+
+  // Success toast - Velzon green (solid subtle bg)
+  .toast-success {
+    background-color: #d1e7dd !important;
+    border-color: #badbcc !important;
+    color: #0f5132;
+
+    .toast-title,
+    .toast-message {
+      color: #0f5132;
+    }
+
+    // Custom checkmark icon
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='%23198754'%3e%3cpath d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11.0026 16L18.0737 8.92893L16.6595 7.51472L11.0026 13.1716L8.17421 10.3431L6.75999 11.7574L11.0026 16Z'/%3e%3c/svg%3e");
+  }
+
+  // Error toast - Velzon red (solid subtle bg)
+  .toast-error {
+    background-color: #f8d7da !important;
+    border-color: #f5c2c7 !important;
+    color: #842029;
+
+    .toast-title,
+    .toast-message {
+      color: #842029;
+    }
+
+    // Custom X icon
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='%23dc3545'%3e%3cpath d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z'/%3e%3c/svg%3e");
+  }
+
+  // Warning toast - Velzon yellow/amber (solid subtle bg)
+  .toast-warning {
+    background-color: #fff3cd !important;
+    border-color: #ffecb5 !important;
+    color: #664d03;
+
+    .toast-title,
+    .toast-message {
+      color: #664d03;
+    }
+
+    // Custom warning icon
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='%23ffc107'%3e%3cpath d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z'/%3e%3c/svg%3e");
+  }
+
+  // Info toast - Velzon primary blue (solid subtle bg)
+  .toast-info {
+    background-color: #d6dae8 !important;
+    border-color: #c5cbe0 !important;
+    color: #2c3a60;
+
+    .toast-title,
+    .toast-message {
+      color: #2c3a60;
+    }
+
+    // Custom info icon
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='%23405189'%3e%3cpath d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z'/%3e%3c/svg%3e");
+  }
+}
+
+// Dark mode support for toastr
+[data-bs-theme="dark"] .toast-container {
+  .toast-success {
+    background-color: #1a4231 !important;
+    border-color: #246c4a !important;
+    color: #75b798;
+
+    .toast-title,
+    .toast-message {
+      color: #75b798;
+    }
+  }
+
+  .toast-error {
+    background-color: #4a1a1e !important;
+    border-color: #6c2530 !important;
+    color: #ea868f;
+
+    .toast-title,
+    .toast-message {
+      color: #ea868f;
+    }
+  }
+
+  .toast-warning {
+    background-color: #4a3f1a !important;
+    border-color: #6c5c25 !important;
+    color: #ffda6a;
+
+    .toast-title,
+    .toast-message {
+      color: #ffda6a;
+    }
+  }
+
+  .toast-info {
+    background-color: #2a2f45 !important;
+    border-color: #3d4566 !important;
+    color: #8b9dc3;
+
+    .toast-title,
+    .toast-message {
+      color: #8b9dc3;
+    }
+  }
+}
