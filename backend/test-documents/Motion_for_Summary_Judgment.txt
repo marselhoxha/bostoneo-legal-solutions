@@ -1,0 +1,200 @@
+UNITED STATES DISTRICT COURT
+DISTRICT OF MASSACHUSETTS
+
+MARCUS JOHNSON,
+    Plaintiff,
+                                        Civil Action No. 24-cv-11234-DMP
+v.
+
+CITY OF SPRINGFIELD and
+OFFICER JAMES WILSON, in his
+individual and official capacities,
+    Defendants.
+
+═══════════════════════════════════════════════════════════════════════════════
+        DEFENDANTS' MOTION FOR SUMMARY JUDGMENT AND MEMORANDUM IN SUPPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+Defendants City of Springfield and Officer James Wilson (collectively, "Defendants"), by and through their undersigned counsel, respectfully move this Court pursuant to Federal Rule of Civil Procedure 56 for summary judgment on all claims asserted by Plaintiff Marcus Johnson ("Plaintiff"). As demonstrated below, there is no genuine dispute as to any material fact, and Defendants are entitled to judgment as a matter of law.
+
+═══════════════════════════════════════════════════════════════════════════════
+                            PRELIMINARY STATEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+This case arises from a routine traffic stop that occurred on March 15, 2024. Plaintiff was pulled over for a valid traffic violation—driving with an expired registration—and during the stop, Officer Wilson observed behavior consistent with intoxication. When Plaintiff refused to comply with lawful orders and became physically aggressive, Officer Wilson used minimal, reasonable force to effect an arrest. The force used was objectively reasonable under the circumstances and protected by qualified immunity.
+
+Plaintiff's claims fail as a matter of law because: (1) Officer Wilson had reasonable suspicion, and ultimately probable cause, to detain and arrest Plaintiff; (2) the force used was objectively reasonable under the Fourth Amendment; (3) Officer Wilson is entitled to qualified immunity because he did not violate any clearly established constitutional right; and (4) the City cannot be held liable under Monell because there is no evidence of an unconstitutional policy or custom.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           STATEMENT OF UNDISPUTED FACTS
+═══════════════════════════════════════════════════════════════════════════════
+
+The following material facts are undisputed based on the record evidence:
+
+1. On March 15, 2024, at approximately 11:45 p.m., Officer James Wilson was on routine patrol in the downtown Springfield area. (Wilson Decl. ¶ 3; Def. Ex. A.)
+
+2. Officer Wilson observed a black Honda Civic with an expired registration sticker—the sticker displayed "2023" while the current year was 2024. (Wilson Decl. ¶ 4; Dashcam Video at 0:15-0:30.)
+
+3. Officer Wilson activated his emergency lights and initiated a traffic stop. The vehicle pulled over to the side of Maple Street within approximately 200 feet. (Wilson Decl. ¶ 5; Dashcam Video at 0:30-1:15.)
+
+4. Officer Wilson approached the driver's side window and requested the driver's license, registration, and proof of insurance. (Wilson Decl. ¶ 6; Dashcam Video at 1:30-1:45.)
+
+5. The driver, later identified as Plaintiff Marcus Johnson, provided his driver's license but stated he could not locate the registration or insurance documents. (Wilson Decl. ¶ 7; Dashcam Video at 1:45-2:30.)
+
+6. During this interaction, Officer Wilson observed that Plaintiff had bloodshot, watery eyes, slurred speech, and a strong odor of alcohol emanating from the vehicle. (Wilson Decl. ¶ 8.)
+
+7. Based on these observations, Officer Wilson asked Plaintiff whether he had been drinking. Plaintiff responded, "Just a few beers at dinner." (Wilson Decl. ¶ 9; Dashcam Video at 2:45-3:00.)
+
+8. Officer Wilson asked Plaintiff to step out of the vehicle to perform standardized field sobriety tests. (Wilson Decl. ¶ 10; Dashcam Video at 3:15.)
+
+9. Plaintiff initially refused to exit the vehicle, stating, "I don't have to do that." After Officer Wilson explained that he was lawfully required to exit the vehicle during a traffic stop, Plaintiff complied. (Wilson Decl. ¶ 11; Dashcam Video at 3:15-4:00.)
+
+10. Upon exiting the vehicle, Plaintiff was unsteady on his feet and had difficulty maintaining his balance. (Wilson Decl. ¶ 12; Dashcam Video at 4:00-4:15.)
+
+11. Officer Wilson began administering the Horizontal Gaze Nystagmus (HGN) test. Plaintiff exhibited six out of six clues indicating impairment. (Wilson Decl. ¶ 13; Field Sobriety Test Report, Def. Ex. B.)
+
+12. During the Walk-and-Turn test, Plaintiff was unable to maintain the instructional stance, started before being told to begin, stopped walking to regain balance, and took an incorrect number of steps. (Wilson Decl. ¶ 14; Field Sobriety Test Report.)
+
+13. Based on the totality of the circumstances, Officer Wilson informed Plaintiff that he was under arrest for operating under the influence of alcohol in violation of M.G.L. c. 90, § 24. (Wilson Decl. ¶ 15; Dashcam Video at 8:45.)
+
+14. When Officer Wilson attempted to place handcuffs on Plaintiff, Plaintiff pulled away and stated, "You're not putting those on me." (Wilson Decl. ¶ 16; Dashcam Video at 8:50-9:00.)
+
+15. Officer Wilson gave Plaintiff two verbal commands to place his hands behind his back. Plaintiff refused and took a step toward Officer Wilson in an aggressive manner. (Wilson Decl. ¶ 17; Dashcam Video at 9:00-9:10.)
+
+16. Officer Wilson then took Plaintiff to the ground using an arm-bar takedown technique taught at the Springfield Police Academy. (Wilson Decl. ¶ 18; Dashcam Video at 9:10-9:15.)
+
+17. Plaintiff continued to resist on the ground, refusing to give Officer Wilson his left arm. Officer Wilson delivered two knee strikes to Plaintiff's thigh—a technique taught to gain compliance from resisting subjects. (Wilson Decl. ¶ 19; Dashcam Video at 9:15-9:30.)
+
+18. After the knee strikes, Plaintiff stopped resisting and was successfully handcuffed. The entire physical altercation lasted approximately 20 seconds. (Wilson Decl. ¶ 20; Dashcam Video at 9:10-9:30.)
+
+19. Officer Wilson immediately called for an ambulance to evaluate Plaintiff. (Wilson Decl. ¶ 21; Dispatch Records, Def. Ex. C.)
+
+20. Springfield Fire Department EMTs examined Plaintiff at the scene and determined that he had no injuries requiring hospital transport. Plaintiff refused further medical treatment. (EMT Report, Def. Ex. D.)
+
+21. Plaintiff was transported to the Springfield Police Department for booking. A breath test administered at 12:47 a.m. showed a blood alcohol content of 0.14%, well above the legal limit of 0.08%. (Booking Records, Def. Ex. E.)
+
+22. Officer Wilson has been employed by the Springfield Police Department for eight years and has received commendations for exemplary service. He has no prior complaints of excessive force. (Personnel Records, Def. Ex. F.)
+
+23. The Springfield Police Department has a comprehensive use-of-force policy that requires officers to use only the minimum force necessary to effect an arrest. (SPD Use of Force Policy, Def. Ex. G.)
+
+24. All Springfield police officers receive annual training on use of force, de-escalation techniques, and constitutional policing. Officer Wilson completed this training in January 2024. (Training Records, Def. Ex. H.)
+
+═══════════════════════════════════════════════════════════════════════════════
+                              LEGAL STANDARD
+═══════════════════════════════════════════════════════════════════════════════
+
+Summary judgment is appropriate where "there is no genuine dispute as to any material fact and the movant is entitled to judgment as a matter of law." Fed. R. Civ. P. 56(a). A fact is "material" if it "might affect the outcome of the suit under the governing law." Anderson v. Liberty Lobby, Inc., 477 U.S. 242, 248 (1986). A dispute is "genuine" if "the evidence is such that a reasonable jury could return a verdict for the nonmoving party." Id.
+
+The moving party bears the initial burden of demonstrating the absence of a genuine issue of material fact. Celotex Corp. v. Catrett, 477 U.S. 317, 323 (1986). Once the movant has met this burden, the non-moving party "must set forth specific facts showing that there is a genuine issue for trial." Anderson, 477 U.S. at 256.
+
+═══════════════════════════════════════════════════════════════════════════════
+                                  ARGUMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+I. OFFICER WILSON DID NOT VIOLATE PLAINTIFF'S FOURTH AMENDMENT RIGHTS
+
+    A. The Traffic Stop Was Supported by Reasonable Suspicion
+
+The Fourth Amendment permits a police officer to conduct a brief investigative stop when the officer has "reasonable, articulable suspicion that criminal activity is afoot." Terry v. Ohio, 392 U.S. 1, 30 (1968). For traffic stops, "the decision to stop an automobile is reasonable where the police have probable cause to believe that a traffic violation has occurred." Whren v. United States, 517 U.S. 806, 810 (1996).
+
+Here, Officer Wilson observed Plaintiff's vehicle displaying an expired registration sticker—an unambiguous traffic violation under M.G.L. c. 90, § 9. This observation provided more than reasonable suspicion; it provided probable cause to initiate the traffic stop. The stop was therefore lawful from its inception.
+
+    B. Officer Wilson Had Probable Cause to Arrest Plaintiff
+
+"Probable cause exists when the facts and circumstances within the officer's knowledge are sufficient to warrant a prudent person in believing that an offense has been committed." Holder v. Town of Sandown, 585 F.3d 500, 504 (1st Cir. 2009).
+
+The undisputed facts establish overwhelming probable cause for Plaintiff's arrest:
+
+    • Plaintiff admitted to drinking alcohol before driving
+    • Plaintiff exhibited classic signs of intoxication (bloodshot eyes, slurred speech, odor of alcohol, unsteady gait)
+    • Plaintiff failed multiple standardized field sobriety tests
+    • Post-arrest breath test confirmed BAC of 0.14%
+
+No reasonable juror could conclude that Officer Wilson lacked probable cause to arrest Plaintiff for operating under the influence.
+
+    C. The Force Used Was Objectively Reasonable
+
+Claims of excessive force during an arrest are analyzed under the Fourth Amendment's "objective reasonableness" standard. Graham v. Connor, 490 U.S. 386, 397 (1989). The inquiry is "whether the officers' actions are 'objectively reasonable' in light of the facts and circumstances confronting them, without regard to their underlying intent or motivation." Id. at 397.
+
+Courts consider three factors in assessing reasonableness: "(1) the severity of the crime at issue; (2) whether the suspect posed an immediate threat to the safety of the officers or others; and (3) whether the suspect was actively resisting arrest or attempting to evade arrest by flight." Id. at 396.
+
+Applying these factors here:
+
+1. Severity of the Crime: Plaintiff was being arrested for operating under the influence—a serious offense that endangered public safety. While not a violent felony, OUI is a significant crime that justifies reasonable force to effect an arrest.
+
+2. Immediate Threat: Plaintiff posed a threat when he stepped aggressively toward Officer Wilson after refusing to be handcuffed. Officer Wilson was alone, at night, with an intoxicated individual who had demonstrated hostility to law enforcement. Courts have consistently recognized that officers need not wait to be attacked before using force. See Young v. City of Providence, 404 F.3d 4, 21 (1st Cir. 2005).
+
+3. Active Resistance: Plaintiff actively resisted arrest by: (a) refusing verbal commands to place his hands behind his back; (b) pulling away when Officer Wilson attempted to handcuff him; (c) stepping aggressively toward Officer Wilson; and (d) refusing to give his arm after being taken to the ground. This active resistance justified the use of force. See Bastien v. Goddard, 279 F.3d 10, 14 (1st Cir. 2002) ("Officers need not use the least intrusive means available when effecting an arrest").
+
+The force used—an arm-bar takedown and two knee strikes to the thigh—was proportional to Plaintiff's resistance. These are taught techniques designed to gain compliance with minimal injury. Plaintiff suffered no significant injuries, as confirmed by EMTs at the scene. The force was objectively reasonable under the circumstances.
+
+II. OFFICER WILSON IS ENTITLED TO QUALIFIED IMMUNITY
+
+Even if this Court were to find a constitutional violation (which it should not), Officer Wilson is entitled to qualified immunity.
+
+    A. Legal Standard for Qualified Immunity
+
+Qualified immunity shields government officials from civil liability unless their conduct violates "clearly established statutory or constitutional rights of which a reasonable person would have known." Harlow v. Fitzgerald, 457 U.S. 800, 818 (1982). A right is "clearly established" only if existing precedent has placed the constitutional question "beyond debate." Ashcroft v. al-Kidd, 563 U.S. 731, 741 (2011).
+
+    B. No Clearly Established Right Was Violated
+
+Plaintiff cannot identify any case holding that an officer violates the Fourth Amendment by using an arm-bar takedown and knee strikes to the thigh when arresting an intoxicated suspect who refuses to be handcuffed, pulls away from the officer, and steps toward the officer aggressively.
+
+The Supreme Court has repeatedly emphasized that qualified immunity protects "all but the plainly incompetent or those who knowingly violate the law." Malley v. Briggs, 475 U.S. 335, 341 (1986). Officer Wilson's actions fall well within the range of reasonable responses to an actively resisting suspect.
+
+III. THE CITY OF SPRINGFIELD IS NOT LIABLE UNDER MONELL
+
+A municipality cannot be held liable under Section 1983 on a respondeat superior theory. Monell v. Dep't of Social Servs., 436 U.S. 658, 691 (1978). Instead, municipal liability requires proof that the alleged constitutional violation resulted from an official policy, custom, or practice. Id. at 694.
+
+Plaintiff has produced no evidence of any unconstitutional policy, custom, or practice. To the contrary, the undisputed evidence shows:
+
+    • Springfield has a comprehensive use-of-force policy requiring minimum necessary force
+    • Officers receive annual training on constitutional policing
+    • Officer Wilson has no prior complaints of excessive force
+
+Plaintiff's claim against the City therefore fails as a matter of law.
+
+IV. PLAINTIFF'S STATE LAW CLAIMS FAIL
+
+    A. Assault and Battery
+
+Plaintiff's assault and battery claim fails because Officer Wilson's use of force was privileged. Under Massachusetts law, a police officer may use reasonable force to effect a lawful arrest. Commonwealth v. Moreira, 388 Mass. 596, 600 (1983). As discussed above, Officer Wilson had probable cause to arrest Plaintiff, and the force used was reasonable.
+
+    B. Intentional Infliction of Emotional Distress
+
+To prevail on an IIED claim, Plaintiff must prove conduct "so outrageous in character, and so extreme in degree, as to go beyond all possible bounds of decency, and to be regarded as atrocious, and utterly intolerable in a civilized community." Agis v. Howard Johnson Co., 371 Mass. 140, 145 (1976). Using reasonable force to arrest a resisting, intoxicated suspect does not meet this demanding standard.
+
+═══════════════════════════════════════════════════════════════════════════════
+                                  CONCLUSION
+═══════════════════════════════════════════════════════════════════════════════
+
+For the foregoing reasons, Defendants respectfully request that this Court grant summary judgment in their favor on all claims.
+
+Respectfully submitted,
+
+CITY OF SPRINGFIELD
+
+By its attorneys,
+
+MUNICIPAL LAW GROUP, LLP
+
+
+_________________________________
+Katherine A. Reynolds, Esq. (BBO# 445892)
+Thomas J. Burke, Esq. (BBO# 567234)
+75 State Street, Suite 2400
+Boston, Massachusetts 02109
+Telephone: (617) 555-4000
+Facsimile: (617) 555-4001
+kreynolds@municipallawgroup.com
+
+Dated: January 8, 2025
+
+═══════════════════════════════════════════════════════════════════════════════
+                           CERTIFICATE OF SERVICE
+═══════════════════════════════════════════════════════════════════════════════
+
+I hereby certify that on January 8, 2025, I caused the foregoing document to be served on all counsel of record via the Court's CM/ECF electronic filing system.
+
+_________________________________
+Katherine A. Reynolds

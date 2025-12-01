@@ -1,0 +1,162 @@
+COMMONWEALTH OF MASSACHUSETTS
+SUFFOLK COUNTY SUPERIOR COURT
+
+CIVIL ACTION NO. 2024-CV-04521
+
+ROBERT SMITH,
+    Plaintiff,
+
+v.
+
+TECHCORP INDUSTRIES, INC.,
+    Defendant.
+
+═══════════════════════════════════════════════════════════════════════════════
+   DEFENDANT TECHCORP INDUSTRIES, INC.'S FIRST SET OF INTERROGATORIES
+                          TO PLAINTIFF ROBERT SMITH
+═══════════════════════════════════════════════════════════════════════════════
+
+Defendant TechCorp Industries, Inc. ("TechCorp" or "Defendant"), by and through its undersigned counsel, pursuant to Massachusetts Rules of Civil Procedure 33, hereby propounds the following Interrogatories to Plaintiff Robert Smith ("Plaintiff"). Plaintiff is required to answer these Interrogatories separately, fully, and under oath within thirty (30) days of service.
+
+═══════════════════════════════════════════════════════════════════════════════
+                               DEFINITIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. "You," "Your," and "Plaintiff" refer to Robert Smith and any person acting on his behalf.
+
+2. "TechCorp" or "Defendant" refers to TechCorp Industries, Inc., its officers, directors, employees, agents, and representatives.
+
+3. "Document" means any written, printed, typed, or graphic matter, including electronically stored information, and includes but is not limited to: correspondence, memoranda, notes, emails, text messages, reports, records, contracts, agreements, invoices, receipts, photographs, recordings, and any other tangible thing on which information is recorded.
+
+4. "Communication" means any oral, written, or electronic exchange of information, including but not limited to: conversations, telephone calls, emails, text messages, letters, memoranda, and any other means of transmitting information.
+
+5. "Person" includes natural persons, corporations, partnerships, associations, and any other legal entities.
+
+6. "Identify" or "Identification" when used with respect to a person means to state the person's full name, current or last known address, telephone number, and relationship to the parties or subject matter of this litigation.
+
+7. "Identify" or "Identification" when used with respect to a document means to state the type of document, date, author, recipient, general subject matter, and present location.
+
+8. "Concerning" or "Relating to" means pertaining to, referring to, describing, evidencing, or constituting.
+
+═══════════════════════════════════════════════════════════════════════════════
+                              INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Each Interrogatory shall be answered separately and fully under oath, unless objected to, in which event the reasons for objection shall be stated in lieu of an answer.
+
+2. If you cannot answer an Interrogatory in full, answer to the extent possible and explain why a complete answer cannot be provided.
+
+3. If information responsive to an Interrogatory is within your control but not within your personal knowledge, you must make reasonable inquiry of persons likely to have such information.
+
+4. These Interrogatories are continuing in nature. If, after serving your responses, you obtain additional information responsive to any Interrogatory, you must supplement your response promptly.
+
+5. If you claim any privilege, state the privilege claimed, the basis for the claim, and provide sufficient information to evaluate the claim.
+
+═══════════════════════════════════════════════════════════════════════════════
+                              INTERROGATORIES
+═══════════════════════════════════════════════════════════════════════════════
+
+                        BACKGROUND AND EMPLOYMENT
+
+INTERROGATORY NO. 1:
+State your complete employment history for the ten (10) years preceding your employment with TechCorp, including for each position: (a) employer name and address; (b) dates of employment; (c) job title and duties; (d) reason for leaving; and (e) name and contact information for your supervisor.
+
+INTERROGATORY NO. 2:
+Identify all performance evaluations, reviews, or assessments you received during your employment with TechCorp, including the date, evaluator, and overall rating or conclusion of each evaluation.
+
+INTERROGATORY NO. 3:
+Describe in detail all promotions, raises, bonuses, or other forms of recognition you received during your employment with TechCorp, including the date, amount, and reason for each.
+
+INTERROGATORY NO. 4:
+Identify all disciplinary actions, warnings, reprimands, or negative feedback you received during your employment with TechCorp, including the date, nature of the issue, and any documentation provided.
+
+INTERROGATORY NO. 5:
+State whether you were ever placed on a performance improvement plan or similar corrective action program during your employment with TechCorp, and if so, describe the circumstances in detail.
+
+                        ALLEGED SECURITY CONCERNS
+
+INTERROGATORY NO. 6:
+Describe in detail each alleged security vulnerability or violation you claim to have discovered at TechCorp, including: (a) the specific nature of each alleged issue; (b) when you first discovered it; (c) how you discovered it; (d) what systems or data were allegedly affected; and (e) any documentation you created or obtained concerning each issue.
+
+INTERROGATORY NO. 7:
+Identify all persons to whom you reported the alleged security concerns, including the date, method (e.g., oral, email, written memo), and substance of each communication.
+
+INTERROGATORY NO. 8:
+State whether you reported the alleged security concerns to any governmental agency, regulatory body, or law enforcement entity, and if so, identify: (a) the agency; (b) the date of the report; (c) the method of reporting; and (d) any response you received.
+
+INTERROGATORY NO. 9:
+Identify all documents, including emails, memoranda, reports, or other writings, that you created, received, or reviewed relating to the alleged security concerns, and state the current location of each document.
+
+INTERROGATORY NO. 10:
+State whether you retained copies of any TechCorp documents, data, or information after your termination, and if so, identify all such materials and their current location.
+
+                           TERMINATION
+
+INTERROGATORY NO. 11:
+Describe in detail all communications you had with TechCorp employees or representatives concerning your termination, including the date, participants, and substance of each communication.
+
+INTERROGATORY NO. 12:
+State whether anyone at TechCorp told you, directly or indirectly, that your termination was related to your reports of alleged security concerns, and if so, identify the speaker and describe the communication in detail.
+
+INTERROGATORY NO. 13:
+Identify all documents you received from TechCorp at or around the time of your termination, including any termination letter, separation agreement, COBRA notice, or similar documentation.
+
+                              DAMAGES
+
+INTERROGATORY NO. 14:
+Describe in detail all economic damages you claim to have suffered as a result of your termination, including: (a) lost wages and benefits; (b) lost bonus or incentive compensation; (c) lost equity or stock options; (d) job search expenses; and (e) any other economic losses.
+
+INTERROGATORY NO. 15:
+State whether you have sought or obtained employment since your termination from TechCorp, and if so, for each position: (a) employer name and address; (b) job title; (c) dates of employment; (d) compensation; and (e) reason for leaving, if applicable.
+
+INTERROGATORY NO. 16:
+Describe in detail all non-economic damages you claim to have suffered, including: (a) emotional distress; (b) physical symptoms; (c) damage to reputation; and (d) any other non-economic harm.
+
+INTERROGATORY NO. 17:
+Identify all healthcare providers, including physicians, psychologists, psychiatrists, and counselors, who have treated you for any condition you allege is related to your termination, and state the dates of treatment and diagnosis, if any.
+
+INTERROGATORY NO. 18:
+State the total amount of damages you seek in this action, itemized by category (e.g., lost wages, emotional distress, punitive damages, attorneys' fees).
+
+                           WITNESSES AND EVIDENCE
+
+INTERROGATORY NO. 19:
+Identify all persons who have knowledge of any facts relevant to this litigation, and for each person, state: (a) their relationship to you or TechCorp; and (b) the subject matter of their knowledge.
+
+INTERROGATORY NO. 20:
+Identify all documents, recordings, photographs, or other tangible evidence you intend to use or rely upon at trial, and state the current location of each item.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Respectfully submitted,
+
+WILSON SONSINI GOODRICH & ROSATI, P.C.
+
+By: _________________________________
+    Elizabeth A. Chen, Esq. (BBO# 678901)
+    Michael R. Thompson, Esq. (BBO# 712345)
+    One Boston Place, Suite 3500
+    Boston, Massachusetts 02108
+    Telephone: (617) 555-7500
+    Facsimile: (617) 555-7501
+    echen@wsgr.com
+
+    Counsel for Defendant TechCorp Industries, Inc.
+
+Dated: October 20, 2024
+
+═══════════════════════════════════════════════════════════════════════════════
+                           CERTIFICATE OF SERVICE
+═══════════════════════════════════════════════════════════════════════════════
+
+I hereby certify that on October 20, 2024, a true and correct copy of the foregoing document was served upon counsel for Plaintiff via email and first-class mail:
+
+    James T. Morrison, Esq.
+    Rachel K. Chen, Esq.
+    Smith & Associates, LLP
+    100 Federal Street, Suite 2500
+    Boston, Massachusetts 02110
+    jmorrison@smithassociates.com
+
+_________________________________
+Elizabeth A. Chen

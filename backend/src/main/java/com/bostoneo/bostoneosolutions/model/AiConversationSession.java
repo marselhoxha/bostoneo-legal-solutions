@@ -62,6 +62,9 @@ public class AiConversationSession {
     @Column(name = "related_draft_id", length = 255)
     private String relatedDraftId;
 
+    @Column(name = "workflow_execution_id")
+    private Long workflowExecutionId;
+
     @Column(name = "jurisdiction", length = 100)
     private String jurisdiction;
 

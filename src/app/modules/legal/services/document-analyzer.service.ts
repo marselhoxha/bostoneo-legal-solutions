@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpEventType, HttpContext } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { map, catchError, tap, timeout } from 'rxjs/operators';
+import { map, catchError, tap, timeout, filter } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
 export interface DocumentAnalysisResult {
@@ -114,26 +114,24 @@ export class DocumentAnalyzerService {
       }
     ).pipe(
       timeout(620000), // 620 second timeout (backend has 600s = 10 min, this gives 20s buffer)
-      map(event => {
-        switch (event.type) {
-          case HttpEventType.UploadProgress:
-            if (event.total) {
-              const progress = Math.round(100 * event.loaded / event.total);
-              this.uploadProgressSubject.next({
-                loaded: event.loaded,
-                total: event.total,
-                percentage: progress
-              });
-              if (progress === 100) {
-                this.analysisStatusSubject.next('analyzing');
-              }
-            }
-            break;
-          case HttpEventType.Response:
-            this.analysisStatusSubject.next('completed');
-            return event.body as DocumentAnalysisResult;
+      tap(event => {
+        // Handle upload progress events (side effect only, don't emit)
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          const progress = Math.round(100 * event.loaded / event.total);
+          this.uploadProgressSubject.next({
+            loaded: event.loaded,
+            total: event.total,
+            percentage: progress
+          });
+          if (progress === 100) {
+            this.analysisStatusSubject.next('analyzing');
+          }
         }
-        return null as any;
+      }),
+      filter(event => event.type === HttpEventType.Response), // Only emit Response events
+      map(event => {
+        this.analysisStatusSubject.next('completed');
+        return (event as any).body as DocumentAnalysisResult;
       }),
       catchError(error => {
         this.analysisStatusSubject.next('failed');
@@ -141,7 +139,7 @@ export class DocumentAnalyzerService {
 
         // Better error message for timeout
         if (error.name === 'TimeoutError') {
-          console.error('Analysis timed out after 120 seconds');
+          console.error('Analysis timed out after 620 seconds');
         }
 
         return throwError(() => error);

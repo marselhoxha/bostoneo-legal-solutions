@@ -66,7 +66,7 @@
               <i class="ri-file-text-line"></i>
             </div>
             <div class="item-content">
-              <div class="item-title" [title]="doc.fileName">{{ doc.fileName | slice:0:25 }}{{ doc.fileName.length > 25 ? '...' : '' }}</div>
+              <div class="item-title" [title]="getCleanFileName(doc.fileName)">{{ getCleanFileName(doc.fileName) | slice:0:25 }}{{ getCleanFileName(doc.fileName).length > 25 ? '...' : '' }}</div>
               <div class="item-meta">
                 <span class="sidebar-badge" [ngClass]="getDocTypeBadgeClass(doc.detectedType)">{{ doc.detectedType }}</span>
                 <span>{{ doc.timestamp | date:'MMM d' }}</span>
@@ -346,9 +346,245 @@
   <!-- ========================================== -->
   <main class="main-content-area" [class.full-width]="(documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async)">
 
+    <!-- ========================================== -->
+    <!-- WORKFLOW DETAILS PAGE (Full-Page View) -->
+    <!-- ========================================== -->
+    <div class="workflow-details-page" *ngIf="showWorkflowDetailsPage && selectedWorkflowForDetails">
+      <!-- Header -->
+      <div class="workflow-details-header">
+        <div class="header-left">
+          <button class="back-btn" (click)="closeWorkflowDetailsPage()">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div class="header-info">
+            <h2 class="workflow-title">{{ selectedWorkflowForDetails.name || selectedWorkflowForDetails.template?.name || 'Workflow' }}</h2>
+            <span class="workflow-meta">
+              Started {{ selectedWorkflowForDetails.startedAt | date:'shortTime' }} • {{ selectedWorkflowForDetails.documentIds?.length || 0 }} documents
+            </span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <ng-container *ngIf="getWorkflowHeaderActions() as actions">
+            <button *ngIf="actions.secondary"
+                    class="btn btn-outline-secondary"
+                    (click)="handleWorkflowHeaderAction(actions.secondary.action)">
+              <i [class]="actions.secondary.icon"></i>
+              {{ actions.secondary.label }}
+            </button>
+            <button *ngIf="actions.primary"
+                    class="btn"
+                    [class.btn-danger]="selectedWorkflowForDetails.status === 'RUNNING'"
+                    [class.btn-primary]="selectedWorkflowForDetails.status !== 'RUNNING'"
+                    (click)="handleWorkflowHeaderAction(actions.primary.action)">
+              <i [class]="actions.primary.icon"></i>
+              {{ actions.primary.label }}
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Status Banner -->
+      <div class="workflow-status-banner" [ngClass]="getWorkflowStatusBanner().colorClass">
+        <div class="status-icon">
+          <i [class]="getWorkflowStatusBanner().icon"></i>
+        </div>
+        <div class="status-text">
+          <span class="status-title">{{ getWorkflowStatusBanner().title }}</span>
+          <span class="status-subtitle">{{ getWorkflowStatusBanner().subtitle }}</span>
+        </div>
+      </div>
+
+      <!-- Progress Section -->
+      <div class="workflow-progress-section">
+        <span class="progress-label">Overall Progress</span>
+        <span class="progress-percentage" [ngClass]="{
+          'text-success': selectedWorkflowForDetails.status === 'COMPLETED',
+          'text-primary': selectedWorkflowForDetails.status === 'RUNNING',
+          'text-warning': selectedWorkflowForDetails.status === 'WAITING_USER'
+        }">{{ getWorkflowProgressPercentage(selectedWorkflowForDetails) }}% Complete</span>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" [ngClass]="{
+            'fill-green': selectedWorkflowForDetails.status === 'COMPLETED',
+            'fill-teal': selectedWorkflowForDetails.status === 'RUNNING',
+            'fill-yellow': selectedWorkflowForDetails.status === 'WAITING_USER',
+            'fill-red': selectedWorkflowForDetails.status === 'FAILED'
+          }" [style.width.%]="getWorkflowProgressPercentage(selectedWorkflowForDetails)"></div>
+        </div>
+      </div>
+
+      <!-- Workflow Steps Section -->
+      <div class="workflow-steps-section">
+        <div class="steps-header">
+          <div class="steps-title">
+            <i class="ri-list-check-2"></i>
+            <span>Workflow Steps</span>
+          </div>
+          <button class="expand-all-btn" (click)="toggleExpandAllSteps()">
+            <i [class]="allStepsExpanded ? 'ri-contract-up-down-line' : 'ri-expand-up-down-line'"></i>
+            {{ allStepsExpanded ? 'Collapse All' : 'Expand All' }}
+          </button>
+        </div>
+
+        <!-- Steps Timeline -->
+        <div class="steps-timeline">
+          <div class="step-item" *ngFor="let step of selectedWorkflowForDetails.stepExecutions; let i = index; let last = last"
+               [class.is-completed]="step.status === 'COMPLETED'"
+               [class.is-running]="step.status === 'IN_PROGRESS' || step.status === 'RUNNING'"
+               [class.is-waiting]="step.status === 'WAITING_USER'"
+               [class.is-pending]="step.status === 'PENDING' || (!step.status || (step.status !== 'COMPLETED' && step.status !== 'IN_PROGRESS' && step.status !== 'RUNNING' && step.status !== 'WAITING_USER' && step.status !== 'FAILED'))"
+               [class.is-failed]="step.status === 'FAILED'">
+
+            <!-- Step Indicator -->
+            <div class="step-indicator-container">
+              <div class="step-indicator">
+                <ng-container [ngSwitch]="step.status">
+                  <i *ngSwitchCase="'COMPLETED'" class="ri-check-line"></i>
+                  <i *ngSwitchCase="'IN_PROGRESS'" class="ri-loader-4-line spin"></i>
+                  <i *ngSwitchCase="'RUNNING'" class="ri-loader-4-line spin"></i>
+                  <i *ngSwitchCase="'WAITING_USER'" class="ri-pause-line"></i>
+                  <i *ngSwitchCase="'FAILED'" class="ri-close-line"></i>
+                  <span *ngSwitchDefault class="step-number">{{ step.stepNumber }}</span>
+                </ng-container>
+              </div>
+              <div class="step-connector" *ngIf="!last"></div>
+            </div>
+
+            <!-- Step Content -->
+            <div class="step-content">
+              <div class="step-header">
+                <div class="step-title-row">
+                  <span class="step-name">{{ step.stepName }}</span>
+                  <span class="step-type-badge" [ngClass]="{
+                    'badge-display': step.stepType === 'DISPLAY',
+                    'badge-synthesis': step.stepType === 'SYNTHESIS',
+                    'badge-generation': step.stepType === 'GENERATION',
+                    'badge-integration': step.stepType === 'INTEGRATION',
+                    'badge-action': step.stepType === 'ACTION'
+                  }">{{ step.stepType }}</span>
+                </div>
+                <span class="step-duration" *ngIf="getStepDuration(step)">
+                  <i class="ri-time-line"></i>
+                  {{ getStepDuration(step) }}
+                </span>
+              </div>
+
+              <!-- Step Description (for pending/running steps) -->
+              <p class="step-description" *ngIf="step.status === 'PENDING' || step.status === 'IN_PROGRESS' || step.status === 'RUNNING'">
+                {{ step.description || getStepDescription(step) }}
+              </p>
+
+              <!-- Processing Indicator -->
+              <div class="processing-indicator" *ngIf="step.status === 'IN_PROGRESS' || step.status === 'RUNNING'">
+                <div class="processing-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="processing-text">Processing with AI...</span>
+              </div>
+
+              <!-- Action Buttons for WAITING_USER -->
+              <div class="step-action-buttons" *ngIf="step.status === 'WAITING_USER'">
+                <p class="action-description">{{ step.outputData?.message || 'This step requires your review before continuing.' }}</p>
+                <div class="action-btn-group">
+                  <button class="btn btn-primary btn-sm" (click)="resumeWorkflowStep(selectedWorkflowForDetails.id, step.id)">
+                    <i class="ri-play-line"></i>
+                    Continue Workflow
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" *ngIf="step.outputData" (click)="toggleStepExpansion(step.id)">
+                    <i class="ri-eye-line"></i>
+                    View Output
+                  </button>
+                </div>
+              </div>
+
+              <!-- View Output Button for Completed Steps -->
+              <button class="view-output-btn" *ngIf="step.status === 'COMPLETED' && step.outputData"
+                      (click)="toggleStepExpansion(step.id)">
+                <i class="ri-eye-line"></i>
+                {{ isStepExpanded(step.id) ? 'Hide Output' : 'View Output' }}
+              </button>
+
+              <!-- Expandable Output Section -->
+              <div class="step-output-card" *ngIf="isStepExpanded(step.id) && step.outputData">
+                <div class="output-header">
+                  <span class="output-label">
+                    <i class="ri-file-text-line"></i>
+                    OUTPUT
+                  </span>
+                  <div class="output-actions">
+                    <button class="icon-btn" (click)="copyToClipboard(step.outputData.content || step.outputData.draftContent || '')" title="Copy">
+                      <i class="ri-file-copy-line"></i>
+                    </button>
+                    <button class="icon-btn" (click)="expandStepOutput(step)" title="Expand">
+                      <i class="ri-fullscreen-line"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="output-content">
+                  <!-- Display step output based on type -->
+                  <ng-container [ngSwitch]="step.stepType">
+                    <!-- DISPLAY type -->
+                    <ng-container *ngSwitchCase="'DISPLAY'">
+                      <div *ngIf="step.outputData.documents?.length" class="output-text">
+                        <strong>Documents Analyzed:</strong>
+                        <ul>
+                          <li *ngFor="let doc of step.outputData.documents">{{ doc.fileName }} - {{ doc.pageCount || '?' }} pages</li>
+                        </ul>
+                      </div>
+                      <div *ngIf="step.outputData.actionItems?.length" class="output-text">
+                        <strong>Action Items:</strong> {{ step.outputData.actionItems.length }} items
+                      </div>
+                      <div *ngIf="step.outputData.timelineEvents?.length" class="output-text">
+                        <strong>Timeline Events:</strong> {{ step.outputData.timelineEvents.length }} events
+                      </div>
+                    </ng-container>
+
+                    <!-- SYNTHESIS type -->
+                    <ng-container *ngSwitchCase="'SYNTHESIS'">
+                      <div class="output-text markdown-content"
+                           [innerHTML]="(step.outputData.content || '') | slice:0:500 | markdownToHtml"></div>
+                    </ng-container>
+
+                    <!-- GENERATION type -->
+                    <ng-container *ngSwitchCase="'GENERATION'">
+                      <div class="output-text markdown-content"
+                           [innerHTML]="(step.outputData.content || '') | slice:0:500 | markdownToHtml"></div>
+                    </ng-container>
+
+                    <!-- INTEGRATION type -->
+                    <ng-container *ngSwitchCase="'INTEGRATION'">
+                      <div *ngIf="step.outputData.draftContent" class="output-text markdown-content"
+                           [innerHTML]="(step.outputData.draftContent || '') | slice:0:500 | markdownToHtml"></div>
+                      <div *ngIf="step.outputData.sessionId" class="output-meta">
+                        <span class="meta-item">
+                          <i class="ri-draft-line"></i>
+                          Draft created - Click to edit
+                        </span>
+                      </div>
+                    </ng-container>
+
+                    <!-- Default -->
+                    <ng-container *ngSwitchDefault>
+                      <div class="output-text" *ngIf="step.outputData.message">{{ step.outputData.message }}</div>
+                    </ng-container>
+                  </ng-container>
+
+                  <!-- Show More Link -->
+                  <button class="show-more-btn" *ngIf="(step.outputData.content?.length > 500) || (step.outputData.draftContent?.length > 500)"
+                          (click)="expandStepOutput(step)">
+                    <i class="ri-arrow-down-s-line"></i>
+                    Show More
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Document Analysis Viewer (Full-width when viewing document) -->
     <app-document-analysis-viewer
-      *ngIf="(documentViewerMode$ | async) && getActiveDocument()"
+      *ngIf="!showWorkflowDetailsPage && (documentViewerMode$ | async) && getActiveDocument()"
       [document]="getActiveDocument()!"
       (close)="closeDocumentViewer()"
       (exportPdf)="onExportPdf($event)"
@@ -366,7 +602,7 @@
     </app-collection-viewer>
 
     <!-- Welcome Screen (No active conversation) -->
-    <div class="welcome-screen" *ngIf="!(documentViewerMode$ | async) && !isViewingCollection && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
+    <div class="welcome-screen" *ngIf="!showWorkflowDetailsPage && !(documentViewerMode$ | async) && !isViewingCollection && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
       <div class="welcome-header">
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
         <p class="welcome-subtitle">AI-Powered Document Analysis for Legal Professionals</p>
@@ -677,142 +913,6 @@
       <!-- Case Workflow Section (shown when Case Workflow task is selected) -->
       <div class="case-workflow-section mb-4" *ngIf="selectedTask === 'workflow'">
 
-        <!-- ====== WORKFLOW DETAILS VIEW ====== -->
-        <div class="workflow-details-view" *ngIf="selectedWorkflowForDetails">
-          <div class="card">
-            <!-- Header with back button and status banner -->
-            <div class="workflow-details-header" [ngClass]="'status-' + selectedWorkflowForDetails.status?.toLowerCase()">
-              <div class="header-top">
-                <button class="btn btn-link back-btn" (click)="closeWorkflowDetails()">
-                  <i class="ri-arrow-left-line"></i> Back
-                </button>
-                <div class="workflow-status-banner">
-                  <i [class]="getWorkflowStatusIcon(selectedWorkflowForDetails.status)"></i>
-                  {{ getWorkflowStatusLabel(selectedWorkflowForDetails) }}
-                </div>
-              </div>
-              <div class="header-content">
-                <div class="workflow-icon" [style.background-color]="getWorkflowTemplateColor(selectedWorkflowForDetails.template?.templateType) + '20'">
-                  <i [class]="getWorkflowTemplateIcon(selectedWorkflowForDetails.template?.templateType)" [style.color]="getWorkflowTemplateColor(selectedWorkflowForDetails.template?.templateType)"></i>
-                </div>
-                <div class="workflow-info">
-                  <h4 class="workflow-title">{{ selectedWorkflowForDetails.template?.name || 'Workflow' }}</h4>
-                  <p class="workflow-meta">
-                    <span *ngIf="selectedWorkflowForDetails.legalCase">
-                      <i class="ri-briefcase-line"></i> {{ selectedWorkflowForDetails.legalCase.caseName }}
-                    </span>
-                    <span><i class="ri-time-line"></i> Started {{ selectedWorkflowForDetails.startedAt | date:'MMM d, h:mm a' }}</span>
-                  </p>
-                </div>
-              </div>
-              <!-- Progress bar with shimmer -->
-              <div class="workflow-progress-section">
-                <div class="progress-info">
-                  <span>Progress</span>
-                  <span>{{ selectedWorkflowForDetails.progressPercentage || 0 }}%</span>
-                </div>
-                <div class="progress-bar-wrapper" [class.shimmer]="selectedWorkflowForDetails.status === 'RUNNING'">
-                  <div class="progress-fill" [ngClass]="getWorkflowProgressClass(selectedWorkflowForDetails)" [style.width.%]="selectedWorkflowForDetails.progressPercentage || 0"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Steps Timeline -->
-            <div class="card-body workflow-steps-timeline">
-              <h6 class="timeline-header">
-                <i class="ri-list-ordered-2"></i> Workflow Steps
-                <span class="steps-count">{{ getCompletedStepsCount(selectedWorkflowForDetails) }} of {{ selectedWorkflowForDetails.totalSteps }} complete</span>
-              </h6>
-
-              <div class="steps-timeline">
-                <div *ngFor="let step of selectedWorkflowForDetails.stepExecutions; let i = index; let last = last"
-                     class="timeline-step"
-                     [ngClass]="'step-' + step.status?.toLowerCase()">
-
-                  <!-- Step indicator -->
-                  <div class="step-indicator">
-                    <div class="indicator-icon">
-                      <i *ngIf="step.status === 'COMPLETED'" class="ri-check-line"></i>
-                      <i *ngIf="step.status === 'IN_PROGRESS'" class="ri-loader-4-line spin"></i>
-                      <i *ngIf="step.status === 'WAITING_USER'" class="ri-pause-line"></i>
-                      <i *ngIf="step.status === 'FAILED'" class="ri-close-line"></i>
-                      <span *ngIf="step.status === 'PENDING' || step.status === 'SKIPPED'">{{ step.stepNumber }}</span>
-                    </div>
-                    <div class="indicator-line" *ngIf="!last"></div>
-                  </div>
-
-                  <!-- Step content -->
-                  <div class="step-content">
-                    <div class="step-header">
-                      <span class="step-name">{{ step.stepName }}</span>
-                      <span class="step-type-badge" [ngClass]="'type-' + step.stepType?.toLowerCase()">
-                        {{ step.stepType }}
-                      </span>
-                    </div>
-
-                    <!-- Step status info -->
-                    <div class="step-status-info">
-                      <span *ngIf="step.status === 'COMPLETED'" class="text-success">
-                        <i class="ri-check-double-line"></i> Completed {{ step.completedAt | date:'h:mm a' }}
-                      </span>
-                      <span *ngIf="step.status === 'IN_PROGRESS'" class="text-primary">
-                        <i class="ri-loader-4-line spin"></i> Processing...
-                      </span>
-                      <span *ngIf="step.status === 'WAITING_USER'" class="text-warning">
-                        <i class="ri-user-line"></i> Waiting for your input
-                      </span>
-                      <span *ngIf="step.status === 'FAILED'" class="text-danger">
-                        <i class="ri-error-warning-line"></i> {{ step.errorMessage || 'Step failed' }}
-                      </span>
-                      <span *ngIf="step.status === 'PENDING'" class="text-muted">
-                        Pending
-                      </span>
-                    </div>
-
-                    <!-- Action buttons for specific states -->
-                    <div class="step-actions" *ngIf="step.status === 'WAITING_USER'">
-                      <button class="btn btn-warning btn-sm" (click)="resumeWorkflowStep(selectedWorkflowForDetails.id, step.id)">
-                        <i class="ri-play-line"></i> Continue
-                      </button>
-                    </div>
-
-                    <!-- Output preview for completed steps -->
-                    <div class="step-output-preview" *ngIf="step.status === 'COMPLETED' && step.outputData">
-                      <button class="btn btn-link btn-sm p-0" (click)="toggleStepOutput(step)">
-                        <i [class]="expandedStepId === step.id ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
-                        {{ expandedStepId === step.id ? 'Hide' : 'View' }} Output
-                      </button>
-                      <div class="output-content" *ngIf="expandedStepId === step.id">
-                        <pre>{{ step.outputData | json }}</pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="card-footer workflow-details-footer">
-              <div class="footer-left">
-                <span class="text-muted" *ngIf="selectedWorkflowForDetails.dueDate">
-                  <i class="ri-calendar-line"></i> Due {{ selectedWorkflowForDetails.dueDate | date:'MMM d, yyyy' }}
-                </span>
-              </div>
-              <div class="footer-actions">
-                <button *ngIf="selectedWorkflowForDetails.status === 'RUNNING'" class="btn btn-outline-secondary btn-sm" (click)="pauseWorkflow(selectedWorkflowForDetails.id)">
-                  <i class="ri-pause-line"></i> Pause
-                </button>
-                <button *ngIf="selectedWorkflowForDetails.status === 'COMPLETED'" class="btn btn-success btn-sm" (click)="downloadWorkflowReport(selectedWorkflowForDetails)">
-                  <i class="ri-download-2-line"></i> Download Report
-                </button>
-                <button *ngIf="selectedWorkflowForDetails.status !== 'COMPLETED'" class="btn btn-outline-danger btn-sm" (click)="cancelWorkflow(selectedWorkflowForDetails.id)">
-                  <i class="ri-close-line"></i> Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- ====== TEMPLATE SELECTION & DOCUMENT CONFIG ====== -->
         <div class="card" *ngIf="!selectedWorkflowForDetails">
           <div class="card-body">
@@ -955,7 +1055,7 @@
                         <label class="form-check-label d-flex align-items-center">
                           <i class="ri-file-text-line me-2 text-primary"></i>
                           <div>
-                            <div class="doc-name">{{ doc.fileName }}</div>
+                            <div class="doc-name">{{ getCleanFileName(doc.fileName) }}</div>
                             <small class="text-muted">{{ doc.documentType || 'Unknown type' }}</small>
                           </div>
                         </label>
@@ -1834,206 +1934,6 @@
   </div>
 </ng-template>
 
-<!-- Workflow Details Modal -->
-<div class="workflow-details-modal-backdrop" *ngIf="showWorkflowDetailsModal" (click)="closeWorkflowDetailsModal()">
-  <div class="workflow-details-modal card" (click)="$event.stopPropagation()">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <div class="d-flex align-items-center gap-2">
-        <div class="workflow-modal-icon" *ngIf="selectedWorkflowForDetails?.template"
-             [style.background-color]="getWorkflowTemplateColor(selectedWorkflowForDetails.template.templateType) + '15'">
-          <i [class]="getWorkflowTemplateIcon(selectedWorkflowForDetails.template.templateType)"
-             [style.color]="getWorkflowTemplateColor(selectedWorkflowForDetails.template.templateType)"></i>
-        </div>
-        <div>
-          <h6 class="mb-0">{{ selectedWorkflowForDetails?.template?.name || 'Workflow Details' }}</h6>
-          <small class="text-muted">Started {{ selectedWorkflowForDetails?.startedAt | date:'MMM d, h:mm a' }}</small>
-        </div>
-      </div>
-      <button type="button" class="btn-close" (click)="closeWorkflowDetailsModal()"></button>
-    </div>
-
-    <div class="card-body" *ngIf="selectedWorkflowForDetails">
-      <!-- Status Banner -->
-      <div class="workflow-status-banner mb-4" [ngClass]="{
-        'status-running': selectedWorkflowForDetails.status === 'RUNNING',
-        'status-completed': selectedWorkflowForDetails.status === 'COMPLETED',
-        'status-failed': selectedWorkflowForDetails.status === 'FAILED',
-        'status-waiting': selectedWorkflowForDetails.status === 'WAITING_USER',
-        'status-pending': selectedWorkflowForDetails.status === 'PENDING'
-      }">
-        <div class="status-icon">
-          <i *ngIf="selectedWorkflowForDetails.status === 'RUNNING'" class="ri-loader-4-line spin"></i>
-          <i *ngIf="selectedWorkflowForDetails.status === 'COMPLETED'" class="ri-checkbox-circle-fill"></i>
-          <i *ngIf="selectedWorkflowForDetails.status === 'FAILED'" class="ri-close-circle-fill"></i>
-          <i *ngIf="selectedWorkflowForDetails.status === 'WAITING_USER'" class="ri-time-line"></i>
-          <i *ngIf="selectedWorkflowForDetails.status === 'PENDING'" class="ri-hourglass-line"></i>
-        </div>
-        <div class="status-text">
-          <span class="status-label">{{ selectedWorkflowForDetails.status }}</span>
-          <span class="status-progress" *ngIf="selectedWorkflowForDetails.status === 'RUNNING'">
-            {{ selectedWorkflowForDetails.progressPercentage }}% complete
-          </span>
-        </div>
-      </div>
-
-      <!-- Progress Bar -->
-      <div class="workflow-progress-section mb-4" *ngIf="selectedWorkflowForDetails.status === 'RUNNING'">
-        <div class="progress" style="height: 8px;">
-          <div class="progress-bar bg-primary" [style.width.%]="selectedWorkflowForDetails.progressPercentage"></div>
-        </div>
-        <div class="d-flex justify-content-between mt-1">
-          <small class="text-muted">Step {{ selectedWorkflowForDetails.currentStep }} of {{ selectedWorkflowForDetails.totalSteps }}</small>
-          <small class="text-muted">{{ selectedWorkflowForDetails.progressPercentage }}%</small>
-        </div>
-      </div>
-
-      <!-- Steps List -->
-      <div class="workflow-steps-detail">
-        <h6 class="mb-3">
-          <i class="ri-list-ordered me-1"></i>
-          Workflow Steps
-        </h6>
-
-        <div class="steps-timeline">
-          <div class="step-timeline-item"
-               *ngFor="let step of selectedWorkflowForDetails.stepExecutions; let i = index"
-               [class.completed]="step.status === 'COMPLETED'"
-               [class.running]="step.status === 'RUNNING' || step.status === 'IN_PROGRESS'"
-               [class.failed]="step.status === 'FAILED'"
-               [class.waiting]="step.status === 'WAITING_USER'"
-               [class.pending]="step.status === 'PENDING'">
-
-            <div class="step-indicator">
-              <div class="step-circle">
-                <i *ngIf="step.status === 'COMPLETED'" class="ri-check-line"></i>
-                <i *ngIf="step.status === 'RUNNING' || step.status === 'IN_PROGRESS'" class="ri-loader-4-line spin"></i>
-                <i *ngIf="step.status === 'FAILED'" class="ri-close-line"></i>
-                <i *ngIf="step.status === 'WAITING_USER'" class="ri-time-line"></i>
-                <span *ngIf="step.status === 'PENDING'">{{ i + 1 }}</span>
-              </div>
-              <div class="step-line" *ngIf="i < selectedWorkflowForDetails.stepExecutions.length - 1"></div>
-            </div>
-
-            <div class="step-content">
-              <div class="step-header">
-                <span class="step-name">{{ step.stepName }}</span>
-                <span class="step-type-badge" [ngClass]="{
-                  'bg-info': step.stepType === 'DISPLAY',
-                  'bg-warning': step.stepType === 'SYNTHESIS',
-                  'bg-danger': step.stepType === 'GENERATION',
-                  'bg-primary': step.stepType === 'INTEGRATION',
-                  'bg-secondary': step.stepType === 'ACTION'
-                }">{{ step.stepType }}</span>
-              </div>
-
-              <!-- Step Output (if completed) -->
-              <div class="step-output" *ngIf="step.status === 'COMPLETED' && step.outputData">
-                <!-- Display step output -->
-                <div class="output-preview" *ngIf="step.outputData.stepType === 'display'">
-                  <small class="text-muted">
-                    <i class="ri-file-text-line me-1"></i>
-                    Processed {{ step.outputData.analysisCount }} document(s)
-                    <span *ngIf="step.outputData.actionItemCount"> | {{ step.outputData.actionItemCount }} action items</span>
-                    <span *ngIf="step.outputData.timelineEventCount"> | {{ step.outputData.timelineEventCount }} timeline events</span>
-                  </small>
-                </div>
-
-                <!-- Synthesis step output -->
-                <div class="output-content" *ngIf="step.outputData.stepType === 'synthesis' && step.outputData.content">
-                  <div class="output-header d-flex align-items-center justify-content-between mb-2">
-                    <small class="text-success fw-medium">
-                      <i class="ri-magic-line me-1"></i>
-                      AI Synthesis Complete
-                    </small>
-                    <button class="btn btn-sm btn-outline-primary py-0 px-2"
-                            (click)="expandStepOutput(step)">
-                      <i class="ri-expand-diagonal-line"></i>
-                    </button>
-                  </div>
-                  <div class="output-text" [innerHTML]="step.outputData.content | slice:0:300"></div>
-                  <small class="text-muted" *ngIf="step.outputData.content?.length > 300">... (click expand to view full)</small>
-                </div>
-
-                <!-- Generation step output -->
-                <div class="output-content" *ngIf="step.outputData.stepType === 'generation' && step.outputData.content">
-                  <div class="output-header d-flex align-items-center justify-content-between mb-2">
-                    <small class="text-danger fw-medium">
-                      <i class="ri-file-edit-line me-1"></i>
-                      Document Generated
-                    </small>
-                    <button class="btn btn-sm btn-outline-primary py-0 px-2"
-                            (click)="expandStepOutput(step)">
-                      <i class="ri-expand-diagonal-line"></i>
-                    </button>
-                  </div>
-                  <div class="output-text" [innerHTML]="step.outputData.content | slice:0:300"></div>
-                  <small class="text-muted" *ngIf="step.outputData.content?.length > 300">... (click expand to view full)</small>
-                </div>
-
-                <!-- Integration step output -->
-                <div class="output-preview" *ngIf="step.outputData.stepType === 'integration'">
-                  <small class="text-primary">
-                    <i class="ri-links-line me-1"></i>
-                    {{ step.outputData.message || 'Integration completed' }}
-                  </small>
-                  <div class="output-content mt-2" *ngIf="step.outputData.draftContent">
-                    <div class="output-header d-flex align-items-center justify-content-between mb-2">
-                      <small class="text-success fw-medium">Draft Created</small>
-                      <button class="btn btn-sm btn-outline-primary py-0 px-2"
-                              (click)="expandStepOutput(step)">
-                        <i class="ri-expand-diagonal-line"></i>
-                      </button>
-                    </div>
-                    <div class="output-text" [innerHTML]="step.outputData.draftContent | slice:0:300"></div>
-                  </div>
-                </div>
-
-                <!-- Generic message output -->
-                <div class="output-preview" *ngIf="step.outputData.message && !step.outputData.stepType">
-                  <small class="text-muted">{{ step.outputData.message }}</small>
-                </div>
-              </div>
-
-              <!-- Step Error (if failed) -->
-              <div class="step-error" *ngIf="step.status === 'FAILED' && step.errorMessage">
-                <small class="text-danger">
-                  <i class="ri-error-warning-line me-1"></i>
-                  {{ step.errorMessage }}
-                </small>
-              </div>
-
-              <!-- Waiting for user action -->
-              <div class="step-action" *ngIf="step.status === 'WAITING_USER'">
-                <p class="text-warning mb-2">
-                  <i class="ri-alert-line me-1"></i>
-                  This step requires your action to continue
-                </p>
-                <button class="btn btn-sm btn-primary"
-                        (click)="resumeWorkflowStep(selectedWorkflowForDetails.id, step.id)">
-                  <i class="ri-play-line me-1"></i>
-                  Continue Workflow
-                </button>
-              </div>
-
-              <!-- Timing info -->
-              <div class="step-timing" *ngIf="step.completedAt">
-                <small class="text-muted">
-                  <i class="ri-time-line me-1"></i>
-                  Completed {{ step.completedAt | date:'h:mm:ss a' }}
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card-footer d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-light" (click)="closeWorkflowDetailsModal()">Close</button>
-    </div>
-  </div>
-</div>
-
 <!-- Step Output Full View Modal -->
 <div class="step-output-modal-backdrop" *ngIf="showStepOutputModal && expandedStepOutput" (click)="closeStepOutputModal()">
   <div class="step-output-modal card" (click)="$event.stopPropagation()">
@@ -2065,7 +1965,7 @@
             <i class="ri-time-line me-1"></i>{{ expandedStepOutput.outputData.generatedAt }}
           </span>
         </div>
-        <div class="content-text" [innerHTML]="expandedStepOutput.outputData.content"></div>
+        <div class="content-text markdown-content" [innerHTML]="expandedStepOutput.outputData.content | markdownToHtml"></div>
       </div>
 
       <!-- Integration draft content -->
@@ -2075,7 +1975,7 @@
             <i class="ri-draft-line me-1"></i>Generated Draft
           </span>
         </div>
-        <div class="content-text" [innerHTML]="expandedStepOutput.outputData.draftContent"></div>
+        <div class="content-text markdown-content" [innerHTML]="expandedStepOutput.outputData.draftContent | markdownToHtml"></div>
       </div>
 
       <!-- Display step data -->
@@ -2084,7 +1984,7 @@
         <div class="mb-4" *ngIf="expandedStepOutput.outputData.analyses?.length > 0">
           <h6 class="text-muted mb-3"><i class="ri-file-text-line me-2"></i>Document Analyses</h6>
           <div class="analysis-card" *ngFor="let analysis of expandedStepOutput.outputData.analyses">
-            <div class="fw-medium">{{ analysis.fileName }}</div>
+            <div class="fw-medium">{{ getCleanFileName(analysis.fileName) }}</div>
             <small class="text-muted d-block">Type: {{ analysis.documentType }}</small>
             <p class="mt-2 mb-0" *ngIf="analysis.summary">{{ analysis.summary }}</p>
           </div>
@@ -2247,7 +2147,7 @@
               <span class="doc-checkbox-visual" [class.checked]="workflowSelectedDocuments.includes(doc.databaseId)">
                 <i class="ri-check-line" *ngIf="workflowSelectedDocuments.includes(doc.databaseId)"></i>
               </span>
-              <span class="doc-name">{{ doc.fileName }}</span>
+              <span class="doc-name">{{ getCleanFileName(doc.fileName) }}</span>
             </div>
           </div>
           <div class="selected-count mt-2" *ngIf="workflowSelectedDocuments.length > 0">

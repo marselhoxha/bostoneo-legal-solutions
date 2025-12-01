@@ -120,11 +120,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   userWorkflows: any[] = [];
   loadingWorkflows = false;
   workflowPollingInterval: any = null;
+  workflowPollingStartTime: number = 0; // Track when polling started
   selectedWorkflowForDetails: any = null;
-  showWorkflowDetailsModal = false;
+  showWorkflowDetailsModal = false; // Legacy - keeping for backwards compatibility
+  showWorkflowDetailsPage = false; // New full-page view
   expandedStepOutput: any = null;
   showStepOutputModal = false;
   expandedStepId: number | null = null;
+  expandedStepIds: Set<number> = new Set(); // Track which steps are expanded
+  allStepsExpanded = false;
 
   // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
@@ -1229,25 +1233,82 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Start polling for workflow status updates
    */
   startWorkflowPolling(): void {
-    if (this.workflowPollingInterval) return;
+    if (this.workflowPollingInterval) {
+      console.log('Polling already active');
+      return;
+    }
+
+    console.log('Starting workflow polling (every 2 seconds)');
+
+    // Track when polling started (minimum 10 seconds of polling)
+    this.workflowPollingStartTime = Date.now();
+
+    // Execute immediately on first call
+    this.pollWorkflows();
 
     this.workflowPollingInterval = setInterval(() => {
-      this.caseWorkflowService.getUserExecutions()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (workflows) => {
-            this.userWorkflows = workflows;
+      this.pollWorkflows();
+    }, 2000); // Poll every 2 seconds for faster updates
+  }
 
-            // Stop polling if no running workflows
-            const hasRunning = workflows.some(w => w.status === 'RUNNING' || w.status === 'PENDING');
-            if (!hasRunning) {
-              this.stopWorkflowPolling();
-            }
-
-            this.cdr.detectChanges();
+  /**
+   * Poll workflows - separated for reuse
+   */
+  private pollWorkflows(): void {
+    // Update the sidebar workflow list (use no-cache version for fresh data)
+    this.caseWorkflowService.getUserExecutionsNoCache()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (workflows) => {
+          // Log progress for debugging
+          const runningWorkflows = workflows.filter(w => w.status === 'RUNNING');
+          if (runningWorkflows.length > 0) {
+            console.log('Polling sidebar - Running workflows:', runningWorkflows.map(w => ({
+              id: w.id,
+              name: w.name || w.template?.name,
+              step: w.currentStep,
+              total: w.totalSteps,
+              progress: w.progressPercentage
+            })));
           }
-        });
-    }, 3000); // Poll every 3 seconds
+
+          // Update the workflows array (creates new reference for change detection)
+          this.userWorkflows = [...workflows];
+
+          // If details page is open, also refresh that
+          if (this.showWorkflowDetailsPage && this.selectedWorkflowForDetails) {
+            this.refreshWorkflowDetails();
+          }
+
+          // Only stop polling if:
+          // 1. Minimum polling time has elapsed (10 seconds) AND
+          // 2. No workflows are running AND
+          // 3. Details page is not open (or the viewed workflow is completed/failed)
+          const minPollingDuration = 10000; // 10 seconds minimum
+          const pollingElapsed = Date.now() - this.workflowPollingStartTime;
+          const hasActiveWorkflow = workflows.some(w =>
+            w.status === 'RUNNING' || w.status === 'PENDING' || w.status === 'WAITING_USER'
+          );
+          const detailsWorkflowActive = this.showWorkflowDetailsPage &&
+            this.selectedWorkflowForDetails &&
+            (this.selectedWorkflowForDetails.status === 'RUNNING' ||
+             this.selectedWorkflowForDetails.status === 'PENDING' ||
+             this.selectedWorkflowForDetails.status === 'WAITING_USER');
+
+          // Don't stop if minimum time hasn't elapsed
+          if (pollingElapsed < minPollingDuration) {
+            console.log(`Polling for ${Math.round(pollingElapsed/1000)}s, waiting for min ${minPollingDuration/1000}s`);
+          } else if (!hasActiveWorkflow && !detailsWorkflowActive) {
+            console.log('No active workflows and minimum polling time elapsed, stopping polling');
+            this.stopWorkflowPolling();
+          }
+
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to poll workflows:', error);
+        }
+      });
   }
 
   /**
@@ -1261,7 +1322,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * View workflow details
+   * View workflow details - opens full-page view
    */
   viewWorkflowDetails(workflow: any): void {
     console.log('Viewing workflow details:', workflow);
@@ -1269,8 +1330,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (executionWithSteps) => {
+          console.log('Workflow details loaded:', executionWithSteps);
           this.selectedWorkflowForDetails = executionWithSteps;
-          this.showWorkflowDetailsModal = true;
+          this.showWorkflowDetailsPage = true;
+          this.expandedStepIds.clear();
+          this.allStepsExpanded = false;
+
+          // Start polling if workflow is running or waiting
+          if (executionWithSteps?.status === 'RUNNING' || executionWithSteps?.status === 'WAITING_USER' || executionWithSteps?.status === 'PENDING') {
+            this.startWorkflowPolling();
+          }
+
           this.cdr.detectChanges();
         },
         error: (error) => {
@@ -1281,12 +1351,251 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Close workflow details modal
+   * Close workflow details page - go back to workflow list
+   */
+  closeWorkflowDetailsPage(): void {
+    this.showWorkflowDetailsPage = false;
+    this.selectedWorkflowForDetails = null;
+    this.expandedStepIds.clear();
+    this.allStepsExpanded = false;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close workflow details modal (legacy - alias for closeWorkflowDetailsPage)
    */
   closeWorkflowDetailsModal(): void {
-    this.showWorkflowDetailsModal = false;
-    this.selectedWorkflowForDetails = null;
+    this.closeWorkflowDetailsPage();
+  }
+
+  /**
+   * Toggle expand/collapse all workflow steps
+   */
+  toggleExpandAllSteps(): void {
+    this.allStepsExpanded = !this.allStepsExpanded;
+    if (this.allStepsExpanded && this.selectedWorkflowForDetails?.stepExecutions) {
+      // Expand all completed steps
+      this.selectedWorkflowForDetails.stepExecutions.forEach((step: any) => {
+        if (step.status === 'COMPLETED') {
+          this.expandedStepIds.add(step.id);
+        }
+      });
+    } else {
+      this.expandedStepIds.clear();
+    }
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Toggle individual step expansion
+   */
+  toggleStepExpansion(stepId: number): void {
+    if (this.expandedStepIds.has(stepId)) {
+      this.expandedStepIds.delete(stepId);
+    } else {
+      this.expandedStepIds.add(stepId);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Check if a step is expanded
+   */
+  isStepExpanded(stepId: number): boolean {
+    return this.expandedStepIds.has(stepId);
+  }
+
+  /**
+   * Get step duration display string
+   */
+  getStepDuration(step: any): string {
+    if (!step.completedAt || !step.startedAt) return '';
+
+    const start = new Date(step.startedAt).getTime();
+    const end = new Date(step.completedAt).getTime();
+    const diffMs = end - start;
+
+    if (diffMs < 1000) return '<1s';
+    if (diffMs < 60000) return Math.round(diffMs / 1000) + 's';
+
+    const minutes = Math.floor(diffMs / 60000);
+    const seconds = Math.round((diffMs % 60000) / 1000);
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+
+  /**
+   * Get step description based on step type
+   */
+  getStepDescription(step: any): string {
+    const descriptions: { [key: string]: string } = {
+      'DISPLAY': 'Gathering and displaying case documents...',
+      'SYNTHESIS': 'Analyzing and extracting information with AI...',
+      'GENERATION': 'Generating content based on analysis...',
+      'INTEGRATION': 'Creating document draft...',
+      'ACTION': 'Waiting for user action...'
+    };
+    return descriptions[step.stepType] || 'Processing step...';
+  }
+
+  /**
+   * Get workflow status banner configuration
+   */
+  getWorkflowStatusBanner(): { icon: string; title: string; subtitle: string; colorClass: string } {
+    const workflow = this.selectedWorkflowForDetails;
+    if (!workflow) {
+      return { icon: 'ri-loader-4-line', title: 'Loading...', subtitle: '', colorClass: 'status-pending' };
+    }
+
+    switch (workflow.status) {
+      case 'RUNNING':
+        const currentStep = workflow.stepExecutions?.find((s: any) => s.status === 'IN_PROGRESS' || s.status === 'RUNNING');
+        return {
+          icon: 'ri-loader-4-line spin',
+          title: 'Workflow Running',
+          subtitle: currentStep
+            ? `Processing step ${currentStep.stepNumber} of ${workflow.totalSteps} - ${currentStep.stepName}`
+            : `Processing step ${workflow.currentStep || 1} of ${workflow.totalSteps}`,
+          colorClass: 'status-running'
+        };
+      case 'WAITING_USER':
+        const waitingStep = workflow.stepExecutions?.find((s: any) => s.status === 'WAITING_USER');
+        return {
+          icon: 'ri-pause-circle-line',
+          title: 'Waiting for Input',
+          subtitle: waitingStep
+            ? `Step ${waitingStep.stepNumber} requires your review before continuing`
+            : 'A step requires your review before continuing',
+          colorClass: 'status-waiting'
+        };
+      case 'COMPLETED':
+        return {
+          icon: 'ri-checkbox-circle-line',
+          title: 'Workflow Completed',
+          subtitle: `All ${workflow.totalSteps} steps completed successfully`,
+          colorClass: 'status-completed'
+        };
+      case 'FAILED':
+        return {
+          icon: 'ri-close-circle-line',
+          title: 'Workflow Failed',
+          subtitle: 'An error occurred during execution',
+          colorClass: 'status-failed'
+        };
+      default:
+        return {
+          icon: 'ri-time-line',
+          title: 'Pending',
+          subtitle: 'Workflow is queued for execution',
+          colorClass: 'status-pending'
+        };
+    }
+  }
+
+  /**
+   * Get workflow header action buttons based on status
+   */
+  getWorkflowHeaderActions(): { primary?: { label: string; icon: string; action: string }; secondary?: { label: string; icon: string; action: string } } {
+    const workflow = this.selectedWorkflowForDetails;
+    if (!workflow) return {};
+
+    switch (workflow.status) {
+      case 'RUNNING':
+        return {
+          primary: { label: 'Cancel', icon: 'ri-stop-circle-line', action: 'cancel' }
+        };
+      case 'WAITING_USER':
+        return {
+          primary: { label: 'Continue Workflow', icon: 'ri-play-line', action: 'continue' }
+        };
+      case 'COMPLETED':
+        return {
+          primary: { label: 'Download Report', icon: 'ri-download-line', action: 'download' },
+          secondary: { label: 'Run Again', icon: 'ri-refresh-line', action: 'rerun' }
+        };
+      default:
+        return {};
+    }
+  }
+
+  /**
+   * Handle workflow header action button click
+   */
+  handleWorkflowHeaderAction(action: string): void {
+    const workflow = this.selectedWorkflowForDetails;
+    if (!workflow) return;
+
+    switch (action) {
+      case 'cancel':
+        this.pauseWorkflow(workflow.id);
+        break;
+      case 'continue':
+        const waitingStep = workflow.stepExecutions?.find((s: any) => s.status === 'WAITING_USER');
+        if (waitingStep) {
+          this.resumeWorkflowStep(workflow.id, waitingStep.id);
+        }
+        break;
+      case 'download':
+        // TODO: Implement download report
+        this.notificationService.info('Coming Soon', 'Report download will be available soon');
+        break;
+      case 'rerun':
+        // TODO: Implement rerun workflow
+        this.notificationService.info('Coming Soon', 'Rerun workflow will be available soon');
+        break;
+    }
+  }
+
+  /**
+   * Refresh workflow details (for polling)
+   */
+  refreshWorkflowDetails(): void {
+    if (this.selectedWorkflowForDetails?.id) {
+      console.log('Polling workflow details for ID:', this.selectedWorkflowForDetails.id);
+      // Use no-cache version to get fresh data
+      this.caseWorkflowService.getExecutionWithStepsNoCache(this.selectedWorkflowForDetails.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (executionWithSteps) => {
+            console.log('Polled workflow details:', {
+              status: executionWithSteps?.status,
+              currentStep: executionWithSteps?.currentStep,
+              steps: executionWithSteps?.stepExecutions?.map((s: any) => ({ name: s.stepName, status: s.status }))
+            });
+
+            // Update the workflow details
+            this.selectedWorkflowForDetails = executionWithSteps;
+
+            // Also update the same workflow in userWorkflows for sidebar consistency
+            const workflowIndex = this.userWorkflows.findIndex(w => w.id === executionWithSteps?.id);
+            if (workflowIndex !== -1 && executionWithSteps) {
+              // Calculate completed steps count from stepExecutions
+              const completedSteps = executionWithSteps.stepExecutions?.filter(
+                (s: any) => s.status === 'COMPLETED'
+              ).length || 0;
+
+              this.userWorkflows[workflowIndex] = {
+                ...this.userWorkflows[workflowIndex],
+                status: executionWithSteps.status,
+                currentStep: completedSteps, // Use actual completed count
+                progressPercentage: executionWithSteps.progressPercentage,
+                stepExecutions: executionWithSteps.stepExecutions // Include for accurate count
+              };
+              this.userWorkflows = [...this.userWorkflows]; // Trigger change detection
+            }
+
+            // Stop polling if workflow completed or failed
+            if (executionWithSteps?.status === 'COMPLETED' || executionWithSteps?.status === 'FAILED') {
+              console.log('Workflow finished, stopping polling');
+              this.stopWorkflowPolling();
+            }
+
+            this.cdr.detectChanges();
+          },
+          error: (error) => {
+            console.error('Failed to poll workflow details:', error);
+          }
+        });
+    }
   }
 
   /**
@@ -1386,10 +1695,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Open workflow selection - clears current selection and scrolls to workflow section
    */
   openWorkflowSelection(): void {
+    // Reset workflow selection state
     this.selectedWorkflowTemplate = null;
     this.workflowSelectedDocuments = [];
     this.workflowName = '';
     this.selectedWorkflowForDetails = null;
+    this.showWorkflowDetailsPage = false;
+
+    // Make sure workflow task is selected
+    this.selectedTask = ConversationType.Workflow;
+
     this.cdr.detectChanges();
   }
 
@@ -1462,27 +1777,38 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.workflowName.trim()
     ).pipe(takeUntil(this.destroy$)).subscribe({
       next: (execution) => {
-        console.log('Workflow started:', execution);
+        console.log('Workflow started successfully:', execution);
+
+        // Reset loading state
         this.startingWorkflow = false;
         this.activeWorkflowExecution = execution;
-        this.notificationService.success(
-          'Workflow Started',
-          `${this.workflowName} workflow is now running`
-        );
-        // Close the modal and reset selection
+
+        // Close the modal FIRST and trigger change detection
         this.showStartWorkflowModal = false;
         this.selectedWorkflowTemplate = null;
         this.workflowSelectedDocuments = [];
+        const workflowName = this.workflowName; // Save for notification
         this.workflowName = '';
+        this.cdr.detectChanges(); // Force close modal immediately
 
-        // Load workflows sidebar and show progress
+        // Switch to workflow tab so user can see the new workflow
+        this.selectedTask = ConversationType.Workflow;
+        this.activeTask = ConversationType.Workflow;
+        this.workflowFilter = 'all'; // Reset filter to show all workflows
+
+        // Load workflows sidebar
         this.loadUserWorkflows();
         this.startWorkflowPolling();
 
-        // Open the workflow details modal to show step progress
-        if (execution?.id) {
-          this.viewWorkflowDetails(execution);
-        }
+        // Show success notification
+        this.notificationService.success(
+          'Workflow Started',
+          `${workflowName} workflow is now running`
+        );
+
+        // Reload conversations to pick up any drafts created by the workflow
+        // This ensures workflow-created drafts appear in Drafting taskcard
+        this.loadConversations();
 
         this.cdr.detectChanges();
       },
@@ -1878,7 +2204,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               taskType: conv.taskType as TaskType,
               documentId: conv.documentId,
               relatedDraftId: conv.relatedDraftId,
-              documentType: conv.documentType
+              documentType: conv.documentType,
+              workflowExecutionId: conv.workflowExecutionId // For workflow-created drafts
             }));
 
             allConversations.push(...conversations);
@@ -1987,9 +2314,61 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           console.log('🎯 All mapped messages:', messages);
           console.log('✅ Messages loaded:', messages.length);
 
+          // Check draft type BEFORE setTimeout (conv object is available now)
+          const isWorkflowDraft = conv.type === 'draft' && conv.workflowExecutionId && !conv.relatedDraftId;
+          const isRegularDraft = conv.type === 'draft' && conv.relatedDraftId;
+
           // CRITICAL: Use setTimeout to ensure Angular processes the observable emission in next tick
           setTimeout(() => {
-            // Extract follow-up questions from last assistant message (if any)
+            // Handle workflow-created drafts - ONLY show in editor, NOT in conversation sidebar
+            if (isWorkflowDraft) {
+              console.log('📋 Loading workflow-created draft:', conv.workflowExecutionId);
+
+              // Get content from first assistant message
+              const firstAssistantMessage = messages.find(m => m.role === 'assistant');
+              const draftContent = firstAssistantMessage?.content || '';
+
+              console.log('📄 Workflow draft content length:', draftContent.length);
+
+              // CLEAR conversation messages - workflow drafts should NOT appear in chat sidebar
+              this.stateService.setConversationMessages([]);
+
+              // Populate document state
+              this.currentDocumentId = null; // No GeneratedDocument for workflow drafts
+              this.activeDocumentTitle = this.extractTitleFromMarkdown(draftContent) || conv.title;
+              this.currentDocumentWordCount = this.countWords(draftContent);
+              this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+              this.documentMetadata = {
+                tokensUsed: 0,
+                costEstimate: 0,
+                generatedAt: conv.date || new Date(),
+                version: 1
+              };
+
+              // Store content for editor
+              this.pendingDocumentContent = draftContent;
+
+              // FORCE editor destruction and recreation
+              this.showEditor = false;
+              this.cdr.detectChanges();
+
+              setTimeout(() => {
+                this.quillEditorInstance = null;
+                this.showEditor = true;
+
+                // Activate drafting mode
+                this.stateService.setDraftingMode(true);
+                this.stateService.setShowChat(true);
+                this.stateService.setShowBottomSearchBar(false);
+
+                this.setModeForDrafting();
+                this.cdr.detectChanges();
+              }, 0);
+
+              return; // Exit early - don't run the change detection below
+            }
+
+            // For non-workflow conversations, extract follow-up questions and set messages
             const lastAssistantMsg = messages
               .slice()
               .reverse()
@@ -2025,8 +2404,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             console.log('🔥 Messages set and first timeout complete');
           }, 0);
 
-          // Check if this is a draft conversation - activate drafting mode
-          if (conv.type === 'draft' && conv.relatedDraftId) {
+          // Handle regular drafts (with relatedDraftId) - these load document from backend
+          if (isRegularDraft) {
             console.log('Loading draft document for conversation:', conv.relatedDraftId);
 
             // Load the draft document from backend
@@ -2231,100 +2610,153 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   /**
    * Export document to PDF
    * Calls backend API to generate PDF from latest saved version
+   * For workflow drafts (no document ID), exports content directly from editor
    */
   exportToPDF(): void {
-    if (!this.currentDocumentId || !this.currentUser) {
-      this.notificationService.error('Error', 'Document not available');
-      return;
-    }
-
     this.notificationService.loading('Preparing PDF', 'Please wait...');
 
-    // Export using backend API which will generate proper PDF format
-    // Backend reads latest version from database - no need to save before exporting
-    this.documentGenerationService.exportToPDF(
-      this.currentDocumentId as number,
-      this.currentUser.id
-    )
-      .subscribe({
-        next: (response) => {
-          // Extract blob and filename from HTTP response
-          const blob = response.body;
-          if (!blob) {
-            console.error('No blob in response body');
-            this.notificationService.error('Error', 'Failed to export PDF.');
-            return;
-          }
-
-          const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
-          const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
-
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-
-          this.notificationService.success('PDF Exported', `${filename} downloaded successfully`);
-        },
+    // Check if we have a document ID (saved document) or need to export from editor content
+    if (this.currentDocumentId && this.currentUser) {
+      // Export using document ID - standard flow
+      this.documentGenerationService.exportToPDF(
+        this.currentDocumentId as number,
+        this.currentUser.id
+      ).subscribe({
+        next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
           console.error('Error exporting PDF:', error);
           this.notificationService.error('Error', 'Failed to export PDF. Please ensure the backend service is running.');
         }
       });
+    } else {
+      // Export from editor content - workflow drafts without document ID
+      const content = this.getEditorContent();
+      if (!content) {
+        this.notificationService.error('Error', 'No content to export');
+        return;
+      }
+
+      this.documentGenerationService.exportContentToPDF(content, this.activeDocumentTitle)
+        .subscribe({
+          next: (response) => this.handleExportResponse(response, 'pdf'),
+          error: (error) => {
+            console.error('Error exporting PDF from content:', error);
+            this.notificationService.error('Error', 'Failed to export PDF.');
+          }
+        });
+    }
   }
 
   /**
    * Export document to Word (DOCX)
    * Calls backend API to generate Word document from latest saved version
+   * For workflow drafts (no document ID), exports content directly from editor
    */
   exportToWord(): void {
-    if (!this.currentDocumentId || !this.currentUser) {
-      console.error('Document ID or user not available for Word export');
-      return;
-    }
-
     this.notificationService.loading('Preparing Word document', 'Please wait...');
 
-    // Export using backend API which will generate proper DOCX format
-    // Backend reads latest version from database - no need to save before exporting
-    this.documentGenerationService.exportToWord(
-      this.currentDocumentId as number,
-      this.currentUser.id
-    )
-      .subscribe({
-        next: (response) => {
-          // Extract blob and filename from HTTP response
-          const blob = response.body;
-          if (!blob) {
-            console.error('No blob in response body');
-            this.notificationService.error('Error', 'Failed to export Word document.');
-            return;
-          }
-
-          const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.docx';
-          const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
-
-          // Download the blob
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-
-          this.notificationService.success('Word Document Exported', `${filename} downloaded successfully`);
-        },
+    // Check if we have a document ID (saved document) or need to export from editor content
+    if (this.currentDocumentId && this.currentUser) {
+      // Export using document ID - standard flow
+      this.documentGenerationService.exportToWord(
+        this.currentDocumentId as number,
+        this.currentUser.id
+      ).subscribe({
+        next: (response) => this.handleExportResponse(response, 'docx'),
         error: (err) => {
           console.error('Error exporting to Word:', err);
           this.notificationService.error('Error', 'Failed to export Word document. Please ensure the backend service is running.');
         }
       });
+    } else {
+      // Export from editor content - workflow drafts without document ID
+      const content = this.getEditorContent();
+      if (!content) {
+        this.notificationService.error('Error', 'No content to export');
+        return;
+      }
+
+      this.documentGenerationService.exportContentToWord(content, this.activeDocumentTitle)
+        .subscribe({
+          next: (response) => this.handleExportResponse(response, 'docx'),
+          error: (error) => {
+            console.error('Error exporting Word from content:', error);
+            this.notificationService.error('Error', 'Failed to export Word document.');
+          }
+        });
+    }
+  }
+
+  /**
+   * Handle export response - download the blob
+   */
+  private handleExportResponse(response: any, format: 'pdf' | 'docx'): void {
+    const blob = response.body;
+    if (!blob) {
+      console.error('No blob in response body');
+      this.notificationService.error('Error', `Failed to export ${format.toUpperCase()}.`);
+      return;
+    }
+
+    const fallbackFilename = this.sanitizeFilename(this.activeDocumentTitle) + '.' + format;
+    const filename = this.extractFilenameFromHeader(response.headers, fallbackFilename);
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    const formatName = format === 'pdf' ? 'PDF' : 'Word Document';
+    this.notificationService.success(`${formatName} Exported`, `${filename} downloaded successfully`);
+  }
+
+  /**
+   * Get content from Quill editor as markdown
+   */
+  private getEditorContent(): string | null {
+    if (this.quillEditorInstance) {
+      // Get HTML from Quill and convert to markdown-like format
+      const html = this.quillEditorInstance.root.innerHTML;
+      // Convert HTML to plain text with basic markdown
+      return this.htmlToMarkdown(html);
+    }
+    return this.pendingDocumentContent || null;
+  }
+
+  /**
+   * Convert HTML to basic markdown
+   */
+  private htmlToMarkdown(html: string): string {
+    let text = html;
+    // Convert headers
+    text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+    text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+    text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+    // Convert bold
+    text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+    text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+    // Convert italic
+    text = text.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+    text = text.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+    // Convert paragraphs
+    text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+    // Convert line breaks
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    // Convert list items
+    text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+    // Remove remaining HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+    // Decode HTML entities
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    text = textarea.value;
+    // Clean up extra whitespace
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    return text;
   }
 
   /**
@@ -2646,32 +3078,32 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       ).subscribe({
         next: (result) => {
-          if (result) {
-            // Update file status
-            fileItem.status = 'completed';
-            fileItem.analysisId = result.id;
-            analysisResults.push({ id: result.id, databaseId: result.databaseId, fileName: result.fileName });
-            console.log(`✅ File ${completedCount + 1}/${totalFiles} analyzed:`, result.fileName);
+          // Service now filters to only emit Response events with valid results
+          // Update file status
+          fileItem.status = 'completed';
+          fileItem.analysisId = result.id;
+          analysisResults.push({ id: result.id, databaseId: result.databaseId, fileName: result.fileName });
+          console.log(`✅ File ${completedCount + 1}/${totalFiles} analyzed:`, result.fileName);
 
-            // Add to collection if target collection exists
-            if (targetCollectionId && result.databaseId) {
-              const addPromise = new Promise<void>((resolve, reject) => {
-                this.collectionService.addDocumentToCollection(targetCollectionId, result.databaseId)
-                  .pipe(takeUntil(this.destroy$))
-                  .subscribe({
-                    next: () => {
-                      console.log(`📁 Added ${result.fileName} to collection ${targetCollectionId}`);
-                      resolve();
-                    },
-                    error: (err) => {
-                      console.error(`Failed to add ${result.fileName} to collection:`, err);
-                      reject(err);
-                    }
-                  });
-              });
-              pendingCollectionAdds.push(addPromise);
-            }
+          // Add to collection if target collection exists
+          if (targetCollectionId && result.databaseId) {
+            const addPromise = new Promise<void>((resolve, reject) => {
+              this.collectionService.addDocumentToCollection(targetCollectionId, result.databaseId)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: () => {
+                    console.log(`📁 Added ${result.fileName} to collection ${targetCollectionId}`);
+                    resolve();
+                  },
+                  error: (err) => {
+                    console.error(`Failed to add ${result.fileName} to collection:`, err);
+                    reject(err);
+                  }
+                });
+            });
+            pendingCollectionAdds.push(addPromise);
           }
+
           completedCount++;
           this.checkUploadCompletion(completedCount, failedCount, totalFiles, sessionId, analysisResults, targetCollectionId, pendingCollectionAdds);
         },
@@ -3286,6 +3718,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return icons[type] || 'ri-chat-3-line';
   }
 
+/**
+   * Strip timestamp prefix from filename (e.g., "1764550939268_Executive..." -> "Executive...")
+   * Backend saves files with timestamp prefix for uniqueness
+   */
+  getCleanFileName(fileName: string | undefined): string {
+    if (!fileName) return 'Unknown Document';
+    // Match pattern: digits followed by underscore at start
+    return fileName.replace(/^\d+_/, '');
+  }
+
   /**
    * Get badge class for document type - matches header badge colors
    */
@@ -3534,27 +3976,37 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Get count of completed steps in workflow
    */
   getCompletedStepsCount(workflow: any): number {
+    // If stepExecutions are loaded (from details endpoint), count completed steps
     if (workflow.stepExecutions?.length > 0) {
       return workflow.stepExecutions.filter((s: any) => s.status === 'COMPLETED').length;
     }
-    // Don't use currentStep as it might be misleading
-    return 0;
+    // Fallback to currentStep (set by backend as each step completes)
+    // currentStep represents the last completed step number
+    return workflow.currentStep || 0;
   }
 
   /**
    * Get workflow progress percentage based on completed steps
    */
   getWorkflowProgressPercentage(workflow: any): number {
+    // If stepExecutions are loaded, calculate from them
     if (workflow.stepExecutions?.length > 0) {
       const completed = workflow.stepExecutions.filter((s: any) => s.status === 'COMPLETED').length;
       const total = workflow.totalSteps || workflow.stepExecutions.length;
       return Math.round((completed / total) * 100);
     }
-    // If no step executions, check status
+    // Check status first
     if (workflow.status === 'COMPLETED') return 100;
     if (workflow.status === 'PENDING') return 0;
-    // Fallback to stored percentage but cap it based on status
-    return workflow.progressPercentage || 0;
+    // Use stored progressPercentage or calculate from currentStep
+    if (workflow.progressPercentage) {
+      return workflow.progressPercentage;
+    }
+    // Calculate from currentStep if available
+    if (workflow.currentStep && workflow.totalSteps) {
+      return Math.round((workflow.currentStep / workflow.totalSteps) * 100);
+    }
+    return 0;
   }
 
   /**
@@ -6825,21 +7277,32 @@ You can:
 
   /**
    * Save document to File Manager
+   * For workflow drafts (no document ID), exports content directly from editor
    */
   async saveToFileManager(): Promise<void> {
-    if (!this.currentDocumentId || !this.currentUser) {
-      this.notificationService.error('Error', 'Document not available');
-      return;
-    }
-
     try {
       // Show loading
       this.notificationService.loading('Saving to File Manager', 'Generating document...');
 
-      // Get the Word document as blob with headers
-      const response = await lastValueFrom(
-        this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
-      );
+      let response;
+
+      // Check if we have a document ID (saved document) or need to export from editor content
+      if (this.currentDocumentId && this.currentUser) {
+        // Export using document ID - standard flow
+        response = await lastValueFrom(
+          this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
+        );
+      } else {
+        // Export from editor content - workflow drafts without document ID
+        const content = this.getEditorContent();
+        if (!content) {
+          this.notificationService.error('Error', 'No content to save');
+          return;
+        }
+        response = await lastValueFrom(
+          this.documentGenerationService.exportContentToWord(content, this.activeDocumentTitle)
+        );
+      }
 
       // Extract blob from response
       const blob = response.body;

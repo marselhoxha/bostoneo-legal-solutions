@@ -1,0 +1,298 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ENTERPRISE SOFTWARE LICENSE AGREEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+This Enterprise Software License Agreement ("Agreement") is entered into as of November 1, 2024 (the "Effective Date"), by and between:
+
+CLOUDTECH SOLUTIONS, INC., a Delaware corporation with its principal place of business at 200 Innovation Way, San Francisco, California 94105 ("Licensor" or "CloudTech")
+
+and
+
+ACME CORPORATION, a Delaware corporation with its principal place of business at 500 Park Avenue, New York, New York 10022 ("Licensee" or "Customer")
+
+(each a "Party" and collectively, the "Parties")
+
+RECITALS
+
+WHEREAS, Licensor has developed and owns certain proprietary software known as the CloudTech Enterprise Platform (the "Software");
+
+WHEREAS, Licensee desires to obtain a license to use the Software for its internal business operations; and
+
+WHEREAS, Licensor is willing to grant such license on the terms and conditions set forth herein.
+
+NOW, THEREFORE, in consideration of the mutual covenants and agreements hereinafter set forth and for other good and valuable consideration, the receipt and sufficiency of which are hereby acknowledged, the Parties agree as follows:
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 1 - DEFINITIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1.1 "Authorized Users" means employees, contractors, and agents of Licensee who are authorized by Licensee to access and use the Software, subject to the User limitations set forth in the Order Form.
+
+1.2 "Confidential Information" means any non-public information disclosed by one Party to the other, whether orally or in writing, that is designated as confidential or that reasonably should be understood to be confidential.
+
+1.3 "Documentation" means the user manuals, technical specifications, and other written materials provided by Licensor describing the functionality and operation of the Software.
+
+1.4 "Intellectual Property Rights" means all patents, copyrights, trademarks, trade secrets, and other intellectual property rights.
+
+1.5 "Order Form" means the ordering document executed by the Parties specifying the Software licensed, number of Authorized Users, fees, and license term.
+
+1.6 "Professional Services" means implementation, configuration, training, and consulting services provided by Licensor.
+
+1.7 "SLA" means the Service Level Agreement attached hereto as Exhibit B.
+
+1.8 "Updates" means bug fixes, patches, and minor version releases to the Software that Licensor makes generally available to its customers at no additional charge.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 2 - LICENSE GRANT
+═══════════════════════════════════════════════════════════════════════════════
+
+2.1 License Grant. Subject to the terms and conditions of this Agreement and payment of all applicable fees, Licensor hereby grants to Licensee a non-exclusive, non-transferable, limited license to:
+
+    (a) Access and use the Software solely for Licensee's internal business operations;
+
+    (b) Allow Authorized Users to access and use the Software;
+
+    (c) Use the Documentation in connection with permitted use of the Software; and
+
+    (d) Make a reasonable number of copies of the Software solely for backup and archival purposes.
+
+2.2 License Restrictions. Licensee shall not, and shall not permit any third party to:
+
+    (a) Sublicense, sell, lease, rent, or otherwise transfer the Software or any rights therein;
+
+    (b) Modify, adapt, translate, or create derivative works based on the Software;
+
+    (c) Reverse engineer, disassemble, decompile, or otherwise attempt to derive the source code of the Software;
+
+    (d) Remove or alter any proprietary notices, labels, or marks on the Software;
+
+    (e) Use the Software for any unlawful purpose or in violation of any applicable laws;
+
+    (f) Use the Software to develop a competing product or service;
+
+    (g) Exceed the number of Authorized Users specified in the Order Form; or
+
+    (h) Allow any third party to access or use the Software except as expressly permitted herein.
+
+2.3 Reservation of Rights. Licensor reserves all rights not expressly granted to Licensee. The Software is licensed, not sold, and Licensee acquires no ownership interest in the Software.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 3 - FEES AND PAYMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+3.1 License Fees. Licensee shall pay the license fees specified in the Order Form. Unless otherwise stated, fees are due within thirty (30) days of invoice date.
+
+3.2 Annual Fee Adjustment. Licensor may increase license fees by up to ten percent (10%) upon each annual renewal, provided that Licensor gives Licensee at least sixty (60) days' written notice prior to the renewal date.
+
+3.3 Taxes. All fees are exclusive of taxes. Licensee shall be responsible for all sales, use, value-added, and other taxes (excluding taxes based on Licensor's income).
+
+3.4 Late Payments. Any amounts not paid when due shall bear interest at the rate of one and one-half percent (1.5%) per month, or the maximum rate permitted by law, whichever is less.
+
+3.5 Suspension of Service. Licensor may suspend Licensee's access to the Software if any fees remain unpaid for more than thirty (30) days past due, provided that Licensor first gives Licensee ten (10) days' written notice.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 4 - INTELLECTUAL PROPERTY
+═══════════════════════════════════════════════════════════════════════════════
+
+4.1 Ownership. As between the Parties, Licensor owns and shall retain all right, title, and interest in and to the Software, Documentation, and all Intellectual Property Rights therein.
+
+4.2 Customer Data. As between the Parties, Licensee owns all right, title, and interest in and to data that Licensee or its Authorized Users input into the Software ("Customer Data"). Licensee hereby grants Licensor a limited license to use Customer Data solely to provide the Software and related services.
+
+4.3 Feedback. If Licensee provides any feedback, suggestions, or recommendations regarding the Software ("Feedback"), Licensee hereby assigns to Licensor all right, title, and interest in such Feedback. Licensor may use Feedback for any purpose without obligation to Licensee.
+
+4.4 Aggregate Data. Licensor may collect and analyze anonymized, aggregated data derived from Licensee's use of the Software ("Aggregate Data"). Licensor may use Aggregate Data for any lawful purpose, including improving the Software and creating benchmarking reports.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 5 - DATA SECURITY AND PRIVACY
+═══════════════════════════════════════════════════════════════════════════════
+
+5.1 Data Security. Licensor shall implement and maintain reasonable administrative, technical, and physical safeguards designed to protect Customer Data from unauthorized access, use, or disclosure.
+
+5.2 Compliance. Licensor shall comply with all applicable data protection laws, including the California Consumer Privacy Act (CCPA) and the General Data Protection Regulation (GDPR) to the extent applicable.
+
+5.3 Data Processing Agreement. The Parties shall execute the Data Processing Agreement attached hereto as Exhibit C.
+
+5.4 Breach Notification. Licensor shall notify Licensee within seventy-two (72) hours of discovering any security breach affecting Customer Data.
+
+5.5 Data Location. Customer Data shall be stored and processed only in the United States unless otherwise agreed in writing.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 6 - WARRANTIES
+═══════════════════════════════════════════════════════════════════════════════
+
+6.1 Licensor Warranties. Licensor warrants that:
+
+    (a) The Software will perform materially in accordance with the Documentation for a period of twelve (12) months following the Effective Date;
+
+    (b) Professional Services will be performed in a professional and workmanlike manner;
+
+    (c) Licensor has the right to grant the license set forth herein; and
+
+    (d) To Licensor's knowledge, the Software does not infringe any third-party Intellectual Property Rights.
+
+6.2 Warranty Remedy. If the Software fails to conform to the warranty in Section 6.1(a), Licensor shall, at its option, (i) repair or replace the non-conforming Software, or (ii) refund the fees paid for the non-conforming Software. This remedy is Licensee's sole and exclusive remedy for breach of the warranty in Section 6.1(a).
+
+6.3 Disclaimer. EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, THE SOFTWARE AND SERVICES ARE PROVIDED "AS IS" AND LICENSOR DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 7 - INDEMNIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+7.1 Licensor Indemnification. Licensor shall defend, indemnify, and hold harmless Licensee from any third-party claim that the Software infringes any patent, copyright, or trade secret, provided that:
+
+    (a) Licensee promptly notifies Licensor in writing of the claim;
+
+    (b) Licensee grants Licensor sole control of the defense and settlement; and
+
+    (c) Licensee provides reasonable cooperation at Licensor's expense.
+
+7.2 Infringement Remedies. If the Software becomes, or in Licensor's opinion is likely to become, the subject of an infringement claim, Licensor may, at its option: (a) procure the right for Licensee to continue using the Software; (b) modify the Software to make it non-infringing; or (c) terminate this Agreement and refund any prepaid fees for the remaining license term.
+
+7.3 Exclusions. Licensor shall have no indemnification obligation for claims arising from: (a) modifications to the Software not made by Licensor; (b) combination of the Software with non-Licensor products; (c) use of the Software in violation of this Agreement; or (d) Licensee's failure to use Updates that would have avoided the infringement.
+
+7.4 Licensee Indemnification. Licensee shall defend, indemnify, and hold harmless Licensor from any third-party claim arising from: (a) Licensee's use of the Software in violation of this Agreement; (b) Customer Data; or (c) Licensee's violation of applicable law.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 8 - LIMITATION OF LIABILITY
+═══════════════════════════════════════════════════════════════════════════════
+
+8.1 Exclusion of Damages. IN NO EVENT SHALL EITHER PARTY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR BUSINESS OPPORTUNITIES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8.2 Liability Cap. EXCEPT FOR (A) BREACHES OF CONFIDENTIALITY OBLIGATIONS, (B) INDEMNIFICATION OBLIGATIONS, OR (C) GROSS NEGLIGENCE OR WILLFUL MISCONDUCT, EACH PARTY'S TOTAL CUMULATIVE LIABILITY UNDER THIS AGREEMENT SHALL NOT EXCEED THE FEES PAID BY LICENSEE DURING THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
+
+8.3 Fundamental Element. THE PARTIES ACKNOWLEDGE THAT THE LIMITATIONS OF LIABILITY IN THIS ARTICLE 8 ARE A FUNDAMENTAL ELEMENT OF THE BASIS OF THE BARGAIN BETWEEN THE PARTIES.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 9 - TERM AND TERMINATION
+═══════════════════════════════════════════════════════════════════════════════
+
+9.1 Term. This Agreement shall commence on the Effective Date and continue for the Initial Term specified in the Order Form. Thereafter, this Agreement shall automatically renew for successive one-year periods unless either Party provides written notice of non-renewal at least sixty (60) days prior to the end of the then-current term.
+
+9.2 Termination for Cause. Either Party may terminate this Agreement immediately upon written notice if the other Party:
+
+    (a) Materially breaches this Agreement and fails to cure such breach within thirty (30) days after written notice; or
+
+    (b) Becomes insolvent, files for bankruptcy, or makes an assignment for the benefit of creditors.
+
+9.3 Effect of Termination. Upon termination or expiration:
+
+    (a) Licensee's right to use the Software shall immediately cease;
+
+    (b) Licensee shall return or destroy all copies of the Software and Documentation;
+
+    (c) Licensor shall, upon request, export Customer Data in a standard format within thirty (30) days; and
+
+    (d) Sections 1, 4, 6.3, 7, 8, 9.3, 10, 11, and 12 shall survive termination.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 10 - CONFIDENTIALITY
+═══════════════════════════════════════════════════════════════════════════════
+
+10.1 Confidentiality Obligations. Each Party shall: (a) maintain the confidentiality of the other Party's Confidential Information; (b) not disclose Confidential Information to third parties without prior written consent; and (c) use Confidential Information only for purposes of this Agreement.
+
+10.2 Permitted Disclosures. A Party may disclose Confidential Information: (a) to its employees and contractors who need to know and are bound by confidentiality obligations; and (b) as required by law, provided the disclosing Party gives prompt notice to enable the other Party to seek a protective order.
+
+10.3 Exclusions. Confidential Information does not include information that: (a) is or becomes publicly available through no fault of the receiving Party; (b) was rightfully known prior to disclosure; (c) is rightfully obtained from a third party without restriction; or (d) is independently developed without use of Confidential Information.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 11 - DISPUTE RESOLUTION
+═══════════════════════════════════════════════════════════════════════════════
+
+11.1 Governing Law. This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws principles.
+
+11.2 Arbitration. Any dispute arising out of or relating to this Agreement shall be resolved by binding arbitration administered by the American Arbitration Association under its Commercial Arbitration Rules. The arbitration shall be conducted in Wilmington, Delaware by a single arbitrator.
+
+11.3 Injunctive Relief. Notwithstanding Section 11.2, either Party may seek injunctive relief in any court of competent jurisdiction to protect its Intellectual Property Rights or Confidential Information.
+
+11.4 Attorneys' Fees. The prevailing Party in any dispute shall be entitled to recover its reasonable attorneys' fees and costs.
+
+═══════════════════════════════════════════════════════════════════════════════
+                        ARTICLE 12 - GENERAL PROVISIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+12.1 Entire Agreement. This Agreement, including all exhibits and Order Forms, constitutes the entire agreement between the Parties and supersedes all prior agreements relating to the subject matter hereof.
+
+12.2 Amendment. This Agreement may be amended only by a written instrument signed by both Parties.
+
+12.3 Waiver. The failure of either Party to enforce any provision of this Agreement shall not constitute a waiver of such provision or any other provision.
+
+12.4 Severability. If any provision of this Agreement is held invalid, the remaining provisions shall continue in full force and effect.
+
+12.5 Assignment. Neither Party may assign this Agreement without the other Party's prior written consent, except in connection with a merger or sale of substantially all assets.
+
+12.6 Notices. All notices shall be in writing and delivered by certified mail, overnight courier, or email to the addresses specified in the Order Form.
+
+12.7 Independent Contractors. The Parties are independent contractors. Nothing in this Agreement creates an agency, partnership, or joint venture.
+
+12.8 Force Majeure. Neither Party shall be liable for delays or failures in performance resulting from circumstances beyond its reasonable control, including acts of God, natural disasters, war, terrorism, or government action.
+
+12.9 Export Compliance. Licensee shall comply with all applicable export control laws and regulations.
+
+12.10 Counterparts. This Agreement may be executed in counterparts, each of which shall be deemed an original.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
+
+CLOUDTECH SOLUTIONS, INC.              ACME CORPORATION
+
+
+By: _________________________          By: _________________________
+
+Name: Jennifer Walsh                   Name: Michael Torres
+
+Title: Chief Executive Officer         Title: Chief Technology Officer
+
+Date: November 1, 2024                 Date: November 1, 2024
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              EXHIBIT A - ORDER FORM
+═══════════════════════════════════════════════════════════════════════════════
+
+Order Form #: CF-2024-00892
+
+Customer: Acme Corporation
+Effective Date: November 1, 2024
+Initial Term: Three (3) years
+
+Licensed Software:
+- CloudTech Enterprise Platform - Enterprise Edition
+- CloudTech Analytics Module
+- CloudTech Integration Suite
+
+Number of Authorized Users: 500
+
+Annual License Fees:
+- Year 1: $450,000
+- Year 2: $472,500 (5% increase)
+- Year 3: $496,125 (5% increase)
+
+Professional Services:
+- Implementation Services: $75,000 (one-time)
+- Training (5 days on-site): $25,000 (one-time)
+
+Payment Terms: Net 30
+
+Total Year 1 Investment: $550,000
+
+═══════════════════════════════════════════════════════════════════════════════
+                          EXHIBIT B - SERVICE LEVEL AGREEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Availability: 99.9% uptime (excluding scheduled maintenance)
+
+2. Scheduled Maintenance: Sundays 2:00 AM - 6:00 AM EST
+
+3. Support Response Times:
+   - Critical (System Down): 1 hour
+   - High (Major Feature Unavailable): 4 hours
+   - Medium (Minor Feature Issue): 8 business hours
+   - Low (General Questions): 24 business hours
+
+4. Credits for Downtime:
+   - 99.0% - 99.9%: 10% credit
+   - 95.0% - 99.0%: 25% credit
+   - Below 95.0%: 50% credit
+
+Maximum credit per month: 50% of monthly fees

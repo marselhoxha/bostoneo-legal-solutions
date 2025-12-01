@@ -1586,6 +1586,101 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Generate Word document from raw content (no document ID required)
+     * Used for workflow drafts that haven't been saved to GeneratedDocuments table
+     */
+    public byte[] generateWordDocumentFromContent(String content, String title) {
+        log.info("Generating Word document from content, title={}", title);
+
+        if (content == null || content.isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+
+        try {
+            XWPFDocument document = new XWPFDocument();
+
+            // Only add title if content doesn't already have a markdown title
+            if (!contentHasMarkdownTitle(content)) {
+                log.info("Content has no markdown title, adding document title: {}", title);
+                XWPFParagraph titlePara = document.createParagraph();
+                titlePara.setAlignment(ParagraphAlignment.CENTER);
+                titlePara.setSpacingAfter(400);
+                XWPFRun titleRun = titlePara.createRun();
+                titleRun.setText(title);
+                titleRun.setBold(true);
+                titleRun.setFontSize(18);
+                titleRun.setFontFamily("Georgia");
+            } else {
+                log.info("Content has markdown title, skipping title injection");
+            }
+
+            // Convert Markdown content to Word
+            convertMarkdownToWord(content, document);
+
+            // Convert to byte array
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.write(out);
+            document.close();
+
+            log.info("Successfully generated Word document from content ({} bytes)", out.size());
+            return out.toByteArray();
+
+        } catch (IOException e) {
+            log.error("Error generating Word document from content", e);
+            throw new RuntimeException("Failed to generate Word document", e);
+        }
+    }
+
+    /**
+     * Generate PDF document from raw content (no document ID required)
+     * Used for workflow drafts that haven't been saved to GeneratedDocuments table
+     */
+    public byte[] generatePdfDocumentFromContent(String content, String title) {
+        log.info("Generating PDF document from content, title={}", title);
+
+        if (content == null || content.isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            Document document = new Document(pdfDoc);
+
+            // Create fonts
+            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
+            PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
+            PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
+
+            // Only add title if content doesn't already have a markdown title
+            if (!contentHasMarkdownTitle(content)) {
+                log.info("Content has no markdown title, adding document title: {}", title);
+                Paragraph titleParagraph = new Paragraph(title)
+                        .setFont(titleFont)
+                        .setFontSize(18)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setMarginBottom(20);
+                document.add(titleParagraph);
+            } else {
+                log.info("Content has markdown title, skipping title injection");
+            }
+
+            // Convert Markdown content to PDF
+            convertMarkdownToPdf(content, document, headerFont, normalFont);
+
+            document.close();
+
+            log.info("Successfully generated PDF document from content ({} bytes)", baos.size());
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Error generating PDF document from content", e);
+            throw new RuntimeException("Failed to generate PDF document", e);
+        }
+    }
+
+    /**
      * Convert Markdown content to PDF paragraphs
      */
     private void convertMarkdownToPdf(String markdown, Document document, PdfFont headerFont, PdfFont normalFont) throws IOException {

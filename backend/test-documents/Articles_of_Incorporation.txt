@@ -1,0 +1,206 @@
+═══════════════════════════════════════════════════════════════════════════════
+                STATE OF DELAWARE
+          CERTIFICATE OF INCORPORATION
+                      OF
+            DATAFLOW SYSTEMS, INC.
+═══════════════════════════════════════════════════════════════════════════════
+
+The undersigned, for the purpose of forming a corporation under the General Corporation Law of the State of Delaware, does hereby certify as follows:
+
+═══════════════════════════════════════════════════════════════════════════════
+                            ARTICLE I
+                              NAME
+═══════════════════════════════════════════════════════════════════════════════
+
+The name of the corporation is DataFlow Systems, Inc. (the "Corporation").
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE II
+                       REGISTERED OFFICE
+═══════════════════════════════════════════════════════════════════════════════
+
+The address of the Corporation's registered office in the State of Delaware is 1209 Orange Street, Wilmington, New Castle County, Delaware 19801. The name of its registered agent at such address is The Corporation Trust Company.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE III
+                            PURPOSE
+═══════════════════════════════════════════════════════════════════════════════
+
+The purpose of the Corporation is to engage in any lawful act or activity for which corporations may be organized under the General Corporation Law of Delaware, including without limitation:
+
+(a) To develop, design, manufacture, market, sell, license, distribute, and support computer software, including data analytics platforms, business intelligence tools, machine learning solutions, and related technology products;
+
+(b) To provide consulting, implementation, training, and professional services relating to technology and data analytics;
+
+(c) To acquire, hold, and dispose of intellectual property rights, including patents, copyrights, trademarks, trade secrets, and licenses;
+
+(d) To acquire, hold, manage, and dispose of investments in other entities;
+
+(e) To borrow money and issue evidences of indebtedness, and to secure the same by mortgage, pledge, or other lien;
+
+(f) To enter into, perform, and carry out contracts of every kind; and
+
+(g) To conduct any other business activities permitted by law.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE IV
+                        CAPITAL STOCK
+═══════════════════════════════════════════════════════════════════════════════
+
+Section 4.1 Authorized Shares. The total number of shares of stock which the Corporation shall have authority to issue is One Hundred Ten Million (110,000,000) shares, consisting of:
+
+(a) One Hundred Million (100,000,000) shares of Common Stock, par value $0.0001 per share ("Common Stock"); and
+
+(b) Ten Million (10,000,000) shares of Preferred Stock, par value $0.0001 per share ("Preferred Stock").
+
+Section 4.2 Common Stock. Each share of Common Stock shall entitle the holder thereof to one vote on all matters submitted to a vote of stockholders. Subject to the rights of holders of Preferred Stock, holders of Common Stock shall be entitled to receive such dividends as may be declared by the Board of Directors out of funds legally available therefor.
+
+Section 4.3 Preferred Stock. The Board of Directors is hereby expressly authorized, by resolution or resolutions, to provide for the issuance of shares of Preferred Stock in one or more series, and to fix for each such series:
+
+(a) The designation of such series;
+(b) The number of shares of such series;
+(c) The voting powers, if any, of such series;
+(d) The dividend rights and preferences, if any, of such series;
+(e) The redemption rights, if any, of such series;
+(f) The liquidation preferences, if any, of such series;
+(g) The conversion rights, if any, of such series;
+(h) The sinking fund provisions, if any, for such series; and
+(i) Any other rights, preferences, privileges, and restrictions of such series.
+
+Section 4.4 Series A Preferred Stock. The Corporation has designated 3,500,000 shares of Preferred Stock as Series A Preferred Stock, having the rights, preferences, and privileges set forth in the Certificate of Designation filed with the Secretary of State of Delaware on March 15, 2019.
+
+Section 4.5 Series B Preferred Stock. The Corporation has designated 2,500,000 shares of Preferred Stock as Series B Preferred Stock, having the rights, preferences, and privileges set forth in the Certificate of Designation filed with the Secretary of State of Delaware on September 1, 2021.
+
+═══════════════════════════════════════════════════════════════════════════════
+                            ARTICLE V
+                      BOARD OF DIRECTORS
+═══════════════════════════════════════════════════════════════════════════════
+
+Section 5.1 Number of Directors. The business and affairs of the Corporation shall be managed by or under the direction of the Board of Directors. The number of directors shall be fixed from time to time exclusively by resolution adopted by a majority of the entire Board of Directors, but shall consist of not less than three (3) nor more than nine (9) directors.
+
+Section 5.2 Classes of Directors. The Board of Directors shall be divided into three classes, designated as Class I, Class II, and Class III, as nearly equal in number as possible. At each annual meeting of stockholders, successors to the class of directors whose term expires at that annual meeting shall be elected for a three-year term.
+
+Section 5.3 Removal. Subject to the rights of the holders of any series of Preferred Stock, any director may be removed from office only for cause and only by the affirmative vote of holders of at least sixty-six and two-thirds percent (66-2/3%) of the voting power of all of the then-outstanding shares of voting stock of the Corporation.
+
+Section 5.4 Vacancies. Subject to the rights of the holders of any series of Preferred Stock, any vacancy on the Board of Directors that results from an increase in the number of directors may be filled by a majority of the Board of Directors then in office.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE VI
+                   LIMITATION OF LIABILITY
+═══════════════════════════════════════════════════════════════════════════════
+
+Section 6.1 Limitation of Liability. A director of the Corporation shall not be personally liable to the Corporation or its stockholders for monetary damages for breach of fiduciary duty as a director, except for liability:
+
+(a) For any breach of the director's duty of loyalty to the Corporation or its stockholders;
+
+(b) For acts or omissions not in good faith or which involve intentional misconduct or a knowing violation of law;
+
+(c) Under Section 174 of the Delaware General Corporation Law; or
+
+(d) For any transaction from which the director derived an improper personal benefit.
+
+Section 6.2 Amendment. If the Delaware General Corporation Law is amended to authorize corporate action further eliminating or limiting the personal liability of directors, then the liability of a director of the Corporation shall be eliminated or limited to the fullest extent permitted by the Delaware General Corporation Law, as so amended.
+
+═══════════════════════════════════════════════════════════════════════════════
+                          ARTICLE VII
+                        INDEMNIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Section 7.1 Right to Indemnification. The Corporation shall indemnify and hold harmless, to the fullest extent permitted by applicable law, any person who was or is made or is threatened to be made a party or is otherwise involved in any action, suit, or proceeding, whether civil, criminal, administrative, or investigative (a "Proceeding"), by reason of the fact that such person is or was a director or officer of the Corporation or, while a director or officer of the Corporation, is or was serving at the request of the Corporation as a director, officer, employee, or agent of another corporation, partnership, joint venture, trust, or other enterprise.
+
+Section 7.2 Advancement of Expenses. The Corporation shall pay the expenses (including attorneys' fees) incurred by any person entitled to indemnification under Section 7.1 in defending any Proceeding in advance of its final disposition; provided that the Corporation receives an undertaking by such person to repay such amounts if it shall ultimately be determined that such person is not entitled to be indemnified under this Article VII or otherwise.
+
+Section 7.3 Insurance. The Corporation may purchase and maintain insurance on behalf of any person who is or was a director, officer, employee, or agent of the Corporation against any liability asserted against such person in any such capacity, whether or not the Corporation would have the power to indemnify such person against such liability under the provisions of this Article VII.
+
+═══════════════════════════════════════════════════════════════════════════════
+                          ARTICLE VIII
+                      STOCKHOLDER ACTION
+═══════════════════════════════════════════════════════════════════════════════
+
+Section 8.1 Written Consent. Any action required or permitted to be taken at any annual or special meeting of stockholders of the Corporation may be taken without a meeting, without prior notice, and without a vote, if a consent or consents in writing, setting forth the action so taken, shall be signed by the holders of outstanding stock having not less than the minimum number of votes that would be necessary to authorize or take such action at a meeting at which all shares entitled to vote thereon were present and voted.
+
+Section 8.2 Special Meetings. Special meetings of stockholders may be called only by (a) the Board of Directors pursuant to a resolution adopted by a majority of the entire Board of Directors, (b) the Chairman of the Board, or (c) the Chief Executive Officer.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE IX
+                     AMENDMENT OF BYLAWS
+═══════════════════════════════════════════════════════════════════════════════
+
+The Board of Directors shall have the power to adopt, amend, or repeal the Bylaws of the Corporation. The Bylaws also may be adopted, amended, or repealed by the stockholders; provided that any Bylaws adopted or amended by the stockholders may be amended or repealed by the Board of Directors unless the resolution of the stockholders adopting such Bylaw expressly provides that such Bylaw may not be amended or repealed by the Board of Directors.
+
+═══════════════════════════════════════════════════════════════════════════════
+                            ARTICLE X
+                    AMENDMENT OF CERTIFICATE
+═══════════════════════════════════════════════════════════════════════════════
+
+The Corporation reserves the right to amend, alter, change, or repeal any provision contained in this Certificate of Incorporation, in the manner now or hereafter prescribed by statute, and all rights conferred upon stockholders herein are granted subject to this reservation.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           ARTICLE XI
+                          INCORPORATOR
+═══════════════════════════════════════════════════════════════════════════════
+
+The name and mailing address of the incorporator is:
+
+    Sarah M. Williams
+    Wilson Sonsini Goodrich & Rosati, P.C.
+    650 Page Mill Road
+    Palo Alto, California 94304
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IN WITNESS WHEREOF, the undersigned has executed this Certificate of Incorporation on January 15, 2018.
+
+
+_________________________________
+Sarah M. Williams
+Incorporator
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                    STATE OF DELAWARE
+              SECRETARY OF STATE
+           CERTIFICATE OF INCORPORATION
+═══════════════════════════════════════════════════════════════════════════════
+
+I, JEFFREY W. BULLOCK, SECRETARY OF STATE OF THE STATE OF DELAWARE, DO HEREBY CERTIFY THAT THE ABOVE AND FOREGOING IS A TRUE AND CORRECT COPY OF THE CERTIFICATE OF INCORPORATION OF "DATAFLOW SYSTEMS, INC." FILED IN THIS OFFICE ON THE FIFTEENTH DAY OF JANUARY, A.D. 2018, AT 3:27 O'CLOCK P.M.
+
+FILE NUMBER: 6847291
+
+_________________________________
+Jeffrey W. Bullock
+Secretary of State
+
+Authentication: 203849572
+Date: 01/15/2018
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                   CURRENT CAPITALIZATION SUMMARY
+                      (As of October 31, 2024)
+═══════════════════════════════════════════════════════════════════════════════
+
+AUTHORIZED SHARES:
+- Common Stock:              100,000,000 shares
+- Preferred Stock:            10,000,000 shares
+  - Series A Preferred:        3,500,000 shares designated
+  - Series B Preferred:        2,500,000 shares designated
+  - Undesignated:              4,000,000 shares
+
+ISSUED AND OUTSTANDING:
+- Common Stock:               18,500,000 shares
+- Series A Preferred:          3,200,000 shares
+- Series B Preferred:          2,100,000 shares
+
+RESERVED FOR ISSUANCE:
+- Stock Option Pool:           4,500,000 shares
+- Warrant Holders:               500,000 shares
+
+PRINCIPAL STOCKHOLDERS:
+1. Founders (3 individuals):                8,500,000 common (45.9%)
+2. Sequoia Capital:                         3,200,000 Series A (17.3%)
+3. Accel Partners:                          2,100,000 Series B (11.4%)
+4. Employee Stock Option Pool:              4,500,000 reserved (24.3%)
+5. Other Common Holders:                      200,000 common (1.1%)
+
+FULLY DILUTED SHARES:                      28,800,000 shares

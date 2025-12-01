@@ -53,6 +53,11 @@
             <span class="conversation-count" *ngIf="conv.messageCount">
               {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
             </span>
+            <span class="workflow-badge" *ngIf="conv.workflowExecutionId"
+                  title="From: {{ conv.workflowName || 'Workflow' }} (click to view)"
+                  (click)="onWorkflowBadgeClick($event, conv.workflowExecutionId)">
+              <i class="ri-flow-chart"></i>
+            </span>
           </div>
         </div>
         <button class="btn-delete" (click)="onDeleteClick($event, conv)" title="Delete conversation">
@@ -78,6 +83,11 @@
             <span class="conversation-count" *ngIf="conv.messageCount">
               {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
             </span>
+            <span class="workflow-badge" *ngIf="conv.workflowExecutionId"
+                  title="From: {{ conv.workflowName || 'Workflow' }} (click to view)"
+                  (click)="onWorkflowBadgeClick($event, conv.workflowExecutionId)">
+              <i class="ri-flow-chart"></i>
+            </span>
           </div>
         </div>
         <button class="btn-delete" (click)="onDeleteClick($event, conv)" title="Delete conversation">
@@ -102,6 +112,11 @@
             <span class="conversation-date">{{ getRelativeTime(conv.date) }}</span>
             <span class="conversation-count" *ngIf="conv.messageCount">
               {{ conv.messageCount }} {{ conv.messageCount === 1 ? 'message' : 'messages' }}
+            </span>
+            <span class="workflow-badge" *ngIf="conv.workflowExecutionId"
+                  title="From: {{ conv.workflowName || 'Workflow' }} (click to view)"
+                  (click)="onWorkflowBadgeClick($event, conv.workflowExecutionId)">
+              <i class="ri-flow-chart"></i>
             </span>
           </div>
         </div>

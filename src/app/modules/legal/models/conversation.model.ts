@@ -55,6 +55,8 @@ export interface Conversation {
   documentId?: number;
   relatedDraftId?: string;
   caseId?: number; // Associated legal case ID
+  workflowExecutionId?: number; // Linked workflow execution
+  workflowName?: string; // Name of the linked workflow
 }
 
 export interface GroupedConversations {

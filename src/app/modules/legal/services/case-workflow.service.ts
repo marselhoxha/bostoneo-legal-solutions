@@ -82,6 +82,16 @@ export class CaseWorkflowService {
     );
   }
 
+  /**
+   * Get user executions with cache-busting for polling
+   */
+  getUserExecutionsNoCache(): Observable<WorkflowExecution[]> {
+    const timestamp = Date.now();
+    return this.http.get<any>(`${this.apiUrl}/executions?_t=${timestamp}`).pipe(
+      map(response => response.data?.executions || [])
+    );
+  }
+
   getExecution(id: number): Observable<WorkflowExecution> {
     return this.http.get<any>(`${this.apiUrl}/executions/${id}`).pipe(
       map(response => response.data?.execution)
@@ -90,6 +100,16 @@ export class CaseWorkflowService {
 
   getExecutionWithSteps(id: number): Observable<WorkflowExecution> {
     return this.http.get<any>(`${this.apiUrl}/executions/${id}/details`).pipe(
+      map(response => response.data?.execution)
+    );
+  }
+
+  /**
+   * Get execution with steps and cache-busting for polling
+   */
+  getExecutionWithStepsNoCache(id: number): Observable<WorkflowExecution> {
+    const timestamp = Date.now();
+    return this.http.get<any>(`${this.apiUrl}/executions/${id}/details?_t=${timestamp}`).pipe(
       map(response => response.data?.execution)
     );
   }

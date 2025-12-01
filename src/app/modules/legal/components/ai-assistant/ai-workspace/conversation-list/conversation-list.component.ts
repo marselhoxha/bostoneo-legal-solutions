@@ -23,6 +23,7 @@ export class ConversationListComponent {
   @Output() conversationDeleted = new EventEmitter<string>();
   @Output() newConversation = new EventEmitter<void>();
   @Output() searchQueryChange = new EventEmitter<string>();
+  @Output() workflowClicked = new EventEmitter<number>();
 
   // Expose enum to template
   ConversationType = ConversationType;
@@ -73,6 +74,11 @@ export class ConversationListComponent {
   onDeleteClick(event: Event, conversation: Conversation): void {
     event.stopPropagation();
     this.conversationDeleted.emit(conversation.id);
+  }
+
+  onWorkflowBadgeClick(event: Event, workflowExecutionId: number): void {
+    event.stopPropagation();
+    this.workflowClicked.emit(workflowExecutionId);
   }
 
   onNewConversation(): void {

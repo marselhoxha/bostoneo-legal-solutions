@@ -5,8 +5,9 @@ import com.bostoneo.bostoneosolutions.enumeration.WorkflowStepType;
 import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +18,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class CaseWorkflowExecutionService {
 
@@ -28,6 +28,53 @@ public class CaseWorkflowExecutionService {
     private final ActionItemRepository actionItemRepository;
     private final TimelineEventRepository timelineEventRepository;
     private final ClaudeSonnet4Service claudeService;
+
+    // Integration repositories - for creating actual drafts and research sessions
+    private final AiConversationSessionRepository conversationSessionRepository;
+    private final AiConversationMessageRepository conversationMessageRepository;
+    private final ResearchSessionRepository researchSessionRepository;
+
+    // Team notification dependencies
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
+
+    // Self-injection for @Async to work (Spring AOP doesn't intercept internal calls)
+    private CaseWorkflowExecutionService self;
+
+    @Autowired
+    public CaseWorkflowExecutionService(
+            CaseWorkflowTemplateRepository templateRepository,
+            CaseWorkflowExecutionRepository executionRepository,
+            CaseWorkflowStepExecutionRepository stepExecutionRepository,
+            AIDocumentAnalysisService documentAnalysisService,
+            ActionItemRepository actionItemRepository,
+            TimelineEventRepository timelineEventRepository,
+            ClaudeSonnet4Service claudeService,
+            AiConversationSessionRepository conversationSessionRepository,
+            AiConversationMessageRepository conversationMessageRepository,
+            ResearchSessionRepository researchSessionRepository,
+            NotificationService notificationService,
+            CaseAssignmentRepository caseAssignmentRepository
+    ) {
+        this.templateRepository = templateRepository;
+        this.executionRepository = executionRepository;
+        this.stepExecutionRepository = stepExecutionRepository;
+        this.documentAnalysisService = documentAnalysisService;
+        this.actionItemRepository = actionItemRepository;
+        this.timelineEventRepository = timelineEventRepository;
+        this.claudeService = claudeService;
+        this.conversationSessionRepository = conversationSessionRepository;
+        this.conversationMessageRepository = conversationMessageRepository;
+        this.researchSessionRepository = researchSessionRepository;
+        this.notificationService = notificationService;
+        this.caseAssignmentRepository = caseAssignmentRepository;
+    }
+
+    @Autowired
+    @Lazy
+    public void setSelf(CaseWorkflowExecutionService self) {
+        this.self = self;
+    }
 
     /**
      * Start a new workflow execution
@@ -90,8 +137,8 @@ public class CaseWorkflowExecutionService {
             stepExecutionRepository.save(stepExecution);
         }
 
-        // Start async execution
-        executeWorkflowAsync(execution.getId());
+        // Start async execution via self-reference to trigger @Async proxy
+        self.executeWorkflowAsync(execution.getId());
 
         return execution;
     }
@@ -111,14 +158,40 @@ public class CaseWorkflowExecutionService {
     }
 
     /**
-     * Execute all steps in a workflow
+     * Load execution with all lazy relationships initialized (transactional)
      */
-    @Transactional
+    @Transactional(readOnly = true)
+    public CaseWorkflowExecution loadExecutionWithRelationships(Long executionId) {
+        CaseWorkflowExecution execution = executionRepository.findById(executionId)
+                .orElseThrow(() -> new RuntimeException("Workflow execution not found: " + executionId));
+
+        // Force initialize lazy-loaded relationships within transaction
+        if (execution.getTemplate() != null) {
+            execution.getTemplate().getName();
+            execution.getTemplate().getTemplateType();
+            execution.getTemplate().getStepsConfig(); // Load steps config too
+        }
+        if (execution.getLegalCase() != null) {
+            execution.getLegalCase().getId();
+            execution.getLegalCase().getTitle();
+        }
+        if (execution.getCreatedBy() != null) {
+            execution.getCreatedBy().getId();
+            execution.getCreatedBy().getEmail();
+        }
+
+        return execution;
+    }
+
+    /**
+     * Execute all steps in a workflow
+     * Note: NOT transactional so each step save commits immediately (enables real-time progress updates)
+     */
     public void executeWorkflow(Long executionId) {
         log.info("Executing workflow: {}", executionId);
 
-        CaseWorkflowExecution execution = executionRepository.findById(executionId)
-                .orElseThrow(() -> new RuntimeException("Workflow execution not found: " + executionId));
+        // Load execution with relationships in a transaction
+        CaseWorkflowExecution execution = self.loadExecutionWithRelationships(executionId);
 
         // Update status to running
         execution.setStatus(WorkflowExecutionStatus.RUNNING);
@@ -131,6 +204,12 @@ public class CaseWorkflowExecutionService {
 
         // Execute each step
         for (CaseWorkflowStepExecution step : steps) {
+            // Skip already completed steps (important for resume after ACTION)
+            if (step.getStatus() == WorkflowExecutionStatus.COMPLETED) {
+                log.info("Skipping already completed step {}: {}", step.getStepNumber(), step.getStepName());
+                continue;
+            }
+
             try {
                 executeStep(step, execution);
 
@@ -347,12 +426,44 @@ public class CaseWorkflowExecutionService {
         try {
             String aiResponse = claudeService.generateCompletion(prompt, false).get();
 
+            // Save synthesis result as a draft session (so it appears in Drafting taskcard)
+            String sessionName = getSynthesisSessionName(synthesisType, execution.getName());
+            AiConversationSession session = AiConversationSession.builder()
+                    .userId(execution.getCreatedBy().getId())
+                    .sessionName(sessionName)
+                    .sessionType("DRAFTING")
+                    .taskType("GENERATE_DRAFT")
+                    .documentType(synthesisType) // e.g., "evidence_checklist", "risk_matrix"
+                    .caseId(execution.getLegalCase() != null ? execution.getLegalCase().getId() : null)
+                    .workflowExecutionId(execution.getId())
+                    .isActive(true)
+                    .isPinned(false)
+                    .isArchived(false)
+                    .messageCount(1)
+                    .build();
+            session = conversationSessionRepository.save(session);
+
+            // Create message with synthesis content
+            AiConversationMessage message = AiConversationMessage.builder()
+                    .session(session)
+                    .role("assistant")
+                    .content(aiResponse)
+                    .modelUsed("claude-sonnet-4")
+                    .ragContextUsed(true)
+                    .build();
+            conversationMessageRepository.save(message);
+
+            log.info("Created synthesis session {} ({}) for workflow {}", session.getId(), synthesisType, execution.getId());
+
             Map<String, Object> result = new HashMap<>();
             result.put("stepType", "synthesis");
             result.put("synthesisType", synthesisType);
             result.put("content", aiResponse);
             result.put("documentCount", documentIds.size());
             result.put("generatedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            result.put("sessionId", session.getId());
+            result.put("sessionName", sessionName);
+            result.put("message", sessionName + " created and available in Drafting");
             return result;
 
         } catch (Exception e) {
@@ -363,6 +474,20 @@ public class CaseWorkflowExecutionService {
                     "error", e.getMessage()
             );
         }
+    }
+
+    /**
+     * Get synthesis session name based on type
+     */
+    private String getSynthesisSessionName(String synthesisType, String workflowName) {
+        String prefix = switch (synthesisType) {
+            case "evidence_checklist" -> "Evidence Checklist";
+            case "risk_matrix" -> "Risk Matrix";
+            case "issue_summary" -> "Issue Summary";
+            case "contract_summary" -> "Contract Summary";
+            default -> "Synthesis";
+        };
+        return prefix + " - " + (workflowName != null ? workflowName : "Workflow");
     }
 
     /**
@@ -565,6 +690,7 @@ public class CaseWorkflowExecutionService {
 
     /**
      * INTEGRATION step - Create drafts/research via other services
+     * Creates actual AiConversationSession or ResearchSession records
      */
     private Map<String, Object> executeIntegrationStep(CaseWorkflowStepExecution step, CaseWorkflowExecution execution) {
         log.info("Executing INTEGRATION step: {}", step.getStepName());
@@ -572,24 +698,74 @@ public class CaseWorkflowExecutionService {
         Map<String, Object> inputData = step.getInputData();
         Map<String, Object> stepConfig = getStepConfig(inputData);
         String integrationType = (String) stepConfig.getOrDefault("integrationType", "draft");
+        String generationType = (String) stepConfig.getOrDefault("generationType", "draft");
 
-        // For now, integration step generates content and stores it
-        // Future: Could create actual Draft entities, Research sessions, etc.
         Map<String, Object> result = new HashMap<>();
         result.put("stepType", "integration");
         result.put("integrationType", integrationType);
 
         switch (integrationType) {
             case "create_draft" -> {
-                // Generate draft content via generation step logic
+                // Generate draft content via AI
                 Map<String, Object> generationResult = executeGenerationStep(step, execution);
-                result.put("draftContent", generationResult.get("content"));
+                String draftContent = (String) generationResult.get("content");
+
+                // Create actual AiConversationSession record
+                String sessionName = getDraftSessionName(generationType, execution.getName());
+                AiConversationSession session = AiConversationSession.builder()
+                        .userId(execution.getCreatedBy().getId())
+                        .sessionName(sessionName)
+                        .sessionType("DRAFTING")
+                        .taskType("GENERATE_DRAFT")
+                        .caseId(execution.getLegalCase() != null ? execution.getLegalCase().getId() : null)
+                        .workflowExecutionId(execution.getId())
+                        .isActive(true)
+                        .isPinned(false)
+                        .isArchived(false)
+                        .messageCount(1)
+                        .build();
+                session = conversationSessionRepository.save(session);
+
+                // Create initial message with generated content
+                AiConversationMessage message = AiConversationMessage.builder()
+                        .session(session)
+                        .role("assistant")
+                        .content(draftContent)
+                        .modelUsed("claude-sonnet-4")
+                        .ragContextUsed(true)
+                        .build();
+                conversationMessageRepository.save(message);
+
+                log.info("Created draft session {} for workflow {}", session.getId(), execution.getId());
+
+                result.put("draftContent", draftContent);
+                result.put("sessionId", session.getId());
+                result.put("sessionName", sessionName);
                 result.put("status", "draft_created");
-                result.put("message", "Draft has been generated and is ready for review");
+                result.put("message", "Draft created and available in Drafting");
             }
             case "legal_research" -> {
-                result.put("status", "research_pending");
-                result.put("message", "Legal research integration - to be connected to research service");
+                // Create actual ResearchSession record
+                String sessionName = "Research - " + (execution.getName() != null ? execution.getName() : "Workflow");
+                ResearchSession researchSession = ResearchSession.builder()
+                        .sessionId(UUID.randomUUID().toString())
+                        .userId(execution.getCreatedBy().getId())
+                        .sessionName(sessionName)
+                        .description("Legal research initiated from workflow: " + execution.getTemplate().getName())
+                        .workflowExecutionId(execution.getId())
+                        .isActive(true)
+                        .totalSearches(0)
+                        .totalDocumentsViewed(0)
+                        .build();
+                researchSession = researchSessionRepository.save(researchSession);
+
+                log.info("Created research session {} for workflow {}", researchSession.getId(), execution.getId());
+
+                result.put("researchSessionId", researchSession.getId());
+                result.put("researchSessionUuid", researchSession.getSessionId());
+                result.put("sessionName", sessionName);
+                result.put("status", "research_session_created");
+                result.put("message", "Research session created and available in Legal Research");
             }
             default -> {
                 result.put("status", "completed");
@@ -602,18 +778,120 @@ public class CaseWorkflowExecutionService {
     }
 
     /**
-     * ACTION step - Pause and wait for user
+     * Get draft session name based on generation type
+     */
+    private String getDraftSessionName(String generationType, String workflowName) {
+        String prefix = switch (generationType) {
+            case "answer_draft" -> "Draft Answer";
+            case "opposition_brief" -> "Opposition Brief";
+            case "due_diligence_report" -> "DD Report";
+            case "contract_redlines" -> "Contract Redlines";
+            case "discovery_responses" -> "Discovery Responses";
+            default -> "Draft";
+        };
+        return prefix + " - " + (workflowName != null ? workflowName : "Workflow");
+    }
+
+    /**
+     * ACTION step - Handle different action types (notify_team, approval, etc.)
      */
     private void executeActionStep(CaseWorkflowStepExecution step, CaseWorkflowExecution execution) {
-        log.info("Executing ACTION step: {} - Waiting for user", step.getStepName());
+        Map<String, Object> stepConfig = getStepConfig(step.getInputData());
+        String actionType = (String) stepConfig.getOrDefault("actionType", "default");
 
+        log.info("Executing ACTION step: {} - actionType: {}", step.getStepName(), actionType);
+
+        Map<String, Object> outputData = new HashMap<>();
+        outputData.put("stepType", "action");
+        outputData.put("actionType", actionType);
+
+        switch (actionType) {
+            case "notify_team" -> {
+                // Send notifications to all team members assigned to the case
+                int notificationCount = sendTeamNotifications(execution, step);
+                outputData.put("notificationsSent", notificationCount);
+                outputData.put("message", notificationCount > 0
+                        ? "Team members have been notified (" + notificationCount + " notifications sent)"
+                        : "No team members to notify");
+            }
+            case "approval" -> {
+                outputData.put("message", "Waiting for client/partner approval");
+            }
+            case "document_collection" -> {
+                outputData.put("message", "Waiting for document collection");
+            }
+            case "export" -> {
+                outputData.put("message", "Ready for export - select your format");
+            }
+            default -> {
+                outputData.put("message", "This step requires user action to continue");
+            }
+        }
+
+        outputData.put("status", "waiting_user");
         step.setStatus(WorkflowExecutionStatus.WAITING_USER);
-        step.setOutputData(Map.of(
-                "stepType", "action",
-                "status", "waiting_user",
-                "message", "This step requires user action to continue"
-        ));
+        step.setOutputData(outputData);
         stepExecutionRepository.save(step);
+    }
+
+    /**
+     * Send notifications to all team members assigned to the case
+     * Returns the number of notifications sent
+     */
+    private int sendTeamNotifications(CaseWorkflowExecution execution, CaseWorkflowStepExecution step) {
+        Long caseId = execution.getLegalCase() != null ? execution.getLegalCase().getId() : null;
+
+        if (caseId == null) {
+            log.warn("No case ID for team notification - skipping");
+            return 0;
+        }
+
+        // Get all team members assigned to this case
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+
+        if (assignments.isEmpty()) {
+            log.info("No team members assigned to case {} for notification", caseId);
+            return 0;
+        }
+
+        String title = "Workflow Review Required: " + execution.getName();
+        String body = String.format("The workflow '%s' requires your review. Current step: %s",
+                execution.getName(), step.getStepName());
+
+        int notificationCount = 0;
+
+        for (CaseAssignment assignment : assignments) {
+            Long userId = assignment.getAssignedTo().getId();
+
+            // Don't notify the user who created the workflow
+            if (userId.equals(execution.getCreatedBy().getId())) {
+                log.info("Skipping notification to workflow creator (user {})", userId);
+                continue;
+            }
+
+            try {
+                Map<String, Object> notificationData = new HashMap<>();
+                notificationData.put("workflowId", execution.getId());
+                notificationData.put("caseId", caseId);
+                notificationData.put("stepName", step.getStepName());
+                notificationData.put("workflowName", execution.getName());
+
+                notificationService.sendCrmNotification(
+                        title,
+                        body,
+                        userId,
+                        "WORKFLOW_REVIEW",
+                        notificationData
+                );
+                notificationCount++;
+                log.info("Sent workflow notification to user {} ({})", userId, assignment.getAssignedTo().getFirstName());
+            } catch (Exception e) {
+                log.error("Failed to send notification to user {}: {}", userId, e.getMessage());
+            }
+        }
+
+        log.info("Sent {} team notifications for workflow {} on case {}", notificationCount, execution.getId(), caseId);
+        return notificationCount;
     }
 
     /**
@@ -636,8 +914,8 @@ public class CaseWorkflowExecutionService {
         ));
         stepExecutionRepository.save(step);
 
-        // Continue workflow execution
-        executeWorkflowAsync(executionId);
+        // Continue workflow execution via self-reference to trigger @Async proxy
+        self.executeWorkflowAsync(executionId);
     }
 
     /**

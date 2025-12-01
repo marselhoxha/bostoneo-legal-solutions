@@ -62,4 +62,7 @@ public class ResearchSession {
 
     @Column(name = "last_accessed")
     private LocalDateTime lastAccessed;
+
+    @Column(name = "workflow_execution_id")
+    private Long workflowExecutionId;
 }

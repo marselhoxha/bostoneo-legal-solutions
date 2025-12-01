@@ -544,4 +544,98 @@ public class AiWorkspaceController {
             default -> String.format("I improved %s.", scopeText);
         };
     }
+
+    /**
+     * Export content to Word (DOCX) - no document ID required
+     * POST /api/legal/ai-workspace/export/content/word
+     * Used for workflow drafts that haven't been saved to database
+     */
+    @PostMapping("/export/content/word")
+    public ResponseEntity<byte[]> exportContentToWord(@RequestBody Map<String, String> request) {
+        try {
+            String content = request.get("content");
+            String title = request.getOrDefault("title", "Document");
+
+            if (content == null || content.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            log.info("Exporting content to Word, title={}", title);
+
+            // Generate Word document from content
+            byte[] wordDoc = documentService.generateWordDocumentFromContent(content, title);
+
+            // Sanitize filename
+            String safeTitle = title.replaceAll("[^a-zA-Z0-9\\s\\-_]", "").replaceAll("\\s+", "_");
+            if (safeTitle.length() > 50) {
+                safeTitle = safeTitle.substring(0, 50);
+            }
+            String filename = safeTitle + ".docx";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+            ContentDisposition contentDisposition = ContentDisposition.attachment()
+                    .filename(filename, StandardCharsets.UTF_8)
+                    .build();
+            headers.setContentDisposition(contentDisposition);
+            headers.setContentLength(wordDoc.length);
+
+            log.info("Exporting Word document with filename: {}", filename);
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(wordDoc);
+
+        } catch (Exception e) {
+            log.error("Error exporting content to Word", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Export content to PDF - no document ID required
+     * POST /api/legal/ai-workspace/export/content/pdf
+     * Used for workflow drafts that haven't been saved to database
+     */
+    @PostMapping("/export/content/pdf")
+    public ResponseEntity<byte[]> exportContentToPdf(@RequestBody Map<String, String> request) {
+        try {
+            String content = request.get("content");
+            String title = request.getOrDefault("title", "Document");
+
+            if (content == null || content.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            log.info("Exporting content to PDF, title={}", title);
+
+            // Generate PDF document from content
+            byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title);
+
+            // Sanitize filename
+            String safeTitle = title.replaceAll("[^a-zA-Z0-9\\s\\-_]", "").replaceAll("\\s+", "_");
+            if (safeTitle.length() > 50) {
+                safeTitle = safeTitle.substring(0, 50);
+            }
+            String filename = safeTitle + ".pdf";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            ContentDisposition contentDisposition = ContentDisposition.attachment()
+                    .filename(filename, StandardCharsets.UTF_8)
+                    .build();
+            headers.setContentDisposition(contentDisposition);
+            headers.setContentLength(pdfDoc.length);
+
+            log.info("Exporting PDF document with filename: {}", filename);
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfDoc);
+
+        } catch (Exception e) {
+            log.error("Error exporting content to PDF", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

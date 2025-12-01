@@ -9,7 +9,7 @@
       <div class="document-info">
         <h5 class="document-title mb-0">
           <i class="ri-file-text-line me-2"></i>
-          {{ document.fileName }}
+          {{ getCleanFileName(document.fileName) }}
         </h5>
         <div class="document-meta">
           <span class="badge me-2" [ngClass]="getDocTypeColorClass(document.detectedType)">
@@ -331,7 +331,7 @@
                     <h6>Ask questions about this document</h6>
                     <p class="text-muted">
                       I can help you understand specific clauses, identify risks,
-                      or explain legal implications of {{ document.fileName }}.
+                      or explain legal implications of {{ getCleanFileName(document.fileName) }}.
                     </p>
                     <div class="suggested-questions">
                       <button class="suggested-btn"
@@ -514,7 +514,7 @@
                         </span>
                       </div>
                       <div class="related-doc-info">
-                        <div class="related-doc-name">{{ rel.relatedDocument.fileName }}</div>
+                        <div class="related-doc-name">{{ getCleanFileName(rel.relatedDocument.fileName) }}</div>
                         <div class="related-doc-meta">
                           <span class="badge bg-light text-dark me-2">{{ rel.relatedDocument.detectedType }}</span>
                           <small class="text-muted">{{ rel.relatedDocument.createdAt | date:'shortDate' }}</small>
@@ -596,7 +596,7 @@
               <div class="d-flex align-items-center gap-2">
                 <i class="ri-file-text-line"></i>
                 <div class="flex-grow-1">
-                  <div class="fw-medium">{{ doc.fileName }}</div>
+                  <div class="fw-medium">{{ getCleanFileName(doc.fileName) }}</div>
                   <div class="small text-muted">
                     <span class="badge bg-light text-dark me-1">{{ doc.detectedType }}</span>
                     {{ doc.createdAt | date:'shortDate' }}

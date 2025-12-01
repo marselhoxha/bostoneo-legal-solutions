@@ -376,6 +376,36 @@ export class DocumentGenerationService {
   }
 
   /**
+   * Export content to Word (DOCX) - no document ID required
+   * Used for workflow drafts that haven't been saved to database
+   */
+  exportContentToWord(content: string, title: string): Observable<HttpResponse<Blob>> {
+    return this.http.post(
+      `${environment.apiUrl}/api/legal/ai-workspace/export/content/word`,
+      { content, title },
+      {
+        responseType: 'blob',
+        observe: 'response'
+      }
+    );
+  }
+
+  /**
+   * Export content to PDF - no document ID required
+   * Used for workflow drafts that haven't been saved to database
+   */
+  exportContentToPDF(content: string, title: string): Observable<HttpResponse<Blob>> {
+    return this.http.post(
+      `${environment.apiUrl}/api/legal/ai-workspace/export/content/pdf`,
+      { content, title },
+      {
+        responseType: 'blob',
+        observe: 'response'
+      }
+    );
+  }
+
+  /**
    * Save manual edit as a new version
    */
   saveManualVersion(documentId: number, userId: number, content: string, versionNote?: string): Observable<any> {

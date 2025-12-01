@@ -1,0 +1,207 @@
+COMMONWEALTH OF MASSACHUSETTS
+SUFFOLK COUNTY SUPERIOR COURT
+
+CIVIL ACTION NO. 2024-CV-04521
+
+ROBERT SMITH,
+    Plaintiff,
+
+v.
+
+TECHCORP INDUSTRIES, INC.,
+    Defendant.
+
+═══════════════════════════════════════════════════════════════════════════════
+                              VERIFIED COMPLAINT
+═══════════════════════════════════════════════════════════════════════════════
+
+COMES NOW, the Plaintiff, Robert Smith, by and through his undersigned counsel, and for his Complaint against the Defendant, TechCorp Industries, Inc., states as follows:
+
+                                   PARTIES
+
+1. Plaintiff Robert Smith ("Plaintiff" or "Mr. Smith") is an individual residing at 123 Main Street, Boston, Massachusetts 02108. Mr. Smith was employed by Defendant as a Senior Software Engineer from March 15, 2019 until his wrongful termination on August 28, 2024.
+
+2. Defendant TechCorp Industries, Inc. ("Defendant" or "TechCorp") is a Delaware corporation with its principal place of business at 750 Technology Drive, Cambridge, Massachusetts 02139. TechCorp is engaged in the business of developing enterprise software solutions and employs approximately 450 employees in Massachusetts.
+
+                                 JURISDICTION
+
+3. This Court has jurisdiction over this matter pursuant to M.G.L. c. 212, § 3, as the amount in controversy exceeds $25,000.
+
+4. Venue is proper in Suffolk County as the Defendant maintains its principal Massachusetts office in Cambridge, which is adjacent to Suffolk County, and significant events giving rise to this action occurred in the greater Boston metropolitan area.
+
+                              FACTUAL BACKGROUND
+
+Employment History and Performance
+
+5. Plaintiff commenced employment with Defendant on March 15, 2019, as a Software Engineer II. Based on his exceptional performance, Plaintiff was promoted to Senior Software Engineer on January 1, 2022, with an annual salary of $185,000 plus benefits.
+
+6. Throughout his employment, Plaintiff consistently received "Exceeds Expectations" ratings on his annual performance reviews. His 2023 performance review, dated February 15, 2024, stated: "Robert continues to be one of our top performers. His technical leadership on the Phoenix Project saved the company an estimated $2.3 million in development costs."
+
+7. On April 1, 2024, Plaintiff received a merit increase of 8%, bringing his annual salary to $199,800, along with a performance bonus of $35,000.
+
+Employment Agreement
+
+8. Upon his promotion to Senior Software Engineer, Plaintiff entered into an Employment Agreement dated January 1, 2022 (the "Agreement"). A true and correct copy of the Agreement is attached hereto as Exhibit A.
+
+9. Section 4.2 of the Agreement provides that Plaintiff's employment may only be terminated "for Cause," which is defined as: "(a) conviction of a felony; (b) willful misconduct causing material harm to the Company; (c) material breach of this Agreement; or (d) continued failure to perform duties after written notice and 30-day cure period."
+
+10. Section 4.3 of the Agreement provides that in the event of termination without Cause, Plaintiff shall be entitled to: "(a) twelve months of base salary continuation; (b) continuation of health benefits for twelve months; (c) accelerated vesting of all equity awards; and (d) a pro-rata bonus for the year of termination."
+
+Safety Violations and Whistleblowing
+
+11. In May 2024, Plaintiff was assigned to lead the development of TechCorp's new cloud infrastructure project, codenamed "Project Titan."
+
+12. During his work on Project Titan, Plaintiff discovered serious security vulnerabilities in TechCorp's customer data handling procedures. Specifically, Plaintiff discovered that:
+
+    a. Customer financial data was being stored in unencrypted databases in violation of PCI-DSS compliance requirements;
+
+    b. Access controls to sensitive customer information were inadequate, with over 200 employees having unnecessary access to customer Social Security numbers and financial data;
+
+    c. Data backup procedures failed to meet industry standards, creating risk of catastrophic data loss; and
+
+    d. The company had failed to implement required security patches for over 18 months, leaving systems vulnerable to known exploits.
+
+13. On June 15, 2024, Plaintiff reported these security concerns in writing to his direct supervisor, Jennifer Martinez, Vice President of Engineering. A true and correct copy of Plaintiff's written report is attached hereto as Exhibit B.
+
+14. On June 22, 2024, Plaintiff attended a meeting with Ms. Martinez and Chief Technology Officer David Chen. During this meeting, Plaintiff was instructed to "stop making waves" and told that addressing the security issues would be "too expensive" and would "delay the product launch."
+
+15. On July 8, 2024, Plaintiff escalated his concerns to TechCorp's General Counsel, Sarah Williams, via email. Plaintiff's email detailed the specific violations and expressed concern that the company's failure to address these issues could result in regulatory penalties and harm to customers.
+
+16. On July 10, 2024, Ms. Williams responded that the matter would be "reviewed by appropriate personnel" but provided no timeline or specific commitments.
+
+17. On July 25, 2024, having received no substantive response, Plaintiff filed a complaint with the Massachusetts Attorney General's Office regarding TechCorp's data security practices. A true and correct copy of this complaint is attached hereto as Exhibit C.
+
+Retaliatory Termination
+
+18. On August 28, 2024, less than five weeks after Plaintiff filed his complaint with the Attorney General, Plaintiff was called into a meeting with Ms. Martinez and Human Resources Director Thomas Brown.
+
+19. At this meeting, Plaintiff was informed that his employment was being terminated, effective immediately. When Plaintiff asked for the reason for his termination, he was told only that it was a "business decision" and that the company was "going in a different direction."
+
+20. Plaintiff was not provided with any written documentation of performance issues, was not given any prior warning, and was not afforded any opportunity to cure any alleged deficiencies.
+
+21. Defendant's stated reason for Plaintiff's termination is pretextual. The true reason for Plaintiff's termination was his protected whistleblowing activity.
+
+22. The temporal proximity between Plaintiff's protected activity and his termination—less than five weeks—demonstrates retaliatory intent.
+
+23. At the time of his termination, Plaintiff was not provided with any of the severance benefits required under Section 4.3 of the Agreement for termination without Cause.
+
+Damages
+
+24. As a direct and proximate result of Defendant's wrongful conduct, Plaintiff has suffered and continues to suffer damages including:
+
+    a. Lost wages and benefits in excess of $250,000;
+    b. Lost equity compensation valued at approximately $125,000;
+    c. Damage to professional reputation;
+    d. Severe emotional distress, anxiety, and depression;
+    e. Medical expenses for treatment of emotional distress; and
+    f. Other consequential damages to be proven at trial.
+
+                                 FIRST CAUSE OF ACTION
+                      (Breach of Employment Agreement)
+
+25. Plaintiff incorporates by reference the allegations contained in paragraphs 1 through 24 as though fully set forth herein.
+
+26. The Employment Agreement constitutes a valid and binding contract between Plaintiff and Defendant.
+
+27. Plaintiff performed all conditions, covenants, and obligations required of him under the Agreement.
+
+28. Defendant breached the Agreement by terminating Plaintiff's employment without Cause and by failing to provide the severance benefits required under Section 4.3.
+
+29. As a direct and proximate result of Defendant's breach, Plaintiff has suffered damages in an amount to be proven at trial, but not less than $375,000.
+
+                                SECOND CAUSE OF ACTION
+               (Wrongful Termination in Violation of Public Policy)
+
+30. Plaintiff incorporates by reference the allegations contained in paragraphs 1 through 29 as though fully set forth herein.
+
+31. Massachusetts recognizes a cause of action for wrongful termination when an employee is discharged for reporting illegal activity or refusing to participate in illegal conduct.
+
+32. Plaintiff engaged in protected activity by reporting Defendant's violations of data security laws and regulations to his supervisors, the General Counsel, and the Massachusetts Attorney General.
+
+33. Defendant terminated Plaintiff's employment in retaliation for his protected whistleblowing activity.
+
+34. Defendant's termination of Plaintiff violated the clear public policy of the Commonwealth of Massachusetts favoring the reporting of illegal conduct and protecting employees who engage in such reporting.
+
+35. As a direct and proximate result of Defendant's wrongful conduct, Plaintiff has suffered damages in an amount to be proven at trial.
+
+                                 THIRD CAUSE OF ACTION
+                    (Violation of Massachusetts Whistleblower Act)
+
+36. Plaintiff incorporates by reference the allegations contained in paragraphs 1 through 35 as though fully set forth herein.
+
+37. Pursuant to M.G.L. c. 149, § 185, an employer shall not take any retaliatory action against an employee because the employee has disclosed or threatened to disclose to a supervisor or public body an activity, policy, or practice of the employer that the employee reasonably believes is in violation of a law.
+
+38. Plaintiff disclosed Defendant's data security violations to his supervisors and to the Massachusetts Attorney General.
+
+39. Plaintiff reasonably believed that Defendant's data security practices violated applicable laws and regulations.
+
+40. Defendant retaliated against Plaintiff by terminating his employment.
+
+41. As a direct and proximate result of Defendant's violation of the Massachusetts Whistleblower Act, Plaintiff is entitled to recover damages including lost wages, benefits, and attorneys' fees pursuant to M.G.L. c. 149, § 185.
+
+                                FOURTH CAUSE OF ACTION
+                       (Intentional Infliction of Emotional Distress)
+
+42. Plaintiff incorporates by reference the allegations contained in paragraphs 1 through 41 as though fully set forth herein.
+
+43. Defendant's conduct in retaliating against Plaintiff for his protected whistleblowing activity was extreme and outrageous.
+
+44. Defendant acted intentionally or recklessly in terminating Plaintiff in retaliation for his protected activity.
+
+45. Defendant's extreme and outrageous conduct caused Plaintiff severe emotional distress, including anxiety, depression, sleep disturbances, and other symptoms requiring medical treatment.
+
+46. As a direct and proximate result of Defendant's intentional infliction of emotional distress, Plaintiff has suffered damages in an amount to be proven at trial.
+
+                                  PRAYER FOR RELIEF
+
+WHEREFORE, Plaintiff respectfully requests that this Court enter judgment in his favor and against Defendant as follows:
+
+A. Compensatory damages for lost wages, benefits, and equity compensation in an amount to be proven at trial, but not less than $375,000;
+
+B. Compensatory damages for emotional distress in an amount to be proven at trial;
+
+C. Punitive damages in an amount sufficient to punish Defendant and deter similar conduct;
+
+D. Attorneys' fees and costs of suit pursuant to M.G.L. c. 149, § 185 and other applicable law;
+
+E. Pre-judgment and post-judgment interest at the maximum rate allowed by law;
+
+F. Reinstatement to his former position or front pay in lieu thereof;
+
+G. Such other and further relief as the Court deems just and proper.
+
+                                   JURY DEMAND
+
+Plaintiff hereby demands a trial by jury on all claims so triable.
+
+                                   VERIFICATION
+
+I, Robert Smith, being duly sworn, depose and say that I am the Plaintiff in the above-entitled action; that I have read the foregoing Complaint and know the contents thereof; and that the same is true to my knowledge, except as to those matters therein stated to be alleged upon information and belief, and as to those matters, I believe them to be true.
+
+____________________________
+Robert Smith
+
+Sworn to before me this
+15th day of September, 2024.
+
+____________________________
+Notary Public
+My Commission Expires: ____________
+
+
+Respectfully submitted,
+
+SMITH & ASSOCIATES, LLP
+
+By: ____________________________
+    James T. Morrison, Esq. (BBO# 558742)
+    Rachel K. Chen, Esq. (BBO# 692315)
+    100 Federal Street, Suite 2500
+    Boston, Massachusetts 02110
+    Telephone: (617) 555-1234
+    Facsimile: (617) 555-1235
+    jmorrison@smithassociates.com
+
+    Counsel for Plaintiff Robert Smith
+
+Dated: September 15, 2024

@@ -1300,14 +1300,21 @@ public class ClaudeSonnet4Service implements AIService {
                                          lowerPrompt.contains("**tool usage requirements** (citation verification mandatory)");
 
         // Detect draft generation - needs higher token limit for complete documents
+        // Includes workflow-generated drafts (e.g., "Draft an ANSWER to the complaint")
         boolean isDraftGeneration = lowerPrompt.contains("generate a professional legal") ||
                                    lowerPrompt.contains("generate a complete, properly formatted legal document") ||
+                                   lowerPrompt.contains("generate an answer") ||
+                                   lowerPrompt.contains("generate a response") ||
                                    lowerPrompt.contains("draft a motion") ||
+                                   lowerPrompt.contains("draft an answer") ||
+                                   lowerPrompt.contains("draft a response") ||
                                    lowerPrompt.contains("draft a brief") ||
                                    lowerPrompt.contains("draft a complaint") ||
                                    lowerPrompt.contains("draft interrogatories") ||
                                    lowerPrompt.contains("draft discovery") ||
-                                   lowerPrompt.contains("draft pleading");
+                                   lowerPrompt.contains("draft pleading") ||
+                                   lowerPrompt.contains("draft a demand letter") ||
+                                   lowerPrompt.contains("draft a legal document");
 
         // Detect THOROUGH mode in draft generation
         boolean isThoroughModeDraft = isDraftGeneration &&

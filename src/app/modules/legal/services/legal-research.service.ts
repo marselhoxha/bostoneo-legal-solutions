@@ -33,6 +33,7 @@ export interface AiConversationSession {
   messageCount?: number;
   totalTokensUsed?: number;
   totalCostUsd?: number;
+  workflowExecutionId?: number; // Linked workflow execution (for workflow-created drafts)
   createdAt?: Date;
   lastInteractionAt?: Date;
   archivedAt?: Date;

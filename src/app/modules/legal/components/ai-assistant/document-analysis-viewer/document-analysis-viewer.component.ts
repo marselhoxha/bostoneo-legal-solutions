@@ -998,6 +998,14 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
+  /**
+   * Strip timestamp prefix from filename (e.g., "1764550939268_Executive..." -> "Executive...")
+   */
+  getCleanFileName(fileName: string | undefined): string {
+    if (!fileName) return 'Unknown Document';
+    return fileName.replace(/^\d+_/, '');
+  }
+
   formatDate(timestamp: number | Date): string {
     const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     return date.toLocaleDateString('en-US', {
