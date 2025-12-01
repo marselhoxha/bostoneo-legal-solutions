@@ -1,0 +1,838 @@
+// ============================================================================
+// BOSTONEO LEGAL SOLUTIONS - DESIGN SYSTEM
+// ============================================================================
+// 
+// This file serves as the single source of truth for all UI styling.
+// Reference this file when creating or modifying any components.
+//
+// Based on Velzon Admin Theme with legal-specific customizations.
+// ============================================================================
+
+// ============================================================================
+// 1. COLOR PALETTE
+// ============================================================================
+
+// Primary Colors
+$vz-primary: #405189;
+$vz-primary-rgb: 64, 81, 137;
+$vz-primary-light: #e8ebf3;
+$vz-primary-soft: rgba(64, 81, 137, 0.08);
+$vz-primary-dark: #343f6e;
+
+// Status Colors
+$vz-success: #0ab39c;
+$vz-success-rgb: 10, 179, 156;
+$vz-success-light: #d8f5f0;
+
+$vz-info: #299cdb;
+$vz-info-rgb: 41, 156, 219;
+$vz-info-light: #d6f0fb;
+
+$vz-warning: #f7b84b;
+$vz-warning-rgb: 247, 184, 75;
+$vz-warning-light: #fef4e4;
+
+$vz-danger: #f06548;
+$vz-danger-rgb: 240, 101, 72;
+$vz-danger-light: #fde8e4;
+
+$vz-secondary: #3577f1;
+$vz-secondary-rgb: 53, 119, 241;
+
+$vz-purple: #6559cc;
+$vz-purple-rgb: 101, 89, 204;
+
+// Background Colors
+$vz-body-bg: #f3f3f9;
+$vz-card-bg: #ffffff;
+$vz-light: #f3f6f9;
+
+// Text Colors
+$vz-body-color: #212529;
+$vz-heading-color: #495057;
+$vz-text-muted: #878a99;
+$vz-text-light: #adb5bd;
+
+// Border Colors
+$vz-border-color: #e9ebec;
+$vz-border-light: #f3f3f9;
+
+// ============================================================================
+// 2. CSS CUSTOM PROPERTIES (use these in components)
+// ============================================================================
+
+:root {
+  // Primary
+  --vz-primary: #{$vz-primary};
+  --vz-primary-rgb: #{$vz-primary-rgb};
+  --vz-primary-light: #{$vz-primary-light};
+  --vz-primary-soft: #{$vz-primary-soft};
+  --vz-primary-dark: #{$vz-primary-dark};
+  
+  // Status
+  --vz-success: #{$vz-success};
+  --vz-success-rgb: #{$vz-success-rgb};
+  --vz-success-light: #{$vz-success-light};
+  
+  --vz-info: #{$vz-info};
+  --vz-info-rgb: #{$vz-info-rgb};
+  --vz-info-light: #{$vz-info-light};
+  
+  --vz-warning: #{$vz-warning};
+  --vz-warning-rgb: #{$vz-warning-rgb};
+  --vz-warning-light: #{$vz-warning-light};
+  
+  --vz-danger: #{$vz-danger};
+  --vz-danger-rgb: #{$vz-danger-rgb};
+  --vz-danger-light: #{$vz-danger-light};
+  
+  --vz-secondary: #{$vz-secondary};
+  --vz-secondary-rgb: #{$vz-secondary-rgb};
+  
+  --vz-purple: #{$vz-purple};
+  --vz-purple-rgb: #{$vz-purple-rgb};
+  
+  // Backgrounds
+  --vz-body-bg: #{$vz-body-bg};
+  --vz-card-bg: #{$vz-card-bg};
+  --vz-light: #{$vz-light};
+  
+  // Text
+  --vz-body-color: #{$vz-body-color};
+  --vz-heading-color: #{$vz-heading-color};
+  --vz-text-muted: #{$vz-text-muted};
+  --vz-text-light: #{$vz-text-light};
+  
+  // Borders
+  --vz-border-color: #{$vz-border-color};
+  --vz-border-light: #{$vz-border-light};
+}
+
+// ============================================================================
+// 3. TYPOGRAPHY
+// ============================================================================
+
+$font-family-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-serif: 'Source Serif 4', Georgia, serif;
+
+// Font Sizes
+$font-size-xs: 0.625rem;    // 10px
+$font-size-sm: 0.75rem;     // 12px
+$font-size-base: 0.8125rem; // 13px
+$font-size-md: 0.875rem;    // 14px
+$font-size-lg: 1rem;        // 16px
+$font-size-xl: 1.125rem;    // 18px
+$font-size-2xl: 1.25rem;    // 20px
+$font-size-3xl: 1.5rem;     // 24px
+
+// Font Weights
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Line Heights
+$line-height-tight: 1.25;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.6;
+$line-height-loose: 1.8;
+
+// ============================================================================
+// 4. SPACING
+// ============================================================================
+
+$spacing-0: 0;
+$spacing-1: 0.25rem;   // 4px
+$spacing-2: 0.5rem;    // 8px
+$spacing-3: 0.75rem;   // 12px
+$spacing-4: 1rem;      // 16px
+$spacing-5: 1.25rem;   // 20px
+$spacing-6: 1.5rem;    // 24px
+$spacing-8: 2rem;      // 32px
+$spacing-10: 2.5rem;   // 40px
+$spacing-12: 3rem;     // 48px
+
+// ============================================================================
+// 5. BORDER RADIUS
+// ============================================================================
+
+$border-radius-sm: 0.25rem;   // 4px
+$border-radius: 0.375rem;     // 6px
+$border-radius-md: 0.5rem;    // 8px
+$border-radius-lg: 0.625rem;  // 10px
+$border-radius-xl: 0.75rem;   // 12px
+$border-radius-2xl: 1rem;     // 16px
+$border-radius-full: 9999px;
+
+// ============================================================================
+// 6. SHADOWS
+// ============================================================================
+
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(56, 65, 74, 0.08);
+$shadow-lg: 0 8px 24px rgba(56, 65, 74, 0.12);
+$shadow-xl: 0 10px 40px rgba(0, 0, 0, 0.12);
+
+// Color Shadows (for buttons/icons)
+$shadow-primary: 0 4px 12px rgba($vz-primary-rgb, 0.35);
+$shadow-success: 0 4px 12px rgba($vz-success-rgb, 0.35);
+$shadow-info: 0 4px 12px rgba($vz-info-rgb, 0.35);
+$shadow-warning: 0 4px 12px rgba($vz-warning-rgb, 0.35);
+$shadow-danger: 0 4px 12px rgba($vz-danger-rgb, 0.35);
+
+// ============================================================================
+// 7. LAYOUT
+// ============================================================================
+
+$sidebar-width: 320px;
+$topbar-height: 72px;
+$content-max-width: 1200px;
+
+// ============================================================================
+// 8. TRANSITIONS
+// ============================================================================
+
+$transition-fast: 0.15s ease;
+$transition-base: 0.2s ease;
+$transition-slow: 0.3s ease;
+$transition-bounce: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+// ============================================================================
+// 9. Z-INDEX SCALE
+// ============================================================================
+
+$z-dropdown: 100;
+$z-sticky: 200;
+$z-fixed: 300;
+$z-modal-backdrop: 400;
+$z-modal: 500;
+$z-popover: 600;
+$z-tooltip: 700;
+
+// ============================================================================
+// 10. COMPONENT PATTERNS
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 10.1 BUTTONS
+// ----------------------------------------------------------------------------
+
+// Primary Button
+@mixin btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  font-family: $font-family-sans;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: all $transition-base;
+  background: var(--vz-primary);
+  color: white;
+  
+  &:hover {
+    background: var(--vz-primary-dark);
+    box-shadow: $shadow-primary;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Soft Button (ghost style)
+@mixin btn-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  font-family: $font-family-sans;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: all $transition-base;
+  background: var(--vz-light);
+  color: var(--vz-text-muted);
+  
+  &:hover {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+}
+
+// Dashed Button (New Item style)
+@mixin btn-dashed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px dashed rgba(var(--vz-primary-rgb), 0.4);
+  background: transparent;
+  color: var(--vz-primary);
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  font-family: $font-family-sans;
+  border-radius: $border-radius-lg;
+  cursor: pointer;
+  transition: all $transition-slow;
+  
+  i {
+    font-size: 1.125rem;
+    transition: transform $transition-slow;
+  }
+  
+  &:hover {
+    background: var(--vz-primary);
+    color: white;
+    border-style: solid;
+    border-color: var(--vz-primary);
+    box-shadow: $shadow-primary;
+    transform: translateY(-2px);
+    
+    i {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.2 CARDS
+// ----------------------------------------------------------------------------
+
+@mixin card-base {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-sm;
+}
+
+@mixin card-hover {
+  transition: all $transition-bounce;
+  
+  &:hover {
+    border-color: var(--vz-primary);
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.3 LIST ITEMS (Sidebar items, workflow items)
+// ----------------------------------------------------------------------------
+
+@mixin list-item-base {
+  position: relative;
+  padding: 0.875rem 1rem;
+  margin: 0.25rem 0.75rem;
+  border-radius: $border-radius-lg;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all $transition-bounce;
+  background: transparent;
+}
+
+@mixin list-item-hover {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.04) 0%, rgba(var(--vz-primary-rgb), 0.08) 100%);
+  border-color: rgba(var(--vz-primary-rgb), 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateX(4px);
+}
+
+@mixin list-item-active {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.08) 0%, rgba(var(--vz-primary-rgb), 0.12) 100%);
+  border-color: rgba(var(--vz-primary-rgb), 0.25);
+  box-shadow: 0 4px 16px rgba(var(--vz-primary-rgb), 0.15);
+  
+  // Left accent bar
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: var(--vz-primary);
+    border-radius: 0 4px 4px 0;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.4 STATUS BADGES
+// ----------------------------------------------------------------------------
+
+@mixin status-badge-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 0.2rem 0.5rem;
+  border-radius: $border-radius-sm;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.status-badge {
+  @include status-badge-base;
+  
+  &.running {
+    background: rgba(var(--vz-info-rgb), 0.15);
+    color: var(--vz-info);
+  }
+  
+  &.completed {
+    background: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
+  }
+  
+  &.waiting {
+    background: rgba(var(--vz-warning-rgb), 0.15);
+    color: var(--vz-warning);
+  }
+  
+  &.failed {
+    background: rgba(var(--vz-danger-rgb), 0.15);
+    color: var(--vz-danger);
+  }
+  
+  &.pending {
+    background: rgba(var(--vz-text-muted), 0.15);
+    color: var(--vz-text-muted);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.5 STEP TYPE BADGES (for workflow steps)
+// ----------------------------------------------------------------------------
+
+.step-type-badge {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  padding: 0.2rem 0.5rem;
+  border-radius: $border-radius-sm;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  
+  &.display {
+    background: rgba(var(--vz-info-rgb), 0.15);
+    color: var(--vz-info);
+  }
+  
+  &.synthesis {
+    background: rgba(var(--vz-purple-rgb), 0.15);
+    color: var(--vz-purple);
+  }
+  
+  &.generation {
+    background: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
+  }
+  
+  &.integration {
+    background: rgba(var(--vz-warning-rgb), 0.15);
+    color: #b8860b;
+  }
+  
+  &.action {
+    background: rgba(var(--vz-danger-rgb), 0.15);
+    color: var(--vz-danger);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.6 ICON CONTAINERS
+// ----------------------------------------------------------------------------
+
+@mixin icon-container($size: 36px) {
+  width: $size;
+  height: $size;
+  border-radius: $border-radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all $transition-base;
+  
+  i {
+    font-size: #{$size * 0.45};
+  }
+}
+
+.workflow-icon {
+  @include icon-container(36px);
+  
+  &.running {
+    background: rgba(var(--vz-info-rgb), 0.15);
+    color: var(--vz-info);
+    
+    i { animation: spin 1.5s linear infinite; }
+  }
+  
+  &.completed {
+    background: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
+  }
+  
+  &.waiting {
+    background: rgba(var(--vz-warning-rgb), 0.15);
+    color: var(--vz-warning);
+  }
+  
+  &.failed {
+    background: rgba(var(--vz-danger-rgb), 0.15);
+    color: var(--vz-danger);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.7 PROGRESS BARS
+// ----------------------------------------------------------------------------
+
+@mixin progress-bar($height: 4px) {
+  height: $height;
+  background: var(--vz-light);
+  border-radius: #{$height / 2};
+  overflow: hidden;
+  
+  .progress-fill {
+    height: 100%;
+    border-radius: #{$height / 2};
+    transition: width $transition-slow;
+    
+    &.running {
+      background: linear-gradient(90deg, var(--vz-info), #5bc0de);
+      animation: progressPulse 1.5s ease-in-out infinite;
+    }
+    
+    &.completed {
+      background: var(--vz-success);
+    }
+    
+    &.waiting {
+      background: var(--vz-warning);
+    }
+    
+    &.failed {
+      background: var(--vz-danger);
+    }
+  }
+}
+
+.progress-bar-mini {
+  @include progress-bar(4px);
+}
+
+.progress-bar {
+  @include progress-bar(8px);
+  
+  .progress-fill.running {
+    background: linear-gradient(90deg, var(--vz-info), #5bc0de, var(--vz-info));
+    background-size: 200% 100%;
+    animation: progressShimmer 2s ease-in-out infinite;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.8 STEP CIRCLES (Timeline indicators)
+// ----------------------------------------------------------------------------
+
+@mixin step-circle($size: 40px) {
+  width: $size;
+  height: $size;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: #{$size * 0.35};
+  font-weight: $font-weight-bold;
+  z-index: 2;
+  transition: all $transition-slow;
+}
+
+.step-circle {
+  @include step-circle(40px);
+  
+  &.pending {
+    background: var(--vz-light);
+    color: var(--vz-text-muted);
+    border: 2px dashed var(--vz-border-color);
+  }
+  
+  &.running {
+    background: var(--vz-info);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(var(--vz-info-rgb), 0.2), 0 4px 12px rgba(var(--vz-info-rgb), 0.3);
+    animation: pulseRing 2s ease-in-out infinite;
+  }
+  
+  &.completed {
+    background: var(--vz-success);
+    color: white;
+    box-shadow: 0 4px 12px rgba(var(--vz-success-rgb), 0.3);
+  }
+  
+  &.waiting {
+    background: var(--vz-warning);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(var(--vz-warning-rgb), 0.2);
+    animation: pulseWaiting 1.5s ease-in-out infinite;
+  }
+  
+  &.failed {
+    background: var(--vz-danger);
+    color: white;
+    box-shadow: 0 4px 12px rgba(var(--vz-danger-rgb), 0.3);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.9 FORM CONTROLS
+// ----------------------------------------------------------------------------
+
+@mixin form-control {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: $font-size-base;
+  font-family: $font-family-sans;
+  color: var(--vz-body-color);
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: $border-radius-md;
+  transition: all $transition-base;
+  
+  &::placeholder {
+    color: var(--vz-text-light);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--vz-primary);
+    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+  }
+}
+
+// Search input with icon
+@mixin search-input {
+  position: relative;
+  
+  .search-icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vz-text-muted);
+    font-size: 0.9375rem;
+    transition: color $transition-base;
+    pointer-events: none;
+  }
+  
+  input {
+    @include form-control;
+    padding-left: 2.5rem;
+    background: var(--vz-light);
+    border-color: transparent;
+    
+    &:focus {
+      background: var(--vz-card-bg);
+      
+      & + .search-icon {
+        color: var(--vz-primary);
+      }
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 10.10 STATUS BANNERS
+// ----------------------------------------------------------------------------
+
+@mixin status-banner {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+  &.running {
+    background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.1) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
+    border-bottom: 2px solid var(--vz-info);
+  }
+  
+  &.completed {
+    background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.1) 0%, rgba(var(--vz-success-rgb), 0.05) 100%);
+    border-bottom: 2px solid var(--vz-success);
+  }
+  
+  &.waiting {
+    background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.1) 0%, rgba(var(--vz-warning-rgb), 0.05) 100%);
+    border-bottom: 2px solid var(--vz-warning);
+  }
+  
+  &.failed {
+    background: linear-gradient(135deg, rgba(var(--vz-danger-rgb), 0.1) 0%, rgba(var(--vz-danger-rgb), 0.05) 100%);
+    border-bottom: 2px solid var(--vz-danger);
+  }
+}
+
+// ============================================================================
+// 11. ANIMATIONS
+// ============================================================================
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseRing {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(var(--vz-info-rgb), 0.2), 0 4px 12px rgba(var(--vz-info-rgb), 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--vz-info-rgb), 0.1), 0 4px 12px rgba(var(--vz-info-rgb), 0.3);
+  }
+}
+
+@keyframes pulseWaiting {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(var(--vz-warning-rgb), 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--vz-warning-rgb), 0.1);
+  }
+}
+
+@keyframes progressShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+// Staggered list animation mixin
+@mixin staggered-animation($delay: 0.05s, $count: 10) {
+  animation: fadeInUp 0.3s ease backwards;
+  
+  @for $i from 1 through $count {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * $delay};
+    }
+  }
+}
+
+// ============================================================================
+// 12. SCROLLBAR STYLING
+// ============================================================================
+
+@mixin custom-scrollbar($width: 5px) {
+  &::-webkit-scrollbar {
+    width: $width;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(var(--vz-primary-rgb), 0.2);
+    border-radius: 10px;
+    
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.4);
+    }
+  }
+}
+
+// ============================================================================
+// 13. RESPONSIVE BREAKPOINTS
+// ============================================================================
+
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+$breakpoint-xxl: 1400px;
+
+@mixin mobile {
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: $breakpoint-md) and (max-width: #{$breakpoint-lg - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+// ============================================================================
+// 14. UTILITY CLASSES
+// ============================================================================
+
+// Text utilities
+.text-primary { color: var(--vz-primary) !important; }
+.text-success { color: var(--vz-success) !important; }
+.text-info { color: var(--vz-info) !important; }
+.text-warning { color: var(--vz-warning) !important; }
+.text-danger { color: var(--vz-danger) !important; }
+.text-muted { color: var(--vz-text-muted) !important; }
+
+// Background utilities
+.bg-primary-soft { background: rgba(var(--vz-primary-rgb), 0.1) !important; }
+.bg-success-soft { background: rgba(var(--vz-success-rgb), 0.1) !important; }
+.bg-info-soft { background: rgba(var(--vz-info-rgb), 0.1) !important; }
+.bg-warning-soft { background: rgba(var(--vz-warning-rgb), 0.1) !important; }
+.bg-danger-soft { background: rgba(var(--vz-danger-rgb), 0.1) !important; }
+
+// ============================================================================
+// END OF DESIGN SYSTEM
+// ============================================================================

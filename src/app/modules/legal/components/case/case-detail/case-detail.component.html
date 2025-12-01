@@ -93,6 +93,12 @@
         <!-- Right: Action Buttons -->
         <div class="col-lg-3">
           <div class="header-actions">
+            <a [routerLink]="['/legal/ai-assistant/ai-workspace']"
+               [queryParams]="{caseId: case.id}"
+               class="btn btn-soft-info btn-modern w-100 mb-2">
+              <i class="ri-robot-line me-2"></i>
+              AI Workspace
+            </a>
             <button class="btn btn-primary btn-modern w-100 mb-2" (click)="toggleEdit()">
               <i class="ri-edit-line me-2"></i>
               {{ isEditing ? 'Cancel' : 'Edit Case' }}
@@ -171,6 +177,13 @@
           <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#documents" role="tab" aria-selected="false">
             <i class="ri-folder-3-line me-2 align-middle fs-16"></i>
             <span>Documents</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#ai-documents" role="tab" aria-selected="false" (click)="onAIDocumentsTabClick()">
+            <i class="ri-robot-line me-2 align-middle fs-16"></i>
+            <span>AI Docs</span>
+            <span *ngIf="aiDocumentsCount > 0" class="badge bg-info-subtle text-info ms-1">{{ aiDocumentsCount }}</span>
           </a>
         </li>
         <li class="nav-item">
@@ -606,6 +619,97 @@
           <div class="tab-pane fade" id="documents" role="tabpanel">
             <div class="p-4">
               <app-case-documents [caseId]="caseId"></app-case-documents>
+            </div>
+          </div>
+
+          <!-- AI Documents Tab -->
+          <div class="tab-pane fade" id="ai-documents" role="tabpanel">
+            <div class="p-4">
+              <!-- Header -->
+              <div class="d-flex align-items-center justify-content-between mb-4">
+                <div>
+                  <h5 class="mb-1">AI-Analyzed Documents</h5>
+                  <p class="text-muted mb-0 small">Documents analyzed with AI for this case</p>
+                </div>
+                <a [routerLink]="['/legal/ai-assistant/ai-workspace']" [queryParams]="{caseId: case?.id}"
+                   class="btn btn-primary btn-sm">
+                  <i class="ri-add-line me-1"></i> Analyze New Document
+                </a>
+              </div>
+
+              <!-- Loading State -->
+              <div *ngIf="isLoadingAIDocuments" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div *ngIf="!isLoadingAIDocuments && aiDocuments.length === 0" class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title rounded-circle bg-soft-info text-info fs-24">
+                    <i class="ri-robot-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">No AI-Analyzed Documents</h5>
+                <p class="text-muted mb-4">Upload documents to the AI Workspace to analyze them for this case.</p>
+                <a [routerLink]="['/legal/ai-assistant/ai-workspace']" [queryParams]="{caseId: case?.id}"
+                   class="btn btn-primary">
+                  <i class="ri-upload-cloud-2-line me-2"></i> Go to AI Workspace
+                </a>
+              </div>
+
+              <!-- Documents Grid -->
+              <div *ngIf="!isLoadingAIDocuments && aiDocuments.length > 0" class="row g-3">
+                <div *ngFor="let doc of aiDocuments" class="col-md-6 col-lg-4">
+                  <div class="card border h-100 ai-doc-card" (click)="openAIDocument(doc)">
+                    <div class="card-body">
+                      <div class="d-flex align-items-start gap-3">
+                        <div class="avatar-sm flex-shrink-0">
+                          <div class="avatar-title rounded bg-soft-primary text-primary">
+                            <i class="ri-file-text-line fs-18"></i>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                          <h6 class="mb-1 text-truncate" [title]="doc.fileName">{{ doc.fileName }}</h6>
+                          <div class="d-flex flex-wrap gap-1 mb-2">
+                            <span *ngIf="doc.detectedType" class="badge bg-primary-subtle text-primary">
+                              {{ doc.detectedType }}
+                            </span>
+                            <span *ngIf="doc.analysisContext && doc.analysisContext !== 'general'"
+                                  class="badge bg-info-subtle text-info">
+                              {{ getContextLabel(doc.analysisContext) }}
+                            </span>
+                            <span *ngIf="doc.riskLevel" class="badge"
+                                  [ngClass]="{
+                                    'bg-danger-subtle text-danger': doc.riskLevel === 'HIGH',
+                                    'bg-warning-subtle text-warning': doc.riskLevel === 'MEDIUM',
+                                    'bg-success-subtle text-success': doc.riskLevel === 'LOW'
+                                  }">
+                              {{ doc.riskLevel }} Risk
+                            </span>
+                          </div>
+                          <p class="text-muted small mb-0 text-truncate-2" *ngIf="doc.summary">
+                            {{ doc.summary }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-footer bg-light border-top-dashed py-2">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                          <i class="ri-time-line me-1"></i>{{ doc.createdAt | date:'MMM d, yyyy' }}
+                        </small>
+                        <span class="badge" [ngClass]="{
+                          'bg-success': doc.status === 'completed',
+                          'bg-warning': doc.status === 'processing',
+                          'bg-danger': doc.status === 'failed'
+                        }">{{ doc.status }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

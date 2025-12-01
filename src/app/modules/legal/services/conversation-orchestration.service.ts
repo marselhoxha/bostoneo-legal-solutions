@@ -64,6 +64,12 @@ export class ConversationOrchestrationService {
       { id: 1, icon: 'ri-file-search-line', description: 'Analyzing document...', status: WorkflowStepStatus.Pending },
       { id: 2, icon: 'ri-magic-line', description: 'Applying transformation...', status: WorkflowStepStatus.Pending },
       { id: 3, icon: 'ri-file-edit-line', description: 'Generating preview...', status: WorkflowStepStatus.Pending }
+    ],
+    workflow: [
+      { id: 1, icon: 'ri-flow-chart', description: 'Loading workflow...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-file-search-line', description: 'Processing documents...', status: WorkflowStepStatus.Pending },
+      { id: 3, icon: 'ri-robot-line', description: 'Running AI analysis...', status: WorkflowStepStatus.Pending },
+      { id: 4, icon: 'ri-file-list-3-line', description: 'Generating results...', status: WorkflowStepStatus.Pending }
     ]
   };
 
@@ -77,7 +83,7 @@ export class ConversationOrchestrationService {
   /**
    * Initialize workflow steps for a task type
    */
-  initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform'): WorkflowStep[] {
+  initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform' | 'workflow'): WorkflowStep[] {
     const template = this.workflowStepTemplates[taskType];
     return template.map(step => ({ ...step }));
   }
@@ -270,12 +276,13 @@ export class ConversationOrchestrationService {
   /**
    * Map conversation type to workflow type
    */
-  private mapConversationTypeToWorkflowType(type: ConversationType): 'question' | 'draft' | 'summarize' | 'upload' | 'transform' {
-    const map: Record<ConversationType, 'question' | 'draft' | 'summarize' | 'upload'> = {
+  private mapConversationTypeToWorkflowType(type: ConversationType): 'question' | 'draft' | 'summarize' | 'upload' | 'transform' | 'workflow' {
+    const map: Record<ConversationType, 'question' | 'draft' | 'summarize' | 'upload' | 'workflow'> = {
       [ConversationType.Question]: 'question',
       [ConversationType.Draft]: 'draft',
       [ConversationType.Summarize]: 'summarize',
-      [ConversationType.Upload]: 'upload'
+      [ConversationType.Upload]: 'upload',
+      [ConversationType.Workflow]: 'workflow'
     };
     return map[type] || 'question';
   }
@@ -284,13 +291,13 @@ export class ConversationOrchestrationService {
    * Map frontend conversation type to backend task type
    */
   private mapToBackendTaskType(type: ConversationType): TaskType {
-    const map: Record<ConversationType, TaskType> = {
+    const map: Partial<Record<ConversationType, TaskType>> = {
       [ConversationType.Question]: TaskType.LegalQuestion,
       [ConversationType.Draft]: TaskType.GenerateDraft,
       [ConversationType.Summarize]: TaskType.SummarizeCase,
       [ConversationType.Upload]: TaskType.AnalyzeDocument
     };
-    return map[type];
+    return map[type] || TaskType.LegalQuestion;
   }
 
   /**

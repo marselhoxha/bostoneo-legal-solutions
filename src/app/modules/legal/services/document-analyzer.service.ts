@@ -57,6 +57,22 @@ export interface UploadProgress {
   percentage: number;
 }
 
+export interface CaseAnalysisDocument {
+  id: string;
+  databaseId: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  analysisType: string;
+  analysisContext?: string;
+  status: string;
+  detectedType?: string;
+  riskScore?: number;
+  riskLevel?: string;
+  summary?: string;
+  createdAt: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -71,12 +87,18 @@ export class DocumentAnalyzerService {
 
   constructor(private http: HttpClient) {}
 
-  analyzeDocument(file: File, analysisType: string, sessionId?: number): Observable<DocumentAnalysisResult> {
+  analyzeDocument(file: File, analysisType: string, sessionId?: number, analysisContext?: string, caseId?: number | null): Observable<DocumentAnalysisResult> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('analysisType', analysisType);
     if (sessionId) {
       formData.append('sessionId', sessionId.toString());
+    }
+    if (analysisContext) {
+      formData.append('analysisContext', analysisContext);
+    }
+    if (caseId) {
+      formData.append('caseId', caseId.toString());
     }
 
     this.analysisStatusSubject.next('uploading');
@@ -198,6 +220,22 @@ export class DocumentAnalyzerService {
       map(response => response.analyses || []),
       catchError(error => {
         console.error('Failed to fetch analysis history:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Get all AI document analyses for a specific case
+   */
+  getAnalysesByCase(caseId: number): Observable<CaseAnalysisDocument[]> {
+    return this.http.get<{ analyses: CaseAnalysisDocument[], count: number, caseId: number }>(
+      `${this.apiUrl}/analysis/by-case/${caseId}`,
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.analyses || []),
+      catchError(error => {
+        console.error('Failed to fetch case analyses:', error);
         return throwError(() => error);
       })
     );

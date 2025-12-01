@@ -355,6 +355,10 @@ export class AiWorkspaceStateService {
     return this.analyzedDocumentsSubject.value.find(doc => doc.id === id);
   }
 
+  getAnalyzedDocumentByDatabaseId(databaseId: number): AnalyzedDocument | undefined {
+    return this.analyzedDocumentsSubject.value.find(doc => doc.databaseId === databaseId);
+  }
+
   setActiveDocumentId(id: string | null): void {
     this.activeDocumentIdSubject.next(id);
   }
@@ -366,7 +370,16 @@ export class AiWorkspaceStateService {
   getActiveDocument(): AnalyzedDocument | undefined {
     const id = this.activeDocumentIdSubject.value;
     if (!id) return undefined;
-    return this.getAnalyzedDocumentById(id);
+
+    // First try to find by UUID
+    let doc = this.getAnalyzedDocumentById(id);
+
+    // If not found and id is numeric, try finding by databaseId
+    if (!doc && !isNaN(Number(id))) {
+      doc = this.getAnalyzedDocumentByDatabaseId(Number(id));
+    }
+
+    return doc;
   }
 
   setDocumentViewerMode(show: boolean): void {

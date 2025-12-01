@@ -35,6 +35,12 @@
         <i [class]="(viewerSidebarCollapsed$ | async) ? 'ri-layout-right-line' : 'ri-layout-left-line'"></i>
       </button>
 
+      <!-- Add to Collection Button -->
+      <button class="btn btn-soft-info btn-sm me-2" (click)="openAddToCollectionModal()" title="Add to Collection">
+        <i class="ri-folder-add-line me-1"></i>
+        Collection
+      </button>
+
       <!-- Compare Button (future feature) -->
       <button class="btn btn-soft-secondary btn-sm me-2" disabled title="Compare with another document (coming soon)">
         <i class="ri-file-copy-2-line me-1"></i>
@@ -442,6 +448,94 @@
           </div>
         </ng-template>
       </li>
+
+      <!-- Related Documents Tab -->
+      <li [ngbNavItem]="'related'" *ngIf="visibleTabs.related">
+        <a ngbNavLink>
+          <i class="ri-links-line me-1"></i>
+          Related
+          <span class="badge bg-soft-primary text-primary ms-1" *ngIf="documentRelationships.length > 0">
+            {{ documentRelationships.length }}
+          </span>
+        </a>
+        <ng-template ngbNavContent>
+          <div class="tab-content-wrapper related-tab">
+            <div class="card h-100">
+              <div class="card-body">
+                <!-- Loading State -->
+                <div class="text-center py-4" *ngIf="loadingRelationships">
+                  <div class="spinner-border text-primary spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted mt-2 mb-0">Loading relationships...</p>
+                </div>
+
+                <!-- Header with Link Button -->
+                <div class="d-flex align-items-center justify-content-between mb-3" *ngIf="!loadingRelationships">
+                  <h6 class="mb-0">Related Documents</h6>
+                  <button class="btn btn-primary btn-sm" (click)="openLinkDocumentModal()">
+                    <i class="ri-link me-1"></i> Link Document
+                  </button>
+                </div>
+
+                <!-- Empty State -->
+                <div class="related-empty text-center py-5" *ngIf="!loadingRelationships && documentRelationships.length === 0">
+                  <div class="empty-icon mb-3">
+                    <i class="ri-git-branch-line text-muted" style="font-size: 3rem;"></i>
+                  </div>
+                  <h6 class="text-muted">No linked documents</h6>
+                  <p class="text-muted small mb-3">
+                    Link this document to related files like amendments, responses, or exhibits.
+                  </p>
+                  <button class="btn btn-soft-primary" (click)="openLinkDocumentModal()">
+                    <i class="ri-link me-1"></i> Link a Document
+                  </button>
+                </div>
+
+                <!-- Relationships List -->
+                <div class="relationships-list" *ngIf="!loadingRelationships && documentRelationships.length > 0">
+                  <div class="relationship-item"
+                       *ngFor="let rel of documentRelationships"
+                       [ngClass]="{'incoming': rel.direction === 'incoming', 'outgoing': rel.direction === 'outgoing'}">
+                    <div class="relationship-direction">
+                      <i *ngIf="rel.direction === 'outgoing'" class="ri-arrow-right-line text-primary"></i>
+                      <i *ngIf="rel.direction === 'incoming'" class="ri-arrow-left-line text-success"></i>
+                    </div>
+                    <div class="relationship-content">
+                      <div class="relationship-type">
+                        <span class="badge" [ngClass]="{
+                          'bg-soft-primary text-primary': rel.relationshipType === 'RESPONDS_TO',
+                          'bg-soft-warning text-warning': rel.relationshipType === 'AMENDS',
+                          'bg-soft-danger text-danger': rel.relationshipType === 'SUPERSEDES',
+                          'bg-soft-info text-info': rel.relationshipType === 'REFERENCES',
+                          'bg-soft-secondary text-secondary': rel.relationshipType === 'EXHIBITS'
+                        }">
+                          {{ getRelationshipLabel(rel.relationshipType) }}
+                        </span>
+                      </div>
+                      <div class="related-doc-info">
+                        <div class="related-doc-name">{{ rel.relatedDocument.fileName }}</div>
+                        <div class="related-doc-meta">
+                          <span class="badge bg-light text-dark me-2">{{ rel.relatedDocument.detectedType }}</span>
+                          <small class="text-muted">{{ rel.relatedDocument.createdAt | date:'shortDate' }}</small>
+                        </div>
+                      </div>
+                      <div class="relationship-description" *ngIf="rel.description">
+                        <small class="text-muted">{{ rel.description }}</small>
+                      </div>
+                    </div>
+                    <div class="relationship-actions">
+                      <button class="btn btn-sm btn-soft-danger" (click)="deleteRelationship(rel.id)" title="Remove link">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </li>
     </ul>
   </div>
 
@@ -456,3 +550,188 @@
     <i class="ri-arrow-up-line"></i>
   </button>
 </div>
+
+<!-- Link Document Modal -->
+<div class="modal fade" [class.show]="showLinkDocumentModal" [style.display]="showLinkDocumentModal ? 'block' : 'none'"
+     tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ri-link me-2"></i>Link Related Document
+        </h5>
+        <button type="button" class="btn-close" (click)="closeLinkDocumentModal()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Relationship Type Selection -->
+        <div class="mb-3">
+          <label class="form-label">Relationship Type</label>
+          <select class="form-select" [(ngModel)]="linkDocumentForm.relationshipType">
+            <option value="">Select relationship...</option>
+            <option *ngFor="let type of relationshipTypes" [value]="type.id">
+              {{ type.label }} - {{ type.description }}
+            </option>
+          </select>
+          <div class="form-text">How is this document related to the target?</div>
+        </div>
+
+        <!-- Document Search -->
+        <div class="mb-3">
+          <label class="form-label">Search Document</label>
+          <input type="text" class="form-control"
+                 [(ngModel)]="linkDocumentSearchQuery"
+                 (input)="searchDocumentsForLink()"
+                 placeholder="Search by file name...">
+        </div>
+
+        <!-- Search Results -->
+        <div class="link-document-results" *ngIf="linkDocumentSearchResults.length > 0">
+          <label class="form-label small text-muted">Select document to link:</label>
+          <div class="list-group">
+            <button type="button"
+                    class="list-group-item list-group-item-action"
+                    *ngFor="let doc of linkDocumentSearchResults"
+                    [class.active]="linkDocumentForm.targetAnalysisId === doc.databaseId"
+                    (click)="selectDocumentToLink(doc)">
+              <div class="d-flex align-items-center gap-2">
+                <i class="ri-file-text-line"></i>
+                <div class="flex-grow-1">
+                  <div class="fw-medium">{{ doc.fileName }}</div>
+                  <div class="small text-muted">
+                    <span class="badge bg-light text-dark me-1">{{ doc.detectedType }}</span>
+                    {{ doc.createdAt | date:'shortDate' }}
+                  </div>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- No results -->
+        <div class="text-muted text-center py-3" *ngIf="linkDocumentSearchQuery && linkDocumentSearchResults.length === 0 && !isSearchingDocuments">
+          <i class="ri-file-unknow-line fs-4"></i>
+          <p class="small mb-0">No documents found</p>
+        </div>
+
+        <!-- Loading -->
+        <div class="text-center py-3" *ngIf="isSearchingDocuments">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+        </div>
+
+        <!-- Description (optional) -->
+        <div class="mb-3 mt-3" *ngIf="linkDocumentForm.targetAnalysisId">
+          <label class="form-label">Description (optional)</label>
+          <input type="text" class="form-control"
+                 [(ngModel)]="linkDocumentForm.description"
+                 placeholder="Add a note about this relationship...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeLinkDocumentModal()">Cancel</button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="!linkDocumentForm.relationshipType || !linkDocumentForm.targetAnalysisId || isCreatingLink"
+                (click)="createDocumentLink()">
+          <span *ngIf="!isCreatingLink">
+            <i class="ri-link me-1"></i> Link Document
+          </span>
+          <span *ngIf="isCreatingLink">
+            <span class="spinner-border spinner-border-sm me-1"></span> Linking...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showLinkDocumentModal" *ngIf="showLinkDocumentModal"></div>
+
+<!-- Add to Collection Modal -->
+<div class="modal fade" [class.show]="showAddToCollectionModal" [style.display]="showAddToCollectionModal ? 'block' : 'none'"
+     tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ri-folder-add-line me-2"></i>Add to Collection
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAddToCollectionModal()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading Collections -->
+        <div class="text-center py-4" *ngIf="isLoadingCollections">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+          <p class="text-muted mt-2 mb-0">Loading collections...</p>
+        </div>
+
+        <!-- Collections List -->
+        <div *ngIf="!isLoadingCollections">
+          <!-- Current Collections Badge -->
+          <div class="mb-3" *ngIf="documentCollections.length > 0">
+            <label class="form-label small text-muted">Already in collections:</label>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge bg-success-subtle text-success" *ngFor="let col of documentCollections">
+                <i class="ri-folder-line me-1"></i>{{ col.name }}
+              </span>
+            </div>
+          </div>
+
+          <label class="form-label">Select a collection:</label>
+          <div class="list-group mb-3" *ngIf="availableCollections.length > 0">
+            <button type="button"
+                    class="list-group-item list-group-item-action"
+                    *ngFor="let col of availableCollections"
+                    [class.active]="selectedCollectionId === col.id"
+                    (click)="selectCollection(col.id)">
+              <div class="d-flex align-items-center gap-2">
+                <div class="collection-color-dot" [style.background-color]="col.color || '#405189'"></div>
+                <div class="flex-grow-1">
+                  <div class="fw-medium">{{ col.name }}</div>
+                  <small class="text-muted">{{ col.documentCount || 0 }} documents</small>
+                </div>
+                <i class="ri-check-line text-success" *ngIf="selectedCollectionId === col.id"></i>
+              </div>
+            </button>
+          </div>
+
+          <!-- No collections -->
+          <div class="text-muted text-center py-3" *ngIf="availableCollections.length === 0 && documentCollections.length === 0">
+            <i class="ri-folder-line fs-3"></i>
+            <p class="small mb-0">No collections available</p>
+          </div>
+
+          <!-- Create New Collection -->
+          <div class="border-top pt-3 mt-3">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="createNewCollection"
+                     [(ngModel)]="createNewCollectionMode">
+              <label class="form-check-label" for="createNewCollection">
+                Create new collection
+              </label>
+            </div>
+            <div *ngIf="createNewCollectionMode">
+              <input type="text" class="form-control mb-2"
+                     [(ngModel)]="newCollectionName"
+                     placeholder="Collection name...">
+              <input type="text" class="form-control"
+                     [(ngModel)]="newCollectionDescription"
+                     placeholder="Description (optional)...">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeAddToCollectionModal()">Cancel</button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="(!selectedCollectionId && !createNewCollectionMode) || (createNewCollectionMode && !newCollectionName) || isAddingToCollection"
+                (click)="addToCollection()">
+          <span *ngIf="!isAddingToCollection">
+            <i class="ri-add-line me-1"></i> Add to Collection
+          </span>
+          <span *ngIf="isAddingToCollection">
+            <span class="spinner-border spinner-border-sm me-1"></span> Adding...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showAddToCollectionModal" *ngIf="showAddToCollectionModal"></div>

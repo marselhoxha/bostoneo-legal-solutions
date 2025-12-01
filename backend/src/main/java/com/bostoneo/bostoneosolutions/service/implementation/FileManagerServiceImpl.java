@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.dto.filemanager.*;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.model.*;
@@ -60,10 +61,13 @@ public class FileManagerServiceImpl implements FileManagerService {
     private Long getCurrentUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated() && 
-                !authentication.getName().equals("anonymousUser")) {
-                String subject = authentication.getName();
-                return Long.parseLong(subject);
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    return ((UserDTO) principal).getId();
+                } else if (principal instanceof UserPrincipal) {
+                    return ((UserPrincipal) principal).getUser().getId();
+                }
             }
         } catch (Exception e) {
             log.debug("Could not get current user from security context: {}", e.getMessage());

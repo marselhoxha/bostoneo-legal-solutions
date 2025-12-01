@@ -54,6 +54,7 @@ export interface Conversation {
   taskType?: TaskType;
   documentId?: number;
   relatedDraftId?: string;
+  caseId?: number; // Associated legal case ID
 }
 
 export interface GroupedConversations {

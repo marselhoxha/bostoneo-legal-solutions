@@ -46,17 +46,18 @@ public class EnhancedSecurityConfig {
                 .maxAgeInSeconds(31536000)
                 .preload(true)
             )
-            // Content Security Policy
+            // Content Security Policy - allow framing from localhost:4200 for PDF preview
             .contentSecurityPolicy(csp -> csp
                 .policyDirectives("default-src 'self'; " +
                     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " +
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                     "font-src 'self' https://fonts.gstatic.com; " +
                     "img-src 'self' data: https:; " +
-                    "connect-src 'self' http://localhost:* ws://localhost:*")
+                    "connect-src 'self' http://localhost:* ws://localhost:*; " +
+                    "frame-ancestors 'self' http://localhost:4200")
             )
-            // Frame Options
-            .frameOptions(frame -> frame.sameOrigin())
+            // Frame Options - disable to allow PDF iframe embedding (CSP frame-ancestors handles security)
+            .frameOptions(frame -> frame.disable())
             // XSS Protection
             .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
             // Referrer Policy

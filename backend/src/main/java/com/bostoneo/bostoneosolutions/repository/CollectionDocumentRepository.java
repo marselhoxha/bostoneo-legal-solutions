@@ -44,6 +44,12 @@ public interface CollectionDocumentRepository extends JpaRepository<CollectionDo
     List<Long> findCollectionIdsByAnalysisId(@Param("analysisId") Long analysisId);
 
     /**
+     * Find all analysis IDs in a collection
+     */
+    @Query("SELECT cd.analysisId FROM CollectionDocument cd WHERE cd.collection.id = :collectionId")
+    List<Long> findAnalysisIdsByCollectionId(@Param("collectionId") Long collectionId);
+
+    /**
      * Delete a document from a collection
      */
     @Modifying

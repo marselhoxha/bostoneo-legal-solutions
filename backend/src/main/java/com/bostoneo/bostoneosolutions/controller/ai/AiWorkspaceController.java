@@ -322,7 +322,8 @@ public class AiWorkspaceController {
                 request.getPrompt(),
                 request.getJurisdiction(),
                 request.getSessionName(),
-                request.getResearchMode()
+                request.getResearchMode(),
+                request.getDocumentType()
             );
 
             Map<String, Object> response = new HashMap<>();

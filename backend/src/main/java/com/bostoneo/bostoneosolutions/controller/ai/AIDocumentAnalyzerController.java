@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.model.ActionItem;
 import com.bostoneo.bostoneosolutions.model.AIAnalysisMessage;
+import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
 import com.bostoneo.bostoneosolutions.model.TimelineEvent;
 import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
 import com.bostoneo.bostoneosolutions.repository.AIAnalysisMessageRepository;
@@ -42,10 +43,11 @@ public class AIDocumentAnalyzerController {
             @RequestParam("analysisType") String analysisType,
             @RequestParam(value = "userId", required = false) Long userId,
             @RequestParam(value = "caseId", required = false) Long caseId,
-            @RequestParam(value = "sessionId", required = false) Long sessionId) {
+            @RequestParam(value = "sessionId", required = false) Long sessionId,
+            @RequestParam(value = "analysisContext", required = false, defaultValue = "general") String analysisContext) {
 
-        log.info("Analyzing document: {}, type: {}, analysis: {}, sessionId: {}",
-                file.getOriginalFilename(), file.getContentType(), analysisType, sessionId);
+        log.info("Analyzing document: {}, type: {}, analysis: {}, context: {}, sessionId: {}",
+                file.getOriginalFilename(), file.getContentType(), analysisType, analysisContext, sessionId);
 
         // Set timeout to 600 seconds (10 minutes) for Claude Sonnet 4 extended thinking with complex documents
         DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(600000L);
@@ -53,7 +55,7 @@ public class AIDocumentAnalyzerController {
         // Use default user ID if not provided (for testing)
         Long effectiveUserId = userId != null ? userId : 1L;
 
-        documentAnalysisService.analyzeDocument(file, analysisType, effectiveUserId, caseId, sessionId)
+        documentAnalysisService.analyzeDocument(file, analysisType, effectiveUserId, caseId, sessionId, analysisContext)
                 .thenApply(analysis -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("id", analysis.getAnalysisId());
@@ -114,6 +116,36 @@ public class AIDocumentAnalyzerController {
         Map<String, Object> response = new HashMap<>();
         response.put("analyses", documentAnalysisService.getAnalysisHistory(effectiveUserId));
         response.put("total", documentAnalysisService.getAnalysisHistory(effectiveUserId).size());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/analysis/by-case/{caseId}")
+    public ResponseEntity<Map<String, Object>> getAnalysesByCase(@PathVariable Long caseId) {
+        List<AIDocumentAnalysis> analyses = documentAnalysisService.getAnalysesByCaseId(caseId);
+
+        List<Map<String, Object>> analysesList = analyses.stream().map(analysis -> {
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", analysis.getAnalysisId());
+            result.put("databaseId", analysis.getId());
+            result.put("fileName", analysis.getFileName());
+            result.put("fileType", analysis.getFileType());
+            result.put("fileSize", analysis.getFileSize());
+            result.put("analysisType", analysis.getAnalysisType());
+            result.put("analysisContext", analysis.getAnalysisContext());
+            result.put("status", analysis.getStatus());
+            result.put("detectedType", analysis.getDetectedType());
+            result.put("riskScore", analysis.getRiskScore());
+            result.put("riskLevel", analysis.getRiskLevel());
+            result.put("summary", analysis.getSummary());
+            result.put("createdAt", analysis.getCreatedAt() != null ? analysis.getCreatedAt().toString() : null);
+            return result;
+        }).collect(java.util.stream.Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("analyses", analysesList);
+        response.put("count", analysesList.size());
+        response.put("caseId", caseId);
 
         return ResponseEntity.ok(response);
     }

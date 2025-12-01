@@ -222,12 +222,22 @@ public class LegalResearchConversationService {
      */
     @Transactional
     public AiConversationSession createGeneralConversation(Long userId, String title, String researchMode, String taskType) {
+        return createGeneralConversation(userId, title, researchMode, taskType, null, null);
+    }
+
+    /**
+     * Create a new general conversation with task type, research mode, and document type
+     */
+    @Transactional
+    public AiConversationSession createGeneralConversation(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {
         AiConversationSession session = AiConversationSession.builder()
                 .userId(userId)
                 .sessionName(title != null ? title : "New Conversation")
                 .sessionType("general")
                 .taskType(taskType != null ? taskType : "LEGAL_QUESTION")
                 .researchMode(researchMode != null ? researchMode : "FAST")
+                .documentType(documentType)
+                .jurisdiction(jurisdiction)
                 .isActive(true)
                 .isPinned(false)
                 .isArchived(false)

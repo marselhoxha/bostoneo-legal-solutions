@@ -584,9 +584,10 @@ public class AiWorkspaceDocumentService {
         String prompt,
         String jurisdiction,
         String sessionName,
-        String researchMode
+        String researchMode,
+        String documentType
     ) {
-        log.info("Creating draft conversation session: userId={}, caseId={}, researchMode={}", userId, caseId, researchMode);
+        log.info("Creating draft conversation session: userId={}, caseId={}, researchMode={}, documentType={}", userId, caseId, researchMode, documentType);
 
         // Create conversation session
         AiConversationSession conversation = AiConversationSession.builder()
@@ -597,6 +598,7 @@ public class AiWorkspaceDocumentService {
             .taskType("GENERATE_DRAFT")
             .researchMode(researchMode != null ? researchMode : "FAST")
             .jurisdiction(jurisdiction)
+            .documentType(documentType)
             .isActive(true)
             .build();
 

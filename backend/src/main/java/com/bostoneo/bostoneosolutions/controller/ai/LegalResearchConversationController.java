@@ -158,31 +158,33 @@ public class LegalResearchConversationController {
             @RequestParam Long userId
     ) {
         try {
-            return conversationService.getConversation(sessionId, userId)
-                    .map(conversation -> {
-                        // Load messages separately to avoid lazy loading issues
-                        List<AiConversationMessage> messages = conversationService.getMessages(sessionId, userId);
+            var conversationOpt = conversationService.getConversation(sessionId, userId);
+            if (conversationOpt.isPresent()) {
+                var conversation = conversationOpt.get();
+                // Load messages separately to avoid lazy loading issues
+                List<AiConversationMessage> messages = conversationService.getMessages(sessionId, userId);
 
-                        return ResponseEntity.ok(
-                                HttpResponse.builder()
-                                        .timeStamp(now().toString())
-                                        .data(Map.of(
-                                                "conversation", conversation,
-                                                "messages", messages
-                                        ))
-                                        .message("Conversation found")
-                                        .status(HttpStatus.OK)
-                                        .statusCode(HttpStatus.OK.value())
-                                        .build()
-                        );
-                    })
-                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                            .body(HttpResponse.builder()
-                                    .timeStamp(now().toString())
-                                    .message("Conversation not found")
-                                    .status(HttpStatus.NOT_FOUND)
-                                    .statusCode(HttpStatus.NOT_FOUND.value())
-                                    .build()));
+                return ResponseEntity.ok(
+                        HttpResponse.builder()
+                                .timeStamp(now().toString())
+                                .data(Map.of(
+                                        "conversation", conversation,
+                                        "messages", messages
+                                ))
+                                .message("Conversation found")
+                                .status(HttpStatus.OK)
+                                .statusCode(HttpStatus.OK.value())
+                                .build()
+                );
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(HttpResponse.builder()
+                                .timeStamp(now().toString())
+                                .message("Conversation not found")
+                                .status(HttpStatus.NOT_FOUND)
+                                .statusCode(HttpStatus.NOT_FOUND.value())
+                                .build());
+            }
 
         } catch (Exception e) {
             log.error("Error loading conversation: {}", sessionId, e);
@@ -416,7 +418,9 @@ public class LegalResearchConversationController {
                     request.userId(),
                     request.title(),
                     request.researchMode(),
-                    request.taskType()
+                    request.taskType(),
+                    request.documentType(),
+                    request.jurisdiction()
             );
 
             return ResponseEntity.ok(
@@ -500,6 +504,6 @@ public class LegalResearchConversationController {
     record SessionRequest(Long sessionId, Long userId, Long caseId, String title) {}
     record MessageRequest(Long userId, String role, String content, String metadata) {}
     record UpdateTitleRequest(Long userId, String title) {}
-    record CreateConversationRequest(Long userId, String title, String researchMode, String taskType) {}
+    record CreateConversationRequest(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {}
     record QueryRequest(Long userId, String query, String researchMode) {}
 }

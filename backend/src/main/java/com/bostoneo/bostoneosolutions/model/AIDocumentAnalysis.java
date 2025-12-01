@@ -35,6 +35,9 @@ public class AIDocumentAnalysis {
     @Column(name = "analysis_type", nullable = false)
     private String analysisType;
 
+    @Column(name = "analysis_context")
+    private String analysisContext;  // respond, negotiate, client_review, due_diligence, general
+
     @Column(name = "document_content", columnDefinition = "TEXT")
     private String documentContent;
 

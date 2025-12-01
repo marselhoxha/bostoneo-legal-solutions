@@ -14,6 +14,7 @@ import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.ocr.TesseractOCRConfig;
 import org.apache.tika.parser.pdf.PDFParserConfig;
 import org.apache.tika.sax.BodyContentHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,9 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -38,26 +42,44 @@ public class AIDocumentAnalysisService {
     private final AnalysisTextParser analysisTextParser;
     private final Tika tika = new Tika();
 
+    @Value("${app.documents.output-path:uploads/documents}")
+    private String documentsOutputPath;
+
     public CompletableFuture<AIDocumentAnalysis> analyzeDocument(
             MultipartFile file,
             String analysisType,
             Long userId,
             Long caseId,
-            Long sessionId) {
+            Long sessionId,
+            String analysisContext) {
 
         String analysisId = UUID.randomUUID().toString();
         long startTime = System.currentTimeMillis();
 
-        log.info("Starting document analysis: analysisId={}, fileName={}, sessionId={}",
-                analysisId, file.getOriginalFilename(), sessionId);
+        // Default to 'general' if analysisContext is null or empty
+        String effectiveContext = (analysisContext == null || analysisContext.isEmpty()) ? "general" : analysisContext;
+
+        log.info("Starting document analysis: analysisId={}, fileName={}, context={}, sessionId={}",
+                analysisId, file.getOriginalFilename(), effectiveContext, sessionId);
+
+        // Save uploaded file to disk
+        String savedFileName = null;
+        try {
+            savedFileName = saveFileToDisk(file);
+            log.info("File saved to disk: {}", savedFileName);
+        } catch (IOException e) {
+            log.error("Failed to save file to disk: {}", e.getMessage());
+            // Continue with analysis even if file save fails
+        }
 
         // Create initial analysis record
         AIDocumentAnalysis analysis = new AIDocumentAnalysis();
         analysis.setAnalysisId(analysisId);
-        analysis.setFileName(file.getOriginalFilename());
+        analysis.setFileName(savedFileName != null ? savedFileName : file.getOriginalFilename());
         analysis.setFileType(file.getContentType());
         analysis.setFileSize(file.getSize());
         analysis.setAnalysisType(analysisType);
+        analysis.setAnalysisContext(effectiveContext);  // Store user's analysis goal
         analysis.setUserId(userId);
         analysis.setCaseId(caseId);
         analysis.setStatus("processing");
@@ -70,7 +92,8 @@ public class AIDocumentAnalysisService {
         try {
             // Extract text using Tika
             String content = extractTextFromFile(file);
-            savedAnalysis.setDocumentContent(content.substring(0, Math.min(content.length(), 5000))); // Store first 5000 chars
+            // Store full document content for semantic search (up to 500KB)
+            savedAnalysis.setDocumentContent(content.substring(0, Math.min(content.length(), 500000)));
 
             // Detect document type AND extract parties using AI (single cheap call)
             DocumentClassification classification = classifyDocumentAndExtractParties(content, file.getOriginalFilename());
@@ -88,8 +111,8 @@ public class AIDocumentAnalysisService {
             boolean requiresOcr = metadataExtractor.requiresOCR(content, file.getSize());
             savedAnalysis.setRequiresOcr(requiresOcr);
 
-            // Use detected type for strategic analysis (ignore user-selected analysisType)
-            String prompt = buildAnalysisPrompt(content, classification.documentType, file.getOriginalFilename());
+            // Use detected type for strategic analysis with context awareness
+            String prompt = buildAnalysisPrompt(content, classification.documentType, file.getOriginalFilename(), effectiveContext);
 
             // Pass sessionId to enable cancellation support (like LegalResearchConversationService)
             return claudeService.generateCompletion(prompt, null, true, sessionId)
@@ -177,6 +200,10 @@ public class AIDocumentAnalysisService {
         return repository.findTop10ByUserIdAndIsArchivedFalseOrderByCreatedAtDesc(userId);
     }
 
+    public List<AIDocumentAnalysis> getAnalysesByCaseId(Long caseId) {
+        return repository.findByCaseIdOrderByCreatedAtDesc(caseId);
+    }
+
     public Optional<AIDocumentAnalysis> getAnalysisById(String analysisId) {
         return repository.findByAnalysisId(analysisId);
     }
@@ -233,6 +260,37 @@ public class AIDocumentAnalysisService {
         }
 
         return cleaned.trim();
+    }
+
+    /**
+     * Save uploaded file to disk for later retrieval
+     */
+    private String saveFileToDisk(MultipartFile file) throws IOException {
+        // Create upload directory if it doesn't exist
+        Path uploadDir = Paths.get(documentsOutputPath);
+        if (!Files.exists(uploadDir)) {
+            Files.createDirectories(uploadDir);
+            log.info("Created upload directory: {}", uploadDir);
+        }
+
+        // Keep original filename but add timestamp prefix to avoid collisions
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            originalFilename = "document.pdf";
+        }
+
+        // Sanitize filename: remove path separators and other unsafe characters
+        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        // Add timestamp prefix to ensure uniqueness while keeping original name readable
+        String uniqueFilename = System.currentTimeMillis() + "_" + sanitizedFilename;
+        Path filePath = uploadDir.resolve(uniqueFilename);
+
+        // Save file
+        Files.write(filePath, file.getBytes());
+        log.info("File saved: {} -> {}", originalFilename, uniqueFilename);
+
+        return uniqueFilename;
     }
 
     private String extractTextFromFile(MultipartFile file) throws IOException {
@@ -483,16 +541,20 @@ public class AIDocumentAnalysisService {
         }
     }
 
-    private String buildAnalysisPrompt(String content, String detectedType, String fileName) {
+    private String buildAnalysisPrompt(String content, String detectedType, String fileName, String analysisContext) {
+        // Build context-specific instruction
+        String contextInstruction = getContextInstruction(analysisContext);
+
         String basePrompt = String.format("""
             You are an expert legal strategist and document analyst.
+            %s
 
             Document: %s
             Detected Type: %s
 
             Document Content:
             %s
-            """, fileName, detectedType, content);
+            """, contextInstruction, fileName, detectedType, content);
 
         // Route to strategic analysis based on detected document type
         String lowerType = detectedType.toLowerCase();
@@ -540,6 +602,67 @@ public class AIDocumentAnalysisService {
         else {
             return basePrompt + getStrategicGeneralAnalysisPrompt();
         }
+    }
+
+    /**
+     * Get context-specific instruction based on user's analysis goal
+     */
+    private String getContextInstruction(String analysisContext) {
+        return switch (analysisContext) {
+            case "respond" -> """
+
+            ANALYSIS CONTEXT: You received this document from opposing counsel and need to respond.
+
+            Focus your analysis on:
+            - Response deadline and timeline requirements
+            - Weaknesses and vulnerabilities to exploit in your response
+            - Arguments and defenses you should raise
+            - Evidence and documentation you need to gather
+            - Strategic considerations for drafting your response
+            - Potential counter-arguments and how to address them
+            """;
+
+            case "negotiate" -> """
+
+            ANALYSIS CONTEXT: You are negotiating this document on behalf of your client.
+
+            Focus your analysis on:
+            - Terms that are unfavorable to your client and should be redlined
+            - Negotiation priorities (must-have vs nice-to-have changes)
+            - Alternative language suggestions for problematic clauses
+            - Industry-standard terms that are missing
+            - Hidden risks and landmines in the current language
+            - Leverage points for negotiation
+            """;
+
+            case "client_review" -> """
+
+            ANALYSIS CONTEXT: You are reviewing this document to explain it to your client.
+
+            Focus your analysis on:
+            - Plain-language summary a non-lawyer can understand
+            - Key obligations and commitments for your client
+            - Important deadlines and dates they need to know
+            - Risks and potential consequences in simple terms
+            - Recommended actions and next steps
+            - Questions the client should consider before proceeding
+            """;
+
+            case "due_diligence" -> """
+
+            ANALYSIS CONTEXT: You are conducting due diligence for a transaction (M&A, investment, etc.).
+
+            Focus your analysis on:
+            - Risk matrix with severity ratings
+            - Issues organized by category (legal, financial, operational, compliance)
+            - Missing documents or information needed
+            - Red flags that require further investigation
+            - Deal-breaker issues vs manageable risks
+            - Recommended conditions or protections for the transaction
+            """;
+
+            default -> ""; // No additional context for 'general' analysis
+        };
     }
 
     private String getContractAnalysisPrompt() {

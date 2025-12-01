@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom, merge } from 'rxjs';
 import { takeUntil, switchMap } from 'rxjs/operators';
@@ -29,6 +29,7 @@ import { VersionHistoryComponent } from './version-history/version-history.compo
 import { ActionItemsListComponent } from '../action-items-list/action-items-list.component';
 import { TimelineViewComponent } from '../timeline-view/timeline-view.component';
 import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../document-analysis-viewer/document-analysis-viewer.component';
+import { CollectionViewerComponent } from '../collection-viewer/collection-viewer.component';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
@@ -36,6 +37,7 @@ import { QuillEditorService } from '../../../services/quill-editor.service';
 import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-workspace-state.service';
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
+import { CaseWorkflowService, WorkflowTemplate } from '../../../services/case-workflow.service';
 
 // NEW: Models and enums
 import { Conversation, Message } from '../../../models/conversation.model';
@@ -66,7 +68,8 @@ import { DocumentState } from '../../../models/document.model';
     VersionHistoryComponent,
     ActionItemsListComponent,
     TimelineViewComponent,
-    DocumentAnalysisViewerComponent
+    DocumentAnalysisViewerComponent,
+    CollectionViewerComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -101,6 +104,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   collections$ = this.collectionService.collections$;
   loadingCollections = false;
   showNewCollectionModal = false;
+
+  // Case Workflow state
+  workflowTemplates: WorkflowTemplate[] = [];
+  loadingWorkflowTemplates = false;
+  selectedWorkflowTemplate: WorkflowTemplate | null = null;
+  workflowSelectedDocuments: number[] = [];  // Document analysis IDs to include in workflow
+  workflowName = '';  // User-provided name for the workflow
+  startingWorkflow = false;
+  showStartWorkflowModal = false;  // Controls the start workflow modal visibility
+  showWorkflowHelpModal = false;   // Controls the workflow help modal visibility
+  activeWorkflowExecution: any = null;
+
+  // My Workflows state
+  userWorkflows: any[] = [];
+  loadingWorkflows = false;
+  workflowPollingInterval: any = null;
+  selectedWorkflowForDetails: any = null;
+  showWorkflowDetailsModal = false;
+  expandedStepOutput: any = null;
+  showStepOutputModal = false;
+  expandedStepId: number | null = null;
 
   // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
@@ -140,6 +164,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       { id: 1, icon: 'ri-file-search-line', description: 'Analyzing document...', status: 'pending' as const },
       { id: 2, icon: 'ri-magic-line', description: 'Applying transformation...', status: 'pending' as const },
       { id: 3, icon: 'ri-file-edit-line', description: 'Generating preview...', status: 'pending' as const }
+    ],
+    workflow: [
+      { id: 1, icon: 'ri-flow-chart', description: 'Loading workflow...', status: 'pending' as const },
+      { id: 2, icon: 'ri-file-search-line', description: 'Processing documents...', status: 'pending' as const },
+      { id: 3, icon: 'ri-robot-line', description: 'Running AI analysis...', status: 'pending' as const },
+      { id: 4, icon: 'ri-file-list-3-line', description: 'Generating results...', status: 'pending' as const }
     ]
   };
 
@@ -151,6 +181,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Search query for filtering conversations
   conversationSearchQuery = '';
+
+  // Filter for conversation list (all, case, general)
+  conversationFilter: 'all' | 'case' | 'general' = 'all';
+
+  // Filter for draft types
+  draftFilter: 'all' | 'motions' | 'letters' | 'contracts' = 'all';
+
+  // Filter for workflow status
+  workflowFilter: 'all' | 'active' | 'pending' | 'completed' = 'all';
+
+  // Search query for workflows
+  workflowSearchQuery = '';
 
   // Search query for filtering document analyses
   documentSearchQuery = '';
@@ -171,22 +213,105 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Filtered conversations based on search query (computed from observable)
+  // Filtered conversations based on search query and filter (computed from observable)
   // Also filters out document analysis conversations (Upload/Summarize) since they appear in Recent Documents
   get filteredConversations() {
     // First, filter out document analysis types (they appear in Recent Documents section)
-    const nonAnalysisConversations = this.stateService.getConversations().filter(conv =>
+    let conversations = this.stateService.getConversations().filter(conv =>
       conv.type !== ConversationType.Upload && conv.type !== ConversationType.Summarize
     );
 
-    if (!this.conversationSearchQuery.trim()) {
-      return nonAnalysisConversations;
+    // Apply case/general filter
+    if (this.conversationFilter === 'case') {
+      conversations = conversations.filter(conv => conv.caseId);
+    } else if (this.conversationFilter === 'general') {
+      conversations = conversations.filter(conv => !conv.caseId);
     }
 
-    const query = this.conversationSearchQuery.toLowerCase();
-    return nonAnalysisConversations.filter(conv =>
-      conv.title.toLowerCase().includes(query)
+    // Apply search filter
+    if (this.conversationSearchQuery.trim()) {
+      const query = this.conversationSearchQuery.toLowerCase();
+      conversations = conversations.filter(conv =>
+        conv.title.toLowerCase().includes(query)
+      );
+    }
+
+    return conversations;
+  }
+
+  // Filtered question conversations
+  get filteredQuestionConversations() {
+    let conversations = this.stateService.getConversations().filter(conv =>
+      conv.type === ConversationType.Question
     );
+
+    if (this.conversationSearchQuery.trim()) {
+      const query = this.conversationSearchQuery.toLowerCase();
+      conversations = conversations.filter(conv =>
+        (conv.title || '').toLowerCase().includes(query)
+      );
+    }
+
+    return conversations;
+  }
+
+  // Filtered draft conversations
+  get filteredDraftConversations() {
+    let conversations = this.stateService.getConversations().filter(conv =>
+      conv.type === ConversationType.Draft
+    );
+
+    // Apply draft type filter
+    if (this.draftFilter !== 'all') {
+      conversations = conversations.filter(conv => {
+        const title = (conv.title || '').toLowerCase();
+        switch (this.draftFilter) {
+          case 'motions': return title.includes('motion');
+          case 'letters': return title.includes('letter') || title.includes('demand');
+          case 'contracts': return title.includes('contract') || title.includes('agreement');
+          default: return true;
+        }
+      });
+    }
+
+    if (this.conversationSearchQuery.trim()) {
+      const query = this.conversationSearchQuery.toLowerCase();
+      conversations = conversations.filter(conv =>
+        (conv.title || '').toLowerCase().includes(query)
+      );
+    }
+
+    return conversations;
+  }
+
+  // Filtered workflows based on status
+  get filteredWorkflows() {
+    let workflows = this.userWorkflows;
+
+    // Apply status filter (skip if 'all')
+    if (this.workflowFilter !== 'all') {
+      switch (this.workflowFilter) {
+        case 'active':
+          workflows = workflows.filter(w => w.status === 'RUNNING');
+          break;
+        case 'pending':
+          workflows = workflows.filter(w => w.status === 'PENDING' || w.status === 'WAITING_USER');
+          break;
+        case 'completed':
+          workflows = workflows.filter(w => w.status === 'COMPLETED');
+          break;
+      }
+    }
+
+    // Apply search filter
+    if (this.workflowSearchQuery.trim()) {
+      const query = this.workflowSearchQuery.toLowerCase();
+      workflows = workflows.filter(w =>
+        (w.template?.name || '').toLowerCase().includes(query)
+      );
+    }
+
+    return workflows;
   }
 
   // User input
@@ -260,6 +385,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   userCases: any[] = [];
 
   // Upload document functionality
+  createCollectionOnUpload = false;
+  newCollectionName = '';
+  bulkUploadCollectionId: number | null = null;
+  isBatchProcessing = false;
+
+  // Collection selection for upload
+  selectedUploadCollectionId: number | string | null = null;  // number for existing, 'new' for create new
+  newUploadCollectionName = '';
+
+  // Collection viewer state
+  isViewingCollection = false;
+  activeCollectionId: number | null = null;
+
   uploadedFiles: Array<{
     name: string;
     size: number;
@@ -279,6 +417,48 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }> = [];
   isDragover: boolean = false;
   selectedAnalysisType: string = 'summarize';
+
+  // Analysis Context Selection (Phase 1 Enhancement)
+  selectedAnalysisContext: 'respond' | 'negotiate' | 'client_review' | 'due_diligence' | 'general' = 'general';
+  showContextSelection: boolean = false;
+
+  analysisContextOptions = [
+    {
+      id: 'respond' as const,
+      label: 'I received this',
+      sublabel: 'Need to respond',
+      icon: 'ri-mail-download-line',
+      description: 'Analyze for response strategy, deadlines, and weaknesses to address'
+    },
+    {
+      id: 'negotiate' as const,
+      label: 'Negotiating',
+      sublabel: 'Contract review',
+      icon: 'ri-shake-hands-line',
+      description: 'Identify unfavorable terms, suggest redlines, negotiation priorities'
+    },
+    {
+      id: 'client_review' as const,
+      label: 'Client review',
+      sublabel: 'Explain to client',
+      icon: 'ri-user-star-line',
+      description: 'Plain-language summary with key points and recommended actions'
+    },
+    {
+      id: 'due_diligence' as const,
+      label: 'Due diligence',
+      sublabel: 'M&A / Transaction',
+      icon: 'ri-search-eye-line',
+      description: 'Risk matrix, issues by category, missing documents checklist'
+    },
+    {
+      id: 'general' as const,
+      label: 'Just analyze',
+      sublabel: 'General analysis',
+      icon: 'ri-file-search-line',
+      description: 'Comprehensive strategic analysis (default)'
+    }
+  ];
   documentUrl: string = '';
   isFetchingUrl: boolean = false;
 
@@ -732,7 +912,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private quillEditorService: QuillEditorService,
     private stateService: AiWorkspaceStateService,
     private conversationOrchestration: ConversationOrchestrationService,
-    private transformationService: DocumentTransformationService
+    private transformationService: DocumentTransformationService,
+    private route: ActivatedRoute,
+    private caseWorkflowService: CaseWorkflowService
   ) {}
 
   /**
@@ -823,10 +1005,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Load collections for sidebar
     this.loadCollections();
 
+    // Load workflow templates for Case Workflow
+    this.loadWorkflowTemplates();
+
+    // Load user's workflow executions
+    this.loadUserWorkflows();
+
     // Load user's cases for case selector if user already available
     if (this.currentUser && this.currentUser.id) {
       this.loadUserCases();
     }
+
+    // Handle caseId from query params (when coming from Case Details)
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      if (params['caseId']) {
+        const caseId = parseInt(params['caseId'], 10);
+        if (!isNaN(caseId)) {
+          this.selectedCaseId = caseId;
+          console.log('Pre-selected case from query params:', caseId);
+        }
+      }
+    });
   }
 
   /**
@@ -976,6 +1175,330 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Load workflow templates for Case Workflow feature
+   */
+  loadWorkflowTemplates(): void {
+    this.loadingWorkflowTemplates = true;
+    this.caseWorkflowService.getWorkflowTemplates()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (templates) => {
+          console.log('📋 Loaded workflow templates:', templates.length);
+          this.workflowTemplates = templates;
+          this.loadingWorkflowTemplates = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load workflow templates:', error);
+          this.loadingWorkflowTemplates = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Load user's workflow executions
+   */
+  loadUserWorkflows(): void {
+    this.loadingWorkflows = true;
+    this.caseWorkflowService.getUserExecutions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (workflows) => {
+          console.log('📋 Loaded user workflows:', workflows.length);
+          this.userWorkflows = workflows;
+          this.loadingWorkflows = false;
+
+          // Start polling if there are running workflows
+          const hasRunning = workflows.some(w => w.status === 'RUNNING' || w.status === 'PENDING');
+          if (hasRunning) {
+            this.startWorkflowPolling();
+          }
+
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load user workflows:', error);
+          this.loadingWorkflows = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Start polling for workflow status updates
+   */
+  startWorkflowPolling(): void {
+    if (this.workflowPollingInterval) return;
+
+    this.workflowPollingInterval = setInterval(() => {
+      this.caseWorkflowService.getUserExecutions()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (workflows) => {
+            this.userWorkflows = workflows;
+
+            // Stop polling if no running workflows
+            const hasRunning = workflows.some(w => w.status === 'RUNNING' || w.status === 'PENDING');
+            if (!hasRunning) {
+              this.stopWorkflowPolling();
+            }
+
+            this.cdr.detectChanges();
+          }
+        });
+    }, 3000); // Poll every 3 seconds
+  }
+
+  /**
+   * Stop workflow polling
+   */
+  stopWorkflowPolling(): void {
+    if (this.workflowPollingInterval) {
+      clearInterval(this.workflowPollingInterval);
+      this.workflowPollingInterval = null;
+    }
+  }
+
+  /**
+   * View workflow details
+   */
+  viewWorkflowDetails(workflow: any): void {
+    console.log('Viewing workflow details:', workflow);
+    this.caseWorkflowService.getExecutionWithSteps(workflow.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (executionWithSteps) => {
+          this.selectedWorkflowForDetails = executionWithSteps;
+          this.showWorkflowDetailsModal = true;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load workflow details:', error);
+          this.notificationService.error('Error', 'Failed to load workflow details');
+        }
+      });
+  }
+
+  /**
+   * Close workflow details modal
+   */
+  closeWorkflowDetailsModal(): void {
+    this.showWorkflowDetailsModal = false;
+    this.selectedWorkflowForDetails = null;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Resume a workflow step that is waiting for user action
+   */
+  resumeWorkflowStep(executionId: number, stepId: number): void {
+    console.log('Resuming workflow step:', executionId, stepId);
+    this.caseWorkflowService.resumeWorkflow(executionId, stepId, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Success', 'Workflow resumed');
+          this.closeWorkflowDetailsModal();
+          this.loadUserWorkflows();
+          this.startWorkflowPolling();
+        },
+        error: (error) => {
+          console.error('Failed to resume workflow:', error);
+          this.notificationService.error('Error', 'Failed to resume workflow');
+        }
+      });
+  }
+
+  /**
+   * Expand step output in a modal for full view
+   */
+  expandStepOutput(step: any): void {
+    this.expandedStepOutput = step;
+    this.showStepOutputModal = true;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close step output modal
+   */
+  closeStepOutputModal(): void {
+    this.showStepOutputModal = false;
+    this.expandedStepOutput = null;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Copy content to clipboard
+   */
+  copyToClipboard(content: string): void {
+    if (!content) {
+      this.notificationService.warning('Warning', 'No content to copy');
+      return;
+    }
+    navigator.clipboard.writeText(content).then(() => {
+      this.notificationService.success('Copied', 'Content copied to clipboard');
+    }).catch(() => {
+      this.notificationService.error('Error', 'Failed to copy to clipboard');
+    });
+  }
+
+  /**
+   * Select a workflow template for Case Workflow - opens the modal
+   */
+  selectWorkflowTemplate(template: WorkflowTemplate): void {
+    this.selectedWorkflowTemplate = template;
+    this.workflowSelectedDocuments = [];
+    this.workflowName = '';
+    this.showStartWorkflowModal = true;
+
+    // Ensure cases are loaded for the dropdown
+    if (this.userCases.length === 0) {
+      this.loadUserCases();
+    }
+
+    console.log('Selected workflow template:', template.name, 'Cases:', this.userCases.length);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close the start workflow modal
+   */
+  closeStartWorkflowModal(): void {
+    this.showStartWorkflowModal = false;
+    this.selectedWorkflowTemplate = null;
+    this.workflowSelectedDocuments = [];
+    this.workflowName = '';
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Clear selected workflow template and return to template selection
+   */
+  clearWorkflowTemplate(): void {
+    this.selectedWorkflowTemplate = null;
+    this.workflowSelectedDocuments = [];
+    this.workflowName = '';
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Open workflow selection - clears current selection and scrolls to workflow section
+   */
+  openWorkflowSelection(): void {
+    this.selectedWorkflowTemplate = null;
+    this.workflowSelectedDocuments = [];
+    this.workflowName = '';
+    this.selectedWorkflowForDetails = null;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Toggle document selection for workflow
+   */
+  toggleWorkflowDocument(documentId: number): void {
+    if (!documentId && documentId !== 0) {
+      console.warn('toggleWorkflowDocument called with invalid documentId:', documentId);
+      return;
+    }
+    const index = this.workflowSelectedDocuments.indexOf(documentId);
+    if (index === -1) {
+      this.workflowSelectedDocuments.push(documentId);
+    } else {
+      this.workflowSelectedDocuments.splice(index, 1);
+    }
+    console.log('Document selection toggled:', documentId, 'Selected docs:', this.workflowSelectedDocuments);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Check if a document is selected for the current workflow
+   */
+  isDocumentSelectedForWorkflow(documentId: number): boolean {
+    return this.workflowSelectedDocuments.includes(documentId);
+  }
+
+  /**
+   * Get workflow template icon by type
+   */
+  getWorkflowTemplateIcon(templateType: string): string {
+    return this.caseWorkflowService.getTemplateIcon(templateType);
+  }
+
+  /**
+   * Get workflow template color by type
+   */
+  getWorkflowTemplateColor(templateType: string): string {
+    return this.caseWorkflowService.getTemplateColor(templateType);
+  }
+
+  /**
+   * Start workflow execution with selected template and documents
+   */
+  startWorkflow(): void {
+    if (!this.selectedWorkflowTemplate || this.workflowSelectedDocuments.length === 0) {
+      this.notificationService.warning('Missing Selection', 'Please select a template and at least one document');
+      return;
+    }
+
+    if (!this.workflowName.trim()) {
+      this.notificationService.warning('Missing Name', 'Please enter a name for this workflow');
+      return;
+    }
+
+    this.startingWorkflow = true;
+    console.log('Starting workflow:', {
+      templateId: this.selectedWorkflowTemplate.id,
+      documentIds: this.workflowSelectedDocuments,
+      caseId: this.selectedCaseId,
+      name: this.workflowName
+    });
+
+    this.caseWorkflowService.startWorkflow(
+      this.selectedWorkflowTemplate.id,
+      this.workflowSelectedDocuments,
+      undefined, // collectionId - can be added later
+      this.selectedCaseId || undefined,
+      this.workflowName.trim()
+    ).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (execution) => {
+        console.log('Workflow started:', execution);
+        this.startingWorkflow = false;
+        this.activeWorkflowExecution = execution;
+        this.notificationService.success(
+          'Workflow Started',
+          `${this.workflowName} workflow is now running`
+        );
+        // Close the modal and reset selection
+        this.showStartWorkflowModal = false;
+        this.selectedWorkflowTemplate = null;
+        this.workflowSelectedDocuments = [];
+        this.workflowName = '';
+
+        // Load workflows sidebar and show progress
+        this.loadUserWorkflows();
+        this.startWorkflowPolling();
+
+        // Open the workflow details modal to show step progress
+        if (execution?.id) {
+          this.viewWorkflowDetails(execution);
+        }
+
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to start workflow:', error);
+        this.startingWorkflow = false;
+        this.notificationService.error(
+          'Workflow Failed',
+          error.error?.message || 'Failed to start workflow'
+        );
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
    * Create a new collection
    */
   createCollection(name: string, description?: string): void {
@@ -1011,11 +1534,99 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Open a collection (placeholder - will implement collection viewer)
+   * Open a collection in the collection viewer
    */
   openCollection(collection: DocumentCollection): void {
-    // TODO: Implement collection viewer
-    this.notificationService.info('Coming Soon', `Collection "${collection.name}" viewer will be available soon`);
+    this.isViewingCollection = true;
+    this.activeCollectionId = collection.id;
+    // Close document viewer if open
+    this.stateService.closeDocumentViewer();
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close the collection viewer
+   */
+  closeCollectionViewer(): void {
+    this.isViewingCollection = false;
+    this.activeCollectionId = null;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Start upload flow with pre-selected collection
+   */
+  startUploadToCollection(collectionId: number): void {
+    // Close collection viewer
+    this.isViewingCollection = false;
+    this.activeCollectionId = null;
+
+    // Switch to upload task
+    this.selectedTask = ConversationType.Upload;
+    this.activeTask = ConversationType.Upload;
+
+    // Pre-select the collection
+    this.selectedUploadCollectionId = collectionId;
+
+    // Show context selection to reveal the upload UI
+    this.showContextSelection = true;
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Handle opening a document from collection viewer
+   */
+  openDocumentFromCollection(event: { analysisId: number; databaseId: number }): void {
+    const databaseId = event.analysisId;
+
+    // First check if document exists in local state
+    let existingDoc = this.stateService.getAnalyzedDocumentByDatabaseId(databaseId);
+
+    if (existingDoc) {
+      // Document exists in state - open it directly
+      this.isViewingCollection = false;
+      this.stateService.openDocumentViewer(existingDoc.id);
+      this.cdr.detectChanges();
+    } else {
+      // Document not in state - fetch from backend first
+      this.documentAnalyzerService.getAnalysisByDatabaseId(databaseId).subscribe({
+        next: (result) => {
+          // Add document to state
+          const newDoc: AnalyzedDocument = {
+            id: result.id || `doc-${databaseId}`,
+            databaseId: result.databaseId || databaseId,
+            fileName: result.fileName || 'Unknown Document',
+            fileSize: result.fileSize || 0,
+            detectedType: result.detectedType || 'Document',
+            riskLevel: result.analysis?.riskLevel,
+            riskScore: result.analysis?.riskScore,
+            analysis: result.analysis ? {
+              fullAnalysis: result.analysis.fullAnalysis || '',
+              summary: result.analysis.summary,
+              riskScore: result.analysis.riskScore,
+              riskLevel: result.analysis.riskLevel,
+              keyFindings: result.analysis.keyFindings,
+              recommendations: result.analysis.recommendations
+            } : undefined,
+            extractedMetadata: result.extractedMetadata,
+            timestamp: result.timestamp || Date.now(),
+            status: 'completed'
+          };
+
+          this.stateService.addAnalyzedDocument(newDoc);
+
+          // Close collection viewer and open document
+          this.isViewingCollection = false;
+          this.stateService.openDocumentViewer(newDoc.id);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to fetch document:', err);
+          this.notificationService.error('Error', 'Failed to load document');
+        }
+      });
+    }
   }
 
   /**
@@ -1124,7 +1735,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Initialize workflow steps based on task type (now uses StateService)
-  private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform'): void {
+  private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform' | 'workflow'): void {
     const template = this.workflowStepTemplates[taskType];
     const steps = template.map(step => ({
       ...step,
@@ -1239,49 +1850,52 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // CONVERSATION MANAGEMENT (Protégé-style)
   // ========================================
 
-  // Load conversations from backend (ONLY general conversations, no case-specific)
+  // Load ALL conversations from backend (both Question and Draft types)
   loadConversations(): void {
-    const taskTypeMap: { [key: string]: string } = {
-      'question': 'LEGAL_QUESTION',
-      'draft': 'GENERATE_DRAFT',
-      'summarize': 'SUMMARIZE_CASE',
-      'upload': 'ANALYZE_DOCUMENT'
-    };
+    // Load both Question and Draft conversations at once to avoid flickering when switching
+    const taskTypes = ['LEGAL_QUESTION', 'GENERATE_DRAFT'];
+    const allConversations: Conversation[] = [];
+    let completedRequests = 0;
 
-    const backendTaskType = taskTypeMap[this.selectedTask];
+    taskTypes.forEach(backendTaskType => {
+      this.legalResearchService.getGeneralConversationsByTaskType(backendTaskType, 0, 50)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            console.log(`Loaded ${backendTaskType} conversations from backend:`, response);
 
-    // Use getGeneralConversationsByTaskType to exclude case-specific conversations
-    this.legalResearchService.getGeneralConversationsByTaskType(backendTaskType, 0, 50)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('Loaded general conversations from backend:', response);
+            // Map backend conversations to frontend format
+            const conversations: Conversation[] = response.conversations.map(conv => ({
+              id: `conv_${conv.id}`,
+              title: conv.sessionName || 'Untitled Conversation',
+              date: new Date(conv.createdAt || new Date()),
+              type: this.mapBackendTaskTypeToFrontend(conv.taskType || 'LEGAL_QUESTION'),
+              messages: [], // Messages will be loaded when conversation is opened
+              messageCount: conv.messageCount || 0,
+              jurisdiction: conv.jurisdiction,
+              backendConversationId: conv.id,
+              researchMode: conv.researchMode as ResearchMode || 'FAST' as ResearchMode,
+              taskType: conv.taskType as TaskType,
+              documentId: conv.documentId,
+              relatedDraftId: conv.relatedDraftId,
+              documentType: conv.documentType
+            }));
 
-          // Map backend conversations to frontend format and set in state service
-          const conversations: Conversation[] = response.conversations.map(conv => ({
-            id: `conv_${conv.id}`,
-            title: conv.sessionName || 'Untitled Conversation',
-            date: new Date(conv.createdAt || new Date()),
-            type: this.mapBackendTaskTypeToFrontend(conv.taskType || 'LEGAL_QUESTION'),
-            messages: [], // Messages will be loaded when conversation is opened
-            messageCount: conv.messageCount || 0, // Use for badge display after page refresh
-            jurisdiction: conv.jurisdiction,
-            backendConversationId: conv.id,
-            researchMode: conv.researchMode as ResearchMode || 'FAST' as ResearchMode,
-            taskType: conv.taskType as TaskType,
-            documentId: conv.documentId,
-            relatedDraftId: conv.relatedDraftId
-          }));
+            allConversations.push(...conversations);
+            completedRequests++;
 
-          // State service automatically groups conversations by date
-          this.stateService.setConversations(conversations);
-
-          this.cdr.detectChanges();
-        },
-        error: (error) => {
-          console.error('Error loading general conversations:', error);
-        }
-      });
+            // Only update state when all requests are complete
+            if (completedRequests === taskTypes.length) {
+              this.stateService.setConversations(allConversations);
+              this.cdr.detectChanges();
+            }
+          },
+          error: (error) => {
+            console.error(`Error loading ${backendTaskType} conversations:`, error);
+            completedRequests++;
+          }
+        });
+    });
   }
 
   // REMOVED: groupConversationsByDate() - now handled by StateService automatically
@@ -1823,8 +2437,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // 1. User sends first message (handled in startCustomDraft)
     // 2. User selects existing conversation (handled in loadConversation)
 
-    // Load conversations for this task type
-    this.loadConversations();
+    // Note: Don't reload conversations here - they're already loaded at init
+    // Reloading causes flickering as state gets temporarily inconsistent
   }
 
   // ========================================
@@ -1964,8 +2578,27 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Show context selection when files are uploaded
+    if (validFiles.length > 0) {
+      this.showContextSelection = true;
+    }
+
     // Don't auto-upload - wait for user to select analysis type and click "Analyze"
     // this.uploadFiles(); // Removed - now triggered by handleUploadAnalysis()
+  }
+
+  /**
+   * Select analysis context
+   */
+  selectAnalysisContext(contextId: 'respond' | 'negotiate' | 'client_review' | 'due_diligence' | 'general'): void {
+    this.selectedAnalysisContext = contextId;
+  }
+
+  /**
+   * Get the selected context option details
+   */
+  getSelectedContextOption() {
+    return this.analysisContextOptions.find(opt => opt.id === this.selectedAnalysisContext);
   }
 
   /**
@@ -1973,19 +2606,42 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private uploadFiles(sessionId?: number): void {
     const filesToUpload = this.uploadedFiles.filter(f => f.status === 'ready');
+    const totalFiles = filesToUpload.length;
 
-    filesToUpload.forEach((fileItem, index) => {
-      if (!fileItem.file) return;
+    if (totalFiles === 0) return;
 
-      // Step 1: Uploading
-      fileItem.status = 'uploading';
-      if (index === 0) this.stateService.updateWorkflowStep(1, { status: WorkflowStepStatus.Active });
+    // Track completion across all parallel uploads
+    let completedCount = 0;
+    let failedCount = 0;
+    const analysisResults: Array<{ id: string; databaseId: number; fileName: string }> = [];
+    const pendingCollectionAdds: Promise<void>[] = [];
 
-      // Call document analyzer service with sessionId for cancellation support
+    // Capture collection ID at start (before any resets)
+    const targetCollectionId = this.bulkUploadCollectionId;
+
+    // Start batch processing
+    this.isBatchProcessing = true;
+    this.cdr.detectChanges();
+    this.stateService.updateWorkflowStep(1, { status: WorkflowStepStatus.Active });
+
+    filesToUpload.forEach((fileItem) => {
+      if (!fileItem.file) {
+        completedCount++;
+        return;
+      }
+
+      // Update status to analyzing
+      fileItem.status = 'analyzing';
+      this.cdr.detectChanges();
+
+      // Call document analyzer service - DON'T pass sessionId to avoid deadlocks
+      // Session will be updated once at the end in finalizeUpload
       this.documentAnalyzerService.analyzeDocument(
         fileItem.file,
         this.selectedAnalysisType,
-        sessionId
+        undefined,  // No sessionId for parallel uploads - prevents DB deadlocks
+        this.selectedAnalysisContext,
+        this.selectedCaseId
       ).pipe(
         takeUntil(this.destroy$)
       ).subscribe({
@@ -1994,53 +2650,166 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             // Update file status
             fileItem.status = 'completed';
             fileItem.analysisId = result.id;
-            console.log('✅ File analyzed successfully:', result);
+            analysisResults.push({ id: result.id, databaseId: result.databaseId, fileName: result.fileName });
+            console.log(`✅ File ${completedCount + 1}/${totalFiles} analyzed:`, result.fileName);
 
-            // If this is the last file and analysis is complete
-            if (index === filesToUpload.length - 1) {
-              // Complete all workflow steps
-              this.completeAllWorkflowSteps();
-              this.stateService.setIsGenerating(false);
-
-              // Save assistant message to backend with analysis metadata
-              // This allows the conversation to be loaded later and open the viewer
-              const activeConvId = this.stateService.getActiveConversationId();
-              if (activeConvId && sessionId) {
-                const assistantContent = `Document analysis completed for ${result.fileName}`;
-                this.legalResearchService.addMessageToSession(
-                  sessionId,
-                  this.currentUser?.id || 1,
-                  'assistant',
-                  assistantContent,
-                  { analysisId: result.id, databaseId: result.databaseId }
-                ).pipe(takeUntil(this.destroy$))
-                 .subscribe({
-                   next: () => console.log('✅ Analysis metadata saved to conversation'),
-                   error: (err) => console.error('❌ Failed to save analysis metadata:', err)
-                 });
-              }
-
-              // Auto-display results in viewer
-              this.displayAnalysisResults(result);
+            // Add to collection if target collection exists
+            if (targetCollectionId && result.databaseId) {
+              const addPromise = new Promise<void>((resolve, reject) => {
+                this.collectionService.addDocumentToCollection(targetCollectionId, result.databaseId)
+                  .pipe(takeUntil(this.destroy$))
+                  .subscribe({
+                    next: () => {
+                      console.log(`📁 Added ${result.fileName} to collection ${targetCollectionId}`);
+                      resolve();
+                    },
+                    error: (err) => {
+                      console.error(`Failed to add ${result.fileName} to collection:`, err);
+                      reject(err);
+                    }
+                  });
+              });
+              pendingCollectionAdds.push(addPromise);
             }
           }
+          completedCount++;
+          this.checkUploadCompletion(completedCount, failedCount, totalFiles, sessionId, analysisResults, targetCollectionId, pendingCollectionAdds);
         },
         error: (error) => {
           console.error('❌ File analysis failed:', error);
           fileItem.status = 'failed';
-
-          // Mark workflow as failed
-          this.stateService.setIsGenerating(false);
-          this.stateService.addConversationMessage({
-            role: 'assistant',
-            content: `❌ Analysis failed: ${error.message || 'Unknown error'}`,
-            timestamp: new Date()
-          });
+          failedCount++;
+          completedCount++;
 
           this.notificationService.error('Analysis Failed', `Failed to analyze ${fileItem.name}`);
+          this.cdr.detectChanges();
+
+          this.checkUploadCompletion(completedCount, failedCount, totalFiles, sessionId, analysisResults, targetCollectionId, pendingCollectionAdds);
         }
       });
     });
+  }
+
+  /**
+   * Check if all uploads are complete and handle final actions
+   */
+  private checkUploadCompletion(
+    completedCount: number,
+    failedCount: number,
+    totalFiles: number,
+    sessionId: number | undefined,
+    analysisResults: Array<{ id: string; databaseId: number; fileName: string }>,
+    targetCollectionId: number | null,
+    pendingCollectionAdds: Promise<void>[]
+  ): void {
+    // Not all files done yet
+    if (completedCount < totalFiles) {
+      return;
+    }
+
+    console.log(`📊 All ${totalFiles} files processed: ${analysisResults.length} succeeded, ${failedCount} failed`);
+
+    // Wait for all collection additions to complete before finalizing
+    if (targetCollectionId && pendingCollectionAdds.length > 0) {
+      Promise.allSettled(pendingCollectionAdds).then((results) => {
+        const successfulAdds = results.filter(r => r.status === 'fulfilled').length;
+        console.log(`📁 Collection additions complete: ${successfulAdds}/${pendingCollectionAdds.length} succeeded`);
+        this.finalizeUpload(failedCount, totalFiles, sessionId, analysisResults, targetCollectionId);
+      });
+    } else {
+      this.finalizeUpload(failedCount, totalFiles, sessionId, analysisResults, targetCollectionId);
+    }
+  }
+
+  /**
+   * Finalize the upload process after all files and collection adds are done
+   */
+  private finalizeUpload(
+    failedCount: number,
+    totalFiles: number,
+    sessionId: number | undefined,
+    analysisResults: Array<{ id: string; databaseId: number; fileName: string }>,
+    targetCollectionId: number | null
+  ): void {
+    // Complete all workflow steps
+    this.completeAllWorkflowSteps();
+    this.stateService.setIsGenerating(false);
+
+    // End batch processing
+    this.isBatchProcessing = false;
+
+    // Save assistant message to backend with analysis metadata
+    if (sessionId && analysisResults.length > 0) {
+      const lastResult = analysisResults[analysisResults.length - 1];
+      const assistantContent = analysisResults.length === 1
+        ? `Document analysis completed for ${lastResult.fileName}`
+        : `Batch analysis completed for ${analysisResults.length} documents`;
+
+      this.legalResearchService.addMessageToSession(
+        sessionId,
+        this.currentUser?.id || 1,
+        'assistant',
+        assistantContent,
+        { analysisId: lastResult.id, databaseId: lastResult.databaseId }
+      ).pipe(takeUntil(this.destroy$))
+       .subscribe({
+         next: () => console.log('✅ Analysis metadata saved to conversation'),
+         error: (err) => console.error('❌ Failed to save analysis metadata:', err)
+       });
+    }
+
+    // Handle collection upload completion
+    if (targetCollectionId) {
+      const successCount = analysisResults.length;
+      if (successCount > 0) {
+        this.notificationService.success(
+          'Added to Collection',
+          `${successCount} document${successCount > 1 ? 's' : ''} added to collection${failedCount > 0 ? ` (${failedCount} failed)` : ''}`
+        );
+      } else {
+        this.notificationService.error('Upload Failed', 'No documents were successfully analyzed');
+      }
+
+      // Reset collection state
+      this.createCollectionOnUpload = false;
+      this.newCollectionName = '';
+      this.selectedUploadCollectionId = null;
+      this.newUploadCollectionName = '';
+      this.bulkUploadCollectionId = null;
+
+      // Refresh collections list
+      this.loadCollections();
+
+      // Open collection viewer
+      this.isViewingCollection = true;
+      this.activeCollectionId = targetCollectionId;
+      this.stateService.setShowChat(false);
+      this.cdr.detectChanges();
+    } else if (analysisResults.length > 0) {
+      // No collection - show document viewer for single document, or last document for batch
+      const lastResult = analysisResults[analysisResults.length - 1];
+      this.documentAnalyzerService.getAnalysisById(lastResult.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (fullResult) => {
+            this.displayAnalysisResults(fullResult);
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            // Fallback: just refresh the analysis history
+            this.loadAnalysisHistory();
+            this.cdr.detectChanges();
+          }
+        });
+    } else {
+      // All failed
+      this.stateService.addConversationMessage({
+        role: 'assistant',
+        content: `❌ All ${totalFiles} document analyses failed. Please try again.`,
+        timestamp: new Date()
+      });
+      this.cdr.detectChanges();
+    }
   }
 
   /**
@@ -2237,6 +3006,34 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   removeFile(index: number): void {
     this.uploadedFiles.splice(index, 1);
+    // Reset collection option if only 1 file left
+    if (this.uploadedFiles.length <= 1) {
+      this.createCollectionOnUpload = false;
+      this.newCollectionName = '';
+    }
+    // Hide context selection if no files
+    if (this.uploadedFiles.length === 0) {
+      this.showContextSelection = false;
+      this.selectedAnalysisContext = 'general';
+    }
+  }
+
+  /**
+   * Generate default collection name from uploaded files
+   */
+  getDefaultCollectionName(): string {
+    if (this.uploadedFiles.length === 0) return 'Document Collection';
+    const firstFile = this.uploadedFiles[0].name;
+    const baseName = firstFile.replace(/\.[^/.]+$/, ''); // Remove extension
+    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${baseName} + ${this.uploadedFiles.length - 1} docs (${date})`;
+  }
+
+  /**
+   * Get count of completed files during batch processing
+   */
+  getCompletedFilesCount(): number {
+    return this.uploadedFiles.filter(f => f.status === 'completed' || f.status === 'failed').length;
   }
 
   /**
@@ -2465,6 +3262,375 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   getActiveDocument(): AnalyzedDocument | undefined {
     return this.stateService.getActiveDocument();
+  }
+
+  /**
+   * Set conversation filter (all, case, general)
+   */
+  setConversationFilter(filter: 'all' | 'case' | 'general'): void {
+    this.conversationFilter = filter;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Get icon for conversation type
+   */
+  getConversationIcon(type: ConversationType): string {
+    const icons: Record<ConversationType, string> = {
+      [ConversationType.Question]: 'ri-question-line',
+      [ConversationType.Draft]: 'ri-file-edit-line',
+      [ConversationType.Summarize]: 'ri-file-list-3-line',
+      [ConversationType.Upload]: 'ri-file-upload-line',
+      [ConversationType.Workflow]: 'ri-flow-chart'
+    };
+    return icons[type] || 'ri-chat-3-line';
+  }
+
+  /**
+   * Get badge class for document type - matches header badge colors
+   */
+  getDocTypeBadgeClass(docType: string | undefined): string {
+    if (!docType) return 'status-default';
+    const type = docType.toLowerCase();
+
+    // Pleadings - Red (matches header)
+    if (type.includes('complaint') || type.includes('answer') || type.includes('counterclaim') || type.includes('petition') || type.includes('pleading')) return 'status-pleading';
+
+    // Motions - Purple (matches header)
+    if (type.includes('motion') || type.includes('suppress') || type.includes('dismiss') || type.includes('compel') || type.includes('protective')) return 'status-motion';
+
+    // Discovery - Teal (matches header)
+    if (type.includes('discovery') || type.includes('interrogat') || type.includes('deposition') || type.includes('subpoena') || type.includes('request for') || type.includes('admission') || type.includes('production')) return 'status-discovery';
+
+    // Court Orders - Yellow (matches header)
+    if (type.includes('order') || type.includes('judgment') || type.includes('decree') || type.includes('injunction') || type.includes('ruling')) return 'status-order';
+
+    // Contracts - Green (matches header)
+    if (type.includes('contract') || type.includes('agreement') || type.includes('lease') || type.includes('nda') || type.includes('settlement')) return 'status-contract';
+
+    // Briefs/Memos - Indigo (matches header)
+    if (type.includes('brief') || type.includes('appellate') || type.includes('appeal') || type.includes('memo')) return 'status-brief';
+
+    // Correspondence/Letters - Orange (matches header)
+    if (type.includes('letter') || type.includes('correspondence') || type.includes('notice') || type.includes('demand') || type.includes('cease')) return 'status-letter';
+
+    // Declarations & Affidavits
+    if (type.includes('affidavit') || type.includes('declaration') || type.includes('exhibit')) return 'status-declaration';
+
+    return 'status-default';
+  }
+
+  /**
+   * Set draft filter
+   */
+  setDraftFilter(filter: 'all' | 'motions' | 'letters' | 'contracts'): void {
+    this.draftFilter = filter;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Set workflow filter
+   */
+  setWorkflowFilter(filter: 'all' | 'active' | 'pending' | 'completed'): void {
+    this.workflowFilter = filter;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Get conversation preview text (last assistant message excerpt)
+   */
+  getConversationPreview(conv: Conversation): string {
+    if (!conv.messages || conv.messages.length === 0) {
+      return 'No messages yet...';
+    }
+    // Find last assistant message
+    const assistantMessages = conv.messages.filter(m => m.role === 'assistant');
+    if (assistantMessages.length === 0) {
+      return 'Awaiting response...';
+    }
+    const lastMessage = assistantMessages[assistantMessages.length - 1];
+    // Strip HTML and get plain text excerpt
+    const plainText = lastMessage.content.replace(/<[^>]*>/g, '').trim();
+    return plainText || 'No preview available';
+  }
+
+  /**
+   * Get draft status based on conversation state
+   */
+  getDraftStatus(conv: Conversation): string {
+    // First, try to use the stored documentType from the conversation
+    if (conv.documentType) {
+      return this.formatDocumentType(conv.documentType);
+    }
+
+    // Fallback: detect from title
+    const title = (conv.title || '').toLowerCase();
+    if (title.includes('motion to compel')) return 'MOTION TO COMPEL';
+    if (title.includes('motion to dismiss')) return 'MOTION TO DISMISS';
+    if (title.includes('motion for summary')) return 'SUMMARY JUDGMENT';
+    if (title.includes('motion')) return 'MOTION';
+    if (title.includes('demand letter')) return 'DEMAND LETTER';
+    if (title.includes('letter')) return 'LETTER';
+    if (title.includes('contract')) return 'CONTRACT';
+    if (title.includes('agreement')) return 'AGREEMENT';
+    if (title.includes('brief')) return 'BRIEF';
+    if (title.includes('complaint')) return 'COMPLAINT';
+    if (title.includes('answer')) return 'ANSWER';
+    if (title.includes('interrogator')) return 'INTERROGATORIES';
+    if (title.includes('discovery')) return 'DISCOVERY';
+    if (title.includes('subpoena')) return 'SUBPOENA';
+    if (title.includes('affidavit')) return 'AFFIDAVIT';
+    if (title.includes('memo')) return 'MEMO';
+    return 'DRAFT';
+  }
+
+  /**
+   * Format document type ID to display label
+   */
+  formatDocumentType(docType: string): string {
+    const typeMap: Record<string, string> = {
+      'motion_to_compel': 'MOTION TO COMPEL',
+      'motion_to_dismiss': 'MOTION TO DISMISS',
+      'motion_summary_judgment': 'SUMMARY JUDGMENT',
+      'motion_preliminary_injunction': 'INJUNCTION',
+      'motion_protective_order': 'PROTECTIVE ORDER',
+      'demand_letter': 'DEMAND LETTER',
+      'cease_desist': 'CEASE & DESIST',
+      'settlement_demand': 'SETTLEMENT',
+      'contract_review': 'CONTRACT',
+      'contract_draft': 'CONTRACT',
+      'nda': 'NDA',
+      'employment_agreement': 'EMPLOYMENT',
+      'complaint': 'COMPLAINT',
+      'answer': 'ANSWER',
+      'counterclaim': 'COUNTERCLAIM',
+      'interrogatories': 'INTERROGATORIES',
+      'requests_production': 'PRODUCTION REQ',
+      'requests_admission': 'ADMISSION REQ',
+      'subpoena': 'SUBPOENA',
+      'legal_brief': 'BRIEF',
+      'legal_memo': 'MEMO',
+      'case_summary': 'CASE SUMMARY',
+      'affidavit': 'AFFIDAVIT',
+      'declaration': 'DECLARATION'
+    };
+    return typeMap[docType] || docType.replace(/_/g, ' ').toUpperCase();
+  }
+
+  /**
+   * Get draft status badge class
+   */
+  getDraftStatusClass(conv: Conversation): string {
+    const status = this.getDraftStatus(conv).toUpperCase();
+    return this.getDocTypeBadgeClass(status);
+  }
+
+  /**
+   * Get workflow section title based on filter
+   */
+  getWorkflowSectionTitle(): string {
+    switch (this.workflowFilter) {
+      case 'all': return 'All Workflows';
+      case 'active': return 'Active Workflows';
+      case 'pending': return 'Pending Workflows';
+      case 'completed': return 'Completed Workflows';
+      default: return 'Workflows';
+    }
+  }
+
+  /**
+   * Get workflow status dot class
+   */
+  getWorkflowStatusDotClass(workflow: any): string {
+    switch (workflow.status) {
+      case 'RUNNING': return 'dot-active';
+      case 'COMPLETED': return 'dot-completed';
+      case 'PENDING': case 'WAITING_USER': return 'dot-pending';
+      case 'FAILED': return 'dot-failed';
+      default: return 'dot-pending';
+    }
+  }
+
+  /**
+   * Get workflow progress bar class
+   */
+  getWorkflowProgressClass(workflow: any): string {
+    switch (workflow.status) {
+      case 'RUNNING': return 'progress-active';
+      case 'COMPLETED': return 'progress-completed';
+      case 'PENDING': case 'WAITING_USER': return 'progress-pending';
+      case 'FAILED': return 'progress-failed';
+      default: return 'progress-pending';
+    }
+  }
+
+  /**
+   * Get human-readable status label
+   */
+  getWorkflowStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      'RUNNING': 'Running',
+      'COMPLETED': 'Done',
+      'PENDING': 'Pending',
+      'WAITING_USER': 'Waiting',
+      'FAILED': 'Failed',
+      'PAUSED': 'Paused'
+    };
+    return labels[status] || status;
+  }
+
+  /**
+   * Download workflow report
+   */
+  downloadWorkflowReport(workflow: any): void {
+    console.log('Downloading report for workflow:', workflow.id);
+    // TODO: Implement report download via service
+    this.notificationService.info('Report', 'Report download will be available soon');
+  }
+
+  /**
+   * Get workflow display name - format: "{Template} – {Case Name}"
+   */
+  getWorkflowDisplayName(workflow: any): string {
+    // First priority: user-provided name
+    if (workflow.name) {
+      return workflow.name;
+    }
+
+    let templateName = '';
+    let caseName = '';
+
+    // Get template name
+    if (workflow.template?.name) {
+      templateName = workflow.template.name;
+    } else if (workflow.templateId && this.workflowTemplates?.length > 0) {
+      const template = this.workflowTemplates.find(t => t.id === workflow.templateId);
+      if (template?.name) {
+        templateName = template.name;
+      }
+    }
+
+    // Get case name
+    if (workflow.legalCase?.caseName) {
+      caseName = workflow.legalCase.caseName;
+    } else if (workflow.legalCase?.clientName) {
+      caseName = workflow.legalCase.clientName;
+    }
+
+    // Format: "Template – Case" or just one if other is missing
+    if (templateName && caseName) {
+      return `${templateName} – ${caseName}`;
+    } else if (templateName) {
+      return templateName;
+    } else if (caseName) {
+      return caseName;
+    }
+
+    // Fallback with ID
+    return `Workflow #${workflow.id}`;
+  }
+
+  /**
+   * Get count of completed steps in workflow
+   */
+  getCompletedStepsCount(workflow: any): number {
+    if (workflow.stepExecutions?.length > 0) {
+      return workflow.stepExecutions.filter((s: any) => s.status === 'COMPLETED').length;
+    }
+    // Don't use currentStep as it might be misleading
+    return 0;
+  }
+
+  /**
+   * Get workflow progress percentage based on completed steps
+   */
+  getWorkflowProgressPercentage(workflow: any): number {
+    if (workflow.stepExecutions?.length > 0) {
+      const completed = workflow.stepExecutions.filter((s: any) => s.status === 'COMPLETED').length;
+      const total = workflow.totalSteps || workflow.stepExecutions.length;
+      return Math.round((completed / total) * 100);
+    }
+    // If no step executions, check status
+    if (workflow.status === 'COMPLETED') return 100;
+    if (workflow.status === 'PENDING') return 0;
+    // Fallback to stored percentage but cap it based on status
+    return workflow.progressPercentage || 0;
+  }
+
+  /**
+   * Close workflow details (alias for closeWorkflowDetailsModal)
+   */
+  closeWorkflowDetails(): void {
+    this.closeWorkflowDetailsModal();
+  }
+
+  /**
+   * Get workflow status icon class
+   */
+  getWorkflowStatusIcon(status: string): string {
+    const icons: Record<string, string> = {
+      'RUNNING': 'ri-loader-4-line spin',
+      'COMPLETED': 'ri-checkbox-circle-fill',
+      'PENDING': 'ri-time-line',
+      'WAITING_USER': 'ri-pause-circle-line',
+      'FAILED': 'ri-error-warning-fill',
+      'PAUSED': 'ri-pause-line'
+    };
+    return icons[status] || 'ri-question-line';
+  }
+
+  /**
+   * Toggle step output visibility
+   */
+  toggleStepOutput(step: any): void {
+    if (this.expandedStepId === step.id) {
+      this.expandedStepId = null;
+    } else {
+      this.expandedStepId = step.id;
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Pause a running workflow
+   */
+  pauseWorkflow(executionId: number): void {
+    console.log('Pausing workflow:', executionId);
+    this.caseWorkflowService.pauseWorkflow(executionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Success', 'Workflow paused');
+          this.loadUserWorkflows();
+          if (this.selectedWorkflowForDetails?.id === executionId) {
+            this.viewWorkflowDetails(this.selectedWorkflowForDetails);
+          }
+        },
+        error: (error) => {
+          console.error('Failed to pause workflow:', error);
+          this.notificationService.error('Error', 'Failed to pause workflow');
+        }
+      });
+  }
+
+  /**
+   * Cancel a workflow
+   */
+  cancelWorkflow(executionId: number): void {
+    console.log('Cancelling workflow:', executionId);
+    this.caseWorkflowService.cancelWorkflow(executionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Success', 'Workflow cancelled');
+          this.closeWorkflowDetailsModal();
+          this.loadUserWorkflows();
+        },
+        error: (error) => {
+          console.error('Failed to cancel workflow:', error);
+          this.notificationService.error('Error', 'Failed to cancel workflow');
+        }
+      });
   }
 
   /**
@@ -3520,6 +4686,41 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       timestamp: new Date()
     });
 
+    // Handle collection selection
+    if (this.selectedUploadCollectionId === 'new') {
+      // Create new collection first
+      const collectionName = this.newUploadCollectionName.trim() || this.getDefaultCollectionName();
+      this.collectionService.createCollection(collectionName, `Upload collection - ${filesToAnalyze.length} document(s)`)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (collection) => {
+            console.log('📁 Created new collection for upload:', collection.id);
+            this.bulkUploadCollectionId = collection.id;
+            this.proceedWithUploadAnalysis(title, userMessage);
+          },
+          error: (error) => {
+            console.error('Failed to create collection:', error);
+            this.notificationService.error('Collection Error', 'Failed to create collection, uploading without collection');
+            this.bulkUploadCollectionId = null;
+            this.proceedWithUploadAnalysis(title, userMessage);
+          }
+        });
+    } else if (typeof this.selectedUploadCollectionId === 'number') {
+      // Use existing collection
+      this.bulkUploadCollectionId = this.selectedUploadCollectionId;
+      console.log('📁 Using existing collection:', this.bulkUploadCollectionId);
+      this.proceedWithUploadAnalysis(title, userMessage);
+    } else {
+      // No collection selected
+      this.bulkUploadCollectionId = null;
+      this.proceedWithUploadAnalysis(title, userMessage);
+    }
+  }
+
+  /**
+   * Continue with upload analysis after optional collection creation
+   */
+  private proceedWithUploadAnalysis(title: string, userMessage: string): void {
     // Create conversation in backend first
     this.legalResearchService.createGeneralConversation(title, this.selectedResearchMode, 'ANALYZE_DOCUMENT')
       .pipe(takeUntil(this.destroy$))
@@ -3527,19 +4728,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         next: (session) => {
           console.log('Created upload analysis conversation:', session);
 
-          // Persist user message to database
-          this.legalResearchService.addMessageToSession(
-            session.id,
-            this.currentUser.id,
-            'user',
-            userMessage
-          ).pipe(takeUntil(this.destroy$))
-           .subscribe({
-             next: () => console.log('✅ User message persisted to database'),
-             error: (err) => console.error('❌ Failed to persist user message:', err)
-           });
-
-          // Add to conversations list
+          // Add to conversations list immediately (UI update)
           const newConv: Conversation = {
             id: `conv_${session.id}`,
             title: session.sessionName || title,
@@ -3558,8 +4747,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.stateService.addConversation(newConv);
           this.stateService.setActiveConversationId(newConv.id);
 
-          // Now proceed with document analysis - pass session.id for cancellation support
-          this.uploadFiles(session.id);
+          // Persist user message FIRST, then start uploads (prevents deadlocks)
+          this.legalResearchService.addMessageToSession(
+            session.id,
+            this.currentUser.id,
+            'user',
+            userMessage
+          ).pipe(takeUntil(this.destroy$))
+           .subscribe({
+             next: () => {
+               console.log('✅ User message persisted, starting file uploads');
+               // Now proceed with document analysis AFTER user message is saved
+               this.uploadFiles(session.id);
+             },
+             error: (err) => {
+               console.error('❌ Failed to persist user message:', err);
+               // Still proceed with uploads even if message save failed
+               this.uploadFiles(session.id);
+             }
+           });
         },
         error: (error) => {
           console.error('Error creating conversation:', error);
@@ -3619,6 +4825,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private generateDocumentFlow(userPrompt: string): void {
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
 
+    // Determine document type: use selected pill OR auto-detect from prompt
+    let documentType: string;
+    if (this.selectedDocTypePill) {
+      documentType = this.selectedDocTypePill;
+    } else {
+      documentType = this.detectDocumentTypeFromPrompt(userPrompt);
+    }
+
     // Create temporary conversation immediately so stop button can find it
     const tempConvId = `conv_temp_${Date.now()}`;
     const tempConv: Conversation = {
@@ -3631,7 +4845,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       relatedDraftId: undefined,
       taskType: TaskType.GenerateDraft,
       jurisdiction: this.selectedJurisdiction,
-      researchMode: this.selectedResearchMode
+      researchMode: this.selectedResearchMode,
+      documentType: documentType
     };
 
     // Add temp conversation and set as active BEFORE making request
@@ -3639,17 +4854,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setActiveConversationId(tempConvId);
 
     console.log('🔵 Created temporary conversation for cancellation:', tempConvId);
-
-    // Determine document type: use selected pill OR auto-detect from prompt
-    let documentType: string;
-    if (this.selectedDocTypePill) {
-      documentType = this.selectedDocTypePill;
-      console.log('📋 Using selected document type:', documentType);
-    } else {
-      documentType = this.detectDocumentTypeFromPrompt(userPrompt);
-      console.log('🔍 Auto-detected document type from prompt:', documentType);
-      console.log('⚠️ No document type selected - using auto-detection fallback');
-    }
+    console.log('📋 Document type:', documentType, this.selectedDocTypePill ? '(selected)' : '(auto-detected)');
 
     // Prepare draft generation request
     const draftRequest = {
@@ -4957,6 +6162,8 @@ You can:
         return 'Example cases you can summarize:';
       case 'upload':
         return 'Example document analysis tasks:';
+      case 'workflow':
+        return 'Example cases you can summarize:';
       default:
         return 'Examples:';
     }
@@ -4989,6 +6196,12 @@ You can:
           'Review this complaint and identify potential defenses',
           'Extract key dates and obligations from this agreement'
         ];
+      case 'workflow':
+        return [
+          'Summarize recent Supreme Court decisions on intellectual property',
+          'Provide an overview of landmark employment discrimination cases',
+          'Analyze trends in contract interpretation over the past 5 years'
+        ];
       default:
         return [];
     }
@@ -5005,6 +6218,8 @@ You can:
         return ['Key holdings', 'Citations', 'Analysis'];
       case 'upload':
         return ['Document review', 'Risk assessment', 'Recommendations'];
+      case 'workflow':
+        return ['Key holdings', 'Citations', 'Analysis'];
       default:
         return [];
     }

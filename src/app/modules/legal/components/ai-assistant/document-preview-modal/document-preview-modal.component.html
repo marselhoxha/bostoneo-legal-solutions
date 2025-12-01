@@ -1,0 +1,119 @@
+<div class="modal-header">
+  <div class="header-content">
+    <h5 class="modal-title">
+      <i class="ri-file-text-line me-2"></i>
+      {{ document?.fileName || 'Document Preview' }}
+    </h5>
+    <div class="search-info" *ngIf="highlightQuery">
+      <span class="badge bg-primary-subtle text-primary">
+        <i class="ri-search-line me-1"></i>
+        "{{ highlightQuery }}"
+      </span>
+      <span class="match-count" *ngIf="matchCount > 0">{{ matchCount }} matches found</span>
+    </div>
+  </div>
+  <button type="button" class="btn-close" aria-label="Close" (click)="close()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading document content...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-state" *ngIf="error">
+    <i class="ri-error-warning-line text-danger"></i>
+    <p class="text-danger">{{ error }}</p>
+    <button class="btn btn-soft-primary" (click)="loadDocumentContent()">
+      <i class="ri-refresh-line me-1"></i>Retry
+    </button>
+  </div>
+
+  <!-- Content -->
+  <ng-container *ngIf="!isLoading && !error && document">
+    <!-- PDF Viewer for original PDF files -->
+    <div class="pdf-viewer" *ngIf="document.fileUrl && isPdfFile()">
+      <div class="pdf-toolbar">
+        <span class="pdf-info">
+          <i class="ri-file-pdf-line me-1"></i>
+          PDF Preview
+        </span>
+        <button class="btn btn-sm btn-soft-primary" (click)="openInNewTab()">
+          <i class="ri-external-link-line me-1"></i>
+          Open in New Tab
+        </button>
+      </div>
+      <iframe
+        [src]="getSafeFileUrl()"
+        frameborder="0"
+        width="100%"
+        height="650px"
+        (error)="onIframeError()"
+        #pdfIframe>
+      </iframe>
+      <div class="pdf-fallback" *ngIf="iframeError">
+        <i class="ri-error-warning-line"></i>
+        <p>Unable to display PDF inline. Please use the button above to open in a new tab.</p>
+      </div>
+    </div>
+
+    <!-- Extracted Text Content (for non-PDF or when fileUrl is not available) -->
+    <ng-container *ngIf="!document.fileUrl || !isPdfFile()">
+      <!-- Match Navigation -->
+      <div class="match-navigation" *ngIf="matchCount > 0">
+        <button class="btn btn-sm btn-soft-primary"
+                (click)="goToPreviousMatch()"
+                [disabled]="currentMatchIndex === 0">
+          <i class="ri-arrow-up-line"></i> Previous
+        </button>
+        <span class="match-counter">{{ currentMatchIndex + 1 }} / {{ matchCount }}</span>
+        <button class="btn btn-sm btn-soft-primary"
+                (click)="goToNextMatch()"
+                [disabled]="currentMatchIndex >= matchCount - 1">
+          Next <i class="ri-arrow-down-line"></i>
+        </button>
+      </div>
+
+      <!-- Document Content -->
+      <div class="document-content" #contentContainer>
+        <!-- Full content display if no chunks -->
+        <div class="full-content" *ngIf="documentChunks.length === 0 && document.content">
+          <div class="content-text" [innerHTML]="highlightQuery ? highlightSearchTerms(document.content, highlightQuery) : document.content"></div>
+        </div>
+
+        <!-- Chunked content display -->
+        <div class="content-chunk"
+             *ngFor="let chunk of documentChunks; let i = index"
+             [id]="'chunk-' + i"
+             [class.active-chunk]="isActiveChunk(i)"
+             [class.has-match]="chunkHasMatch(i)">
+          <div class="chunk-marker">
+            <span class="chunk-number">§{{ i + 1 }}</span>
+            <span class="section-title" *ngIf="chunk.sectionTitle">{{ chunk.sectionTitle }}</span>
+          </div>
+          <div class="chunk-text" [innerHTML]="getHighlightedChunkContent(chunk)"></div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" *ngIf="documentChunks.length === 0 && !document.content">
+          <i class="ri-file-unknow-line"></i>
+          <p class="text-muted">No content available for this document</p>
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
+</div>
+
+<div class="modal-footer">
+  <button class="btn btn-soft-secondary" (click)="close()">
+    <i class="ri-close-line me-1"></i>Close
+  </button>
+  <button class="btn btn-primary" (click)="openFullAnalysis()">
+    <i class="ri-eye-line me-1"></i>
+    View Full Analysis
+  </button>
+</div>

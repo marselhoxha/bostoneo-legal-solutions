@@ -23,6 +23,7 @@ export interface AiConversationSession {
   documentId?: number;
   relatedDraftId?: string;
   jurisdiction?: string;
+  documentType?: string; // Document type for drafts (e.g., demand_letter, motion_to_compel)
   contextSummary?: string;
   primaryTopic?: string;
   keyEntities?: any;
@@ -714,12 +715,14 @@ export class LegalResearchService {
   createGeneralConversation(
     title: string,
     researchMode: string,
-    taskType: string
+    taskType: string,
+    documentType?: string,
+    jurisdiction?: string
   ): Observable<AiConversationSession> {
     const userId = this.getUserId();
     return this.http.post<any>(
       `${this.conversationApiUrl}`,
-      { userId, title, researchMode, taskType },
+      { userId, title, researchMode, taskType, documentType, jurisdiction },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.session),

@@ -65,6 +65,9 @@ public class AiConversationSession {
     @Column(name = "jurisdiction", length = 100)
     private String jurisdiction;
 
+    @Column(name = "document_type", length = 100)
+    private String documentType;
+
     @Column(name = "context_summary", columnDefinition = "TEXT")
     private String contextSummary;
 

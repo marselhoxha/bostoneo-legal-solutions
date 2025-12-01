@@ -1,0 +1,591 @@
+<div class="collection-viewer">
+  <!-- Top Action Bar -->
+  <div class="viewer-action-bar">
+    <div class="action-bar-left">
+      <button class="btn btn-link back-btn" (click)="onClose()" title="Back">
+        <i class="ri-arrow-left-line"></i>
+      </button>
+      <div class="collection-info" *ngIf="collection">
+        <h5 class="collection-title mb-0">
+          <div class="collection-icon me-2" [style.background]="collection.color || '#405189'">
+            <i [class]="collection.icon || 'ri-folder-line'"></i>
+          </div>
+          {{ collection.name }}
+        </h5>
+        <div class="collection-meta">
+          <span class="meta-item text-muted">
+            <i class="ri-file-list-3-line me-1"></i>
+            {{ collection.documentCount }} documents
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="action-bar-right">
+      <button class="btn btn-primary btn-sm me-2" (click)="uploadDocuments()">
+        <i class="ri-upload-2-line me-1"></i>
+        Upload Documents
+      </button>
+      <div class="btn-group" ngbDropdown>
+        <button ngbDropdownToggle class="btn btn-soft-secondary btn-sm">
+          <i class="ri-more-2-fill"></i>
+        </button>
+        <div ngbDropdownMenu class="dropdown-menu-end">
+          <button ngbDropdownItem>
+            <i class="ri-edit-line me-2"></i>Edit Collection
+          </button>
+          <button ngbDropdownItem class="text-danger">
+            <i class="ri-delete-bin-line me-2"></i>Delete Collection
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading collection...</p>
+  </div>
+
+  <!-- Content -->
+  <div class="viewer-content" *ngIf="!isLoading && collection">
+    <!-- Stats Cards -->
+    <div class="stats-wrapper">
+      <div class="card">
+        <div class="card-body">
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-icon bg-primary-subtle text-primary">
+                <i class="ri-file-list-3-line"></i>
+              </div>
+              <div class="stat-content">
+                <span class="stat-value">{{ collection.documentCount }}</span>
+                <span class="stat-label">Documents</span>
+              </div>
+            </div>
+            <div class="stat-card" *ngFor="let stat of documentTypeStats.slice(0, 3)">
+              <div class="stat-icon" [style.background]="stat.color + '20'" [style.color]="stat.color">
+                <i [class]="getDocTypeIcon(stat.type)"></i>
+              </div>
+              <div class="stat-content">
+                <span class="stat-value">{{ stat.count }}</span>
+                <span class="stat-label">{{ stat.type }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="viewer-tabs">
+      <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" (activeIdChange)="onTabChange($event)" class="nav nav-tabs nav-tabs-custom">
+        <li [ngbNavItem]="'documents'">
+          <a ngbNavLink>
+            <i class="ri-file-list-line me-1"></i>
+            Documents
+          </a>
+          <ng-template ngbNavContent>
+            <div class="tab-content-wrapper">
+              <div class="card">
+                <div class="card-body">
+                  <!-- Search and Filter -->
+                  <div class="filter-bar">
+                    <div class="search-box">
+                      <i class="ri-search-line"></i>
+                      <input type="text"
+                             class="form-control"
+                             [(ngModel)]="searchQuery"
+                             placeholder="Search documents...">
+                    </div>
+                    <div class="filter-controls">
+                      <select class="form-select form-select-sm" [(ngModel)]="filterType">
+                        <option value="all">All Types</option>
+                        <option *ngFor="let type of uniqueDocumentTypes" [value]="type">{{ type }}</option>
+                      </select>
+                      <select class="form-select form-select-sm" [(ngModel)]="sortBy">
+                        <option value="date">Sort by Date</option>
+                        <option value="name">Sort by Name</option>
+                        <option value="type">Sort by Type</option>
+                      </select>
+                      <button class="btn btn-sm"
+                              [ngClass]="compareMode ? 'btn-primary' : 'btn-soft-primary'"
+                              (click)="toggleCompareMode()">
+                        <i class="ri-git-merge-line me-1"></i>
+                        {{ compareMode ? 'Exit Compare' : 'Compare' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Compare Mode Bar -->
+                  <div class="compare-mode-bar" *ngIf="compareMode">
+                    <div class="compare-info">
+                      <i class="ri-information-line text-info me-2"></i>
+                      <span>Select 2 documents to compare. Selected: {{ selectedDocsForCompare.length }}/2</span>
+                    </div>
+                    <div class="compare-actions" *ngIf="selectedDocsForCompare.length === 2">
+                      <div class="compare-aspect-input">
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               [(ngModel)]="compareAspect"
+                               placeholder="Focus on specific aspect (optional)">
+                      </div>
+                      <button class="btn btn-sm btn-success"
+                              (click)="runComparison()"
+                              [disabled]="isComparing">
+                        <span *ngIf="!isComparing">
+                          <i class="ri-git-merge-line me-1"></i>Compare Documents
+                        </span>
+                        <span *ngIf="isComparing">
+                          <span class="spinner-border spinner-border-sm me-1"></span>Comparing...
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Compare Result -->
+                  <div class="compare-result" *ngIf="compareResult">
+                    <div class="compare-result-header">
+                      <h6 class="mb-0">
+                        <i class="ri-git-merge-line me-2 text-primary"></i>
+                        Comparison Result
+                      </h6>
+                      <button class="btn btn-sm btn-light" (click)="compareResult = null">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+                    <div class="compare-result-docs">
+                      <span class="badge bg-primary-subtle text-primary me-2">
+                        {{ selectedDocsForCompare[0]?.fileName }}
+                      </span>
+                      <i class="ri-arrow-left-right-line text-muted"></i>
+                      <span class="badge bg-info-subtle text-info ms-2">
+                        {{ selectedDocsForCompare[1]?.fileName }}
+                      </span>
+                    </div>
+                    <div class="compare-result-content" [innerHTML]="formatAnswer(compareResult.comparison)"></div>
+                    <div class="compare-sources" *ngIf="compareResult.sources?.length">
+                      <div class="sources-header">
+                        <i class="ri-file-list-3-line me-1"></i>
+                        <span>Sources ({{ compareResult.sources.length }})</span>
+                      </div>
+                      <div class="source-cards">
+                        <div class="source-card" *ngFor="let source of compareResult.sources"
+                             (click)="openSourceDocument(source)">
+                          <div class="source-info">
+                            <div class="source-name">{{ source.documentName }}</div>
+                            <div class="source-excerpt">{{ source.excerpt }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Documents Grid -->
+                  <div class="documents-grid">
+                    <div class="document-card"
+                         *ngFor="let doc of filteredDocuments"
+                         [ngClass]="{'selected-for-compare': isSelectedForCompare(doc), 'compare-mode-active': compareMode}"
+                         (click)="compareMode ? toggleDocumentForCompare(doc, $event) : onDocumentClick(doc)">
+                      <!-- Compare Mode Checkbox -->
+                      <div class="compare-checkbox" *ngIf="compareMode">
+                        <div class="form-check">
+                          <input type="checkbox"
+                                 class="form-check-input"
+                                 [checked]="isSelectedForCompare(doc)"
+                                 (click)="$event.stopPropagation()">
+                        </div>
+                      </div>
+                      <div class="doc-icon">
+                        <i [class]="getDocTypeIcon(doc.detectedType || 'Unknown')"></i>
+                      </div>
+                      <div class="doc-content">
+                        <h6 class="doc-name" [title]="doc.fileName">{{ doc.fileName }}</h6>
+                        <div class="doc-meta">
+                          <span class="badge" [ngClass]="'bg-' + getDocTypeColor(doc.detectedType || 'Unknown') + '-subtle text-' + getDocTypeColor(doc.detectedType || 'Unknown')">
+                            {{ doc.detectedType || 'Document' }}
+                          </span>
+                          <span class="text-muted ms-2">
+                            <i class="ri-time-line me-1"></i>{{ formatDate(doc.addedAt) }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="doc-actions" *ngIf="!compareMode">
+                        <button class="btn btn-sm btn-soft-primary" (click)="viewDocumentPreview(doc, $event)" title="View document">
+                          <i class="ri-eye-line"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light" (click)="removeDocument(doc, $event)" title="Remove from collection">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="empty-state" *ngIf="filteredDocuments.length === 0">
+                      <i class="ri-file-search-line empty-icon"></i>
+                      <p *ngIf="searchQuery || filterType !== 'all'">No documents match your filters</p>
+                      <div *ngIf="!searchQuery && filterType === 'all'" class="text-center">
+                        <p class="mb-3">No documents in this collection</p>
+                        <button class="btn btn-primary" (click)="uploadDocuments()">
+                          <i class="ri-upload-2-line me-2"></i>
+                          Upload Documents
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+
+        <li [ngbNavItem]="'timeline'">
+          <a ngbNavLink>
+            <i class="ri-calendar-event-line me-1"></i>
+            Timeline
+          </a>
+          <ng-template ngbNavContent>
+            <div class="tab-content-wrapper">
+              <div class="card">
+                <div class="card-body">
+                  <!-- Loading State -->
+                  <div class="text-center py-4" *ngIf="isLoadingTimeline">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading timeline events...</p>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="timeline-placeholder" *ngIf="!isLoadingTimeline && aggregatedTimeline.length === 0">
+                    <i class="ri-calendar-todo-line"></i>
+                    <h6>No Timeline Events</h6>
+                    <p class="text-muted">No timeline events found in the documents of this collection</p>
+                  </div>
+
+                  <!-- Timeline Events -->
+                  <div class="timeline-events" *ngIf="!isLoadingTimeline && aggregatedTimeline.length > 0">
+                    <div class="timeline-event" *ngFor="let event of aggregatedTimeline">
+                      <div class="event-date">
+                        <span class="date-badge">{{ formatDate(event.eventDate) }}</span>
+                      </div>
+                      <div class="event-content">
+                        <div class="event-header">
+                          <i [class]="getEventTypeIcon(event.eventType)" class="event-icon"></i>
+                          <h6 class="event-title mb-0">{{ event.title }}</h6>
+                          <span class="badge ms-2" [ngClass]="'bg-' + getPriorityClass(event.priority) + '-subtle text-' + getPriorityClass(event.priority)">
+                            {{ event.priority }}
+                          </span>
+                        </div>
+                        <p class="event-description text-muted mb-1" *ngIf="event.description">{{ event.description }}</p>
+                        <div class="event-source">
+                          <small class="text-muted">
+                            <i class="ri-file-text-line me-1"></i>
+                            {{ event.sourceDocument }}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+
+        <li [ngbNavItem]="'search'">
+          <a ngbNavLink>
+            <i class="ri-search-2-line me-1"></i>
+            Search
+          </a>
+          <ng-template ngbNavContent>
+            <div class="tab-content-wrapper">
+              <div class="card">
+                <div class="card-body">
+                  <!-- Search Input -->
+                  <div class="search-container mb-3">
+                    <div class="input-group">
+                      <span class="input-group-text bg-transparent border-end-0">
+                        <i class="ri-search-line text-muted"></i>
+                      </span>
+                      <input type="text"
+                             class="form-control border-start-0"
+                             [(ngModel)]="collectionSearchQuery"
+                             placeholder="Search across all documents in this collection..."
+                             (keyup.enter)="performSearch()">
+                      <button class="btn btn-primary" (click)="performSearch()" [disabled]="isSearching">
+                        <span *ngIf="isSearching" class="spinner-border spinner-border-sm me-1"></span>
+                        Search
+                      </button>
+                      <button class="btn btn-outline-secondary" (click)="clearSearch()" *ngIf="hasSearched">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+                    <small class="text-muted mt-1 d-block">
+                      Ask questions like "What are the key deadlines?" or "Find clauses about indemnification"
+                    </small>
+                  </div>
+
+                  <!-- Search Results -->
+                  <div class="search-results" *ngIf="hasSearched && !isSearching">
+                    <div class="results-header mb-2">
+                      <span class="text-muted">Found {{ searchResults.length }} results</span>
+                    </div>
+
+                    <!-- Results List -->
+                    <div class="result-card" *ngFor="let result of searchResults" (click)="openSearchResult(result)">
+                      <div class="result-header">
+                        <div class="result-source">
+                          <i class="ri-file-text-line me-1"></i>
+                          <span class="source-name">{{ result.sourceDocument }}</span>
+                          <span class="badge ms-2" [ngClass]="'bg-' + getDocTypeColor(result.sourceDocumentType || 'Unknown') + '-subtle text-' + getDocTypeColor(result.sourceDocumentType || 'Unknown')">
+                            {{ result.sourceDocumentType || 'Document' }}
+                          </span>
+                        </div>
+                        <div class="result-score">
+                          <span class="badge" [ngClass]="'bg-' + getScoreClass(result.score) + '-subtle text-' + getScoreClass(result.score)">
+                            {{ getScorePercentage(result.score) }}% match
+                          </span>
+                        </div>
+                      </div>
+                      <div class="result-section" *ngIf="result.sectionTitle">
+                        <small class="text-muted">
+                          <i class="ri-bookmark-line me-1"></i>{{ result.sectionTitle }}
+                        </small>
+                      </div>
+                      <div class="result-content" [innerHTML]="sanitizeHtml(result.highlightedContent)"></div>
+                    </div>
+
+                    <!-- No Results -->
+                    <div class="empty-state" *ngIf="searchResults.length === 0">
+                      <i class="ri-search-line"></i>
+                      <h6>No Results Found</h6>
+                      <p class="text-muted">Try different keywords or a broader search query</p>
+                    </div>
+                  </div>
+
+                  <!-- Initial State -->
+                  <div class="search-placeholder" *ngIf="!hasSearched">
+                    <i class="ri-search-eye-line"></i>
+                    <h6>Search Across Documents</h6>
+                    <p class="text-muted">Search for specific information across all documents in this collection</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+
+        <li [ngbNavItem]="'actions'">
+          <a ngbNavLink>
+            <i class="ri-checkbox-multiple-line me-1"></i>
+            Action Items
+          </a>
+          <ng-template ngbNavContent>
+            <div class="tab-content-wrapper">
+              <div class="card">
+                <div class="card-body">
+                  <!-- Loading State -->
+                  <div class="text-center py-4" *ngIf="isLoadingActionItems">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading action items...</p>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="actions-placeholder" *ngIf="!isLoadingActionItems && aggregatedActionItems.length === 0">
+                    <i class="ri-task-line"></i>
+                    <h6>No Action Items</h6>
+                    <p class="text-muted">No action items found in the documents of this collection</p>
+                  </div>
+
+                  <!-- Action Items List -->
+                  <div class="action-items-list" *ngIf="!isLoadingActionItems && aggregatedActionItems.length > 0">
+                    <div class="action-item-card" *ngFor="let item of aggregatedActionItems">
+                      <div class="item-status">
+                        <span class="badge" [ngClass]="'bg-' + getStatusClass(item.status) + '-subtle text-' + getStatusClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </div>
+                      <div class="item-content">
+                        <p class="item-description mb-1">{{ item.description }}</p>
+                        <div class="item-meta">
+                          <span class="badge me-2" [ngClass]="'bg-' + getPriorityClass(item.priority) + '-subtle text-' + getPriorityClass(item.priority)">
+                            {{ item.priority }}
+                          </span>
+                          <span class="deadline text-muted me-2" *ngIf="item.deadline">
+                            <i class="ri-calendar-line me-1"></i>{{ formatDate(item.deadline) }}
+                          </span>
+                          <span class="source text-muted">
+                            <i class="ri-file-text-line me-1"></i>{{ item.sourceDocument }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+
+        <li [ngbNavItem]="'ask'">
+          <a ngbNavLink>
+            <i class="ri-questionnaire-line me-1"></i>
+            Ask AI
+          </a>
+          <ng-template ngbNavContent>
+            <div class="tab-content-wrapper ask-ai-tab">
+              <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                  <div class="qa-container">
+                    <!-- Suggested Questions (show when no messages) -->
+                    <div class="suggested-questions" *ngIf="qaMessages.length === 0">
+                      <div class="suggestions-header">
+                        <i class="ri-lightbulb-line text-warning"></i>
+                        <h6 class="mb-0">Ask questions about your documents</h6>
+                      </div>
+                      <p class="text-muted mb-3">Click a suggestion or type your own question</p>
+                      <div class="suggestion-chips">
+                        <button class="suggestion-chip"
+                                *ngFor="let question of suggestedQuestions"
+                                (click)="askSuggestedQuestion(question)">
+                          {{ question }}
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div class="qa-messages" *ngIf="qaMessages.length > 0">
+                      <div class="qa-message" *ngFor="let message of qaMessages"
+                           [ngClass]="{'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant'}">
+                        <div class="message-avatar">
+                          <i [class]="message.role === 'user' ? 'ri-user-line' : 'ri-robot-line'"></i>
+                        </div>
+                        <div class="message-content">
+                          <div class="message-header">
+                            <span class="message-role">{{ message.role === 'user' ? 'You' : 'AI Assistant' }}</span>
+                            <span class="message-time">{{ message.timestamp | date:'shortTime' }}</span>
+                          </div>
+                          <div class="message-text" *ngIf="message.role === 'user'">{{ message.content }}</div>
+                          <div class="message-text" *ngIf="message.role === 'assistant'" [innerHTML]="formatAnswer(message.content)"></div>
+
+                          <!-- Source Citations -->
+                          <div class="message-sources" *ngIf="message.sources && message.sources.length > 0">
+                            <div class="sources-header">
+                              <i class="ri-file-list-3-line me-1"></i>
+                              <span>Sources ({{ message.sources.length }})</span>
+                            </div>
+                            <div class="source-cards">
+                              <div class="source-card" *ngFor="let source of message.sources; let i = index"
+                                   (click)="openSourceDocument(source)">
+                                <div class="source-number">[{{ i + 1 }}]</div>
+                                <div class="source-info">
+                                  <div class="source-name">{{ source.documentName }}</div>
+                                  <div class="source-section" *ngIf="source.sectionTitle">{{ source.sectionTitle }}</div>
+                                  <div class="source-excerpt">{{ source.excerpt }}</div>
+                                </div>
+                                <div class="source-score">
+                                  <span class="badge" [ngClass]="'bg-' + getScoreClass(source.relevanceScore) + '-subtle text-' + getScoreClass(source.relevanceScore)">
+                                    {{ getScorePercentage(source.relevanceScore) }}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Processing time -->
+                          <div class="processing-time" *ngIf="message.processingTimeMs">
+                            <small class="text-muted">
+                              <i class="ri-time-line me-1"></i>
+                              Answered in {{ (message.processingTimeMs / 1000).toFixed(1) }}s
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Loading indicator -->
+                      <div class="qa-message assistant-message" *ngIf="isAskingQuestion">
+                        <div class="message-avatar">
+                          <i class="ri-robot-line"></i>
+                        </div>
+                        <div class="message-content">
+                          <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                          <small class="text-muted">Analyzing documents...</small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="qa-input-area">
+                      <!-- Saved Queries Dropdown -->
+                      <div class="saved-queries-bar" *ngIf="savedQueries.length > 0">
+                        <div class="btn-group" ngbDropdown>
+                          <button ngbDropdownToggle class="btn btn-sm btn-soft-info">
+                            <i class="ri-bookmark-line me-1"></i>Saved Queries ({{ savedQueries.length }})
+                          </button>
+                          <div ngbDropdownMenu class="dropdown-menu-end">
+                            <button ngbDropdownItem
+                                    *ngFor="let saved of savedQueries"
+                                    (click)="loadSavedQuery(saved)"
+                                    class="d-flex justify-content-between align-items-center">
+                              <span>{{ saved.name }}</span>
+                              <i class="ri-close-line text-danger ms-2"
+                                 (click)="deleteSavedQuery(saved.id, $event)"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               [(ngModel)]="qaQuery"
+                               placeholder="Ask a question about your documents..."
+                               (keyup.enter)="askQuestion()"
+                               [disabled]="isAskingQuestion">
+                        <button class="btn btn-soft-secondary"
+                                (click)="saveCurrentQuery()"
+                                [disabled]="!qaQuery.trim()"
+                                title="Save this query">
+                          <i class="ri-bookmark-line"></i>
+                        </button>
+                        <button class="btn btn-primary" (click)="askQuestion()" [disabled]="!qaQuery.trim() || isAskingQuestion">
+                          <i class="ri-send-plane-fill" *ngIf="!isAskingQuestion"></i>
+                          <span class="spinner-border spinner-border-sm" *ngIf="isAskingQuestion"></span>
+                        </button>
+                      </div>
+                      <div class="input-actions">
+                        <button class="btn btn-sm btn-soft-success"
+                                (click)="exportToWord()"
+                                [disabled]="qaMessages.length === 0"
+                                title="Export Q&A to Word">
+                          <i class="ri-file-word-line me-1"></i>Export to Word
+                        </button>
+                        <button class="btn btn-sm btn-soft-secondary"
+                                (click)="clearQAChat()"
+                                *ngIf="qaMessages.length > 0">
+                          <i class="ri-delete-bin-line me-1"></i>Clear Chat
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div [ngbNavOutlet]="nav" class="nav-content"></div>
+  </div>
+</div>

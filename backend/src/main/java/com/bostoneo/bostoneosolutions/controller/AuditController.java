@@ -3,8 +3,10 @@ package com.bostoneo.bostoneosolutions.controller;
 import com.bostoneo.bostoneosolutions.dto.AuditActivityResponseDTO;
 import com.bostoneo.bostoneosolutions.dto.AuditLogDTO;
 import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.AuditLog;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import com.bostoneo.bostoneosolutions.service.SystemAuditService;
 import lombok.RequiredArgsConstructor;
@@ -238,7 +240,15 @@ public class AuditController {
     @com.bostoneo.bostoneosolutions.annotation.AuditLog(action = "CREATE", entityType = "SYSTEM", description = "Test audit log entry created")
     public ResponseEntity<HttpResponse> testAuditLog(Authentication authentication) {
         try {
-            String username = authentication != null ? authentication.getName() : "system";
+            String username = "system";
+            if (authentication != null) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    username = ((UserDTO) principal).getEmail();
+                } else if (principal instanceof UserPrincipal) {
+                    username = ((UserPrincipal) principal).getUser().getEmail();
+                }
+            }
             
             // Create a test audit entry directly
             auditService.logActivity(

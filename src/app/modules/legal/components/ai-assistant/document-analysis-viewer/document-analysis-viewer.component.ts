@@ -12,6 +12,7 @@ import { DocumentAnalyzerService, DocumentAnalysisResult, AnalysisMessage } from
 import { NotificationService } from '../../../services/notification.service';
 import { ActionItemService } from '../../../services/action-item.service';
 import { AiWorkspaceStateService } from '../../../services/ai-workspace-state.service';
+import { DocumentCollectionService, DocumentRelationship, RelationshipType } from '../../../services/document-collection.service';
 
 export interface AnalyzedDocumentData {
   id: string;
@@ -102,6 +103,7 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     riskAssessment: boolean;
     obligations: boolean;
     askAi: boolean;
+    related: boolean;
   } = {
     overview: true,
     actions: true,
@@ -110,8 +112,38 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     keyTerms: false,
     riskAssessment: false,
     obligations: false,
-    askAi: true
+    askAi: true,
+    related: true
   };
+
+  // Document relationships state
+  documentRelationships: DocumentRelationship[] = [];
+  relationshipTypes: RelationshipType[] = [];
+  loadingRelationships = false;
+  showLinkDocumentModal = false;
+
+  // Link document modal state
+  linkDocumentForm = {
+    relationshipType: '',
+    targetAnalysisId: 0,
+    description: ''
+  };
+  linkDocumentSearchQuery = '';
+  linkDocumentSearchResults: any[] = [];
+  isSearchingDocuments = false;
+  isCreatingLink = false;
+  allAnalysisHistory: any[] = [];
+
+  // Add to Collection modal state
+  showAddToCollectionModal = false;
+  isLoadingCollections = false;
+  isAddingToCollection = false;
+  availableCollections: any[] = [];
+  documentCollections: any[] = [];
+  selectedCollectionId: number | null = null;
+  createNewCollectionMode = false;
+  newCollectionName = '';
+  newCollectionDescription = '';
 
   // Contract-specific parsed sections
   contractSections: {
@@ -131,6 +163,7 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
     private notificationService: NotificationService,
     private actionItemService: ActionItemService,
     private stateService: AiWorkspaceStateService,
+    private documentCollectionService: DocumentCollectionService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -181,8 +214,301 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
       this.loadAskAiMessages();
     }
 
+    // Load document relationships
+    if (this.document?.databaseId) {
+      this.loadRelationships();
+      this.loadRelationshipTypes();
+    }
+
     // Extract parties info from metadata
     this.extractPartiesInfo();
+  }
+
+  /**
+   * Load document relationships
+   */
+  private loadRelationships(): void {
+    this.loadingRelationships = true;
+    this.documentCollectionService.getDocumentRelationships(this.document.databaseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.documentRelationships = response.relationships;
+          this.loadingRelationships = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to load relationships:', err);
+          this.loadingRelationships = false;
+        }
+      });
+  }
+
+  /**
+   * Load available relationship types
+   */
+  private loadRelationshipTypes(): void {
+    this.documentCollectionService.getRelationshipTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (types) => {
+          this.relationshipTypes = types;
+        },
+        error: (err) => {
+          console.error('Failed to load relationship types:', err);
+        }
+      });
+  }
+
+  /**
+   * Get relationship type label
+   */
+  getRelationshipLabel(type: string): string {
+    const found = this.relationshipTypes.find(t => t.id === type);
+    return found?.label || type;
+  }
+
+  /**
+   * Delete a relationship
+   */
+  deleteRelationship(relationshipId: number): void {
+    this.documentCollectionService.deleteRelationship(this.document.databaseId, relationshipId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.documentRelationships = this.documentRelationships.filter(r => r.id !== relationshipId);
+          this.notificationService.success('Deleted', 'Relationship removed');
+        },
+        error: (err) => {
+          console.error('Failed to delete relationship:', err);
+          this.notificationService.error('Error', 'Failed to delete relationship');
+        }
+      });
+  }
+
+  /**
+   * Open the link document modal
+   */
+  openLinkDocumentModal(): void {
+    this.showLinkDocumentModal = true;
+    this.resetLinkDocumentForm();
+    // Load analysis history for search
+    this.loadAnalysisHistoryForSearch();
+  }
+
+  /**
+   * Close the link document modal
+   */
+  closeLinkDocumentModal(): void {
+    this.showLinkDocumentModal = false;
+    this.resetLinkDocumentForm();
+  }
+
+  /**
+   * Reset the link document form
+   */
+  private resetLinkDocumentForm(): void {
+    this.linkDocumentForm = {
+      relationshipType: '',
+      targetAnalysisId: 0,
+      description: ''
+    };
+    this.linkDocumentSearchQuery = '';
+    this.linkDocumentSearchResults = [];
+  }
+
+  /**
+   * Load analysis history for document search
+   */
+  private loadAnalysisHistoryForSearch(): void {
+    this.documentAnalyzerService.getAnalysisHistory()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (analyses) => {
+          // Exclude current document from search results
+          this.allAnalysisHistory = analyses.filter(a => a.id !== this.document.databaseId);
+        },
+        error: (err) => {
+          console.error('Failed to load analysis history:', err);
+        }
+      });
+  }
+
+  /**
+   * Search documents for linking
+   */
+  searchDocumentsForLink(): void {
+    const query = this.linkDocumentSearchQuery.toLowerCase().trim();
+    if (!query) {
+      this.linkDocumentSearchResults = [];
+      return;
+    }
+
+    this.linkDocumentSearchResults = this.allAnalysisHistory.filter(doc =>
+      doc.fileName?.toLowerCase().includes(query) ||
+      doc.detectedType?.toLowerCase().includes(query)
+    ).slice(0, 10); // Limit to 10 results
+  }
+
+  /**
+   * Select a document to link
+   */
+  selectDocumentToLink(doc: any): void {
+    this.linkDocumentForm.targetAnalysisId = doc.id;
+  }
+
+  /**
+   * Create the document link
+   */
+  createDocumentLink(): void {
+    if (!this.linkDocumentForm.relationshipType || !this.linkDocumentForm.targetAnalysisId) {
+      return;
+    }
+
+    this.isCreatingLink = true;
+    this.documentCollectionService.createRelationship(
+      this.document.databaseId,
+      this.linkDocumentForm.targetAnalysisId,
+      this.linkDocumentForm.relationshipType,
+      this.linkDocumentForm.description || undefined
+    ).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Linked', 'Document relationship created');
+          this.closeLinkDocumentModal();
+          this.loadRelationships(); // Refresh relationships list
+        },
+        error: (err) => {
+          console.error('Failed to create relationship:', err);
+          this.notificationService.error('Error', 'Failed to create relationship');
+          this.isCreatingLink = false;
+        }
+      });
+  }
+
+  // ============================================
+  // Add to Collection Methods
+  // ============================================
+
+  /**
+   * Open the Add to Collection modal
+   */
+  openAddToCollectionModal(): void {
+    this.showAddToCollectionModal = true;
+    this.resetAddToCollectionForm();
+    this.loadCollectionsForModal();
+  }
+
+  /**
+   * Close the Add to Collection modal
+   */
+  closeAddToCollectionModal(): void {
+    this.showAddToCollectionModal = false;
+    this.resetAddToCollectionForm();
+  }
+
+  /**
+   * Reset the Add to Collection form
+   */
+  private resetAddToCollectionForm(): void {
+    this.selectedCollectionId = null;
+    this.createNewCollectionMode = false;
+    this.newCollectionName = '';
+    this.newCollectionDescription = '';
+  }
+
+  /**
+   * Load collections for the modal
+   */
+  private loadCollectionsForModal(): void {
+    this.isLoadingCollections = true;
+
+    // Load all collections and collections containing this document
+    this.documentCollectionService.getCollections()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (collections) => {
+          // Also load which collections this document is in
+          this.documentCollectionService.getCollectionsForDocument(this.document.databaseId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (docCollections) => {
+                this.documentCollections = docCollections;
+                // Filter out collections the document is already in
+                const docCollectionIds = docCollections.map(c => c.id);
+                this.availableCollections = collections.filter(c => !docCollectionIds.includes(c.id));
+                this.isLoadingCollections = false;
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.availableCollections = collections;
+                this.documentCollections = [];
+                this.isLoadingCollections = false;
+                this.cdr.detectChanges();
+              }
+            });
+        },
+        error: (err) => {
+          console.error('Failed to load collections:', err);
+          this.isLoadingCollections = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Select a collection
+   */
+  selectCollection(collectionId: number): void {
+    this.selectedCollectionId = collectionId;
+    this.createNewCollectionMode = false;
+  }
+
+  /**
+   * Add document to collection
+   */
+  addToCollection(): void {
+    this.isAddingToCollection = true;
+
+    if (this.createNewCollectionMode && this.newCollectionName) {
+      // Create new collection first, then add document
+      this.documentCollectionService.createCollection(
+        this.newCollectionName,
+        this.newCollectionDescription || undefined
+      ).pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (newCollection) => {
+            this.addDocumentToCollectionById(newCollection.id);
+          },
+          error: (err) => {
+            console.error('Failed to create collection:', err);
+            this.notificationService.error('Error', 'Failed to create collection');
+            this.isAddingToCollection = false;
+          }
+        });
+    } else if (this.selectedCollectionId) {
+      this.addDocumentToCollectionById(this.selectedCollectionId);
+    }
+  }
+
+  /**
+   * Add document to collection by ID
+   */
+  private addDocumentToCollectionById(collectionId: number): void {
+    this.documentCollectionService.addDocumentToCollection(collectionId, this.document.databaseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Added', 'Document added to collection');
+          this.closeAddToCollectionModal();
+          this.isAddingToCollection = false;
+        },
+        error: (err) => {
+          console.error('Failed to add to collection:', err);
+          this.notificationService.error('Error', 'Failed to add document to collection');
+          this.isAddingToCollection = false;
+        }
+      });
   }
 
   /**
@@ -245,7 +571,8 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
       keyTerms: false,
       riskAssessment: false,
       obligations: false,
-      askAi: true
+      askAi: true,
+      related: true
     };
 
     switch (this.documentCategory) {

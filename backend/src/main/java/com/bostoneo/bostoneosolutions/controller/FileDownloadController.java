@@ -1,8 +1,11 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +19,11 @@ import java.nio.file.Paths;
 @RestController
 @RequestMapping("/api/files")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@Slf4j
 public class FileDownloadController {
+
+    @Value("${app.documents.output-path:uploads/documents}")
+    private String documentsOutputPath;
 
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadFile(@RequestParam String path) {
@@ -51,19 +58,27 @@ public class FileDownloadController {
                     .body(resource);
 
         } catch (IOException e) {
+            log.error("Error downloading file: {}", path, e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/serve/{filename:.+}")
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
+    public ResponseEntity<?> serveFile(@PathVariable String filename) {
+        log.info("Serving file: {}", filename);
+
         try {
-            // Default to documents directory
-            Path filePath = Paths.get("backend/uploads/documents", filename);
+            // Use configured output path for consistency with AIDocumentAnalysisService
+            Path filePath = Paths.get(documentsOutputPath, filename);
+            log.info("Looking for file at: {}", filePath.toAbsolutePath());
 
             File file = filePath.toFile();
             if (!file.exists() || !file.isFile()) {
-                return ResponseEntity.notFound().build();
+                log.warn("File not found: {}", filePath.toAbsolutePath());
+                // Return a proper JSON error instead of letting global handler catch it
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": \"File not found\", \"filename\": \"" + filename + "\"}");
             }
 
             Resource resource = new FileSystemResource(file);
@@ -73,14 +88,24 @@ public class FileDownloadController {
             if (contentType == null) {
                 contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
             }
+            log.info("Serving file {} with content-type: {}", filename, contentType);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    // Allow iframe embedding from localhost:4200
+                    .header("X-Frame-Options", "ALLOW-FROM http://localhost:4200")
+                    .header("Content-Security-Policy", "frame-ancestors 'self' http://localhost:4200")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4200")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
                     .body(resource);
 
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
+            log.error("Error serving file: {}", filename, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Error reading file\"}");
         }
     }
 }

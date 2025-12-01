@@ -2,7 +2,8 @@ export enum ConversationType {
   Question = 'question',
   Draft = 'draft',
   Summarize = 'summarize',
-  Upload = 'upload'
+  Upload = 'upload',
+  Workflow = 'workflow'
 }
 
 export enum TaskType {

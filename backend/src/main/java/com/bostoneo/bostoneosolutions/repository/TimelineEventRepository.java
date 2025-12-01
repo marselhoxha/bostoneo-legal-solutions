@@ -10,5 +10,6 @@ import java.util.List;
 public interface TimelineEventRepository extends JpaRepository<TimelineEvent, Long> {
     List<TimelineEvent> findByAnalysisIdOrderByEventDateAsc(Long analysisId);
     List<TimelineEvent> findByAnalysisIdAndEventTypeOrderByEventDateAsc(Long analysisId, String eventType);
+    List<TimelineEvent> findByAnalysisIdInOrderByEventDateAsc(List<Long> analysisIds);
     void deleteByAnalysisId(Long analysisId);
 }

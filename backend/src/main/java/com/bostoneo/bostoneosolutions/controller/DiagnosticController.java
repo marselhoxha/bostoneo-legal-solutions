@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,14 @@ public class DiagnosticController {
         Map<String, Object> result = new HashMap<>();
         
         if (authentication != null && authentication.isAuthenticated()) {
-            result.put("username", authentication.getName());
+            String username = "unknown";
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDTO) {
+                username = ((UserDTO) principal).getEmail();
+            } else if (principal instanceof UserPrincipal) {
+                username = ((UserPrincipal) principal).getUser().getEmail();
+            }
+            result.put("username", username);
             result.put("isAuthenticated", authentication.isAuthenticated());
             
             // Get all authorities
@@ -50,13 +58,13 @@ public class DiagnosticController {
             result.put("hasInvoiceView", authorities.contains("INVOICE:VIEW"));
             result.put("hasInvoiceRead", authorities.contains("INVOICE:READ"));
             
-            // Check if it's a UserPrincipal
-            if (authentication.getPrincipal() instanceof UserPrincipal) {
-                UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-                result.put("roles", principal.getRoles().stream()
+            // Check if it's a UserPrincipal for roles/permissions
+            if (principal instanceof UserPrincipal) {
+                UserPrincipal userPrincipal = (UserPrincipal) principal;
+                result.put("roles", userPrincipal.getRoles().stream()
                         .map(role -> role.getName())
                         .collect(Collectors.toList()));
-                result.put("permissions", principal.getPermissions().stream()
+                result.put("permissions", userPrincipal.getPermissions().stream()
                         .map(perm -> perm.getName())
                         .collect(Collectors.toList()));
             }

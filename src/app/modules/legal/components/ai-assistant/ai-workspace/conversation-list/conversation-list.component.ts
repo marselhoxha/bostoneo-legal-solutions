@@ -88,7 +88,8 @@ export class ConversationListComponent {
       [ConversationType.Question]: 'ri-question-line',
       [ConversationType.Draft]: 'ri-file-edit-line',
       [ConversationType.Summarize]: 'ri-file-list-3-line',
-      [ConversationType.Upload]: 'ri-file-upload-line'
+      [ConversationType.Upload]: 'ri-file-upload-line',
+      [ConversationType.Workflow]: 'ri-flow-chart'
     };
     return icons[type] || 'ri-chat-3-line';
   }

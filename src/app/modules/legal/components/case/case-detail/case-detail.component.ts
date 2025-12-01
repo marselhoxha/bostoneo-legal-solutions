@@ -39,6 +39,7 @@ import { NotificationService } from '../../../../../service/notification.service
 import { AuditLogService } from '../../../../../core/services/audit-log.service';
 import { PushNotificationService } from '../../../../../core/services/push-notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
+import { DocumentAnalyzerService, CaseAnalysisDocument } from '../../../services/document-analyzer.service';
 
 @Component({
   selector: 'app-case-detail',
@@ -107,6 +108,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoadingTasks = false;
   availableUsers: any[] = [];
 
+  // AI Documents properties
+  aiDocuments: CaseAnalysisDocument[] = [];
+  isLoadingAIDocuments = false;
+  aiDocumentsLoaded = false;
+  aiDocumentsCount = 0;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -127,7 +134,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private auditLogService: AuditLogService,
     private pushNotificationService: PushNotificationService,
     private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationTrigger: NotificationTriggerService,
+    private documentAnalyzerService: DocumentAnalyzerService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -2911,5 +2919,66 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     return null;
+  }
+
+  // ============================================
+  // AI Documents Methods
+  // ============================================
+
+  /**
+   * Handle AI Documents tab click - load on first visit
+   */
+  onAIDocumentsTabClick(): void {
+    if (!this.aiDocumentsLoaded && this.caseId) {
+      this.loadAIDocuments();
+    }
+  }
+
+  /**
+   * Load AI-analyzed documents for this case
+   */
+  loadAIDocuments(): void {
+    if (!this.caseId) return;
+
+    this.isLoadingAIDocuments = true;
+    this.documentAnalyzerService.getAnalysesByCase(parseInt(this.caseId, 10))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (documents) => {
+          this.aiDocuments = documents;
+          this.aiDocumentsCount = documents.length;
+          this.aiDocumentsLoaded = true;
+          this.isLoadingAIDocuments = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load AI documents:', error);
+          this.isLoadingAIDocuments = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Open AI document in the workspace
+   */
+  openAIDocument(doc: CaseAnalysisDocument): void {
+    this.router.navigate(['/legal/ai-assistant/ai-workspace'], {
+      queryParams: { analysisId: doc.id }
+    });
+  }
+
+  /**
+   * Get human-readable label for analysis context
+   */
+  getContextLabel(context: string): string {
+    const labels: { [key: string]: string } = {
+      'respond': 'Response',
+      'negotiate': 'Negotiation',
+      'client_review': 'Client Review',
+      'due_diligence': 'Due Diligence',
+      'general': 'General'
+    };
+    return labels[context] || context;
   }
 }

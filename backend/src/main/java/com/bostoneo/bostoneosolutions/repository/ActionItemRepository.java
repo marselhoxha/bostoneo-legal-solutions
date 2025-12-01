@@ -10,5 +10,6 @@ import java.util.List;
 public interface ActionItemRepository extends JpaRepository<ActionItem, Long> {
     List<ActionItem> findByAnalysisIdOrderByDeadlineAsc(Long analysisId);
     List<ActionItem> findByAnalysisIdAndStatusOrderByDeadlineAsc(Long analysisId, String status);
+    List<ActionItem> findByAnalysisIdInOrderByDeadlineAsc(List<Long> analysisIds);
     void deleteByAnalysisId(Long analysisId);
 }

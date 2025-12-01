@@ -28,10 +28,10 @@ public class AIPDFFormService {
     private final AIPDFFormFieldRepository pdfFormFieldRepository;
     private final AILegalTemplateRepository templateRepository;
 
-    @Value("${app.pdf-forms.storage-path:backend/uploads/pdf-forms}")
+    @Value("${app.pdf-forms.storage-path:uploads/pdf-forms}")
     private String pdfStoragePath;
 
-    @Value("${app.documents.output-path:backend/uploads/documents}")
+    @Value("${app.documents.output-path:uploads/documents}")
     private String documentsOutputPath;
 
     public AIPDFFormService(AIPDFFormFieldRepository pdfFormFieldRepository,
