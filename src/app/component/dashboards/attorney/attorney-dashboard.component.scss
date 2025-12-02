@@ -16,6 +16,17 @@
   height: calc(100% - 24px);
 }
 
+// Activity & Urgent Items cards - consistent height
+.activity-urgent-card {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+
+  .card-body {
+    flex: 1;
+  }
+}
+
 // CRM Widget styling
 .crm-widget {
   .col {
@@ -422,6 +433,136 @@
   }
 }
 
+// Minimal Case Cards - Velzon Theme
+.case-card-minimal {
+  background-color: var(--vz-light);
+  border: 1px solid var(--vz-border-color);
+  transition: all 0.25s ease;
+  min-height: 180px;
+
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.08);
+    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(var(--vz-primary-rgb), 0.12);
+
+    h5 {
+      color: var(--vz-primary) !important;
+    }
+
+    .case-card-arrow {
+      background-color: var(--vz-primary);
+      color: #fff;
+    }
+
+    .avatar-title {
+      box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+    }
+  }
+
+  .avatar-md {
+    width: 48px;
+    height: 48px;
+
+    .avatar-title {
+      width: 100%;
+      height: 100%;
+      font-size: 16px;
+    }
+  }
+
+  .case-card-arrow {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--vz-light);
+    border: 1px solid var(--vz-border-color);
+    color: var(--vz-secondary-color);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--vz-primary);
+      border-color: var(--vz-primary);
+      color: #fff;
+    }
+  }
+
+  // Add case variant
+  &.case-card-add {
+    border: 2px dashed var(--vz-border-color);
+    background-color: transparent;
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.04);
+      border-color: var(--vz-primary);
+
+      h6, p {
+        color: var(--vz-primary) !important;
+      }
+
+      .avatar-title {
+        background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+        color: var(--vz-primary) !important;
+      }
+    }
+  }
+}
+
+// Case Badges (pill style) - Velzon Theme
+.case-badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+.case-badge-muted {
+  background-color: rgba(var(--vz-secondary-rgb), 0.12);
+  color: var(--vz-secondary);
+}
+
+.case-badge-light {
+  background-color: rgba(var(--vz-secondary-rgb), 0.08);
+  color: var(--vz-secondary-color);
+}
+
+.case-badge-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--vz-info);
+}
+
+.case-badge-urgent {
+  background-color: rgba(var(--vz-danger-rgb), 0.1);
+  color: var(--vz-danger);
+}
+
+.case-badge-dark {
+  background-color: rgba(var(--vz-dark-rgb), 0.08);
+  color: var(--vz-body-color);
+}
+
+.case-badge-success {
+  background-color: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--vz-success);
+}
+
+.case-badge-warning {
+  background-color: rgba(var(--vz-warning-rgb), 0.1);
+  color: var(--vz-warning);
+}
+
+.case-badge-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+}
+
 // Dark mode
 [data-bs-theme="dark"] {
   .crm-widget {
@@ -464,6 +605,30 @@
 
       .activity-icon {
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+
+  .case-card-minimal {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: var(--vz-border-color);
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.12);
+      border-color: rgba(var(--vz-primary-rgb), 0.4);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .case-card-arrow {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: var(--vz-border-color);
+    }
+
+    &.case-card-add {
+      border-color: var(--vz-border-color);
+
+      &:hover {
+        background-color: rgba(var(--vz-primary-rgb), 0.1);
       }
     }
   }

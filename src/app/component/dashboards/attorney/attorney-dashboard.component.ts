@@ -132,6 +132,11 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   // Urgent items
   urgentItems: UrgentItem[] = [];
 
+  // Expand/collapse states
+  showAllActivities = false;
+  showAllUrgentItems = false;
+  showAllCases = false;
+
   currentDate = new Date();
   private destroy$ = new Subject<void>();
 
@@ -185,6 +190,38 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
         client: 'John Doe',
         caseNumber: '#2025-CV-5678',
         route: '/legal/messages'
+      },
+      {
+        id: 4,
+        title: 'Discovery Deadline',
+        description: 'Interrogatories due for Williams case',
+        type: 'deadline',
+        priority: 'high',
+        dueLabel: '5 days',
+        caseNumber: '#2025-CV-9012',
+        caseId: 3,
+        route: '/legal/cases/3'
+      },
+      {
+        id: 5,
+        title: 'Invoice Overdue',
+        description: 'Payment pending from Tech Solutions',
+        type: 'billing',
+        priority: 'medium',
+        dueLabel: '10 days',
+        client: 'Tech Solutions Inc.',
+        route: '/billing'
+      },
+      {
+        id: 6,
+        title: 'Hearing Preparation',
+        description: 'Prepare exhibits for Davis hearing',
+        type: 'task',
+        priority: 'high',
+        dueLabel: 'Tomorrow',
+        caseNumber: '#2025-CV-3456',
+        caseId: 4,
+        route: '/legal/cases/4'
       }
     ];
   }
@@ -270,7 +307,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
         ).length || cases.length;
 
         // Map to dashboard format
-        this.recentCases = cases.slice(0, 5).map((c: any) => ({
+        this.recentCases = cases.slice(0, 10).map((c: any) => ({
           id: c.id,
           caseNumber: c.caseNumber || `#${c.id}`,
           title: c.title || c.caseName || 'Untitled Case',
@@ -444,6 +481,30 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
         color: 'secondary',
         displayType: 'View',
         route: '/legal/documents'
+      },
+      {
+        id: 6,
+        type: 'filing',
+        title: 'Case Created',
+        description: 'New case opened for Martinez family',
+        timestamp: new Date(Date.now() - 14400000), // 4 hrs ago
+        caseNumber: '#2025-CV-7890',
+        icon: 'ri-folder-add-line',
+        color: 'success',
+        displayType: 'New',
+        route: '/legal/cases/5'
+      },
+      {
+        id: 7,
+        type: 'communication',
+        title: 'Email Sent',
+        description: 'Sent settlement proposal to opposing counsel',
+        timestamp: new Date(Date.now() - 18000000), // 5 hrs ago
+        caseNumber: '#2025-CV-1234',
+        icon: 'ri-mail-send-line',
+        color: 'info',
+        displayType: 'Email',
+        route: '/legal/cases/1'
       }
     ];
   }
@@ -600,6 +661,30 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     this.loadDashboardData();
   }
 
+  toggleShowAllActivities(): void {
+    this.showAllActivities = !this.showAllActivities;
+  }
+
+  toggleShowAllUrgentItems(): void {
+    this.showAllUrgentItems = !this.showAllUrgentItems;
+  }
+
+  getVisibleActivities(): ActivityItem[] {
+    return this.showAllActivities ? this.recentActivity : this.recentActivity.slice(0, 4);
+  }
+
+  getVisibleUrgentItems(): UrgentItem[] {
+    return this.showAllUrgentItems ? this.urgentItems : this.urgentItems.slice(0, 4);
+  }
+
+  toggleShowAllCases(): void {
+    this.showAllCases = !this.showAllCases;
+  }
+
+  getVisibleCases(): DashboardCase[] {
+    return this.showAllCases ? this.recentCases.slice(0, 6) : this.recentCases.slice(0, 3);
+  }
+
   // Schedule event helpers
   getTotalScheduledHours(): string {
     // Calculate total hours from events
@@ -710,10 +795,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   getUrgentItemIcon(type: string): string {
     const iconMap: { [key: string]: string } = {
-      'deadline': 'ri-calendar-schedule-line',
-      'document': 'ri-file-search-line',
-      'message': 'ri-mail-unread-line',
-      'task': 'ri-task-line',
+      'deadline': 'ri-calendar-todo-line',
+      'document': 'ri-file-text-line',
+      'message': 'ri-mail-line',
+      'task': 'ri-checkbox-circle-line',
       'billing': 'ri-money-dollar-circle-line'
     };
     return iconMap[type] || 'ri-alert-line';
@@ -809,5 +894,158 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     if (randomHours < 1) return 'Just now';
     if (randomHours < 24) return `${randomHours}h ago`;
     return '1d ago';
+  }
+
+  // Case card helpers
+  getCasePriorityBorderClass(priority: string): string {
+    const classMap: { [key: string]: string } = {
+      'high': 'border-danger',
+      'medium': 'border-warning',
+      'low': 'border-success'
+    };
+    return classMap[priority] || '';
+  }
+
+  getCaseTypeHeaderClass(caseType: string): string {
+    const classMap: { [key: string]: string } = {
+      'CRIMINAL': 'bg-danger-subtle text-danger',
+      'CIVIL': 'bg-info-subtle text-info',
+      'FAMILY': 'bg-warning-subtle text-warning',
+      'CORPORATE': 'bg-primary-subtle text-primary',
+      'REAL_ESTATE': 'bg-success-subtle text-success',
+      'IMMIGRATION': 'bg-purple-subtle text-purple',
+      'PERSONAL_INJURY': 'bg-danger-subtle text-danger',
+      'BANKRUPTCY': 'bg-secondary-subtle text-secondary',
+      'EMPLOYMENT': 'bg-info-subtle text-info',
+      'INTELLECTUAL_PROPERTY': 'bg-primary-subtle text-primary'
+    };
+    return classMap[caseType?.toUpperCase()] || 'bg-light text-muted';
+  }
+
+  getCaseTypeIcon(caseType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'CRIMINAL': 'ri-shield-user-line',
+      'CIVIL': 'ri-scales-3-line',
+      'FAMILY': 'ri-parent-line',
+      'CORPORATE': 'ri-building-2-line',
+      'REAL_ESTATE': 'ri-home-4-line',
+      'IMMIGRATION': 'ri-global-line',
+      'PERSONAL_INJURY': 'ri-heart-pulse-line',
+      'BANKRUPTCY': 'ri-money-dollar-circle-line',
+      'EMPLOYMENT': 'ri-user-settings-line',
+      'INTELLECTUAL_PROPERTY': 'ri-lightbulb-line'
+    };
+    return iconMap[caseType?.toUpperCase()] || 'ri-briefcase-line';
+  }
+
+  getCaseTypeIconBgClass(caseType: string): string {
+    const classMap: { [key: string]: string } = {
+      'CRIMINAL': 'bg-danger-subtle text-danger',
+      'CIVIL': 'bg-info-subtle text-info',
+      'FAMILY': 'bg-warning-subtle text-warning',
+      'CORPORATE': 'bg-primary-subtle text-primary',
+      'REAL_ESTATE': 'bg-success-subtle text-success',
+      'IMMIGRATION': 'bg-purple-subtle text-purple',
+      'PERSONAL_INJURY': 'bg-danger-subtle text-danger',
+      'BANKRUPTCY': 'bg-secondary-subtle text-secondary',
+      'EMPLOYMENT': 'bg-info-subtle text-info',
+      'INTELLECTUAL_PROPERTY': 'bg-primary-subtle text-primary'
+    };
+    return classMap[caseType?.toUpperCase()] || 'bg-light text-muted';
+  }
+
+  getCasePriorityBadgeClass(priority: string): string {
+    const classMap: { [key: string]: string } = {
+      'high': 'bg-danger-subtle text-danger',
+      'medium': 'bg-warning-subtle text-warning',
+      'low': 'bg-success-subtle text-success'
+    };
+    return classMap[priority] || 'bg-secondary-subtle text-secondary';
+  }
+
+  // Minimal case card helpers
+  getClientInitials(name: string): string {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  getClientAvatarClass(name: string): string {
+    // Generate consistent color based on name
+    const colors = [
+      'bg-primary text-white',
+      'bg-secondary text-white',
+      'bg-success text-white',
+      'bg-info text-white',
+      'bg-warning text-dark',
+      'bg-danger text-white',
+      'bg-dark text-white'
+    ];
+    const index = name ? name.charCodeAt(0) % colors.length : 0;
+    return colors[index];
+  }
+
+  getCaseStatusBadgeStyle(status: string): string {
+    const styleMap: { [key: string]: string } = {
+      'ACTIVE': 'case-badge-success',
+      'IN_PROGRESS': 'case-badge-primary',
+      'OPEN': 'case-badge-success',
+      'PENDING': 'case-badge-warning',
+      'PENDING_REVIEW': 'case-badge-warning',
+      'UNDER_REVIEW': 'case-badge-info',
+      'CLOSED': 'case-badge-dark',
+      'ON_HOLD': 'case-badge-muted'
+    };
+    return styleMap[status?.toUpperCase()] || 'case-badge-muted';
+  }
+
+  formatCaseStatus(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'ACTIVE': 'Open',
+      'IN_PROGRESS': 'In Progress',
+      'OPEN': 'Open',
+      'PENDING': 'Pending',
+      'PENDING_REVIEW': 'Under Review',
+      'UNDER_REVIEW': 'Under Review',
+      'CLOSED': 'Closed',
+      'ON_HOLD': 'On Hold'
+    };
+    return statusMap[status?.toUpperCase()] || status;
+  }
+
+  getCaseDeadlineBadgeStyle(caseItem: DashboardCase): string {
+    if (caseItem.priority === 'high') {
+      return 'case-badge-urgent';
+    }
+    if (caseItem.nextActionDate) {
+      const date = new Date(caseItem.nextActionDate);
+      const today = new Date();
+      const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) return 'case-badge-urgent'; // Due Today - red
+      if (diffDays === 1) return 'case-badge-warning'; // Due Tomorrow - yellow
+      if (diffDays <= 3) return 'case-badge-warning'; // Due soon - yellow
+      if (diffDays <= 7) return 'case-badge-info'; // Due this week - blue
+      return 'case-badge-muted'; // No urgent deadline
+    }
+    return 'case-badge-light'; // No Deadline - gray
+  }
+
+  getCaseDeadlineLabel(caseItem: DashboardCase): string {
+    if (caseItem.priority === 'high') {
+      return 'Urgent';
+    }
+    if (caseItem.nextActionDate) {
+      const date = new Date(caseItem.nextActionDate);
+      const today = new Date();
+      const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) return 'Due Today';
+      if (diffDays === 1) return 'Due Tomorrow';
+      if (diffDays <= 7) return `Due in ${diffDays} days`;
+      return 'No Deadline';
+    }
+    return 'No Deadline';
   }
 }
