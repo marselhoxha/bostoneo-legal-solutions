@@ -719,11 +719,6 @@ export class SafePipe implements PipeTransform {
                       <div class="flex-grow-1 ms-3">
                         <div class="d-flex align-items-center gap-2">
                           <h6 class="mb-0">{{document.title}}</h6>
-                          @if(document.isFileManagerFile) {
-                            <span class="badge bg-info-subtle text-info fs-11">File Manager</span>
-                          } @else {
-                            <span class="badge bg-secondary-subtle text-secondary fs-11">Legacy</span>
-                          }
                         </div>
                         @if(document.description) {
                           <small class="text-muted">{{document.description}}</small>
@@ -1874,67 +1869,53 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
 
     this.isUploading = true;
 
-    const formData = new FormData();
-    formData.append('file', this.selectedFile);
-    formData.append('title', this.newDocument.title || 'Untitled Document');
-    
-    // Convert type to string, handle both enum and string values
-    const typeValue = typeof this.newDocument.type === 'string' ? 
-      this.newDocument.type : String(this.newDocument.type);
-    formData.append('type', typeValue);
-    
-    // Convert category to string, handle both enum and string values
-    const categoryValue = typeof this.newDocument.category === 'string' ? 
+    // Convert category to string for File Manager API
+    const categoryValue = typeof this.newDocument.category === 'string' ?
       this.newDocument.category : String(this.newDocument.category);
-    formData.append('category', categoryValue || '');
-    
-    if (this.newDocument.description) {
-      formData.append('description', this.newDocument.description);
-    }
-    
-    if (this.tagsInput && this.tagsInput.length > 0) {
-      formData.append('tags', this.tagsInput);
-    }
 
-    console.log('Uploading document with data:', {
+    console.log('Uploading document via File Manager with data:', {
       title: this.newDocument.title,
-      type: typeValue,
       category: categoryValue,
-      description: this.newDocument.description,
-      tags: this.tagsInput
+      caseId: this.caseId
     });
 
-    this.documentsService.uploadDocument(String(this.caseId), formData)
-      .subscribe({
-        next: (response) => {
-          console.log('Upload response:', response);
-          this.loadDocuments();
-          
-          // Show sweet alert success message
-          Swal.fire({
-            title: 'Success!',
-            text: 'Document uploaded successfully',
-            icon: 'success',
-            confirmButtonText: 'OK'
-          }).then(() => {
-            // Reset the form and explicitly hide it after the alert is closed
-            this.resetForm();
-            this.isUploading = false;
-          });
-        },
-        error: (error) => {
+    // Use File Manager service for upload - documents will appear in both places
+    this.fileManagerService.uploadFile(
+      this.selectedFile,
+      undefined, // folderId - no folder
+      Number(this.caseId), // caseId - link to this case
+      categoryValue || 'OTHER', // documentCategory
+      'DRAFT' // documentStatus
+    ).subscribe({
+      next: (response) => {
+        console.log('Upload response:', response);
+        this.loadFileManagerFiles();
+
+        // Show sweet alert success message
+        Swal.fire({
+          title: 'Success!',
+          text: 'Document uploaded successfully',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        }).then(() => {
+          // Reset the form and explicitly hide it after the alert is closed
+          this.resetForm();
           this.isUploading = false;
-          console.error('Error uploading document:', error);
-          
-          // Show sweet alert error message
-          Swal.fire({
-            title: 'Error!',
-            text: error.message || 'Failed to upload document',
-            icon: 'error',
-            confirmButtonText: 'OK'
-          });
-        }
-      });
+        });
+      },
+      error: (error) => {
+        this.isUploading = false;
+        console.error('Error uploading document:', error);
+
+        // Show sweet alert error message
+        Swal.fire({
+          title: 'Error!',
+          text: error.message || 'Failed to upload document',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
   }
 
   closePreview(): void {

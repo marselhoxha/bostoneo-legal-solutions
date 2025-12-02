@@ -12,5 +12,7 @@ export interface MenuItem {
       resource: string;
       action: string;
     };
+    // Simplified roles: ROLE_ADMIN, ROLE_ATTORNEY, ROLE_FINANCE, PARALEGAL, ROLE_SECRETARY, ROLE_USER
+    requiredRoles?: string[];
     childItem?: any;
   }

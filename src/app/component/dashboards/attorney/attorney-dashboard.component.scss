@@ -1,0 +1,470 @@
+// Attorney Dashboard - Velzon Theme
+
+// Cursor for interactive elements
+.cursor-pointer {
+  cursor: pointer;
+}
+
+// Table row hover
+.table tbody tr.cursor-pointer:hover {
+  background-color: rgba(var(--vz-primary-rgb), 0.04);
+  transition: background-color 0.15s ease;
+}
+
+// Card height utilities
+.card-height-100 {
+  height: calc(100% - 24px);
+}
+
+// CRM Widget styling
+.crm-widget {
+  .col {
+    border-right: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  .border-start {
+    border-left: 1px dashed var(--vz-border-color) !important;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+  }
+
+  .display-6 {
+    font-size: 2.5rem;
+    opacity: 0.5;
+  }
+}
+
+// Schedule Date Badge
+.schedule-date-badge {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+
+  .day {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .month {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 1px;
+  }
+}
+
+// Schedule Event Cards
+.schedule-event-card {
+  transition: all 0.25s ease;
+  position: relative;
+  background: var(--vz-card-bg);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  // Event time header
+  .event-time-header {
+    font-size: 13px;
+  }
+
+  // Add event placeholder
+  &.add-event-placeholder {
+    border-style: dashed !important;
+    min-height: 200px;
+
+    &:hover {
+      transform: translateY(-2px);
+      background-color: rgba(var(--vz-primary-rgb), 0.02);
+      border-color: var(--vz-primary) !important;
+
+      .avatar-title {
+        background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+        color: var(--vz-primary) !important;
+      }
+
+      h6, p {
+        color: var(--vz-primary) !important;
+      }
+    }
+  }
+}
+
+// Ribbon for court appearances
+.ribbon-box {
+  position: absolute;
+  top: 0;
+  right: 0;
+  overflow: hidden;
+
+  .ribbon {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 12px;
+    position: relative;
+
+    &.ribbon-warning {
+      background-color: var(--vz-warning);
+      color: #000;
+    }
+
+    &.ribbon-shape {
+      border-radius: 0 0 0 4px;
+    }
+  }
+}
+
+// Avatar sizes
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.avatar-xs {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+}
+
+// Counter value
+.counter-value {
+  display: inline-block;
+}
+
+// Badge improvements
+.badge {
+  font-weight: 500;
+}
+
+// Button icon
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Activity Timeline - Velzon Style
+.letter-spacing {
+  letter-spacing: 0.06em;
+}
+
+// Activity Feed - Premium Design
+.activity-feed {
+  position: relative;
+  padding-left: 6px;
+
+  // Dashed connecting line
+  &::before {
+    content: "";
+    position: absolute;
+    left: 27px;
+    top: 24px;
+    bottom: 24px;
+    width: 0;
+    border-left: 2px dashed rgba(var(--vz-primary-rgb), 0.25);
+  }
+
+  .activity-feed-item {
+    position: relative;
+    padding: 16px;
+    margin: 0 -16px 12px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.04);
+
+      .activity-title {
+        color: var(--vz-primary);
+      }
+    }
+
+    .activity-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+
+      &-primary {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.18) 0%, rgba(var(--vz-primary-rgb), 0.28) 100%);
+        color: var(--vz-primary);
+      }
+
+      &-success {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.18) 0%, rgba(var(--vz-success-rgb), 0.28) 100%);
+        color: var(--vz-success);
+      }
+
+      &-warning {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.18) 0%, rgba(var(--vz-warning-rgb), 0.28) 100%);
+        color: var(--vz-warning);
+      }
+
+      &-info {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.18) 0%, rgba(var(--vz-info-rgb), 0.28) 100%);
+        color: var(--vz-info);
+      }
+
+      &-danger {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-danger-rgb), 0.18) 0%, rgba(var(--vz-danger-rgb), 0.28) 100%);
+        color: var(--vz-danger);
+      }
+
+      &-secondary {
+        background-color: var(--vz-card-bg);
+        background-image: linear-gradient(135deg, rgba(var(--vz-secondary-rgb), 0.15) 0%, rgba(var(--vz-secondary-rgb), 0.25) 100%);
+        color: var(--vz-secondary);
+      }
+    }
+
+    .activity-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--vz-heading-color);
+      transition: color 0.2s ease;
+    }
+
+    .activity-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+
+      &-primary {
+        background-color: rgba(var(--vz-primary-rgb), 0.12);
+        color: var(--vz-primary);
+      }
+
+      &-success {
+        background-color: rgba(var(--vz-success-rgb), 0.12);
+        color: var(--vz-success);
+      }
+
+      &-warning {
+        background-color: rgba(var(--vz-warning-rgb), 0.12);
+        color: var(--vz-warning);
+      }
+
+      &-info {
+        background-color: rgba(var(--vz-info-rgb), 0.12);
+        color: var(--vz-info);
+      }
+
+      &-danger {
+        background-color: rgba(var(--vz-danger-rgb), 0.12);
+        color: var(--vz-danger);
+      }
+
+      &-secondary {
+        background-color: rgba(var(--vz-secondary-rgb), 0.12);
+        color: var(--vz-secondary);
+      }
+    }
+
+    .activity-desc {
+      font-size: 13px;
+      color: var(--vz-body-color);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .activity-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+
+      span {
+        display: flex;
+        align-items: center;
+        color: var(--vz-secondary-color);
+
+        i {
+          margin-right: 4px;
+          font-size: 13px;
+        }
+      }
+
+      .activity-time {
+        color: var(--vz-secondary-color);
+      }
+
+      .activity-case {
+        color: var(--vz-primary);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Urgent Items
+.urgent-items-list {
+  .urgent-item {
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+
+    &:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    &:hover {
+      transform: translateX(4px);
+    }
+
+    // Priority-based left borders
+    &.bg-danger-subtle {
+      border-left-color: var(--vz-danger);
+    }
+
+    &.bg-warning-subtle {
+      border-left-color: var(--vz-warning);
+    }
+
+    &.bg-info-subtle {
+      border-left-color: var(--vz-info);
+    }
+  }
+}
+
+// Activity item hover (scoped)
+.card-body .d-flex.align-items-center.py-3 {
+  transition: background-color 0.15s ease;
+  border-radius: 4px;
+  margin: 0 -8px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.04);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 1199.98px) {
+  .crm-widget {
+    .col {
+      border-right: none;
+
+      .border-start {
+        border-left: none !important;
+        border-top: 1px dashed var(--vz-border-color) !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 767.98px) {
+  .schedule-date-badge {
+    width: 48px;
+    height: 48px;
+
+    .day {
+      font-size: 1.25rem;
+    }
+
+    .month {
+      font-size: 0.6rem;
+    }
+  }
+}
+
+// Dark mode
+[data-bs-theme="dark"] {
+  .crm-widget {
+    .border-start {
+      border-color: var(--vz-border-color) !important;
+    }
+  }
+
+  .table tbody tr.cursor-pointer:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.08);
+  }
+
+  .card-body .d-flex.align-items-center.py-3:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.08);
+  }
+
+  .schedule-event-card {
+    &:hover {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    &.event-hearing {
+      background: rgba(var(--vz-warning-rgb), 0.15);
+    }
+  }
+
+  .schedule-date-badge {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .activity-feed {
+    &::before {
+      border-left-color: rgba(var(--vz-primary-rgb), 0.3);
+    }
+
+    .activity-feed-item {
+      &:hover {
+        background-color: rgba(var(--vz-primary-rgb), 0.08);
+      }
+
+      .activity-icon {
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+}

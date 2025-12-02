@@ -59,12 +59,11 @@ export class PermissionGuard implements CanActivate {
   }
 
   private hasLegalRole(): boolean {
+    // Simplified roles: ROLE_ATTORNEY and PARALEGAL are legal roles
     const legalRoles = [
-      'MANAGING_PARTNER', 'SENIOR_PARTNER', 'EQUITY_PARTNER', 'NON_EQUITY_PARTNER',
-      'OF_COUNSEL', 'SENIOR_ASSOCIATE', 'ASSOCIATE', 'JUNIOR_ASSOCIATE', 
-      'PARALEGAL', 'SENIOR_PARALEGAL'
+      'ROLE_ADMIN', 'ROLE_ATTORNEY', 'PARALEGAL', 'ROLE_SECRETARY', 'ROLE_FINANCE'
     ];
-    
+
     return legalRoles.some(role => this.rbacService.hasRole(role));
   }
   

@@ -71,18 +71,17 @@ export class RbacGuard implements CanActivate, CanActivateChild {
         }
 
         // ADMIN BYPASS: Check if user has admin roles - give full access
-        const adminRoles = ['MANAGING_PARTNER', 'ROLE_ADMIN', 'SENIOR_PARTNER', 'ADMINISTRATOR', 'ROLE_SYSADMIN'];
-        const hasAdminRole = currentPermissions.roles?.some(role => 
-          adminRoles.some(adminRole => 
-            role.name === adminRole || 
-            role.name === `ROLE_${adminRole}` ||
-            role.displayName?.includes('PARTNER') ||
-            role.displayName?.includes('ADMIN')
+        // Simplified roles: ROLE_ADMIN (100), ROLE_ATTORNEY (70), ROLE_FINANCE (65)
+        const adminRoles = ['ROLE_ADMIN', 'ROLE_ATTORNEY', 'ADMINISTRATOR'];
+        const hasAdminRole = currentPermissions.roles?.some(role =>
+          adminRoles.some(adminRole =>
+            role.name === adminRole ||
+            role.name === `ROLE_${adminRole}`
           )
         ) || false;
 
-        // HIERARCHY BYPASS: Check if user has high hierarchy level (80+)
-        const hasHighHierarchy = currentPermissions.hierarchyLevel >= 80;
+        // HIERARCHY BYPASS: Check if user has high hierarchy level (65+ for finance and above)
+        const hasHighHierarchy = currentPermissions.hierarchyLevel >= 65;
 
         // PERMISSION BYPASS: Check if user has system admin permissions
         const hasSystemAdmin = currentPermissions.effectivePermissions?.some(perm => 

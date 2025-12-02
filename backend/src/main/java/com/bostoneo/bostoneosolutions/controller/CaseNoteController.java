@@ -96,7 +96,7 @@ public class CaseNoteController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'PARALEGAL', 'ROLE_SECRETARY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> createNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,
@@ -127,7 +127,7 @@ public class CaseNoteController {
     }
 
     @PutMapping("/{noteId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'PARALEGAL', 'ROLE_SECRETARY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> updateNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,
@@ -158,7 +158,7 @@ public class CaseNoteController {
     }
 
     @DeleteMapping("/{noteId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'PARALEGAL', 'ROLE_SECRETARY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> deleteNote(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable("caseId") Long caseId,

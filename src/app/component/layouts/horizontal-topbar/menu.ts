@@ -242,13 +242,14 @@ export const MENU: MenuItem[] = [
     ]
   },
   
-  // ===== FINANCIAL MODULE =====
+  // ===== FINANCIAL MODULE (Attorney, Finance, Admin) =====
   {
     id: 11,
     label: 'Financial',
     icon: 'ri-money-dollar-circle-line',
     link: '/invoices',
     requiredPermission: { resource: 'BILLING', action: 'VIEW' },
+    requiredRoles: ['ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE'],
     subItems: [
       {
         id: 'billing-dashboard',
@@ -321,13 +322,14 @@ export const MENU: MenuItem[] = [
     ]
   },
   
-  // ===== ADMINISTRATION (Admin/Manager only) =====
+  // ===== ADMINISTRATION (Admin only) =====
   {
     id: 12,
     label: 'Admin',
     icon: 'ri-admin-line',
     link: '/admin',
     requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
+    requiredRoles: ['ROLE_ADMIN'],
     subItems: [
       {
         id: 'team-directory',
@@ -341,28 +343,32 @@ export const MENU: MenuItem[] = [
         label: 'Role Management',
         link: '/admin/roles',
         parentId: 8,
-        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
+        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
+        requiredRoles: ['ROLE_ADMIN']
       },
       {
         id: 'user-roles',
         label: 'User Role Assignment',
         link: '/admin/user-roles',
         parentId: 8,
-        requiredPermission: { resource: 'ADMINISTRATIVE', action: 'EDIT' }
+        requiredPermission: { resource: 'SYSTEM', action: 'ADMIN' },
+        requiredRoles: ['ROLE_ADMIN']
       },
       {
         id: 'role-hierarchy',
         label: 'Role Hierarchy',
         link: '/admin/hierarchy',
         parentId: 8,
-        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
+        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
+        requiredRoles: ['ROLE_ADMIN']
       },
       {
         id: 'audit-logs',
         label: 'Audit Logs',
         link: '/admin/audit-logs',
         parentId: 8,
-        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' }
+        requiredPermission: { resource: 'SYSTEM', action: 'VIEW' },
+        requiredRoles: ['ROLE_ADMIN']
       }
     ]
   },

@@ -35,7 +35,7 @@ public class CaseAssignmentController {
     // ==================== Assignment Operations ====================
     
     @PostMapping("/assign")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_MANAGING_PARTNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> assignCase(@Valid @RequestBody CaseAssignmentRequest request) {
         log.info("Assigning case {} to user {}", request.getCaseId(), request.getUserId());
         
@@ -64,7 +64,7 @@ public class CaseAssignmentController {
     }
     
     @PostMapping("/auto-assign/{caseId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_MANAGING_PARTNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> autoAssignCase(@PathVariable Long caseId) {
         log.info("Auto-assigning case {}", caseId);
         
@@ -93,7 +93,7 @@ public class CaseAssignmentController {
     }
     
     @PostMapping("/transfer")
-    @PreAuthorize("hasRole('ROLE_ATTORNEY') or hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> transferCase(@Valid @RequestBody CaseTransferRequest request) {
         log.info("Requesting case transfer for case {}", request.getCaseId());
         
@@ -122,7 +122,7 @@ public class CaseAssignmentController {
     }
     
     @DeleteMapping("/{caseId}/user/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_MANAGING_PARTNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> unassignCase(
             @PathVariable Long caseId,
             @PathVariable Long userId,
@@ -184,7 +184,7 @@ public class CaseAssignmentController {
     }
     
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or @securityService.isCurrentUser(#userId)")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or @securityService.isCurrentUser(#userId)")
     public ResponseEntity<HttpResponse> getUserAssignments(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
@@ -281,7 +281,7 @@ public class CaseAssignmentController {
     // ==================== Workload Operations ====================
     
     @GetMapping("/workload/user/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or @securityService.isCurrentUser(#userId)")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or @securityService.isCurrentUser(#userId)")
     public ResponseEntity<HttpResponse> getUserWorkload(@PathVariable Long userId) {
         log.info("Getting workload for user {}", userId);
         
@@ -310,7 +310,7 @@ public class CaseAssignmentController {
     }
     
     @GetMapping("/workload/team/{managerId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or @securityService.isCurrentUser(#managerId)")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or @securityService.isCurrentUser(#managerId)")
     public ResponseEntity<HttpResponse> getTeamWorkload(@PathVariable Long managerId) {
         log.info("Getting team workload for manager {}", managerId);
         
@@ -339,7 +339,7 @@ public class CaseAssignmentController {
     }
     
     @GetMapping("/workload/analytics")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getWorkloadAnalytics() {
         log.info("Getting workload analytics");
         
@@ -370,7 +370,7 @@ public class CaseAssignmentController {
     // ==================== Assignment Rules ====================
     
     @GetMapping("/rules")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getActiveRules() {
         log.info("Getting active assignment rules");
         
@@ -399,7 +399,7 @@ public class CaseAssignmentController {
     }
     
     @PostMapping("/rules")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> createRule(@Valid @RequestBody AssignmentRuleDTO rule) {
         log.info("Creating assignment rule");
         
@@ -428,7 +428,7 @@ public class CaseAssignmentController {
     }
     
     @PutMapping("/rules/{ruleId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> updateRule(
             @PathVariable Long ruleId,
             @Valid @RequestBody AssignmentRuleDTO rule) {
@@ -460,7 +460,7 @@ public class CaseAssignmentController {
     // ==================== History & Audit ====================
     
     @GetMapping("/history/case/{caseId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or @securityService.canAccessCase(#caseId)")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or @securityService.canAccessCase(#caseId)")
     public ResponseEntity<HttpResponse> getAssignmentHistory(
             @PathVariable Long caseId,
             @RequestParam(defaultValue = "0") int page,
@@ -499,7 +499,7 @@ public class CaseAssignmentController {
     // ==================== Transfer Requests ====================
     
     @GetMapping("/transfer-requests")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getPendingTransferRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -535,7 +535,7 @@ public class CaseAssignmentController {
     }
     
     @PostMapping("/transfer-requests/{requestId}/approve")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> approveTransfer(
             @PathVariable Long requestId,
             @RequestParam(required = false) String notes) {
@@ -566,7 +566,7 @@ public class CaseAssignmentController {
     }
     
     @PostMapping("/transfer-requests/{requestId}/reject")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> rejectTransfer(
             @PathVariable Long requestId,
             @RequestParam(required = false) String notes) {

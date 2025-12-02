@@ -357,11 +357,11 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
             label: 'System Settings',
             link: '/admin/system',
             parentId: 8,
-            permission: { 
-              resource: 'SYSTEM', 
-              action: 'ADMIN', 
+            permission: {
+              resource: 'SYSTEM',
+              action: 'ADMIN',
               hierarchyLevel: 100,
-              roles: ['MANAGING_PARTNER', 'ROLE_ADMIN']
+              roles: ['ROLE_ADMIN']
             }
           }
         ]

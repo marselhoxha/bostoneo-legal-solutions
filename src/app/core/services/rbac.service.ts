@@ -84,23 +84,26 @@ export class RbacService {
   private _permissions$ = new BehaviorSubject<Permission[]>([]);
   private _caseRoles$ = new BehaviorSubject<CaseRole[]>([]);
 
-  // Comprehensive admin roles definition
+  // Simplified role definitions (6 core roles)
+  // ROLE_ADMIN (100), ROLE_ATTORNEY (70), ROLE_FINANCE (65), PARALEGAL (40), ROLE_SECRETARY (20), ROLE_USER (10)
   private static readonly ADMIN_ROLES = [
-    'ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 
-    'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL',
-    'ROLE_SYSADMIN', 'MANAGING_PARTNER', 'SENIOR_PARTNER', 
-    'EQUITY_PARTNER', 'OF_COUNSEL', 'ADMINISTRATOR'
+    'ROLE_ADMIN', 'ADMINISTRATOR'
   ];
-  
+
   private static readonly MANAGEMENT_ROLES = [
-    'ROLE_MANAGER', 'ROLE_PARALEGAL_SUPERVISOR', 'ROLE_DEPARTMENT_HEAD',
-    'MANAGER', 'PARALEGAL_SUPERVISOR', 'DEPARTMENT_HEAD'
+    'ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE'
   ];
-  
+
   private static readonly ATTORNEY_ROLES = [
-    'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 
-    'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'MANAGING_PARTNER',
-    'SENIOR_PARTNER', 'EQUITY_PARTNER', 'OF_COUNSEL', 'ATTORNEY'
+    'ROLE_ATTORNEY', 'ROLE_ADMIN'
+  ];
+
+  private static readonly LEGAL_SUPPORT_ROLES = [
+    'PARALEGAL', 'ROLE_SECRETARY'
+  ];
+
+  private static readonly FINANCE_ROLES = [
+    'ROLE_FINANCE', 'ROLE_ADMIN'
   ];
 
   constructor(
@@ -193,10 +196,10 @@ export class RbacService {
           'TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:CREATE'
         ];
         
-        // Add admin permissions for admin roles
-        if (userRoles.some((role: any) => 
-          typeof role === 'string' && 
-          ['ROLE_ADMIN', 'MANAGING_PARTNER', 'SENIOR_PARTNER', 'ADMINISTRATOR', 'ROLE_SYSADMIN', 'OF_COUNSEL'].includes(role)
+        // Add admin permissions for admin roles (simplified: ROLE_ADMIN, ROLE_ATTORNEY)
+        if (userRoles.some((role: any) =>
+          typeof role === 'string' &&
+          ['ROLE_ADMIN', 'ROLE_ATTORNEY', 'ADMINISTRATOR'].includes(role)
         )) {
           basicPermissions.push(
             // System and Admin permissions
@@ -344,47 +347,41 @@ export class RbacService {
 
   /**
    * Helper methods for fallback permission creation
+   * Updated for simplified 6-role structure
    */
   private getRoleIdFromName(roleName: string): number {
     const roleMap: { [key: string]: number } = {
-      'MANAGING_PARTNER': 1,
-      'ROLE_ADMIN': 2,
-      'SENIOR_PARTNER': 3,
-      'EQUITY_PARTNER': 4,
-      'OF_COUNSEL': 5,
-      'NON_EQUITY_PARTNER': 6,
-      'SENIOR_ASSOCIATE': 7,
-      'ASSOCIATE': 8,
-      'JUNIOR_ASSOCIATE': 9,
-      'PARALEGAL': 10,
-      'ROLE_USER': 11
+      'ROLE_ADMIN': 20,
+      'ROLE_ATTORNEY': 22,
+      'ROLE_FINANCE': 107,
+      'PARALEGAL': 11,
+      'ROLE_SECRETARY': 13,
+      'ROLE_USER': 21
     };
-    return roleMap[roleName] || 99;
+    return roleMap[roleName] || 21; // Default to USER
   }
 
   private getHierarchyLevelFromRole(roleName: string): number {
     const hierarchyMap: { [key: string]: number } = {
-      'MANAGING_PARTNER': 100,
       'ROLE_ADMIN': 100,
-      'SENIOR_PARTNER': 95,
-      'EQUITY_PARTNER': 90,
-      'OF_COUNSEL': 85,
-      'NON_EQUITY_PARTNER': 80,
-      'SENIOR_ASSOCIATE': 70,
-      'ASSOCIATE': 60,
-      'JUNIOR_ASSOCIATE': 50,
-      'PARALEGAL': 25,
+      'ROLE_ATTORNEY': 70,
+      'ROLE_FINANCE': 65,
+      'PARALEGAL': 40,
+      'ROLE_SECRETARY': 20,
       'ROLE_USER': 10
     };
     return hierarchyMap[roleName] || 10;
   }
 
   private getRoleCategoryFromName(roleName: string): any {
-    if (roleName.includes('PARTNER') || roleName.includes('ASSOCIATE') || roleName.includes('COUNSEL')) {
+    if (roleName === 'ROLE_ATTORNEY') {
       return 'LEGAL';
     }
-    if (roleName.includes('ADMIN') || roleName.includes('MANAGER')) {
-      return 'ADMINISTRATIVE';
+    if (roleName === 'ROLE_ADMIN') {
+      return 'TECHNICAL';
+    }
+    if (roleName === 'ROLE_FINANCE') {
+      return 'FINANCIAL';
     }
     return 'SUPPORT';
   }
@@ -511,8 +508,9 @@ export class RbacService {
                        [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean) ||
                        [];
       
-      const adminRoles = ['MANAGING_PARTNER', 'ROLE_ADMIN', 'SENIOR_PARTNER', 'ADMINISTRATOR', 'ROLE_SYSADMIN', 'OF_COUNSEL'];
-      const hasAdminRole = userRoles.some((role: any) => 
+      // Simplified admin roles (ROLE_ADMIN and ROLE_ATTORNEY have full access)
+      const adminRoles = ['ROLE_ADMIN', 'ROLE_ATTORNEY', 'ADMINISTRATOR'];
+      const hasAdminRole = userRoles.some((role: any) =>
         typeof role === 'string' && adminRoles.includes(role)
       );
       

@@ -85,53 +85,48 @@ export class HorizontalTopbarComponent implements OnInit {
 
   /**
    * Filter menu items based on user permissions
+   * Updated for simplified 6-role structure:
+   * ROLE_ADMIN (100), ROLE_ATTORNEY (70), ROLE_FINANCE (65), PARALEGAL (40), ROLE_SECRETARY (20), ROLE_USER (10)
    */
   filterMenuByPermissions(menuItems: MenuItem[]): MenuItem[] {
-    console.log('🔍 Filtering menu items. Current user:', this.user);
-    console.log('🔍 RBAC Service permissions$:', this.rbacService.permissions$);
-    
-    // Debug role checks
-    console.log('🔍 Role checks:');
+    // Debug role checks with simplified roles
+    console.log('🔍 Role checks (simplified):');
     console.log('  - ROLE_ADMIN:', this.hasRole('ROLE_ADMIN'));
-    console.log('  - MANAGING_PARTNER:', this.hasRole('MANAGING_PARTNER'));
-    console.log('  - SENIOR_PARTNER:', this.hasRole('SENIOR_PARTNER'));
-    console.log('  - COO:', this.hasRole('COO'));
-    
-    // Debug TIME_TRACKING permissions
-    console.log('🔧 TIME_TRACKING permissions:');
-    console.log('  - TIME_TRACKING:VIEW_OWN:', this.hasPermission('TIME_TRACKING', 'VIEW_OWN'));
-    console.log('  - TIME_TRACKING:CREATE:', this.hasPermission('TIME_TRACKING', 'CREATE'));
-    console.log('  - TIME_TRACKING:APPROVE:', this.hasPermission('TIME_TRACKING', 'APPROVE'));
-    console.log('  - BILLING:VIEW:', this.hasPermission('BILLING', 'VIEW'));
-    console.log('  - BILLING:ADMIN:', this.hasPermission('BILLING', 'ADMIN'));
-    console.log('  - BILLING:CREATE:', this.hasPermission('BILLING', 'CREATE'));
-    
-    // If user is admin, show all menu items
-    if (this.hasRole('ROLE_ADMIN') || this.hasRole('MANAGING_PARTNER') || this.hasRole('SENIOR_PARTNER') || this.hasRole('COO')) {
-      console.log('✅ User is admin, showing all menu items');
+    console.log('  - ROLE_ATTORNEY:', this.hasRole('ROLE_ATTORNEY'));
+    console.log('  - ROLE_FINANCE:', this.hasRole('ROLE_FINANCE'));
+    console.log('  - PARALEGAL:', this.hasRole('PARALEGAL'));
+    console.log('  - ROLE_SECRETARY:', this.hasRole('ROLE_SECRETARY'));
+
+    // Admin and Attorney roles get full menu access
+    if (this.hasRole('ROLE_ADMIN') || this.hasRole('ROLE_ATTORNEY')) {
+      console.log('✅ User is admin/attorney, showing all menu items');
       return menuItems;
     }
-    
-    console.log('❌ User is not admin, filtering menu items');
-    
+
+    console.log('🔍 Filtering menu items based on permissions and roles');
+
     return menuItems.filter(item => {
-      // Always show items without permission requirements
-      if (!item.requiredPermission) {
-        return true;
+      // Check role requirements first
+      if (item.requiredRoles && item.requiredRoles.length > 0) {
+        const hasRequiredRole = item.requiredRoles.some(role => this.hasRole(role));
+        if (!hasRequiredRole) {
+          console.log(`❌ ${item.label}: Missing required role`);
+          return false;
+        }
       }
-      
-      // Check if item has required permission
-      const hasPermission = this.hasPermission(
-        item.requiredPermission.resource, 
-        item.requiredPermission.action
-      );
-      
-      console.log(`Checking permission for ${item.label}: ${item.requiredPermission.resource}:${item.requiredPermission.action} = ${hasPermission}`);
-      
-      if (!hasPermission) {
-        return false;
+
+      // Check permission requirements
+      if (item.requiredPermission) {
+        const hasPermission = this.hasPermission(
+          item.requiredPermission.resource,
+          item.requiredPermission.action
+        );
+        if (!hasPermission) {
+          console.log(`❌ ${item.label}: Missing permission ${item.requiredPermission.resource}:${item.requiredPermission.action}`);
+          return false;
+        }
       }
-      
+
       return true;
     }).map(item => {
       // Also filter subItems recursively if they exist
@@ -160,21 +155,25 @@ export class HorizontalTopbarComponent implements OnInit {
   }
 
   /**
-   * Check if user has role
+   * Check if user has role (simplified 6-role structure)
    */
   hasRole(roleName: string): boolean {
+    // First check via RBAC service
+    if (this.rbacService.hasRole(roleName)) {
+      return true;
+    }
+
     if (!this.user) {
       return false;
     }
 
-    // Check roles directly from user object (safely access properties)
+    // Fallback: Check roles directly from user object
     const userObj = this.user as any;
     const userRoles = userObj.roles || [];
-    const hasRole = userRoles.includes(roleName) || 
-                    this.user.roleName === roleName || 
+    const hasRole = userRoles.includes(roleName) ||
+                    this.user.roleName === roleName ||
                     userObj.primaryRoleName === roleName;
-    
-    console.log(`Role check for ${roleName}: ${hasRole}`);
+
     return hasRole;
   }
 

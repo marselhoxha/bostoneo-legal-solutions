@@ -123,7 +123,7 @@ public class NotificationController {
      * Get notifications for a specific user
      */
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
     public ResponseEntity<HttpResponse> getUserNotifications(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
@@ -189,7 +189,7 @@ public class NotificationController {
      * Get notification preferences for a user
      */
     @GetMapping("/preferences/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
     public ResponseEntity<HttpResponse> getNotificationPreferences(@PathVariable Long userId) {
         log.info("Getting notification preferences for user: {}", userId);
         
@@ -226,7 +226,7 @@ public class NotificationController {
      * Update notification preferences for a user
      */
     @PutMapping("/preferences/{userId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
     public ResponseEntity<HttpResponse> updateNotificationPreferences(
             @PathVariable Long userId,
             @RequestBody Map<String, Object> preferences) {
@@ -251,7 +251,7 @@ public class NotificationController {
      * Send notification to user(s)
      */
     @PostMapping("/send")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ATTORNEY')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> sendNotification(@RequestBody Map<String, Object> notificationData) {
         log.info("Sending notification: {}", notificationData);
         
@@ -288,7 +288,7 @@ public class NotificationController {
      * Send bulk notifications
      */
     @PostMapping("/send-bulk")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ATTORNEY')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> sendBulkNotifications(@RequestBody Map<String, Object> bulkData) {
         log.info("Sending bulk notifications: {}", bulkData);
         
@@ -345,7 +345,7 @@ public class NotificationController {
      * Mark all notifications as read for a user
      */
     @PutMapping("/user/{userId}/read-all")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER') or principal.id == #userId")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
     public ResponseEntity<HttpResponse> markAllAsRead(@PathVariable Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
         
