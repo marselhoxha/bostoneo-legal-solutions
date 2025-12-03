@@ -218,15 +218,60 @@
 .card {
   box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.03);
   margin-bottom: 1.5rem;
-  
+
   .card-header {
     background-color: #fff;
     border-bottom: 1px solid #e9ebec3c;
     padding: 1rem 1.5rem;
   }
-  
+
   .card-body {
     padding: 1.5rem;
+  }
+}
+
+// CRM Widget styling
+.crm-widget {
+  .col {
+    border-right: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  .border-start {
+    border-left: 1px dashed var(--vz-border-color) !important;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+  }
+
+  .display-6 {
+    font-size: 2.5rem;
+    opacity: 0.5;
+  }
+}
+
+// Counter value
+.counter-value {
+  display: inline-block;
+}
+
+// Responsive adjustments
+@media (max-width: 1199.98px) {
+  .crm-widget {
+    .col {
+      border-right: none;
+
+      .border-start {
+        border-left: none !important;
+        border-top: 1px dashed var(--vz-border-color) !important;
+      }
+    }
   }
 }
 

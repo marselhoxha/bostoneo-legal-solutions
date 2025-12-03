@@ -19,7 +19,13 @@ export class CaseListComponent implements OnInit {
   cases: LegalCase[] = [];
   isLoading = false;
   error: string | null = null;
-  
+
+  // Stats
+  activeCasesCount = 0;
+  pendingCasesCount = 0;
+  closedCasesCount = 0;
+  highPriorityCount = 0;
+
   // Pagination-related variables
   state: { dataState: DataState, appData?: any } = { dataState: DataState.LOADING };
   readonly DataState = DataState;
@@ -77,6 +83,7 @@ export class CaseListComponent implements OnInit {
           console.warn('Unexpected response format:', response);
           this.cases = [];
         }
+        this.calculateStats();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -288,5 +295,20 @@ export class CaseListComponent implements OnInit {
       default:
         return 'badge';
     }
+  }
+
+  private calculateStats(): void {
+    this.activeCasesCount = this.cases.filter(c =>
+      c.status === CaseStatus.OPEN || c.status === CaseStatus.IN_PROGRESS
+    ).length;
+    this.pendingCasesCount = this.cases.filter(c =>
+      c.status === CaseStatus.PENDING
+    ).length;
+    this.closedCasesCount = this.cases.filter(c =>
+      c.status === CaseStatus.CLOSED || c.status === CaseStatus.ARCHIVED
+    ).length;
+    this.highPriorityCount = this.cases.filter(c =>
+      c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT
+    ).length;
   }
 } 

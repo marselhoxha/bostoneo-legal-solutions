@@ -7,6 +7,7 @@ import { CaseService } from 'src/app/modules/legal/services/case.service';
 import { TimeTrackingService, TimeEntry } from 'src/app/modules/time-tracking/services/time-tracking.service';
 import { CalendarService } from 'src/app/modules/legal/services/calendar.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
+import { AiBriefingService, BriefingRequest } from 'src/app/core/services/ai-briefing.service';
 
 interface DashboardCase {
   id: number;
@@ -137,6 +138,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   showAllUrgentItems = false;
   showAllCases = false;
 
+  // AI Briefing
+  aiBriefing: string | null = null;
+  aiBriefingLoading = false;
+
   currentDate = new Date();
   private destroy$ = new Subject<void>();
 
@@ -146,6 +151,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     private timeTrackingService: TimeTrackingService,
     private calendarService: CalendarService,
     private rbacService: RbacService,
+    private aiBriefingService: AiBriefingService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -289,6 +295,42 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     this.loadCases();
     this.loadTimeEntries();
     this.loadTodayEvents();
+    this.loadAiBriefing();
+  }
+
+  private loadAiBriefing(): void {
+    this.aiBriefingLoading = true;
+
+    // Find if there's a court appearance today
+    const todayHearing = this.getTodayHearing();
+    const nextEvent = this.getNextEvent();
+
+    const request: BriefingRequest = {
+      todayEventsCount: this.scheduleEvents.length,
+      urgentItemsCount: this.urgentItems.length,
+      activeCasesCount: this.activeCasesCount,
+      nextEventTitle: nextEvent?.title || null,
+      nextEventTime: nextEvent?.startTime || null,
+      hasCourtAppearance: !!todayHearing,
+      courtCaseName: todayHearing?.caseInfo || null,
+      courtTime: todayHearing?.startTime || null,
+      recentTeamActivity: [] // TODO: Add team activity when available
+    };
+
+    this.aiBriefingService.getBriefing(request).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (briefing) => {
+        this.aiBriefing = briefing;
+        this.aiBriefingLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading AI briefing:', error);
+        this.aiBriefingLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private loadCases(): void {
@@ -560,6 +602,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  }
+
+  getNewItemsCount(): number {
+    // Count items added in the last 24 hours (activities + urgent items)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentActivities = this.recentActivity.filter(a => a.timestamp > yesterday).length;
+    return recentActivities + this.urgentItems.length;
   }
 
   formatCurrency(amount: number): string {
@@ -1047,5 +1096,41 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       return 'No Deadline';
     }
     return 'No Deadline';
+  }
+
+  // Briefing helper methods
+  getTodayHearing(): ScheduleEvent | null {
+    return this.scheduleEvents.find(e => e.type === 'hearing') || null;
+  }
+
+  getCriticalDeadline(): UrgentItem | null {
+    return this.urgentItems.find(item =>
+      item.priority === 'critical' ||
+      (item.type === 'deadline' && (item.dueLabel === 'Today' || item.dueLabel === 'Tomorrow'))
+    ) || null;
+  }
+
+  getNextEvent(): ScheduleEvent | null {
+    if (this.scheduleEvents.length === 0) return null;
+    // Return the first event (assuming they're sorted by time)
+    return this.scheduleEvents[0];
+  }
+
+  getOverdueCount(): number {
+    return this.urgentItems.filter(item =>
+      item.dueLabel === 'Overdue' || item.priority === 'critical'
+    ).length;
+  }
+
+  getUpcomingDeadlinesCount(): number {
+    return this.urgentItems.filter(item =>
+      item.type === 'deadline' && item.dueLabel !== 'Overdue'
+    ).length;
+  }
+
+  getPendingReviewCount(): number {
+    return this.urgentItems.filter(item =>
+      item.type === 'document'
+    ).length;
   }
 }

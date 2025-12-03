@@ -3,116 +3,24 @@
   <div class="col">
     <div class="h-100">
 
-      <!-- Row 1: Simple Header -->
-      <div class="row mb-3 pb-1">
-        <div class="col-12">
-          <div class="d-flex align-items-lg-center flex-lg-row flex-column">
-            <div class="flex-grow-1">
-              <h4 class="fs-16 mb-1">{{getGreeting()}}, {{currentUser?.firstName || 'Counselor'}}!</h4>
-              <p class="text-muted mb-0">Here's what's happening with your cases today.</p>
-            </div>
-            <div class="mt-3 mt-lg-0">
-              <div class="row g-3 mb-0 align-items-center">
-                <div class="col-auto">
-                  <button type="button" class="btn btn-soft-success" (click)="openNewTimeEntry()">
-                    <i class="ri-timer-line align-middle me-1"></i> Log Time
-                  </button>
-                </div>
-                <div class="col-auto">
-                  <button type="button" class="btn btn-soft-primary" (click)="navigateTo('/legal/cases/new')">
-                    <i class="ri-add-circle-line align-middle me-1"></i> New Case
-                  </button>
-                </div>
-                <div class="col-auto">
-                  <button type="button" class="btn btn-soft-info" (click)="openCalendar()">
-                    <i class="ri-calendar-event-line align-middle me-1"></i> Calendar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 2: CRM-Style Stats Widget -->
+      <!-- Row 1: Greeting Section -->
       <div class="row">
         <div class="col-12">
-          <div class="card crm-widget">
-            <div class="card-body p-0">
-              <div class="row row-cols-xxl-4 row-cols-md-2 row-cols-1 g-0">
-                <!-- Active Cases -->
-                <div class="col">
-                  <div class="py-4 px-3">
-                    <h5 class="text-muted text-uppercase fs-13">Active Cases
-                      <i class="ri-arrow-up-circle-line fs-18 float-end align-middle text-success"></i>
-                    </h5>
-                    <div class="d-flex align-items-center">
-                      <div class="flex-shrink-0">
-                        <i class="ri-briefcase-4-line display-6 text-muted"></i>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <h2 class="mb-0"><span class="counter-value">{{activeCasesCount}}</span></h2>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <!-- Today's Hours -->
-                <div class="col">
-                  <div class="py-4 px-3 border-start">
-                    <h5 class="text-muted text-uppercase fs-13">Today's Hours
-                      <i class="ri-arrow-up-circle-line fs-18 float-end align-middle"
-                         [ngClass]="todayHours > 0 ? 'text-success' : 'text-muted'"></i>
-                    </h5>
-                    <div class="d-flex align-items-center">
-                      <div class="flex-shrink-0">
-                        <i class="ri-timer-line display-6 text-muted"></i>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <h2 class="mb-0"><span class="counter-value">{{formatHours(todayHours)}}</span>h</h2>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <!-- Week Hours -->
-                <div class="col">
-                  <div class="py-4 px-3 border-start">
-                    <h5 class="text-muted text-uppercase fs-13">This Week
-                      <i class="ri-arrow-up-circle-line fs-18 float-end align-middle text-success"></i>
-                    </h5>
-                    <div class="d-flex align-items-center">
-                      <div class="flex-shrink-0">
-                        <i class="ri-calendar-check-line display-6 text-muted"></i>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <h2 class="mb-0"><span class="counter-value">{{formatHours(weekHours)}}</span>h</h2>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <!-- Pending Items -->
-                <div class="col">
-                  <div class="py-4 px-3 border-start">
-                    <h5 class="text-muted text-uppercase fs-13">Pending Items
-                      <i class="ri-arrow-down-circle-line fs-18 float-end align-middle"
-                         [ngClass]="pendingItems > 0 ? 'text-danger' : 'text-success'"></i>
-                    </h5>
-                    <div class="d-flex align-items-center">
-                      <div class="flex-shrink-0">
-                        <i class="ri-file-list-3-line display-6 text-muted"></i>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <h2 class="mb-0"><span class="counter-value">{{pendingItems}}</span></h2>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div class="dashboard-greeting">
+            <div class="greeting-date">{{currentDate | date:'EEEE, MMMM d' | uppercase}}</div>
+            <h1 class="greeting-title">{{getGreeting()}}, {{currentUser?.firstName || 'Counselor'}}</h1>
+            <div class="greeting-briefing" *ngIf="!aiBriefingLoading">
+              <p>{{aiBriefing || ('You have ' + scheduleEvents.length + ' events scheduled for today. ' + (urgentItems.length > 0 ? urgentItems.length + ' items require your attention.' : 'All caught up!'))}}</p>
+            </div>
+            <div class="greeting-briefing greeting-loading" *ngIf="aiBriefingLoading">
+              <div class="loading-line"></div>
+              <div class="loading-line short"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Row 3: My Ongoing Cases - Minimal Card Layout -->
+      <!-- Row 2: My Ongoing Cases - Minimal Card Layout -->
       <div class="row">
         <div class="col-12">
           <div class="card">
