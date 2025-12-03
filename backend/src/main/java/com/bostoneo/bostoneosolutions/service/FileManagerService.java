@@ -23,7 +23,8 @@ public interface FileManagerService {
     void moveFile(Long fileId, Long targetFolderId);
     void copyFile(Long fileId, Long targetFolderId);
     FileItemDTO toggleFileStar(Long fileId);
-    
+    FileItemDTO toggleShareWithClient(Long fileId);
+
     // Folder operations
     FolderDTO getRootFolder();
     List<FolderDTO> getRootFolders();

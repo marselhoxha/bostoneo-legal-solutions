@@ -42,6 +42,7 @@ export interface FileItemModel {
   createdAt: Date;
   updatedAt: Date;
   starred?: boolean;
+  sharedWithClient?: boolean;
   deleted?: boolean;
   downloadUrl: string;
   previewUrl?: string;

@@ -1,0 +1,126 @@
+// Client Documents Styles
+
+.document-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+}
+
+.search-box {
+  position: relative;
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vz-secondary-color);
+  }
+
+  .search {
+    padding-left: 38px;
+  }
+}
+
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.bg-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1) !important;
+}
+
+.bg-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1) !important;
+}
+
+.bg-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+}
+
+.fs-12 {
+  font-size: 12px;
+}
+
+.modal.show {
+  display: block !important;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+// Upload dropzone
+.upload-dropzone {
+  border: 2px dashed var(--vz-border-color);
+  background: var(--vz-light);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--vz-primary);
+    background: rgba(var(--vz-primary-rgb), 0.05);
+  }
+
+  &.border-primary {
+    border-color: var(--vz-primary);
+    border-style: solid;
+  }
+
+  &.bg-primary-subtle {
+    background: rgba(var(--vz-primary-rgb), 0.1) !important;
+  }
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+// Avatar sizes
+.avatar-lg {
+  width: 72px;
+  height: 72px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.avatar-md {
+  width: 48px;
+  height: 48px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// Dark mode
+[data-bs-theme="dark"] {
+  .upload-dropzone {
+    background: rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.1);
+    }
+  }
+}

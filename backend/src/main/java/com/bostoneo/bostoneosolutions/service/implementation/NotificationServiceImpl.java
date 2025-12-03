@@ -308,6 +308,10 @@ public class NotificationServiceImpl implements NotificationService {
                         notificationData.put("entityId", dataMap.get("caseId"));
                         notificationData.put("entityType", "case");
                     }
+                    // Include the URL if provided
+                    if (dataMap.containsKey("url")) {
+                        notificationData.put("url", dataMap.get("url"));
+                    }
                 }
                 
                 UserNotification inAppNotification = createUserNotification(notificationData);

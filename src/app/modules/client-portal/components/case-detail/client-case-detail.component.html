@@ -1,0 +1,345 @@
+<!-- Client Case Detail - Premium Design -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
+  <div class="text-center">
+    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mb-0">Loading case details...</p>
+  </div>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="row">
+  <div class="col-12">
+    <div class="card border-danger">
+      <div class="card-body text-center py-5">
+        <div class="avatar-lg mx-auto mb-4">
+          <div class="avatar-title rounded-circle bg-danger-subtle text-danger fs-24">
+            <i class="ri-error-warning-line"></i>
+          </div>
+        </div>
+        <h5 class="mb-2">Failed to Load Case</h5>
+        <p class="text-muted mb-4">{{ error }}</p>
+        <button type="button" class="btn btn-primary" (click)="loadCaseData()">
+          <i class="ri-refresh-line me-2"></i> Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div *ngIf="caseData && !loading">
+
+  <!-- Premium Header Card -->
+  <div class="card case-header-premium border-0 overflow-hidden mb-4" style="margin-top: 100px;">
+    <div class="case-header-bg"></div>
+    <div class="card-body position-relative p-4">
+      <!-- Back Link -->
+      <a routerLink="/client/dashboard" class="back-link mb-4 d-inline-flex align-items-center text-white-50">
+        <i class="ri-arrow-left-s-line me-1 fs-18"></i>
+        <span>Back to Dashboard</span>
+      </a>
+
+      <div class="row g-4 align-items-center">
+        <!-- Left: Icon & Title -->
+        <div class="col-lg-8">
+          <div class="d-flex gap-4">
+            <!-- Premium Icon Box -->
+            <div class="header-icon-wrapper flex-shrink-0">
+              <div class="icon-box" [ngClass]="getTypeClass(caseData.type)">
+                <i [ngClass]="getTypeIcon(caseData.type)"></i>
+              </div>
+            </div>
+
+            <!-- Title & Meta -->
+            <div class="flex-grow-1">
+              <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <span class="status-pill" [ngClass]="'status-' + (caseData.status?.toLowerCase() || 'open')">
+                  <span class="pill-dot"></span>
+                  <span class="pill-text">{{formatStatus(caseData.status)}}</span>
+                </span>
+                <span class="case-number-badge">
+                  <i class="ri-hashtag"></i>{{caseData.caseNumber}}
+                </span>
+              </div>
+
+              <h1 class="header-title text-white mb-3">{{caseData.title}}</h1>
+
+              <div class="d-flex flex-wrap gap-3 header-meta">
+                <span class="meta-item" *ngIf="caseData.type">
+                  <i class="ri-folder-2-line"></i>
+                  <span>{{caseData.type}}</span>
+                </span>
+                <span class="meta-item" *ngIf="caseData.attorneyName">
+                  <i class="ri-user-star-line"></i>
+                  <span>{{caseData.attorneyName}}</span>
+                </span>
+                <span class="meta-item" *ngIf="caseData.openDate">
+                  <i class="ri-calendar-line"></i>
+                  <span>Opened {{formatDate(caseData.openDate)}}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Stats -->
+        <div class="col-lg-4">
+          <div class="case-stats-card">
+            <div class="stats-header">
+              <span class="text-white-50 fs-13">Case Progress</span>
+              <span class="fw-bold text-white fs-16">{{getProgressPercentage()}}%</span>
+            </div>
+            <div class="progress progress-animated mb-3" style="height: 8px;">
+              <div class="progress-bar" [style.width.%]="getProgressPercentage()"
+                   [ngClass]="{
+                     'bg-success': getProgressPercentage() === 100,
+                     'bg-primary': getProgressPercentage() < 100
+                   }"></div>
+            </div>
+            <div class="row g-3 text-center">
+              <div class="col-6">
+                <div class="stat-value text-white">{{getDaysOpen()}}</div>
+                <div class="stat-label text-white-50">Days Open</div>
+              </div>
+              <div class="col-6">
+                <div class="stat-value text-white">{{documents.length}}</div>
+                <div class="stat-label text-white-50">Documents</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Cards Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="info-card">
+        <div class="info-card-icon bg-primary-subtle text-primary">
+          <i class="ri-user-star-line"></i>
+        </div>
+        <div class="info-card-content">
+          <span class="info-card-label">Lead Attorney</span>
+          <span class="info-card-value">{{caseData.attorneyName || 'Not Assigned'}}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="info-card">
+        <div class="info-card-icon bg-warning-subtle text-warning">
+          <i class="ri-calendar-check-line"></i>
+        </div>
+        <div class="info-card-content">
+          <span class="info-card-label">Next Court Date</span>
+          <span class="info-card-value">{{caseData.nextHearingDate ? formatDate(caseData.nextHearingDate) : 'Not Scheduled'}}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="info-card">
+        <div class="info-card-icon bg-success-subtle text-success">
+          <i class="ri-file-list-3-line"></i>
+        </div>
+        <div class="info-card-content">
+          <span class="info-card-label">Documents Shared</span>
+          <span class="info-card-value">{{documents.length}} File{{documents.length !== 1 ? 's' : ''}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Tabs -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header border-bottom">
+      <ul class="nav nav-tabs card-header-tabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button">
+            <i class="ri-file-list-3-line me-2"></i>Overview
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-documents" type="button">
+            <i class="ri-folder-3-line me-2"></i>Documents
+            <span class="badge bg-primary-subtle text-primary ms-2" *ngIf="documents.length > 0">{{documents.length}}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+          <div class="p-4">
+            <div class="row g-4">
+              <!-- Case Details -->
+              <div class="col-lg-7">
+                <h6 class="section-title mb-3">
+                  <i class="ri-information-line me-2 text-primary"></i>Case Information
+                </h6>
+                <div class="details-grid">
+                  <div class="detail-item">
+                    <span class="detail-label">Case Number</span>
+                    <span class="detail-value font-monospace">{{caseData.caseNumber}}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Case Type</span>
+                    <span class="detail-value">
+                      <span class="badge bg-light text-body">{{caseData.type || '-'}}</span>
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Current Status</span>
+                    <span class="detail-value">
+                      <span class="badge rounded-pill" [ngClass]="getStatusBadgeClass(caseData.status)">
+                        {{formatStatus(caseData.status)}}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Assigned Attorney</span>
+                    <span class="detail-value">{{caseData.attorneyName || '-'}}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Date Opened</span>
+                    <span class="detail-value">{{formatDate(caseData.openDate)}}</span>
+                  </div>
+                  <div class="detail-item" *ngIf="caseData.nextHearingDate">
+                    <span class="detail-label">Next Court Date</span>
+                    <span class="detail-value text-warning fw-medium">
+                      <i class="ri-alarm-warning-line me-1"></i>{{formatDate(caseData.nextHearingDate)}}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div *ngIf="caseData.description" class="mt-4">
+                  <h6 class="section-title mb-3">
+                    <i class="ri-file-text-line me-2 text-primary"></i>Description
+                  </h6>
+                  <p class="text-muted mb-0 lh-lg">{{caseData.description}}</p>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="col-lg-5">
+                <h6 class="section-title mb-3">
+                  <i class="ri-flashlight-line me-2 text-primary"></i>Quick Actions
+                </h6>
+                <div class="quick-actions-list">
+                  <a routerLink="/client/messages" class="quick-action-btn">
+                    <div class="action-icon bg-success-subtle text-success">
+                      <i class="ri-message-2-line"></i>
+                    </div>
+                    <div class="action-content">
+                      <span class="action-title">Message Attorney</span>
+                      <span class="action-desc">Contact your legal team</span>
+                    </div>
+                    <i class="ri-arrow-right-s-line action-arrow"></i>
+                  </a>
+                  <a routerLink="/client/appointments" class="quick-action-btn">
+                    <div class="action-icon bg-warning-subtle text-warning">
+                      <i class="ri-calendar-check-line"></i>
+                    </div>
+                    <div class="action-content">
+                      <span class="action-title">Request Appointment</span>
+                      <span class="action-desc">Schedule a consultation</span>
+                    </div>
+                    <i class="ri-arrow-right-s-line action-arrow"></i>
+                  </a>
+                  <a routerLink="/client/documents" class="quick-action-btn">
+                    <div class="action-icon bg-info-subtle text-info">
+                      <i class="ri-upload-cloud-line"></i>
+                    </div>
+                    <div class="action-content">
+                      <span class="action-title">Upload Documents</span>
+                      <span class="action-desc">Share files securely</span>
+                    </div>
+                    <i class="ri-arrow-right-s-line action-arrow"></i>
+                  </a>
+                </div>
+
+                <!-- Need Help Card -->
+                <div class="help-card mt-4">
+                  <div class="d-flex align-items-start">
+                    <div class="help-icon">
+                      <i class="ri-question-line"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">Need Help?</h6>
+                      <p class="text-muted fs-13 mb-3">Have questions about your case? Our team is here to help.</p>
+                      <a routerLink="/client/messages" class="btn btn-primary btn-sm">
+                        <i class="ri-chat-1-line me-1"></i> Contact Support
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div class="tab-pane fade" id="tab-documents" role="tabpanel">
+          <div class="p-4">
+            <!-- Documents Loading -->
+            <div *ngIf="documentsLoading" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="text-muted mt-3 mb-0">Loading documents...</p>
+            </div>
+
+            <!-- Documents Grid -->
+            <div *ngIf="!documentsLoading && documents.length > 0">
+              <div class="row g-3">
+                <div class="col-md-6 col-lg-4" *ngFor="let doc of documents">
+                  <div class="document-card">
+                    <div class="document-icon">
+                      <i [ngClass]="getFileIcon(doc.fileType)"></i>
+                    </div>
+                    <div class="document-info">
+                      <h6 class="document-name" [title]="doc.fileName || doc.title">{{doc.fileName || doc.title}}</h6>
+                      <div class="document-meta">
+                        <span>{{formatFileSize(doc.fileSize)}}</span>
+                        <span class="mx-2">•</span>
+                        <span>{{formatDate(doc.uploadedAt)}}</span>
+                      </div>
+                    </div>
+                    <div class="document-actions">
+                      <button type="button" class="btn btn-soft-primary btn-sm"
+                              (click)="previewDocument(doc)" title="Preview">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                      <button type="button" class="btn btn-soft-success btn-sm"
+                              (click)="downloadDocument(doc)" title="Download">
+                        <i class="ri-download-line"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="!documentsLoading && documents.length === 0" class="text-center py-5">
+              <div class="empty-state-icon mb-4">
+                <i class="ri-folder-open-line"></i>
+              </div>
+              <h5 class="mb-2">No Documents Yet</h5>
+              <p class="text-muted mb-0 mx-auto" style="max-width: 400px;">
+                Documents shared by your attorney will appear here. Check back later or contact your attorney for updates.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

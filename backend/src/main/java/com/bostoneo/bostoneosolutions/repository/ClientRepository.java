@@ -20,6 +20,13 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
     // Find client by email
     @Query("SELECT c FROM Client c WHERE c.email = :email")
     List<Client> findByEmail(@Param("email") String email);
+
+    // Find client by user ID (for client portal)
+    @Query("SELECT c FROM Client c WHERE c.userId = :userId")
+    Client findByUserId(@Param("userId") Long userId);
+
+    // Check if client exists by user ID
+    boolean existsByUserId(Long userId);
     
     // Find client by exact name (case insensitive)
     @Query("SELECT c FROM Client c WHERE LOWER(c.name) = LOWER(:name)")

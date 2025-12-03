@@ -45,4 +45,11 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
                                        Pageable pageable);
     
     Page<LegalCase> findByStatusIn(List<CaseStatus> statuses, Pageable pageable);
+
+    // Client portal - find cases by exact client name
+    @Query("SELECT c FROM LegalCase c WHERE LOWER(c.clientName) = LOWER(:clientName) ORDER BY c.createdAt DESC")
+    Page<LegalCase> findByClientNameIgnoreCase(@Param("clientName") String clientName, Pageable pageable);
+
+    @Query("SELECT c FROM LegalCase c WHERE LOWER(c.clientName) = LOWER(:clientName) ORDER BY c.createdAt DESC")
+    List<LegalCase> findAllByClientNameIgnoreCase(@Param("clientName") String clientName);
 } 

@@ -1,0 +1,86 @@
+// Client Appointments Styles
+
+.card-animate {
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.appointment-item {
+  .card {
+    transition: box-shadow 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+.date-box {
+  min-width: 70px;
+}
+
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.bg-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+}
+
+.bg-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1) !important;
+}
+
+.bg-soft-success {
+  background-color: rgba(var(--vz-success-rgb), 0.1) !important;
+}
+
+.bg-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1) !important;
+}
+
+.bg-soft-danger {
+  background-color: rgba(var(--vz-danger-rgb), 0.1) !important;
+}
+
+.fs-12 {
+  font-size: 12px;
+}
+
+.fs-13 {
+  font-size: 13px;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: var(--vz-secondary-color);
+
+  &.active {
+    color: var(--vz-primary);
+    border-bottom: 2px solid var(--vz-primary);
+  }
+
+  &:hover:not(.active) {
+    color: var(--vz-primary);
+  }
+}
+
+.modal.show {
+  display: block !important;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}

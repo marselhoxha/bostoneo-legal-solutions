@@ -75,6 +75,33 @@ public class FileManagerServiceImpl implements FileManagerService {
         return 1L; // Default fallback
     }
 
+    private String getCurrentUserName() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    UserDTO user = (UserDTO) principal;
+                    return user.getFirstName() + " " + user.getLastName();
+                } else if (principal instanceof UserPrincipal) {
+                    User user = ((UserPrincipal) principal).getUser();
+                    return user.getFirstName() + " " + user.getLastName();
+                }
+            }
+            // Fallback: get user from database
+            Long userId = getCurrentUserId();
+            if (userId != null) {
+                User user = userRepository.get(userId);
+                if (user != null) {
+                    return user.getFirstName() + " " + user.getLastName();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not get current user name: {}", e.getMessage());
+        }
+        return "A user";
+    }
+
     private final FileItemRepository fileItemRepository;
     private final FolderRepository folderRepository;
     private final FileVersionRepository fileVersionRepository;
@@ -203,90 +230,11 @@ public class FileManagerServiceImpl implements FileManagerService {
                 throw dbException;
             }
             
-            // Send notification for file upload
-            try {
-                log.info("📄 FILE MANAGER: Starting notification process for file upload...");
-                log.info("📄 File details - ID: {}, Name: '{}', Case ID: {}", 
-                    fileItem.getId(), fileItem.getOriginalName(), caseId);
-                
-                if (caseId != null) {
-                    log.info("🔔 Looking up case with ID: {}", caseId);
-                    Optional<LegalCase> legalCaseOpt = legalCaseRepository.findById(caseId);
-                    if (legalCaseOpt.isPresent()) {
-                        LegalCase legalCase = legalCaseOpt.get();
-                        log.info("🔔 Found case: {}", legalCase.getTitle());
-                        
-                        String title = "Document Uploaded";
-                        String message = String.format("New document \"%s\" has been uploaded to case \"%s\"", 
-                            fileItem.getOriginalName(), legalCase.getTitle());
-                        
-                        // Only send notifications to users DIRECTLY involved with the case
-                        // NOT to all admins/managers in the system
-                        Set<Long> notificationUserIds = new HashSet<>();
-                        
-                        // Get users assigned to the case
-                        try {
-                            log.info("🔍 Looking for active case assignments for case ID: {}", caseId);
-                            List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(caseId);
-                            log.info("🔍 Found {} active case assignments", caseAssignments.size());
-                            
-                            for (CaseAssignment assignment : caseAssignments) {
-                                if (assignment.getAssignedTo() != null) {
-                                    notificationUserIds.add(assignment.getAssignedTo().getId());
-                                    log.info("📧 Adding case assignee to notification list: {} {} (ID: {}, Role: {})", 
-                                        assignment.getAssignedTo().getFirstName(), 
-                                        assignment.getAssignedTo().getLastName(),
-                                        assignment.getAssignedTo().getId(),
-                                        assignment.getRoleType());
-                                } else {
-                                    log.warn("⚠️ Case assignment {} has null assignedTo user", assignment.getId());
-                                }
-                            }
-                            
-                            if (caseAssignments.isEmpty()) {
-                                log.warn("⚠️ No active case assignments found for case ID: {}", caseId);
-                            }
-                        } catch (Exception e) {
-                            log.error("❌ Failed to get case assignments: {}", e.getMessage(), e);
-                        }
-                        
-                        // Add the uploader to get notifications (optional, can be removed if not needed)
-                        Long currentUserId = getCurrentUserId();
-                        if (currentUserId != null) {
-                            notificationUserIds.add(currentUserId);
-                            log.info("📧 Adding uploader to notification list: user ID {}", currentUserId);
-                        }
-                        
-                        // Send notification ONLY to users involved with the case
-                        // The sendCrmNotification method will check each user's preferences
-                        // and only send email if they have DOCUMENT_UPLOADED email notifications enabled
-                        log.info("🔔 Processing notifications for {} case-related users", notificationUserIds.size());
-                        int notificationsSent = 0;
-                        for (Long userId : notificationUserIds) {
-                            try {
-                                log.info("🔔 Processing notification for user ID: {}", userId);
-                                
-                                // sendCrmNotification will check user preferences internally
-                                // It will only send email if the user has enabled email for DOCUMENT_UPLOADED
-                                notificationService.sendCrmNotification(title, message, userId, 
-                                    "DOCUMENT_UPLOADED", Map.of("documentId", fileItem.getId(), "caseId", legalCase.getId()));
-                                
-                                notificationsSent++;
-                            } catch (Exception e) {
-                                log.error("❌ Failed to send notification to user ID {}: {}", userId, e.getMessage());
-                            }
-                        }
-                        
-                        log.info("✅ Document upload notifications sent to {} case-related users", notificationsSent);
-                    } else {
-                        log.warn("⚠️ Could not find case with ID: {}, notification will not be sent", caseId);
-                    }
-                } else {
-                    log.info("📄 File has no case ID, notification will not be sent");
-                }
-            } catch (Exception e) {
-                log.error("❌ Failed to send file upload notification for file ID: {}", fileItem.getId(), e);
-            }
+            // Note: Notifications for case-related document uploads are handled by the calling service
+            // (e.g., ClientPortalServiceImpl.notifyAttorneyOfNewDocument()) to provide better context
+            // about who uploaded the document and with proper formatting.
+            log.info("📄 File uploaded successfully - ID: {}, Name: '{}', Case ID: {}",
+                fileItem.getId(), fileItem.getOriginalName(), caseId);
             
             return FileUploadResponseDTO.builder()
                     .fileId(fileItem.getId())
@@ -602,6 +550,35 @@ public class FileManagerServiceImpl implements FileManagerService {
         
         log.info("[STAR DEBUG] File {} - After save: starred={}", fileId, fileItem.getStarred());
         
+        return convertToFileItemDTO(fileItem);
+    }
+
+    @Override
+    @Transactional
+    public FileItemDTO toggleShareWithClient(Long fileId) {
+        // Get the current file state
+        FileItem fileItem = fileItemRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
+
+        log.info("[SHARE DEBUG] File {} - DB current sharedWithClient: {}",
+                fileId, fileItem.getSharedWithClient());
+
+        if (Boolean.TRUE.equals(fileItem.getDeleted())) {
+            throw new RuntimeException("Cannot share a deleted file");
+        }
+
+        // Toggle the sharedWithClient status - ensure non-null
+        boolean currentShared = fileItem.getSharedWithClient() != null ? fileItem.getSharedWithClient() : false;
+        boolean newSharedStatus = !currentShared;
+
+        log.info("[SHARE DEBUG] File {} - Toggling sharedWithClient: {} -> {}", fileId, currentShared, newSharedStatus);
+
+        // Update the entity directly and save
+        fileItem.setSharedWithClient(newSharedStatus);
+        fileItem = fileItemRepository.save(fileItem);
+
+        log.info("[SHARE DEBUG] File {} - After save: sharedWithClient={}", fileId, fileItem.getSharedWithClient());
+
         return convertToFileItemDTO(fileItem);
     }
 
@@ -1272,6 +1249,7 @@ public class FileManagerServiceImpl implements FileManagerService {
                 .updatedAt(fileItem.getUpdatedAt())
                 .version(fileItem.getVersion())
                 .starred(fileItem.getStarred() != null ? fileItem.getStarred() : false)
+                .sharedWithClient(fileItem.getSharedWithClient() != null ? fileItem.getSharedWithClient() : false)
                 .deleted(fileItem.getDeleted() != null ? fileItem.getDeleted() : false)
                 .deletedAt(fileItem.getDeletedAt())
                 .canEdit(true)

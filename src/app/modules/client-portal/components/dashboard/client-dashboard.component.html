@@ -1,0 +1,368 @@
+<!-- Client Dashboard -->
+<div class="row" style="margin-top: 100px;">
+  <div class="col">
+    <div class="h-100">
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-body text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="text-muted mt-3 mb-0">Loading your dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error && !loading" class="row">
+        <div class="col-12">
+          <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="ri-error-warning-line me-2 fs-20"></i>
+            <div class="flex-grow-1">{{ error }}</div>
+            <button type="button" class="btn btn-danger btn-sm ms-3" (click)="loadDashboard()">
+              <i class="ri-refresh-line me-1"></i> Retry
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <ng-container *ngIf="dashboard && !loading">
+
+        <!-- Row 1: Greeting Section -->
+        <div class="row">
+          <div class="col-12">
+            <div class="dashboard-greeting">
+              <div class="greeting-date">{{currentDate | date:'EEEE, MMMM d' | uppercase}}</div>
+              <h1 class="greeting-title">{{getGreeting()}}, {{dashboard.clientName?.split(' ')[0] || 'Client'}}</h1>
+              <div class="greeting-briefing">
+                <p>{{getWelcomeMessage()}}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Quick Stats Overview -->
+        <div class="row g-3 mb-4">
+          <div class="col-xl-3 col-sm-6">
+            <div class="stat-card stat-card-primary cursor-pointer" routerLink="/client/cases">
+              <div class="stat-icon">
+                <i class="ri-briefcase-line"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-value">{{dashboard.activeCases}}</h3>
+                <p class="stat-label">Active Cases</p>
+                <span class="stat-detail" *ngIf="dashboard.totalCases > 0">
+                  of {{dashboard.totalCases}} total
+                </span>
+              </div>
+              <div class="stat-arrow">
+                <i class="ri-arrow-right-s-line"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-sm-6">
+            <div class="stat-card stat-card-info cursor-pointer" routerLink="/client/documents">
+              <div class="stat-icon">
+                <i class="ri-file-text-line"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-value">{{dashboard.totalDocuments}}</h3>
+                <p class="stat-label">Documents</p>
+                <span class="stat-detail stat-new" *ngIf="dashboard.recentDocuments > 0">
+                  +{{dashboard.recentDocuments}} new
+                </span>
+              </div>
+              <div class="stat-arrow">
+                <i class="ri-arrow-right-s-line"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-sm-6">
+            <div class="stat-card stat-card-warning cursor-pointer" routerLink="/client/appointments">
+              <div class="stat-icon">
+                <i class="ri-calendar-check-line"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-value">{{dashboard.upcomingAppointments}}</h3>
+                <p class="stat-label">Appointments</p>
+                <span class="stat-detail">upcoming</span>
+              </div>
+              <div class="stat-arrow">
+                <i class="ri-arrow-right-s-line"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-sm-6">
+            <div class="stat-card stat-card-success cursor-pointer" routerLink="/client/messages">
+              <div class="stat-icon">
+                <i class="ri-message-2-line"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-value">{{dashboard.unreadMessages}}</h3>
+                <p class="stat-label">Messages</p>
+                <span class="stat-detail stat-unread" *ngIf="dashboard.unreadMessages > 0">
+                  unread
+                </span>
+              </div>
+              <div class="stat-arrow">
+                <i class="ri-arrow-right-s-line"></i>
+              </div>
+              <span class="stat-badge" *ngIf="dashboard.unreadMessages > 0">
+                {{dashboard.unreadMessages}}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outstanding Balance Alert -->
+        <div class="row mb-4" *ngIf="dashboard.totalOutstanding > 0 || dashboard.pendingInvoices > 0">
+          <div class="col-12">
+            <div class="alert-card alert-card-danger">
+              <div class="alert-icon">
+                <i class="ri-money-dollar-circle-line"></i>
+              </div>
+              <div class="alert-content">
+                <h5 class="alert-title">Outstanding Balance</h5>
+                <p class="alert-text">
+                  You have {{dashboard.pendingInvoices}} pending invoice(s) totaling
+                  <strong>{{formatCurrency(dashboard.totalOutstanding)}}</strong>
+                </p>
+              </div>
+              <a routerLink="/client/invoices" class="btn btn-danger">
+                <i class="ri-bill-line me-1"></i> View Invoices
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: My Cases - Card Layout -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header border-0 d-flex align-items-center">
+                <div class="flex-grow-1">
+                  <h4 class="card-title mb-0 fs-18">My Cases</h4>
+                </div>
+                <div class="flex-shrink-0">
+                  <a routerLink="/client/cases" class="btn btn-soft-primary btn-sm">
+                    View All Cases <i class="ri-arrow-right-line align-middle ms-1"></i>
+                  </a>
+                </div>
+              </div>
+              <div class="card-body pt-0">
+                <!-- Case Cards Grid -->
+                <div class="row g-3" *ngIf="dashboard.recentCases && dashboard.recentCases.length > 0">
+                  <div class="col-xl-4 col-md-6" *ngFor="let caseItem of dashboard.recentCases.slice(0, showAllCases ? 6 : 3)">
+                    <div class="case-card-minimal rounded-4 p-3 h-100 cursor-pointer"
+                         [routerLink]="['/client/cases', caseItem.id]">
+                      <!-- Top Row: Icon & Status -->
+                      <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div class="avatar-md">
+                          <span class="avatar-title rounded-circle fs-16 fw-semibold"
+                                [ngClass]="getCaseAvatarClass(caseItem.type)">
+                            <i [ngClass]="getCaseIcon(caseItem.type)"></i>
+                          </span>
+                        </div>
+                        <span class="case-badge" [ngClass]="getCaseStatusBadgeClass(caseItem.status)">
+                          {{formatStatus(caseItem.status)}}
+                        </span>
+                      </div>
+                      <!-- Case Title -->
+                      <h5 class="fs-16 fw-semibold mb-1 text-truncate" [title]="caseItem.title">
+                        {{caseItem.title}}
+                      </h5>
+                      <!-- Case Number -->
+                      <p class="text-muted fs-13 mb-3">
+                        <i class="ri-hashtag me-1"></i>{{caseItem.caseNumber}}
+                      </p>
+                      <!-- Case Meta -->
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="case-meta" *ngIf="caseItem.type">
+                          <i class="ri-folder-line me-1"></i>{{caseItem.type}}
+                        </span>
+                        <span class="case-meta" *ngIf="caseItem.attorneyName">
+                          <i class="ri-user-line me-1"></i>{{caseItem.attorneyName}}
+                        </span>
+                      </div>
+                      <!-- Last Updated -->
+                      <div class="case-updated mt-3 pt-3 border-top">
+                        <small class="text-muted">
+                          <i class="ri-time-line me-1"></i>Updated {{formatDate(caseItem.lastUpdated)}}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Show More/Less Link -->
+                <div class="text-center mt-4" *ngIf="dashboard.recentCases && dashboard.recentCases.length > 3">
+                  <a href="javascript:void(0);" class="text-primary fw-medium fs-13" (click)="toggleShowAllCases()">
+                    <span *ngIf="!showAllCases">Show more <i class="ri-arrow-down-s-line align-middle"></i></span>
+                    <span *ngIf="showAllCases">Show less <i class="ri-arrow-up-s-line align-middle"></i></span>
+                  </a>
+                </div>
+
+                <!-- Empty State -->
+                <div class="text-center py-5" *ngIf="!dashboard.recentCases || dashboard.recentCases.length === 0">
+                  <div class="avatar-lg mx-auto mb-3">
+                    <span class="avatar-title bg-light text-muted rounded-circle fs-28">
+                      <i class="ri-briefcase-line"></i>
+                    </span>
+                  </div>
+                  <h5 class="text-muted mb-2">No Cases Yet</h5>
+                  <p class="text-muted fs-13 mb-0">Your cases will appear here once assigned.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: Next Appointment & Quick Actions -->
+        <div class="row">
+          <!-- Next Appointment -->
+          <div class="col-xxl-8 col-xl-7">
+            <div class="card appointment-card">
+              <div class="card-header border-0 d-flex align-items-center">
+                <div class="flex-shrink-0 me-3" *ngIf="dashboard.nextAppointment">
+                  <div class="appointment-date-badge">
+                    <span class="day">{{getAppointmentDay(dashboard.nextAppointment.startTime)}}</span>
+                    <span class="month">{{getAppointmentMonth(dashboard.nextAppointment.startTime)}}</span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h4 class="card-title mb-1">
+                    {{dashboard.nextAppointment ? 'Next Appointment' : 'Upcoming Appointments'}}
+                  </h4>
+                  <span class="text-muted fs-13" *ngIf="dashboard.nextAppointment">
+                    {{formatDateTime(dashboard.nextAppointment.startTime)}}
+                  </span>
+                  <span class="text-muted fs-13" *ngIf="!dashboard.nextAppointment">
+                    No upcoming appointments scheduled
+                  </span>
+                </div>
+                <div class="flex-shrink-0">
+                  <a routerLink="/client/appointments" class="btn btn-soft-warning btn-sm">
+                    <i class="ri-calendar-line align-middle me-1"></i> View All
+                  </a>
+                </div>
+              </div>
+              <div class="card-body pt-0">
+                <!-- Appointment Details -->
+                <div *ngIf="dashboard.nextAppointment" class="appointment-details">
+                  <div class="row">
+                    <div class="col-md-8">
+                      <h5 class="fs-17 mb-2">{{dashboard.nextAppointment.title}}</h5>
+                      <div class="appointment-meta mb-3">
+                        <span class="me-3" *ngIf="dashboard.nextAppointment.location">
+                          <i class="ri-map-pin-line text-warning me-1"></i>
+                          {{dashboard.nextAppointment.location}}
+                        </span>
+                        <span *ngIf="dashboard.nextAppointment.attorneyName">
+                          <i class="ri-user-line text-primary me-1"></i>
+                          {{dashboard.nextAppointment.attorneyName}}
+                        </span>
+                      </div>
+                      <div *ngIf="dashboard.nextAppointment.isVirtual && dashboard.nextAppointment.meetingLink">
+                        <a [href]="dashboard.nextAppointment.meetingLink" target="_blank"
+                           class="btn btn-primary">
+                          <i class="ri-video-line me-1"></i> Join Video Meeting
+                        </a>
+                      </div>
+                    </div>
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                      <div class="countdown-badge" *ngIf="dashboard.nextAppointment">
+                        <span class="countdown-label">Coming up in</span>
+                        <span class="countdown-value">{{getTimeUntil(dashboard.nextAppointment.startTime)}}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="!dashboard.nextAppointment" class="text-center py-4">
+                  <div class="avatar-md mx-auto mb-3">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-24">
+                      <i class="ri-calendar-check-line"></i>
+                    </span>
+                  </div>
+                  <h6 class="text-muted mb-2">No Upcoming Appointments</h6>
+                  <p class="text-muted fs-13 mb-3">Schedule a meeting with your attorney</p>
+                  <a routerLink="/client/appointments" class="btn btn-soft-warning btn-sm">
+                    <i class="ri-add-line me-1"></i> Request Appointment
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="col-xxl-4 col-xl-5">
+            <div class="card h-100">
+              <div class="card-header border-0">
+                <h4 class="card-title mb-0">Quick Actions</h4>
+              </div>
+              <div class="card-body pt-0">
+                <div class="quick-actions-grid">
+                  <a routerLink="/client/messages" class="quick-action-item">
+                    <div class="quick-action-icon bg-success-subtle text-success">
+                      <i class="ri-message-2-line"></i>
+                    </div>
+                    <div class="quick-action-content">
+                      <h6>Send Message</h6>
+                      <p>Contact your attorney</p>
+                    </div>
+                    <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                  </a>
+
+                  <a routerLink="/client/documents" class="quick-action-item">
+                    <div class="quick-action-icon bg-info-subtle text-info">
+                      <i class="ri-upload-2-line"></i>
+                    </div>
+                    <div class="quick-action-content">
+                      <h6>Upload Document</h6>
+                      <p>Share files securely</p>
+                    </div>
+                    <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                  </a>
+
+                  <a routerLink="/client/appointments" class="quick-action-item">
+                    <div class="quick-action-icon bg-warning-subtle text-warning">
+                      <i class="ri-calendar-line"></i>
+                    </div>
+                    <div class="quick-action-content">
+                      <h6>Request Appointment</h6>
+                      <p>Schedule a meeting</p>
+                    </div>
+                    <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                  </a>
+
+                  <a routerLink="/client/invoices" class="quick-action-item">
+                    <div class="quick-action-icon bg-primary-subtle text-primary">
+                      <i class="ri-bill-line"></i>
+                    </div>
+                    <div class="quick-action-content">
+                      <h6>View Invoices</h6>
+                      <p>Check billing status</p>
+                    </div>
+                    <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      
+
+      </ng-container>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,247 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Messages</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/client/dashboard">Portal</a></li>
+            <li class="breadcrumb-item active">Messages</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="row">
+    <div class="col-12">
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="ri-error-warning-line me-2"></i> {{ error }}
+        <button type="button" class="btn-close" (click)="error = null"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3 text-muted">Loading your messages...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages Content -->
+  <ng-container *ngIf="!loading">
+    <div class="row">
+      <div class="col-12">
+        <div class="card chat-container">
+          <div class="row g-0">
+            <!-- Thread List -->
+            <div class="col-md-4 border-end">
+              <div class="chat-sidebar">
+                <!-- Header -->
+                <div class="chat-sidebar-header p-3 border-bottom">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="mb-0">Conversations</h6>
+                    <button class="btn btn-sm btn-primary" (click)="openNewThreadModal()" [disabled]="cases.length === 0">
+                      <i class="ri-add-line me-1"></i> New
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Thread List -->
+                <div class="chat-thread-list" style="height: calc(100vh - 280px); overflow-y: auto;">
+                  <div *ngIf="threads.length === 0" class="text-center py-5">
+                    <i class="ri-chat-3-line fs-1 text-muted"></i>
+                    <p class="text-muted mt-3">No conversations yet</p>
+                    <button class="btn btn-sm btn-primary" (click)="openNewThreadModal()" [disabled]="cases.length === 0">
+                      Start a conversation
+                    </button>
+                  </div>
+
+                  <div *ngFor="let thread of threads"
+                       class="chat-thread-item p-3 border-bottom cursor-pointer"
+                       [class.active]="selectedThread?.id === thread.id"
+                       (click)="selectThread(thread)">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-sm flex-shrink-0 me-3">
+                        <span class="avatar-title bg-soft-primary text-primary rounded-circle">
+                          <i class="ri-briefcase-4-line"></i>
+                        </span>
+                      </div>
+                      <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-1 text-truncate">{{ thread.subject }}</h6>
+                        <p class="text-muted mb-0 fs-12 text-truncate">
+                          {{ thread.caseNumber }}
+                        </p>
+                      </div>
+                      <div class="flex-shrink-0 text-end">
+                        <p class="text-muted mb-1 fs-11">{{ formatDate(thread.lastMessageAt) }}</p>
+                        <span *ngIf="thread.unreadCount > 0" class="badge bg-danger rounded-pill">
+                          {{ thread.unreadCount }}
+                        </span>
+                      </div>
+                    </div>
+                    <p class="text-muted mb-0 fs-12 mt-2 text-truncate">
+                      <span class="fw-medium">{{ thread.lastSenderName }}:</span>
+                      {{ truncateText(thread.lastMessage, 40) }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="col-md-8">
+              <div class="chat-area">
+                <!-- No Thread Selected -->
+                <div *ngIf="!selectedThread" class="d-flex flex-column align-items-center justify-content-center h-100 py-5">
+                  <i class="ri-chat-3-line fs-1 text-muted mb-3"></i>
+                  <h5 class="text-muted">Select a conversation</h5>
+                  <p class="text-muted">Choose from your existing conversations or start a new one.</p>
+                </div>
+
+                <!-- Thread Selected -->
+                <ng-container *ngIf="selectedThread">
+                  <!-- Chat Header -->
+                  <div class="chat-header p-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-sm flex-shrink-0 me-3">
+                        <span class="avatar-title bg-soft-primary text-primary rounded-circle">
+                          <i class="ri-briefcase-4-line"></i>
+                        </span>
+                      </div>
+                      <div class="flex-grow-1">
+                        <h6 class="mb-0">{{ selectedThread.subject }}</h6>
+                        <p class="text-muted mb-0 fs-12">
+                          {{ selectedThread.caseNumber }} | {{ selectedThread.totalMessages }} messages
+                        </p>
+                      </div>
+                      <div class="flex-shrink-0">
+                        <span class="badge" [ngClass]="getStatusClass(selectedThread.status)">
+                          {{ selectedThread.status }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Messages Area -->
+                  <div class="chat-messages p-3" #messagesContainer style="height: calc(100vh - 400px); overflow-y: auto;">
+                    <!-- Loading Messages -->
+                    <div *ngIf="loadingMessages" class="text-center py-5">
+                      <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <p class="text-muted mt-2 fs-12">Loading messages...</p>
+                    </div>
+
+                    <!-- Messages List -->
+                    <ng-container *ngIf="!loadingMessages">
+                      <div *ngFor="let message of currentMessages; let i = index">
+                        <!-- Date Separator -->
+                        <div *ngIf="isNewDay(i)" class="text-center my-3">
+                          <span class="badge bg-light text-muted px-3">
+                            {{ formatMessageDate(message.sentAt) }}
+                          </span>
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div class="message-item mb-3" [class.sent]="isSentByClient(message)" [class.received]="!isSentByClient(message)">
+                          <div class="message-bubble">
+                            <div class="message-header mb-1">
+                              <span class="fw-medium fs-12">{{ message.senderName }}</span>
+                              <span class="text-muted fs-11 ms-2">{{ formatMessageTime(message.sentAt) }}</span>
+                            </div>
+                            <p class="mb-0">{{ message.content }}</p>
+                            <div *ngIf="message.hasAttachment" class="mt-2">
+                              <span class="badge bg-light text-dark">
+                                <i class="ri-attachment-2 me-1"></i>
+                                {{ message.attachmentName }}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+
+                  <!-- Message Input -->
+                  <div class="chat-input p-3 border-top">
+                    <form (ngSubmit)="sendMessage()">
+                      <div class="input-group">
+                        <input type="text" class="form-control"
+                               [(ngModel)]="newMessageContent" name="messageContent"
+                               placeholder="Type your message..."
+                               [disabled]="sending">
+                        <button type="submit" class="btn btn-primary"
+                                [disabled]="sending || !newMessageContent.trim()">
+                          <span *ngIf="sending" class="spinner-border spinner-border-sm" role="status"></span>
+                          <i *ngIf="!sending" class="ri-send-plane-fill"></i>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- New Thread Modal -->
+<div class="modal fade" [class.show]="showNewThreadModal" [style.display]="showNewThreadModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="newThreadModalLabel" [attr.aria-hidden]="!showNewThreadModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newThreadModalLabel">Start New Conversation</h5>
+        <button type="button" class="btn-close" (click)="closeNewThreadModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label for="threadCase" class="form-label">Select Case <span class="text-danger">*</span></label>
+            <select class="form-select" id="threadCase" [(ngModel)]="newThreadCaseId" name="caseId" required>
+              <option [ngValue]="0">Select a case...</option>
+              <option *ngFor="let c of cases" [ngValue]="c.id">
+                {{ c.caseNumber }} - {{ c.title }}
+              </option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="threadSubject" class="form-label">Subject <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="threadSubject" [(ngModel)]="newThreadSubject" name="subject"
+                   placeholder="What is this about?" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="threadMessage" class="form-label">Message <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="threadMessage" [(ngModel)]="newThreadMessage" name="message"
+                      rows="4" placeholder="Write your message..." required></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeNewThreadModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="startNewThread()"
+                [disabled]="sending || !newThreadCaseId || !newThreadSubject.trim() || !newThreadMessage.trim()">
+          <span *ngIf="sending" class="spinner-border spinner-border-sm me-1" role="status"></span>
+          {{ sending ? 'Starting...' : 'Start Conversation' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showNewThreadModal" *ngIf="showNewThreadModal"></div>

@@ -43,11 +43,12 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   // UI state properties
   isLoading = false;
   isTogglingStar = false;
+  isTogglingShare = false;
   searchTerm = '';
   selectedFiles: number[] = [];
   selectedFolders: number[] = [];
   selectedFile: FileItemModel | null = null;
-  viewMode: 'grid' | 'list' = 'grid';
+  viewMode: 'grid' | 'list' = 'list';
   sortBy = 'createdAt';
   sortDirection = 'DESC';
   
@@ -192,16 +193,29 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Query params for direct navigation (from notifications)
+  private pendingCaseId: number | null = null;
+  private pendingFileId: number | null = null;
+
   /**
    * Initialize component data
    */
   private initializeData(): void {
     this.isLoading = true;
-    
+
+    // Check for query params for direct navigation (from notifications) - use snapshot for immediate access
+    const queryParams = this.route.snapshot.queryParams;
+    if (queryParams['caseId']) {
+      this.pendingCaseId = parseInt(queryParams['caseId'], 10);
+    }
+    if (queryParams['fileId']) {
+      this.pendingFileId = parseInt(queryParams['fileId'], 10);
+    }
+
     // Check if this is the deleted files view
     this.route.data.subscribe(data => {
       this.isDeletedView = data['view'] === 'deleted';
-      
+
       if (this.isDeletedView) {
         this.loadDeletedFiles();
       } else {
@@ -282,10 +296,17 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         this.totalCasesCount = cases.totalElements || this.activeCases.length;
         
         this.recentFiles = recentFiles;
-        
+
         this.updateBreadcrumb();
         this.isLoading = false;
         this.cdr.detectChanges();
+
+        // Check if we need to navigate to a specific case (from notification link)
+        if (this.pendingCaseId) {
+          this.navigateToCaseFromNotification(this.pendingCaseId, this.pendingFileId);
+          this.pendingCaseId = null;
+          this.pendingFileId = null;
+        }
       },
       error: (error) => {
         console.error('Error loading file manager data:', error);
@@ -296,23 +317,78 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigate to a specific case from notification link
+   */
+  private navigateToCaseFromNotification(caseId: number, fileId: number | null): void {
+    // Expand case documents section
+    this.caseDocumentsExpanded = true;
+    this.myDocumentsExpanded = false;
+
+    // Set navigation state to case context
+    this.navigationState.context = 'case';
+    this.navigationState.folderId = null;
+    this.navigationState.folderName = null;
+    this.navigationState.filter = null;
+    this.currentFolder = null;
+
+    // Try to find the case in activeCases for the name
+    const selectedCase = this.activeCases.find(c => c.id === caseId);
+    if (selectedCase) {
+      this.navigationState.caseId = selectedCase.id;
+      this.navigationState.caseName = selectedCase.title;
+    } else {
+      // Even if case not in activeCases, still set the ID to filter documents
+      this.navigationState.caseId = caseId;
+      this.navigationState.caseName = 'Case Documents';
+    }
+
+    // Load documents for this specific case (uses existing method at line ~1854)
+    this.loadCaseDocumentsForNotification(caseId);
+  }
+
+  /**
+   * Load case documents specifically for notification navigation
+   */
+  private loadCaseDocumentsForNotification(caseId: number): void {
+    this.isDeletedView = false;
+    this.isLoading = true;
+
+    this.fileManagerService.getFilesByCase(caseId, 0, 100).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        // Filter to ensure only this case's files are shown
+        this.files = (response.content || []).filter(file => file.caseId === caseId);
+        this.loadCaseFolders(caseId);
+        this.updateBreadcrumb();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading case documents:', error);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
    * Subscribe to real-time data streams
    */
   private subscribeToDataStreams(): void {
-    // Subscribe to files stream
-    this.fileManagerService.files$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(files => {
-      this.files = files;
-      this.cdr.detectChanges();
-    });
+    // NOTE: We do NOT subscribe to files$ here because it would override
+    // case-filtered files when navigating from notifications.
+    // Files are managed explicitly through load methods.
 
     // Subscribe to folders stream
     this.fileManagerService.folders$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(folders => {
-      this.folders = folders;
-      this.cdr.detectChanges();
+      // Only update if we're not in a specific case context (to avoid overriding case folders)
+      if (!this.navigationState.caseId) {
+        this.folders = folders;
+        this.cdr.detectChanges();
+      }
     });
 
     // Subscribe to current folder stream
@@ -3299,6 +3375,51 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error toggling star:', error);
         this.showNotification('error', 'Failed to update file status');
+      }
+    });
+  }
+
+  /**
+   * Toggle share with client status
+   */
+  toggleShareWithClient(file: FileItemModel): void {
+    // Prevent double clicks
+    if (this.isTogglingShare) {
+      return;
+    }
+    this.isTogglingShare = true;
+
+    const userWantsToShare = file.sharedWithClient !== true;
+
+    this.fileManagerService.toggleShareWithClient(file.id).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isTogglingShare = false;
+      })
+    ).subscribe({
+      next: (updatedFile) => {
+        const backendShared = updatedFile.sharedWithClient === true;
+
+        // Update ALL references to this file with backend state
+        file.sharedWithClient = backendShared;
+        this.files = this.files.map(f =>
+          f.id === file.id ? { ...f, sharedWithClient: backendShared } : f
+        );
+
+        if (this.selectedFile?.id === file.id) {
+          this.selectedFile = { ...this.selectedFile, sharedWithClient: backendShared };
+        }
+
+        const message = backendShared
+          ? 'Document is now visible to client'
+          : 'Document is now hidden from client';
+        this.showNotification('success', message);
+
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error toggling share with client:', error);
+        this.showNotification('error', 'Failed to update sharing status');
       }
     });
   }

@@ -66,6 +66,66 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
   
   private initializeMenu(): void {
     this.menuItems = [
+      // Client Portal - Only visible for ROLE_CLIENT
+      {
+        id: 100,
+        label: 'My Portal',
+        icon: 'ri-user-heart-line',
+        isParent: true,
+        permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] },
+        subItems: [
+          {
+            id: 101,
+            label: 'Dashboard',
+            link: '/client/dashboard',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 102,
+            label: 'My Cases',
+            link: '/client/cases',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 103,
+            label: 'My Documents',
+            link: '/client/documents',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 104,
+            label: 'Appointments',
+            link: '/client/appointments',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 105,
+            label: 'Messages',
+            link: '/client/messages',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 106,
+            label: 'My Invoices',
+            link: '/client/invoices',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          },
+          {
+            id: 107,
+            label: 'My Profile',
+            link: '/client/profile',
+            parentId: 100,
+            permission: { resource: 'CLIENT_PORTAL', action: 'VIEW', roles: ['ROLE_CLIENT'] }
+          }
+        ]
+      },
+
       // Dashboard - Always visible for authenticated users
       {
         id: 1,
@@ -407,6 +467,15 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
     const { resource, action, hierarchyLevel, roles } = item.permission;
 
+    // Special handling for role-only permissions (like CLIENT_PORTAL)
+    // If roles are specified and resource is CLIENT_PORTAL, only check roles
+    if (roles && roles.length > 0 && resource === 'CLIENT_PORTAL') {
+      const hasRequiredRole = roles.some(role =>
+        this.userPermissions!.roles.some(userRole => userRole.name === role)
+      );
+      return hasRequiredRole;
+    }
+
     // Check hierarchy level requirement
     if (hierarchyLevel && this.userPermissions!.hierarchyLevel < hierarchyLevel) {
       return false;
@@ -414,7 +483,7 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
     // Check specific role requirements
     if (roles && roles.length > 0) {
-      const hasRequiredRole = roles.some(role => 
+      const hasRequiredRole = roles.some(role =>
         this.userPermissions!.roles.some(userRole => userRole.name === role)
       );
       if (!hasRequiredRole) {
@@ -424,7 +493,7 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
 
     // Check basic permission
     const permissionName = `${resource}:${action}`;
-    return this.userPermissions!.effectivePermissions.some(permission => 
+    return this.userPermissions!.effectivePermissions.some(permission =>
       permission.name === permissionName
     );
   }

@@ -326,6 +326,16 @@ export class FileManagerService {
   }
 
   /**
+   * Toggle share with client status
+   */
+  toggleShareWithClient(fileId: number): Observable<FileItemModel> {
+    return this.http.post<any>(`${this.FILE_MANAGER_API}/files/${fileId}/share-with-client`, {}).pipe(
+      map(response => this.transformFileFromAPI(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Search files
    */
   searchFiles(query: string, page: number = 0, size: number = 50): Observable<any> {
@@ -1037,13 +1047,7 @@ export class FileManagerService {
       downloadUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
       previewUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
       starred: file.starred === true,  // Ensure boolean value
-      // DEBUG: Log the transformation
-      ...(() => {
-        if (file.id) {
-          console.log(`[TRANSFORM DEBUG] File ${file.id} - Backend starred: ${file.starred} -> Frontend: ${file.starred === true}`);
-        }
-        return {};
-      })(),
+      sharedWithClient: file.sharedWithClient === true,  // Ensure boolean value
       deleted: file.deleted || false,
       canEdit: file.canEdit !== undefined ? file.canEdit : true,
       canDelete: file.canDelete !== undefined ? file.canDelete : true,

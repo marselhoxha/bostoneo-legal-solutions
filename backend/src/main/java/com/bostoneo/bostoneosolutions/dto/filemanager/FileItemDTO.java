@@ -31,6 +31,7 @@ public class FileItemDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean starred;
+    private Boolean sharedWithClient;
     private Boolean deleted;
     private LocalDateTime deletedAt;
     private String downloadUrl;

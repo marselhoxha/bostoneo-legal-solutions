@@ -52,9 +52,16 @@ const routes: Routes = [
       },
 
       // File manager module
-      { 
-        path: 'file-manager', 
+      {
+        path: 'file-manager',
         loadChildren: () => import('./modules/file-manager/file-manager.module').then(m => m.FileManagerModule),
+        canActivate: [AuthenticationGuard]
+      },
+
+      // Client Portal module
+      {
+        path: 'client',
+        loadChildren: () => import('./modules/client-portal/client-portal.module').then(m => m.ClientPortalModule),
         canActivate: [AuthenticationGuard]
       },
 

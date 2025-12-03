@@ -1,0 +1,50 @@
+// Client Cases Styles
+
+.case-row {
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.05);
+  }
+}
+
+.search-box {
+  position: relative;
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vz-secondary-color);
+  }
+
+  .search {
+    padding-left: 38px;
+  }
+}
+
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.bg-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+}
+
+.fs-12 {
+  font-size: 12px;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.75rem 1rem;
+}

@@ -142,10 +142,14 @@ public interface FileItemRepository extends JpaRepository<FileItem, Long> {
     // Shared files
     @Query("SELECT f FROM FileItem f WHERE f.deleted = false AND f.sharedWithClient = true")
     List<FileItem> findSharedWithClient();
-    
+
     @Query("SELECT f FROM FileItem f WHERE f.deleted = false AND f.sharedWithClient = true " +
            "AND f.caseId = :caseId")
     List<FileItem> findSharedWithClientByCase(@Param("caseId") Long caseId);
+
+    @Query("SELECT f FROM FileItem f WHERE f.deleted = false AND f.sharedWithClient = true " +
+           "AND f.caseId IN :caseIds")
+    List<FileItem> findByCaseIdInAndSharedWithClientTrue(@Param("caseIds") List<Long> caseIds);
     
     // Files by extension/type
     @Query("SELECT f FROM FileItem f WHERE f.deleted = false AND f.extension = :extension")

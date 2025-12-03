@@ -922,9 +922,17 @@
                                     <div class="d-flex gap-3 justify-content-center">
                                         <button type="button"
                                                 class="btn btn-ghost-primary btn-icon btn-sm favourite-btn"
-                                                [ngClass]="{'active': file.starred}" 
+                                                [ngClass]="{'active': file.starred}"
                                                 (click)="toggleStar(file)">
                                             <i class="ri-star-fill fs-13 align-bottom"></i>
+                                        </button>
+                                        <button type="button" *ngIf="file.caseId"
+                                                class="btn btn-icon btn-sm"
+                                                [ngClass]="file.sharedWithClient ? 'btn-soft-success' : 'btn-ghost-secondary'"
+                                                (click)="toggleShareWithClient(file)"
+                                                [title]="file.sharedWithClient ? 'Shared with client - click to hide' : 'Not shared with client - click to share'">
+                                            <i class="fs-13 align-bottom"
+                                               [ngClass]="file.sharedWithClient ? 'ri-share-fill' : 'ri-share-line'"></i>
                                         </button>
                                         <div class="dropdown" ngbDropdown>
                                             <button class="btn btn-ghost-primary btn-icon btn-sm favourite-btn active arrow-none d-block"
@@ -1056,13 +1064,22 @@
                                     <div class="d-flex justify-content-center gap-1">
                                         <button type="button"
                                                 class="btn btn-ghost-primary btn-icon btn-sm favourite-btn"
-                                                [ngClass]="{'active': file.starred}" 
+                                                [ngClass]="{'active': file.starred}"
                                                 (click)="toggleStar(file)">
                                             <i class="ri-star-fill fs-12"></i>
                                         </button>
+                                        <button type="button" *ngIf="file.caseId"
+                                                class="btn btn-icon btn-sm"
+                                                [ngClass]="file.sharedWithClient ? 'btn-soft-success' : 'btn-ghost-secondary'"
+                                                (click)="toggleShareWithClient(file)"
+                                                [title]="file.sharedWithClient ? 'Shared with client' : 'Not shared'">
+                                            <i class="fs-12"
+                                               [ngClass]="file.sharedWithClient ? 'ri-share-fill' : 'ri-share-line'"></i>
+                                        </button>
                                         <button type="button"
                                                 class="btn btn-ghost-secondary btn-icon btn-sm"
-                                                (click)="previewFile(file)">
+                                                (click)="previewFile(file)"
+                                                title="Preview">
                                             <i class="ri-eye-line fs-12"></i>
                                         </button>
                                         <button type="button"

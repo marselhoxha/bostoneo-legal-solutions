@@ -48,22 +48,13 @@ export class SafePipe implements PipeTransform {
         <div class="d-flex align-items-center">
           <h5 class="card-title mb-0 flex-grow-1">Case Documents</h5>
           <div class="flex-shrink-0">
-            <div class="btn-group" role="group">
-              <button 
-                class="btn btn-primary btn-sm" 
-                (click)="openQuickUpload()"
-              >
-                <i class="ri-upload-cloud-line align-bottom me-1"></i>
-                Quick Upload
-              </button>
-              <button 
-                class="btn btn-soft-primary btn-sm" 
-                (click)="toggleUploadForm()"
-              >
-                <i class="ri-upload-2-line align-bottom me-1"></i>
-                Detailed Upload
-              </button>
-            </div>
+            <button
+              class="btn btn-primary btn-sm"
+              (click)="toggleUploadForm()"
+            >
+              <i class="ri-upload-cloud-line align-bottom me-1"></i>
+              Upload Document
+            </button>
           </div>
         </div>
       </div>
@@ -206,378 +197,6 @@ export class SafePipe implements PipeTransform {
             </div>
           </div>
         </div>
-        
-        <!-- Document Views Selector -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card border-0 bg-light-subtle">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                  <h6 class="mb-0 text-muted">
-                    <i class="ri-layout-3-line me-2"></i>Document Views
-                  </h6>
-                  <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="documentView" id="activityView" 
-                           [checked]="currentView === 'activity'" (change)="setView('activity')">
-                    <label class="btn btn-outline-primary btn-sm" for="activityView">
-                      <i class="ri-history-line me-1"></i>Activity
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="documentView" id="timelineView" 
-                           [checked]="currentView === 'timeline'" (change)="setView('timeline')">
-                    <label class="btn btn-outline-primary btn-sm" for="timelineView">
-                      <i class="ri-time-line me-1"></i>Timeline
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="documentView" id="categoriesView" 
-                           [checked]="currentView === 'categories'" (change)="setView('categories')">
-                    <label class="btn btn-outline-primary btn-sm" for="categoriesView">
-                      <i class="ri-folder-chart-line me-1"></i>Categories
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="documentView" id="teamView" 
-                           [checked]="currentView === 'team'" (change)="setView('team')">
-                    <label class="btn btn-outline-primary btn-sm" for="teamView">
-                      <i class="ri-team-line me-1"></i>Team Access
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="documentView" id="deadlinesView" 
-                           [checked]="currentView === 'deadlines'" (change)="setView('deadlines')">
-                    <label class="btn btn-outline-primary btn-sm" for="deadlinesView">
-                      <i class="ri-calendar-event-line me-1"></i>Deadlines
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity View -->
-        @if(currentView === 'activity' && getRecentActivity().length > 0) {
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light-subtle">
-              <div class="d-flex align-items-center">
-                <h6 class="card-title mb-0 flex-grow-1">
-                  <i class="ri-history-line me-2 text-muted"></i>
-                  Recent Document Activity
-                </h6>
-                <button class="btn btn-link btn-sm text-muted p-0" (click)="showAllActivity = !showAllActivity">
-                  {{showAllActivity ? 'Show Less' : 'Show All'}}
-                  <i [class]="showAllActivity ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
-                </button>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="activity-feed" style="max-height: {{showAllActivity ? 'none' : '200px'}}; overflow-y: auto;">
-                @for(activity of getRecentActivity().slice(0, showAllActivity ? getRecentActivity().length : 3); track activity.id) {
-                  <div class="activity-item border-bottom">
-                    <div class="d-flex p-3">
-                      <div class="flex-shrink-0">
-                        <div class="avatar-xs">
-                          <span class="avatar-title bg-soft-primary text-primary rounded-circle">
-                            <i [class]="activity.icon"></i>
-                          </span>
-                        </div>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <div class="d-flex">
-                          <div class="flex-grow-1">
-                            <h6 class="mb-1 fs-14">{{activity.title}}</h6>
-                            <p class="text-muted mb-0 fs-13">{{activity.description}}</p>
-                          </div>
-                          <div class="flex-shrink-0">
-                            <small class="text-muted">{{activity.timestamp | date:'short'}}</small>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Timeline View -->
-        @if(currentView === 'timeline') {
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light-subtle">
-              <h6 class="card-title mb-0">
-                <i class="ri-time-line me-2 text-muted"></i>Document Timeline
-              </h6>
-            </div>
-            <div class="card-body">
-              <div class="timeline-container">
-                @for(timelineItem of getDocumentTimeline(); track timelineItem.id) {
-                  <div class="timeline-item d-flex mb-4">
-                    <div class="timeline-marker flex-shrink-0">
-                      <div class="timeline-icon" [ngClass]="getTimelineIconClass(timelineItem.type)">
-                        <i [class]="timelineItem.icon"></i>
-                      </div>
-                    </div>
-                    <div class="timeline-content flex-grow-1 ms-3">
-                      <div class="timeline-header d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="timeline-title mb-1">{{timelineItem.title}}</h6>
-                        <small class="text-muted">{{timelineItem.date | date:'MMM d, y h:mm a'}}</small>
-                      </div>
-                      <p class="text-muted mb-2">{{timelineItem.description}}</p>
-                      @if(timelineItem.documentName) {
-                        <div class="d-flex align-items-center">
-                          <i class="ri-file-text-line text-primary me-2"></i>
-                          <span class="badge bg-primary-subtle text-primary">{{timelineItem.documentName}}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Categories View -->
-        @if(currentView === 'categories') {
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light-subtle">
-              <h6 class="card-title mb-0">
-                <i class="ri-folder-chart-line me-2 text-muted"></i>Document Categories
-              </h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                @for(category of getDocumentCategories(); track category.name) {
-                  <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="category-card border rounded p-3 h-100">
-                      <div class="d-flex align-items-center mb-3">
-                        <div class="avatar-sm flex-shrink-0 me-3">
-                          <span class="avatar-title rounded" [style.background-color]="category.color + '20'" [style.color]="category.color">
-                            <i [class]="category.icon"></i>
-                          </span>
-                        </div>
-                        <div class="flex-grow-1">
-                          <h6 class="mb-1">{{category.name}}</h6>
-                          <p class="text-muted mb-0 fs-12">{{category.count}} documents</p>
-                        </div>
-                      </div>
-                      <div class="progress mb-2" style="height: 6px;">
-                        <div class="progress-bar" [style.width.%]="category.percentage" [style.background-color]="category.color"></div>
-                      </div>
-                      <small class="text-muted">{{category.percentage}}% of total documents</small>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Team Access View -->
-        @if(currentView === 'team') {
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light-subtle">
-              <h6 class="card-title mb-0">
-                <i class="ri-team-line me-2 text-muted"></i>Team Document Access
-              </h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                @for(member of getTeamAccess(); track member.id) {
-                  <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="team-member-card border rounded p-3 h-100">
-                      <div class="d-flex align-items-center mb-3">
-                        <div class="avatar-sm flex-shrink-0 me-3">
-                          <img [src]="member.avatar || '/assets/images/users/avatar-placeholder.jpg'" 
-                               [alt]="member.name" 
-                               class="rounded-circle">
-                        </div>
-                        <div class="flex-grow-1">
-                          <h6 class="mb-1">{{member.name}}</h6>
-                          <p class="text-muted mb-0 fs-12">{{member.role}}</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                          <span class="badge" [ngClass]="getAccessBadgeClass(member.accessLevel)">
-                            {{member.accessLevel}}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="access-stats">
-                        <div class="d-flex justify-content-between mb-2">
-                          <span class="text-muted fs-13">Documents Accessed:</span>
-                          <span class="fw-medium">{{member.documentsAccessed}}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                          <span class="text-muted fs-13">Last Activity:</span>
-                          <span class="fs-13">{{member.lastActivity | date:'MMM d'}}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                          <span class="text-muted fs-13">Permissions:</span>
-                          <div class="permission-icons">
-                            <i *ngIf="member.canView" class="ri-eye-line text-info me-1" title="Can View"></i>
-                            <i *ngIf="member.canEdit" class="ri-edit-line text-warning me-1" title="Can Edit"></i>
-                            <i *ngIf="member.canDelete" class="ri-delete-bin-line text-danger me-1" title="Can Delete"></i>
-                            <i *ngIf="member.canShare" class="ri-share-line text-success" title="Can Share"></i>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Deadlines View -->
-        @if(currentView === 'deadlines') {
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light-subtle">
-              <div class="d-flex align-items-center justify-content-between">
-                <h6 class="card-title mb-0">
-                  <i class="ri-calendar-event-line me-2 text-muted"></i>
-                  Document Deadlines
-                </h6>
-                <div class="d-flex gap-2">
-                  <div class="btn-group btn-group-sm" role="group">
-                    <input type="radio" class="btn-check" name="deadlineFilter" id="upcomingDeadlines" 
-                           [checked]="deadlineFilter === 'upcoming'" (change)="setDeadlineFilter('upcoming')">
-                    <label class="btn btn-outline-warning" for="upcomingDeadlines">
-                      <i class="ri-time-line me-1"></i>Upcoming
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="deadlineFilter" id="overdueDeadlines" 
-                           [checked]="deadlineFilter === 'overdue'" (change)="setDeadlineFilter('overdue')">
-                    <label class="btn btn-outline-danger" for="overdueDeadlines">
-                      <i class="ri-alarm-warning-line me-1"></i>Overdue
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="deadlineFilter" id="allDeadlines" 
-                           [checked]="deadlineFilter === 'all'" (change)="setDeadlineFilter('all')">
-                    <label class="btn btn-outline-primary" for="allDeadlines">
-                      <i class="ri-calendar-line me-1"></i>All
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-nowrap mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Document</th>
-                      <th>Deadline Type</th>
-                      <th>Due Date</th>
-                      <th>Priority</th>
-                      <th>Status</th>
-                      <th>Days Left</th>
-                      <th class="text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for(deadline of getFilteredDeadlines(); track deadline.id) {
-                      <tr [class]="getDeadlineRowClass(deadline)">
-                        <td>
-                          <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                              <div class="avatar-xs">
-                                <span class="avatar-title bg-soft-primary text-primary rounded">
-                                  <i class="ri-file-text-line"></i>
-                                </span>
-                              </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                              <h6 class="mb-1 fs-14">{{deadline.documentTitle}}</h6>
-                              <p class="text-muted mb-0 fs-12">{{deadline.documentType}}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span class="badge" [class]="getDeadlineTypeClass(deadline.type)">
-                            {{deadline.type}}
-                          </span>
-                        </td>
-                        <td>
-                          <div>
-                            <span class="fw-medium">{{deadline.dueDate | date:'MMM d, y'}}</span>
-                            <br>
-                            <small class="text-muted">{{deadline.dueDate | date:'h:mm a'}}</small>
-                          </div>
-                        </td>
-                        <td>
-                          <span class="badge" [class]="getPriorityClass(deadline.priority)">
-                            <i [class]="getPriorityIcon(deadline.priority)" class="me-1"></i>
-                            {{deadline.priority}}
-                          </span>
-                        </td>
-                        <td>
-                          <span class="badge" [class]="getStatusClass(deadline.status)">
-                            {{deadline.status}}
-                          </span>
-                        </td>
-                        <td>
-                          <div class="deadline-countdown">
-                            <span [class]="getDaysLeftClass(deadline)">
-                              {{getDaysLeft(deadline)}}
-                            </span>
-                          </div>
-                        </td>
-                        <td class="text-end">
-                          <div class="dropdown">
-                            <button class="btn btn-soft-primary btn-sm dropdown-toggle" 
-                                    type="button" 
-                                    data-bs-toggle="dropdown">
-                              <i class="ri-more-2-fill"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li>
-                                <a class="dropdown-item" href="javascript:void(0);" 
-                                   (click)="viewDocument(deadline.documentId)">
-                                  <i class="ri-eye-line me-2"></i>View Document
-                                </a>
-                              </li>
-                              <li>
-                                <a class="dropdown-item" href="javascript:void(0);" 
-                                   (click)="editDeadline(deadline)">
-                                  <i class="ri-edit-line me-2"></i>Edit Deadline
-                                </a>
-                              </li>
-                              <li>
-                                <a class="dropdown-item" href="javascript:void(0);" 
-                                   (click)="markDeadlineComplete(deadline)">
-                                  <i class="ri-check-line me-2"></i>Mark Complete
-                                </a>
-                              </li>
-                              <li class="dropdown-divider"></li>
-                              <li>
-                                <a class="dropdown-item text-danger" href="javascript:void(0);" 
-                                   (click)="deleteDeadline(deadline.id)">
-                                  <i class="ri-delete-bin-line me-2"></i>Delete
-                                </a>
-                              </li>
-                            </ul>
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              
-              @if(getFilteredDeadlines().length === 0) {
-                <div class="text-center py-5">
-                  <div class="avatar-lg mx-auto mb-4">
-                    <div class="avatar-title bg-soft-info text-info rounded-circle">
-                      <i class="ri-calendar-line fs-1"></i>
-                    </div>
-                  </div>
-                  <h5 class="mb-2">No {{deadlineFilter}} deadlines</h5>
-                  <p class="text-muted">There are no {{deadlineFilter}} deadlines for this case.</p>
-                </div>
-              }
-            </div>
-          </div>
-        }
 
         <!-- Document Filters -->
         <div class="row mb-4">
@@ -607,88 +226,6 @@ export class SafePipe implements PipeTransform {
             >
           </div>
         </div>
-
-        <!-- Upload Document Form -->
-        @if(isUploading) {
-          <div class="mb-4">
-            <div class="mb-3">
-              <label class="form-label">Document Title</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                placeholder="Enter document title"
-                [(ngModel)]="newDocument.title"
-              >
-            </div>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Document Type</label>
-                  <select class="form-select" [(ngModel)]="newDocument.type">
-                    <option [ngValue]="null" disabled hidden>Select document type</option>
-                    @for(type of documentTypes; track type) {
-                      <option [value]="type">{{type}}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-              <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label">Category</label>
-              <select class="form-select" [(ngModel)]="newDocument.category">
-                <option [ngValue]="null" disabled hidden>Select category</option>
-                <option *ngFor="let category of categories; trackBy: trackByCategory"
-                        [value]="category">
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Description</label>
-              <textarea 
-                class="form-control" 
-                rows="3" 
-                placeholder="Enter document description"
-                [(ngModel)]="newDocument.description"
-              ></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Tags</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                placeholder="Enter tags (comma separated)"
-                [(ngModel)]="tagsInput"
-              >
-            </div>
-            <div class="mb-3">
-              <label class="form-label">File</label>
-              <input 
-                type="file" 
-                class="form-control" 
-                (change)="onFileSelected($event)"
-              >
-            </div>
-            <div class="d-flex justify-content-end gap-2">
-              <button 
-                class="btn btn-outline-secondary btn-sm" 
-                (click)="toggleUploadForm()"
-              >
-                Cancel
-              </button>
-              <button 
-                class="btn btn-outline-primary btn-sm" 
-                (click)="uploadDocument()"
-                [disabled]="!isFormValid()"
-              >
-                Upload
-              </button>
-            </div>
-          </div>
-        }
 
         <!-- Documents List -->
         <div class="table-responsive">
@@ -894,123 +431,95 @@ export class SafePipe implements PipeTransform {
       <div class="modal-backdrop fade show"></div>
     }
 
-    <!-- Quick Upload Modal -->
-    @if(showQuickUpload) {
+    <!-- Upload Document Modal -->
+    @if(isUploading) {
       <div class="modal fade show" style="display: block;" tabindex="-1">
         <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Quick Upload Documents</h5>
-              <button type="button" class="btn-close" (click)="closeQuickUpload()"></button>
+              <h5 class="modal-title">
+                <i class="ri-upload-cloud-line me-2"></i>Upload Document
+              </h5>
+              <button type="button" class="btn-close" (click)="toggleUploadForm()"></button>
             </div>
             <div class="modal-body">
-              <!-- Drag and Drop Area -->
-              <div class="dropzone-area border-2 border-dashed rounded p-4 text-center mb-3"
-                   [class.drag-over]="isDragOver"
-                   (dragover)="onDragOver($event)"
-                   (dragleave)="onDragLeave($event)"
-                   (drop)="onQuickUploadDrop($event)">
-                <div class="py-4">
-                  <div class="avatar-xl mx-auto mb-3">
-                    <div class="avatar-title bg-soft-primary text-primary rounded-circle">
-                      <i class="ri-upload-cloud-2-line fs-1"></i>
-                    </div>
-                  </div>
-                  <h5 class="mb-2">Drop files here or click to select</h5>
-                  <p class="text-muted mb-3">Upload multiple files at once for quick processing</p>
-                  <input type="file" 
-                         class="d-none" 
-                         multiple 
-                         #quickFileInput
-                         (change)="onQuickFileSelected($event)">
-                  <button type="button" 
-                          class="btn btn-primary" 
-                          (click)="quickFileInput.click()">
-                    Select Files
-                  </button>
-                </div>
+              <div class="mb-3">
+                <label class="form-label">Document Title <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Enter document title"
+                  [(ngModel)]="newDocument.title"
+                >
               </div>
-              
-              <!-- Selected Files -->
-              @if(quickUploadFiles.length > 0) {
-                <div class="selected-files mb-3">
-                  <h6 class="mb-3">Selected Files ({{quickUploadFiles.length}})</h6>
-                  <div class="list-group">
-                    @for(file of quickUploadFiles; track file.name; let i = $index) {
-                      <div class="list-group-item d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                          <div class="avatar-xs">
-                            <span class="avatar-title bg-soft-info text-info rounded">
-                              <i class="ri-file-line"></i>
-                            </span>
-                          </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                          <h6 class="mb-1 fs-14">{{file.name}}</h6>
-                          <p class="text-muted mb-0 fs-12">{{formatFileSize(file.size)}}</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                          <button type="button" 
-                                  class="btn btn-sm btn-outline-danger" 
-                                  (click)="removeQuickUploadFile(i)">
-                            <i class="ri-close-line"></i>
-                          </button>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                </div>
-                
-                <!-- Quick Settings -->
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <label class="form-label">Default Document Type</label>
-                    <select class="form-select" [(ngModel)]="quickUploadDefaults.type">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Document Type <span class="text-danger">*</span></label>
+                    <select class="form-select" [(ngModel)]="newDocument.type">
+                      <option [ngValue]="null" disabled hidden>Select document type</option>
                       @for(type of documentTypes; track type) {
                         <option [value]="type">{{type}}</option>
                       }
                     </select>
                   </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Default Category</label>
-                    <select class="form-select" [(ngModel)]="quickUploadDefaults.category">
-                      @for(category of categories; track category) {
-                        <option [value]="category">{{category}}</option>
-                      }
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Category <span class="text-danger">*</span></label>
+                    <select class="form-select" [(ngModel)]="newDocument.category">
+                      <option [ngValue]="null" disabled hidden>Select category</option>
+                      <option *ngFor="let category of categories; trackBy: trackByCategory"
+                              [value]="category">
+                        {{ category }}
+                      </option>
                     </select>
                   </div>
                 </div>
-                
-                <!-- Progress -->
-                @if(isQuickUploading) {
-                  <div class="progress-container mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-muted">Uploading files...</span>
-                      <span class="text-muted">{{quickUploadProgress.completed}}/{{quickUploadProgress.total}}</span>
-                    </div>
-                    <div class="progress">
-                      <div class="progress-bar" 
-                           role="progressbar" 
-                           [style.width.%]="quickUploadProgress.percentage">
-                      </div>
-                    </div>
-                  </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  rows="3"
+                  placeholder="Enter document description (optional)"
+                  [(ngModel)]="newDocument.description"
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Tags</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Enter tags (comma separated)"
+                  [(ngModel)]="tagsInput"
+                >
+              </div>
+              <div class="mb-3">
+                <label class="form-label">File <span class="text-danger">*</span></label>
+                <input
+                  type="file"
+                  class="form-control"
+                  (change)="onFileSelected($event)"
+                >
+                @if(selectedFile) {
+                  <small class="text-muted mt-1 d-block">
+                    Selected: {{selectedFile.name}} ({{formatFileSize(selectedFile.size)}})
+                  </small>
                 }
-              }
+              </div>
             </div>
             <div class="modal-footer">
-              <button type="button" 
-                      class="btn btn-outline-secondary" 
-                      (click)="closeQuickUpload()"
-                      [disabled]="isQuickUploading">
+              <button type="button" class="btn btn-outline-secondary" (click)="toggleUploadForm()">
                 Cancel
               </button>
-              <button type="button" 
-                      class="btn btn-primary" 
-                      (click)="startQuickUpload()"
-                      [disabled]="quickUploadFiles.length === 0 || isQuickUploading">
-                <i class="ri-upload-cloud-line me-1"></i>
-                Upload {{quickUploadFiles.length}} Files
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="uploadDocument()"
+                [disabled]="!isFormValid()"
+              >
+                <i class="ri-upload-cloud-line me-1"></i>Upload Document
               </button>
             </div>
           </div>
@@ -1107,51 +616,6 @@ export class SafePipe implements PipeTransform {
     .btn-soft-danger:hover {
       background-color: #ef476f;
       color: #fff;
-    }
-
-    /* Quick Upload Styles */
-    .dropzone-area {
-      border-color: #dee2e6;
-      background-color: #f8f9fa;
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    .dropzone-area:hover {
-      border-color: #405189;
-      background-color: rgba(64, 81, 137, 0.05);
-    }
-
-    .dropzone-area.drag-over {
-      border-color: #405189;
-      background-color: rgba(64, 81, 137, 0.1);
-      transform: scale(1.02);
-    }
-
-    .avatar-xl {
-      width: 5rem;
-      height: 5rem;
-      margin: 0 auto;
-    }
-
-    .selected-files .list-group-item {
-      border: 1px solid #e9ecef;
-      margin-bottom: 0.5rem;
-      border-radius: 0.375rem;
-    }
-
-    .selected-files .list-group-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .progress-container .progress {
-      height: 8px;
-      background-color: #e9ecef;
-    }
-
-    .progress-container .progress-bar {
-      background: linear-gradient(45deg, #405189, #299cdb);
-      transition: width 0.3s ease;
     }
 
     /* Activity Feed Styles */
@@ -1304,21 +768,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   showAllActivity: boolean = false;
   currentView: 'activity' | 'timeline' | 'categories' | 'team' | 'deadlines' = 'activity';
   deadlineFilter: 'upcoming' | 'overdue' | 'all' = 'upcoming';
-  
-  // Quick upload properties
-  showQuickUpload: boolean = false;
-  quickUploadFiles: File[] = [];
-  isQuickUploading: boolean = false;
-  isDragOver: boolean = false;
-  quickUploadDefaults = {
-    type: DocumentType.OTHER,
-    category: DocumentCategory.PUBLIC
-  };
-  quickUploadProgress = {
-    total: 0,
-    completed: 0,
-    percentage: 0
-  };
 
   documentTypes = Object.values(DocumentType);
   allCategories = Object.values(DocumentCategory);
@@ -2320,130 +1769,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       default:
         return 'ri-file-line';
     }
-  }
-
-  // Quick upload methods
-  openQuickUpload(): void {
-    this.showQuickUpload = true;
-    this.quickUploadFiles = [];
-    this.isQuickUploading = false;
-    this.isDragOver = false;
-    this.quickUploadProgress = { total: 0, completed: 0, percentage: 0 };
-  }
-
-  closeQuickUpload(): void {
-    if (!this.isQuickUploading) {
-      this.showQuickUpload = false;
-      this.quickUploadFiles = [];
-      this.quickUploadProgress = { total: 0, completed: 0, percentage: 0 };
-    }
-  }
-
-  onQuickFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
-      this.addQuickUploadFiles(Array.from(input.files));
-    }
-  }
-
-  onQuickUploadDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver = false;
-    const files = event.dataTransfer?.files;
-    if (files) {
-      this.addQuickUploadFiles(Array.from(files));
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver = true;
-  }
-
-  onDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver = false;
-  }
-
-  private addQuickUploadFiles(files: File[]): void {
-    // Filter out duplicates and add new files
-    const existingNames = this.quickUploadFiles.map(f => f.name);
-    const newFiles = files.filter(file => !existingNames.includes(file.name));
-    this.quickUploadFiles.push(...newFiles);
-  }
-
-  removeQuickUploadFile(index: number): void {
-    this.quickUploadFiles.splice(index, 1);
-  }
-
-  startQuickUpload(): void {
-    if (this.quickUploadFiles.length === 0) return;
-
-    this.isQuickUploading = true;
-    this.quickUploadProgress = {
-      total: this.quickUploadFiles.length,
-      completed: 0,
-      percentage: 0
-    };
-
-    // Upload files sequentially to avoid overwhelming the server
-    this.uploadFilesSequentially(0);
-  }
-
-  private uploadFilesSequentially(index: number): void {
-    if (index >= this.quickUploadFiles.length) {
-      // All files uploaded
-      this.completeQuickUpload();
-      return;
-    }
-
-    const file = this.quickUploadFiles[index];
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', file.name.replace(/\.[^/.]+$/, '')); // Remove extension for title
-    formData.append('type', this.quickUploadDefaults.type);
-    formData.append('category', this.quickUploadDefaults.category);
-    formData.append('description', `Quick upload: ${file.name}`);
-
-    this.documentsService.uploadDocument(String(this.caseId), formData)
-      .subscribe({
-        next: (response) => {
-          this.quickUploadProgress.completed++;
-          this.quickUploadProgress.percentage = Math.round(
-            (this.quickUploadProgress.completed / this.quickUploadProgress.total) * 100
-          );
-          
-          // Continue with next file
-          this.uploadFilesSequentially(index + 1);
-        },
-        error: (error) => {
-          console.error(`Error uploading file ${file.name}:`, error);
-          
-          // Continue with next file even if one fails
-          this.quickUploadProgress.completed++;
-          this.quickUploadProgress.percentage = Math.round(
-            (this.quickUploadProgress.completed / this.quickUploadProgress.total) * 100
-          );
-          
-          this.uploadFilesSequentially(index + 1);
-        }
-      });
-  }
-
-  private completeQuickUpload(): void {
-    this.isQuickUploading = false;
-    
-    Swal.fire({
-      title: 'Upload Complete!',
-      text: `Successfully processed ${this.quickUploadProgress.total} files`,
-      icon: 'success',
-      confirmButtonText: 'OK'
-    }).then(() => {
-      // Refresh documents and close modal
-      this.loadDocuments();
-      this.loadFileManagerFiles();
-      this.closeQuickUpload();
-    });
   }
 
   // View management methods

@@ -1,368 +1,311 @@
 <!-- Client Dashboard -->
 <div class="row">
-  <!-- Dashboard Header -->
-  <div class="col-12">
-    <div class="page-title-box d-sm-flex align-items-center justify-content-between mb-4">
-      <div>
-        <h4 class="mb-sm-0">Client Portal</h4>
-        <p class="text-muted mb-0">Welcome back, {{ currentUser?.firstName || 'Client' }}!</p>
-      </div>
-      <div class="page-title-right">
-        <button class="btn btn-primary btn-sm" (click)="refreshDashboard()">
-          <i class="ri-refresh-line me-1"></i> Refresh
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+  <div class="col">
+    <div class="h-100">
 
-<!-- Dashboard Metrics -->
-<div class="row">
-  <!-- My Cases -->
-  <div class="col-xl-3 col-md-6">
-    <div class="card card-animate">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm flex-shrink-0">
-            <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+      <!-- Row 1: Greeting Section -->
+      <div class="row">
+        <div class="col-12">
+          <div class="dashboard-greeting">
+            <div class="greeting-date">{{currentDate | date:'EEEE, MMMM d' | uppercase}}</div>
+            <h1 class="greeting-title">{{getGreeting()}}, {{currentUser?.firstName || 'Client'}}</h1>
+            <div class="greeting-briefing">
+              <p>{{getWelcomeMessage()}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Quick Stats Overview -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+          <div class="stat-card stat-card-primary cursor-pointer" (click)="navigateToCases()">
+            <div class="stat-icon">
               <i class="ri-briefcase-line"></i>
-            </span>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <p class="text-uppercase fw-medium text-muted mb-1">My Cases</p>
-            <h4 class="mb-0">{{ myCases }}</h4>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value">{{myCases}}</h3>
+              <p class="stat-label">Active Cases</p>
+            </div>
+            <div class="stat-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Active Documents -->
-  <div class="col-xl-3 col-md-6">
-    <div class="card card-animate">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm flex-shrink-0">
-            <span class="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+        <div class="col-xl-3 col-sm-6">
+          <div class="stat-card stat-card-info cursor-pointer" (click)="navigateToDocuments()">
+            <div class="stat-icon">
               <i class="ri-file-text-line"></i>
-            </span>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <p class="text-uppercase fw-medium text-muted mb-1">Documents</p>
-            <h4 class="mb-0">{{ activeDocuments }}</h4>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pending Invoices -->
-  <div class="col-xl-3 col-md-6">
-    <div class="card card-animate">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm flex-shrink-0">
-            <span class="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
-              <i class="ri-bill-line"></i>
-            </span>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <p class="text-uppercase fw-medium text-muted mb-1">Pending Bills</p>
-            <h4 class="mb-0">{{ pendingInvoices }}</h4>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value">{{activeDocuments}}</h3>
+              <p class="stat-label">Documents</p>
+            </div>
+            <div class="stat-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Upcoming Appointments -->
-  <div class="col-xl-3 col-md-6">
-    <div class="card card-animate">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm flex-shrink-0">
-            <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+        <div class="col-xl-3 col-sm-6">
+          <div class="stat-card stat-card-warning cursor-pointer" (click)="navigateToAppointments()">
+            <div class="stat-icon">
               <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value">{{upcomingAppointments}}</h3>
+              <p class="stat-label">Appointments</p>
+            </div>
+            <div class="stat-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+          <div class="stat-card stat-card-success cursor-pointer" (click)="sendMessage()">
+            <div class="stat-icon">
+              <i class="ri-message-2-line"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value">{{unreadMessages}}</h3>
+              <p class="stat-label">Messages</p>
+            </div>
+            <div class="stat-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
+            <span class="stat-badge" *ngIf="unreadMessages > 0">
+              {{unreadMessages}}
             </span>
           </div>
-          <div class="flex-grow-1 ms-3">
-            <p class="text-uppercase fw-medium text-muted mb-1">Appointments</p>
-            <h4 class="mb-0">{{ upcomingAppointments }}</h4>
-          </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- Main Content Row -->
-<div class="row">
-  <!-- My Cases -->
-  <div class="col-xl-8">
-    <div class="card">
-      <div class="card-header align-items-center d-flex">
-        <h4 class="card-title mb-0 flex-grow-1">My Cases</h4>
-        <a href="javascript:void(0);" class="link-primary" (click)="navigateToCases()">View All</a>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Case Number</th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Attorney</th>
-                <th>Next Hearing</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let case of clientCases">
-                <td>
-                  <a href="javascript:void(0);" (click)="viewCase(case.id)" class="fw-medium link-primary">
-                    {{ case.caseNumber }}
-                  </a>
-                </td>
-                <td>{{ case.title }}</td>
-                <td>
-                  <span [class]="getCaseStatusClass(case.status)">{{ case.status }}</span>
-                </td>
-                <td>{{ case.attorney }}</td>
-                <td>{{ case.nextHearing || 'TBD' }}</td>
-                <td>
-                  <button class="btn btn-sm btn-link text-primary" (click)="viewCase(case.id)">
-                    <i class="ri-eye-line"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="clientCases.length === 0">
-                <td colspan="6" class="text-center text-muted">No active cases</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Case Timeline -->
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Case Timeline</h4>
-      </div>
-      <div class="card-body">
-        <div class="timeline">
-          <div class="timeline-item" *ngFor="let event of caseTimeline; let i = index">
-            <div class="timeline-pin">
-              <i class="ri-checkbox-circle-fill text-primary"></i>
+      <!-- Outstanding Balance Alert -->
+      <div class="row mb-4" *ngIf="totalDue > 0">
+        <div class="col-12">
+          <div class="alert-card alert-card-danger">
+            <div class="alert-icon">
+              <i class="ri-money-dollar-circle-line"></i>
             </div>
-            <div class="timeline-content">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="mb-0">{{ event.event }}</h6>
-                <small class="text-muted">{{ event.date | date:'MMM d, y' }}</small>
-              </div>
-              <p class="text-muted mb-0">{{ event.description }}</p>
+            <div class="alert-content">
+              <h5 class="alert-title">Outstanding Balance</h5>
+              <p class="alert-text">
+                You have {{pendingInvoices}} pending invoice(s) totaling
+                <strong>{{formatCurrency(totalDue)}}</strong>
+              </p>
             </div>
-          </div>
-          <div *ngIf="caseTimeline.length === 0" class="text-center text-muted py-3">
-            No timeline events available
+            <button class="btn btn-danger" (click)="navigateToInvoices()">
+              <i class="ri-bill-line me-1"></i> View Invoices
+            </button>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Right Sidebar -->
-  <div class="col-xl-4">
-    <!-- Next Appointment -->
-    <div class="card" *ngIf="nextAppointment">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Next Appointment</h4>
-      </div>
-      <div class="card-body">
-        <div class="text-center mb-3">
-          <div class="avatar-lg mx-auto mb-3">
-            <span class="avatar-title bg-info-subtle text-info rounded-circle">
-              <i class="ri-calendar-event-line fs-1"></i>
-            </span>
-          </div>
-          <h5 class="mb-1">{{ nextAppointment.title }}</h5>
-          <p class="text-muted mb-0">{{ nextAppointment.date | date:'fullDate' }}</p>
-          <p class="text-primary mb-0">{{ nextAppointment.time }}</p>
-        </div>
-        <div class="border-top pt-3">
-          <div class="d-flex align-items-center mb-2">
-            <i class="ri-user-3-line text-muted me-2"></i>
-            <span>{{ nextAppointment.attorney }}</span>
-          </div>
-          <div class="d-flex align-items-center">
-            <i [class]="getAppointmentTypeIcon(nextAppointment.type) + ' text-muted me-2'"></i>
-            <span>{{ nextAppointment.type }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Documents -->
-    <div class="card">
-      <div class="card-header align-items-center d-flex">
-        <h4 class="card-title mb-0 flex-grow-1">Recent Documents</h4>
-        <a href="javascript:void(0);" class="link-primary" (click)="navigateToDocuments()">View All</a>
-      </div>
-      <div class="card-body">
-        <div class="list-group list-group-flush">
-          <a *ngFor="let doc of recentDocuments" class="list-group-item list-group-item-action">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <i [class]="getDocumentTypeIcon(doc.type) + ' text-primary fs-4'"></i>
+      <!-- Row 3: My Cases - Card Layout -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header border-0 d-flex align-items-center">
+              <div class="flex-grow-1">
+                <h4 class="card-title mb-0 fs-18">My Cases</h4>
               </div>
-              <div class="flex-grow-1 ms-3">
-                <h6 class="mb-1">{{ doc.name }}</h6>
-                <small class="text-muted">{{ doc.uploadDate | date:'MMM d' }} • {{ doc.size }}</small>
+              <div class="flex-shrink-0" *ngIf="clientCases.length > 3">
+                <a href="javascript:void(0);" class="btn btn-soft-primary btn-sm" (click)="toggleShowAllCases()">
+                  {{showAllCases ? 'Show Less' : 'View All'}} <i class="ri-arrow-right-line align-middle ms-1"></i>
+                </a>
               </div>
             </div>
-          </a>
-          <div *ngIf="recentDocuments.length === 0" class="text-center text-muted py-3">
-            No documents available
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payment Summary -->
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Payment Summary</h4>
-      </div>
-      <div class="card-body">
-        <div class="text-center mb-4">
-          <h2 class="text-primary mb-1">{{ formatCurrency(totalDue) }}</h2>
-          <p class="text-muted mb-0">Total Amount Due</p>
-        </div>
-        <div class="d-grid">
-          <button class="btn btn-primary" (click)="navigateToInvoices()">
-            <i class="ri-bank-card-line me-1"></i> Make Payment
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Quick Actions</h4>
-      </div>
-      <div class="card-body">
-        <div class="d-grid gap-2">
-          <button class="btn btn-soft-primary" (click)="sendMessage()">
-            <i class="ri-message-3-line me-1"></i> Send Message
-          </button>
-          <button class="btn btn-soft-info" (click)="navigateToAppointments()">
-            <i class="ri-calendar-line me-1"></i> Schedule Appointment
-          </button>
-          <button class="btn btn-soft-success" (click)="navigateToDocuments()">
-            <i class="ri-file-upload-line me-1"></i> Upload Document
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Invoices Row -->
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header align-items-center d-flex">
-        <h4 class="card-title mb-0 flex-grow-1">Recent Invoices</h4>
-        <a href="javascript:void(0);" class="link-primary" (click)="navigateToInvoices()">View All</a>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Invoice #</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let invoice of clientInvoices | slice:0:5">
-                <td>
-                  <a href="javascript:void(0);" (click)="viewInvoice(invoice.id)" class="fw-medium link-primary">
-                    {{ invoice.invoiceNumber }}
-                  </a>
-                </td>
-                <td>{{ invoice.createdDate | date:'MMM d, y' }}</td>
-                <td>{{ formatCurrency(invoice.totalAmount || invoice.amount) }}</td>
-                <td>
-                  <span [class]="getInvoiceStatusClass(invoice.status)">{{ invoice.status }}</span>
-                </td>
-                <td>{{ invoice.dueDate | date:'MMM d, y' }}</td>
-                <td>
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-link text-primary" (click)="viewInvoice(invoice.id)">
-                      <i class="ri-eye-line"></i>
-                    </button>
-                    <button *ngIf="invoice.status !== 'PAID'" class="btn btn-link text-success" (click)="payInvoice(invoice.id)">
-                      <i class="ri-bank-card-line"></i>
-                    </button>
+            <div class="card-body pt-0">
+              <!-- Case Cards Grid -->
+              <div class="row g-3" *ngIf="clientCases.length > 0">
+                <div class="col-xl-4 col-md-6" *ngFor="let caseItem of clientCases.slice(0, showAllCases ? clientCases.length : 3)">
+                  <div class="case-card-minimal rounded-4 p-3 h-100 cursor-pointer"
+                       (click)="viewCase(caseItem.id)">
+                    <!-- Top Row: Icon & Status -->
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                      <div class="avatar-md">
+                        <span class="avatar-title rounded-circle fs-16 fw-semibold"
+                              [ngClass]="getCaseAvatarClass(caseItem.type)">
+                          <i [ngClass]="getCaseIcon(caseItem.type)"></i>
+                        </span>
+                      </div>
+                      <span class="case-badge" [ngClass]="getCaseStatusBadgeClass(caseItem.status)">
+                        {{formatStatus(caseItem.status)}}
+                      </span>
+                    </div>
+                    <!-- Case Title -->
+                    <h5 class="fs-16 fw-semibold mb-1 text-truncate" [title]="caseItem.title">
+                      {{caseItem.title}}
+                    </h5>
+                    <!-- Case Number -->
+                    <p class="text-muted fs-13 mb-3">
+                      <i class="ri-hashtag me-1"></i>{{caseItem.caseNumber}}
+                    </p>
+                    <!-- Case Meta -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="case-meta" *ngIf="caseItem.type">
+                        <i class="ri-folder-line me-1"></i>{{caseItem.type}}
+                      </span>
+                      <span class="case-meta" *ngIf="caseItem.attorney">
+                        <i class="ri-user-line me-1"></i>{{caseItem.attorney}}
+                      </span>
+                    </div>
+                    <!-- Next Hearing -->
+                    <div class="case-updated mt-3 pt-3 border-top" *ngIf="caseItem.nextHearing">
+                      <small class="text-muted">
+                        <i class="ri-calendar-line me-1"></i>Next: {{caseItem.nextHearing | date:'MMM d, y'}}
+                      </small>
+                    </div>
                   </div>
-                </td>
-              </tr>
-              <tr *ngIf="clientInvoices.length === 0">
-                <td colspan="6" class="text-center text-muted">No invoices found</td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div class="text-center py-5" *ngIf="clientCases.length === 0">
+                <div class="avatar-lg mx-auto mb-3">
+                  <span class="avatar-title bg-light text-muted rounded-circle fs-28">
+                    <i class="ri-briefcase-line"></i>
+                  </span>
+                </div>
+                <h5 class="text-muted mb-2">No Cases Yet</h5>
+                <p class="text-muted fs-13 mb-0">Your cases will appear here once assigned.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- Charts Row -->
-<div class="row">
-  <!-- Case Progress -->
-  <div class="col-xl-6">
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Case Progress</h4>
-      </div>
-      <div class="card-body">
-        <apx-chart
-          *ngIf="caseProgressChart"
-          [series]="caseProgressChart.series"
-          [chart]="caseProgressChart.chart"
-          [plotOptions]="caseProgressChart.plotOptions"
-          [colors]="caseProgressChart.colors"
-          [labels]="caseProgressChart.labels"
-        ></apx-chart>
-      </div>
-    </div>
-  </div>
+      <!-- Row 4: Next Appointment & Quick Actions -->
+      <div class="row">
+        <!-- Next Appointment -->
+        <div class="col-xxl-8 col-xl-7">
+          <div class="card appointment-card">
+            <div class="card-header border-0 d-flex align-items-center">
+              <div class="flex-shrink-0 me-3" *ngIf="nextAppointment">
+                <div class="appointment-date-badge">
+                  <span class="day">{{getAppointmentDay(nextAppointment.date)}}</span>
+                  <span class="month">{{getAppointmentMonth(nextAppointment.date)}}</span>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h4 class="card-title mb-1">
+                  {{nextAppointment ? 'Next Appointment' : 'Upcoming Appointments'}}
+                </h4>
+                <span class="text-muted fs-13" *ngIf="nextAppointment">
+                  {{nextAppointment.date | date:'fullDate'}} at {{nextAppointment.time}}
+                </span>
+                <span class="text-muted fs-13" *ngIf="!nextAppointment">
+                  No upcoming appointments scheduled
+                </span>
+              </div>
+              <div class="flex-shrink-0">
+                <a href="javascript:void(0);" class="btn btn-soft-warning btn-sm" (click)="navigateToAppointments()">
+                  <i class="ri-calendar-line align-middle me-1"></i> View All
+                </a>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <!-- Appointment Details -->
+              <div *ngIf="nextAppointment" class="appointment-details">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h5 class="fs-17 mb-2">{{nextAppointment.title}}</h5>
+                    <div class="appointment-meta mb-3">
+                      <span class="me-3">
+                        <i [ngClass]="getAppointmentTypeIcon(nextAppointment.type)" class="text-warning me-1"></i>
+                        {{nextAppointment.type}}
+                      </span>
+                      <span *ngIf="nextAppointment.attorney">
+                        <i class="ri-user-line text-primary me-1"></i>
+                        {{nextAppointment.attorney}}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="countdown-badge">
+                      <span class="countdown-label">Coming up in</span>
+                      <span class="countdown-value">{{getTimeUntil(nextAppointment.date)}}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-  <!-- Payment History -->
-  <div class="col-xl-6">
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title mb-0">Payment History</h4>
+              <!-- Empty State -->
+              <div *ngIf="!nextAppointment" class="text-center py-4">
+                <div class="avatar-md mx-auto mb-3">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-24">
+                    <i class="ri-calendar-check-line"></i>
+                  </span>
+                </div>
+                <h6 class="text-muted mb-2">No Upcoming Appointments</h6>
+                <p class="text-muted fs-13 mb-3">Schedule a meeting with your attorney</p>
+                <a href="javascript:void(0);" class="btn btn-soft-warning btn-sm" (click)="navigateToAppointments()">
+                  <i class="ri-add-line me-1"></i> Request Appointment
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-xxl-4 col-xl-5">
+          <div class="card h-100">
+            <div class="card-header border-0">
+              <h4 class="card-title mb-0">Quick Actions</h4>
+            </div>
+            <div class="card-body pt-0">
+              <div class="quick-actions-grid">
+                <a href="javascript:void(0);" class="quick-action-item" (click)="sendMessage()">
+                  <div class="quick-action-icon bg-success-subtle text-success">
+                    <i class="ri-message-2-line"></i>
+                  </div>
+                  <div class="quick-action-content">
+                    <h6>Send Message</h6>
+                    <p>Contact your attorney</p>
+                  </div>
+                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                </a>
+
+                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToDocuments()">
+                  <div class="quick-action-icon bg-info-subtle text-info">
+                    <i class="ri-upload-2-line"></i>
+                  </div>
+                  <div class="quick-action-content">
+                    <h6>Upload Document</h6>
+                    <p>Share files securely</p>
+                  </div>
+                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                </a>
+
+                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToAppointments()">
+                  <div class="quick-action-icon bg-warning-subtle text-warning">
+                    <i class="ri-calendar-line"></i>
+                  </div>
+                  <div class="quick-action-content">
+                    <h6>Request Appointment</h6>
+                    <p>Schedule a meeting</p>
+                  </div>
+                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                </a>
+
+                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToInvoices()">
+                  <div class="quick-action-icon bg-primary-subtle text-primary">
+                    <i class="ri-bill-line"></i>
+                  </div>
+                  <div class="quick-action-content">
+                    <h6>View Invoices</h6>
+                    <p>Check billing status</p>
+                  </div>
+                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <apx-chart
-          *ngIf="paymentHistoryChart"
-          [series]="paymentHistoryChart.series"
-          [chart]="paymentHistoryChart.chart"
-          [xaxis]="paymentHistoryChart.xaxis"
-          [stroke]="paymentHistoryChart.stroke"
-          [fill]="paymentHistoryChart.fill"
-          [colors]="paymentHistoryChart.colors"
-        ></apx-chart>
-      </div>
+
     </div>
   </div>
 </div>

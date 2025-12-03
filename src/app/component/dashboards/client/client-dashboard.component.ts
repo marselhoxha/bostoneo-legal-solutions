@@ -2,13 +2,7 @@ import { Component, OnInit, OnDestroy, Input, ChangeDetectorRef } from '@angular
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { User } from 'src/app/interface/user';
-import { ClientService } from 'src/app/service/client.service';
-import { UserService } from 'src/app/service/user.service';
-import { RbacService } from 'src/app/core/services/rbac.service';
-import { AuthService } from 'src/app/services/auth.service';
-import { CaseClientService } from 'src/app/service/case-client.service';
-import { InvoiceService } from 'src/app/service/invoice.service';
-// DocumentService will be used when available
+import { ClientPortalService, ClientCase } from 'src/app/modules/client-portal/services/client-portal.service';
 
 @Component({
   selector: 'app-client-dashboard',
@@ -20,6 +14,10 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   @Input() currentUser: User | null = null;
   @Input() isDarkMode: boolean = false;
 
+  // Date and UI state
+  currentDate = new Date();
+  showAllCases = false;
+
   // Client specific stats
   myCases = 0;
   activeDocuments = 0;
@@ -29,7 +27,6 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   unreadMessages = 0;
 
   // Client data
-  clientId: number | null = null;
   clientCases: any[] = [];
   recentDocuments: any[] = [];
   clientInvoices: any[] = [];
@@ -53,12 +50,7 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private clientService: ClientService,
-    private userService: UserService,
-    private rbacService: RbacService,
-    private authService: AuthService,
-    private caseClientService: CaseClientService,
-    private invoiceService: InvoiceService,
+    private clientPortalService: ClientPortalService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -74,65 +66,9 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   }
 
   private initializeClient(): void {
-    // Get client ID from current user
-    // For CLIENT role, we need to map the user to a client based on email
-    // For other roles (attorney, paralegal, etc.), we'll use user ID to fetch their assigned cases
-    
-    const userRole = this.currentUser?.roleName || this.currentUser?.primaryRoleName || '';
-    const isClientRole = userRole.toUpperCase().includes('CLIENT') || userRole.toUpperCase().includes('ROLE_USER');
-    
+    // The ClientPortalService handles user-to-client mapping on the backend
+    // No need for client-side mapping
     console.log('Client Dashboard - User:', this.currentUser);
-    console.log('Client Dashboard - User Role:', userRole, 'Is Client Role:', isClientRole);
-    
-    if (isClientRole) {
-      // For client users, try to map user email to client
-      // Simple mapping: if user email matches known pattern, use mapped client ID
-      this.clientId = this.mapUserToClientId();
-      console.log('Client Dashboard - Mapped Client ID:', this.clientId);
-    } else {
-      // For non-client users (attorneys, paralegals), use user ID directly
-      this.clientId = this.currentUser?.id || null;
-      console.log('Client Dashboard - Using User ID as Client ID:', this.clientId);
-    }
-  }
-
-  private mapUserToClientId(): number | null {
-    if (!this.currentUser?.email) {
-      return null;
-    }
-
-    // Simple mapping based on known user-client relationships
-    // This can be expanded or replaced with a proper API call
-    const userClientMapping: { [key: string]: number } = {
-      'marsel.hox@gmail.com': 101,
-      'test.client@example.com': 102,
-      // Add more mappings as needed
-    };
-
-    const mappedClientId = userClientMapping[this.currentUser.email];
-    if (mappedClientId) {
-      console.log(`Mapped user ${this.currentUser.email} to client ID ${mappedClientId}`);
-      return mappedClientId;
-    }
-
-    // If no mapping found, try to use a fallback approach
-    // For demo purposes, we'll use the user ID + 100 as client ID
-    const fallbackClientId = (this.currentUser.id || 0) + 100;
-    console.log(`No mapping found for ${this.currentUser.email}, using fallback client ID: ${fallbackClientId}`);
-    return fallbackClientId;
-  }
-
-  private findClientIdByEmail(): void {
-    // This method is no longer needed with the simplified approach
-    console.log('findClientIdByEmail method called but not implemented in simplified version');
-    this.createFallbackClientData();
-  }
-
-  private createFallbackClientData(): void {
-    // If we can't find a client, create some fallback data
-    console.log('Creating fallback client data');
-    this.clientId = this.currentUser?.id || 1;
-    this.loadClientData();
   }
 
   private loadClientData(): void {
@@ -151,35 +87,30 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadClientCases(): void {
-    if (!this.clientId) return;
-    
     this.casesLoading = true;
-    
-    // Determine if this is a CLIENT role or case-specific role (attorney, paralegal, etc.)
-    const userRole = this.currentUser?.roleName || this.currentUser?.primaryRoleName || '';
-    const isClientRole = userRole.toUpperCase().includes('CLIENT') || userRole.toUpperCase().includes('ROLE_USER');
-    
-    console.log('Loading cases for role:', userRole, 'isClientRole:', isClientRole);
-    
-    // Use appropriate method based on role
-    const casesObservable = isClientRole 
-      ? this.caseClientService.getClientCases(this.clientId, 0, 10)
-      : this.caseClientService.getUserCases(this.clientId, 0, 10);
-    
-    casesObservable
+
+    // Use ClientPortalService which handles user-to-client mapping on the backend
+    this.clientPortalService.getCases(0, 10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response?.data?.content) {
-            this.clientCases = response.data.content;
-            this.myCases = response.data.totalElements || 0;
-            
-            console.log('Loaded cases:', this.clientCases);
-            
-            // Load timeline for the first case
-            if (this.clientCases.length > 0) {
-              this.loadCaseTimeline(this.clientCases[0].id);
-            }
+          if (response?.content) {
+            this.clientCases = response.content.map((c: ClientCase) => ({
+              id: c.id,
+              caseNumber: c.caseNumber,
+              title: c.title,
+              status: c.status,
+              caseType: c.type,
+              attorney: c.attorneyName,
+              progress: this.calculateProgress(c.status),
+              documentCount: c.documentCount,
+              upcomingAppointments: c.upcomingAppointments,
+              createdAt: c.openDate,
+              lastUpdated: c.lastUpdated
+            }));
+            this.myCases = response.totalElements || this.clientCases.length;
+
+            console.log('Loaded cases from ClientPortalService:', this.clientCases);
           }
           this.casesLoading = false;
           this.cdr.detectChanges();
@@ -187,39 +118,48 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading cases:', error);
           this.casesLoading = false;
-          // Use fallback data
-          this.clientCases = [
-            {
-              id: 1,
-              caseNumber: 'CASE-2024-001',
-              title: 'Contract Dispute',
-              status: 'Active',
-              attorney: 'John Smith',
-              nextHearing: '2024-02-15',
-              progress: 65
-            }
-          ];
-          this.myCases = this.clientCases.length;
+          this.clientCases = [];
+          this.myCases = 0;
           this.cdr.detectChanges();
         }
       });
   }
 
+  private calculateProgress(status: string): number {
+    const progressMap: { [key: string]: number } = {
+      'OPEN': 10,
+      'ACTIVE': 40,
+      'IN_PROGRESS': 60,
+      'PENDING': 30,
+      'UNDER_REVIEW': 50,
+      'SETTLED': 90,
+      'CLOSED': 100,
+      'WON': 100,
+      'LOST': 100
+    };
+    return progressMap[status] || 25;
+  }
+
   private loadClientDocuments(): void {
-    if (!this.clientId || this.clientCases.length === 0) return;
-    
     this.documentsLoading = true;
-    
-    // Load documents for the first case (simplified)
-    const caseId = this.clientCases[0]?.id || 1;
-    
-    this.caseClientService.getClientCaseDocuments(this.clientId, caseId, 0, 5)
+
+    // Use ClientPortalService to load documents
+    this.clientPortalService.getDocuments(0, 5)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response?.data?.content) {
-            this.recentDocuments = response.data.content;
-            this.activeDocuments = response.data.totalElements || 0;
+          if (response?.content) {
+            this.recentDocuments = response.content.map((d: any) => ({
+              id: d.id,
+              name: d.fileName || d.title,
+              title: d.title,
+              type: d.category,
+              uploadDate: d.uploadedAt,
+              size: this.formatFileSize(d.fileSize),
+              caseNumber: d.caseNumber,
+              caseName: d.caseName
+            }));
+            this.activeDocuments = response.totalElements || this.recentDocuments.length;
           }
           this.documentsLoading = false;
           this.cdr.detectChanges();
@@ -227,50 +167,39 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading documents:', error);
           this.documentsLoading = false;
-          // Use fallback data
-          this.recentDocuments = [
-            {
-              id: 1,
-              name: 'Contract Agreement.pdf',
-              type: 'Contract',
-              uploadDate: new Date('2024-01-15'),
-              size: '2.5 MB'
-            },
-            {
-              id: 2,
-              name: 'Evidence Document.pdf',
-              type: 'Evidence',
-              uploadDate: new Date('2024-01-10'),
-              size: '1.8 MB'
-            }
-          ];
-          this.activeDocuments = this.recentDocuments.length;
+          this.recentDocuments = [];
+          this.activeDocuments = 0;
           this.cdr.detectChanges();
         }
       });
   }
 
+  private formatFileSize(bytes: number): string {
+    if (!bytes) return '-';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
   private loadClientInvoices(): void {
-    if (!this.clientId) return;
-    
     this.invoicesLoading = true;
-    
-    // Load invoices for this client
-    this.invoiceService.getInvoicesByClient(this.clientId, 0, 10)
+
+    // Use ClientPortalService for invoices
+    this.clientPortalService.getInvoices(0, 10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response?.data?.content) {
-            this.clientInvoices = response.data.content;
-            
+          if (response?.content) {
+            this.clientInvoices = response.content;
+
             // Calculate pending invoices and total due
-            this.pendingInvoices = this.clientInvoices.filter(inv => 
+            this.pendingInvoices = this.clientInvoices.filter(inv =>
               inv.status === 'PENDING' || inv.status === 'OVERDUE'
             ).length;
-            
+
             this.totalDue = this.clientInvoices
               .filter(inv => inv.status !== 'PAID')
-              .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+              .reduce((sum, inv) => sum + (inv.balanceDue || inv.amount || 0), 0);
           }
           this.invoicesLoading = false;
           this.cdr.detectChanges();
@@ -278,81 +207,50 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading invoices:', error);
           this.invoicesLoading = false;
-          // Use fallback data
-          this.clientInvoices = [
-            {
-              id: 1,
-              invoiceNumber: 'INV-2024-001',
-              amount: 5000,
-              status: 'PENDING',
-              dueDate: new Date('2024-02-01')
-            }
-          ];
-          this.pendingInvoices = 1;
-          this.totalDue = 5000;
+          this.clientInvoices = [];
+          this.pendingInvoices = 0;
+          this.totalDue = 0;
           this.cdr.detectChanges();
         }
       });
   }
 
   private loadAppointments(): void {
-    // Simulated appointments data
-    this.appointments = [
-      {
-        id: 1,
-        title: 'Case Review Meeting',
-        date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-        time: '10:00 AM',
-        attorney: 'John Smith',
-        type: 'In-Person'
-      },
-      {
-        id: 2,
-        title: 'Deposition Preparation',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
-        time: '2:00 PM',
-        attorney: 'John Smith',
-        type: 'Virtual'
-      }
-    ];
-    
-    this.upcomingAppointments = this.appointments.length;
-    this.nextAppointment = this.appointments[0];
-    this.cdr.detectChanges();
-  }
-
-  private loadCaseTimeline(caseId: number): void {
-    if (!this.clientId) return;
-    
-    this.caseClientService.getClientCaseTimeline(this.clientId, caseId)
+    // Use ClientPortalService to load appointments
+    this.clientPortalService.getAppointments()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          if (response?.data) {
-            this.caseTimeline = response.data;
-          }
+        next: (appointments) => {
+          this.appointments = (appointments || []).map(apt => ({
+            id: apt.id,
+            title: apt.title,
+            date: new Date(apt.startTime),
+            time: new Date(apt.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            attorney: apt.attorneyName,
+            type: apt.isVirtual ? 'Virtual' : 'In-Person',
+            caseNumber: apt.caseNumber,
+            location: apt.location
+          }));
+
+          this.upcomingAppointments = this.appointments.length;
+          this.nextAppointment = this.appointments.length > 0 ? this.appointments[0] : null;
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error loading timeline:', error);
-          // Use fallback data
-          this.caseTimeline = [
-            {
-              id: 1,
-              date: new Date('2024-01-01'),
-              event: 'Case Filed',
-              description: 'Initial complaint filed with the court'
-            },
-            {
-              id: 2,
-              date: new Date('2024-01-15'),
-              event: 'Discovery Phase Started',
-              description: 'Document collection and review initiated'
-            }
-          ];
+          console.error('Error loading appointments:', error);
+          this.appointments = [];
+          this.upcomingAppointments = 0;
+          this.nextAppointment = null;
           this.cdr.detectChanges();
         }
       });
+  }
+
+  private loadCaseTimeline(caseId: number): void {
+    // Timeline is loaded as part of case details - we can add this later
+    // For now, we just initialize an empty timeline
+    this.caseTimeline = [];
+    this.cdr.detectChanges();
   }
 
   private initializeCharts(): void {
@@ -404,7 +302,8 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   
   // Navigation methods
   navigateToCases(): void {
-    this.router.navigate(['/client/cases']);
+    // Show all cases on dashboard instead of navigating away
+    this.showAllCases = true;
   }
   
   navigateToDocuments(): void {
@@ -508,5 +407,122 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
 
   refreshDashboard(): void {
     this.loadClientData();
+  }
+
+  // Greeting helpers
+  getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  getWelcomeMessage(): string {
+    const parts: string[] = [];
+
+    if (this.myCases > 0) {
+      parts.push(`You have ${this.myCases} active case${this.myCases !== 1 ? 's' : ''}`);
+    }
+
+    if (this.upcomingAppointments > 0) {
+      parts.push(`${this.upcomingAppointments} upcoming appointment${this.upcomingAppointments !== 1 ? 's' : ''}`);
+    }
+
+    if (this.unreadMessages > 0) {
+      parts.push(`${this.unreadMessages} unread message${this.unreadMessages !== 1 ? 's' : ''}`);
+    }
+
+    if (parts.length === 0) {
+      return 'Welcome to your client portal. Your dashboard is up to date.';
+    }
+
+    return parts.join(', ') + '.';
+  }
+
+  // Toggle methods
+  toggleShowAllCases(): void {
+    this.showAllCases = !this.showAllCases;
+  }
+
+  // Case helpers
+  getCaseAvatarClass(caseType: string | undefined): string {
+    const typeMap: { [key: string]: string } = {
+      'Criminal': 'bg-danger-subtle text-danger',
+      'Civil': 'bg-primary-subtle text-primary',
+      'Family': 'bg-warning-subtle text-warning',
+      'Corporate': 'bg-info-subtle text-info',
+      'Immigration': 'bg-success-subtle text-success',
+      'Real Estate': 'bg-secondary-subtle text-secondary',
+      'Personal Injury': 'bg-danger-subtle text-danger',
+      'Bankruptcy': 'bg-warning-subtle text-warning'
+    };
+    return typeMap[caseType || ''] || 'bg-primary-subtle text-primary';
+  }
+
+  getCaseIcon(caseType: string | undefined): string {
+    const iconMap: { [key: string]: string } = {
+      'Criminal': 'ri-scales-3-line',
+      'Civil': 'ri-file-list-3-line',
+      'Family': 'ri-parent-line',
+      'Corporate': 'ri-building-line',
+      'Immigration': 'ri-global-line',
+      'Real Estate': 'ri-home-line',
+      'Personal Injury': 'ri-heart-pulse-line',
+      'Bankruptcy': 'ri-bank-line'
+    };
+    return iconMap[caseType || ''] || 'ri-briefcase-line';
+  }
+
+  getCaseStatusBadgeClass(status: string | undefined): string {
+    const statusMap: { [key: string]: string } = {
+      'Active': 'case-badge-primary',
+      'In Progress': 'case-badge-info',
+      'Pending': 'case-badge-warning',
+      'Closed': 'case-badge-secondary',
+      'Settled': 'case-badge-success',
+      'Won': 'case-badge-success',
+      'Lost': 'case-badge-danger'
+    };
+    return statusMap[status || ''] || 'case-badge-secondary';
+  }
+
+  formatStatus(status: string | undefined): string {
+    if (!status) return 'Unknown';
+    return status.replace(/_/g, ' ');
+  }
+
+  // Appointment helpers
+  getAppointmentDay(date: Date | string | undefined): string {
+    if (!date) return '--';
+    const d = new Date(date);
+    return d.getDate().toString();
+  }
+
+  getAppointmentMonth(date: Date | string | undefined): string {
+    if (!date) return '---';
+    const d = new Date(date);
+    return d.toLocaleString('default', { month: 'short' }).toUpperCase();
+  }
+
+  getTimeUntil(date: Date | string | undefined): string {
+    if (!date) return '--';
+
+    const appointmentDate = new Date(date);
+    const now = new Date();
+    const diff = appointmentDate.getTime() - now.getTime();
+
+    if (diff < 0) return 'Past';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) {
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    if (hours > 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    return `${minutes} min${minutes !== 1 ? 's' : ''}`;
   }
 } 

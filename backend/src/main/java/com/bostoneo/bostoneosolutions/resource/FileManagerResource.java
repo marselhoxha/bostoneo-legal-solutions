@@ -791,4 +791,17 @@ public class FileManagerResource {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PostMapping("/files/{fileId}/share-with-client")
+    @Operation(summary = "Toggle share with client status of a file")
+    // @PreAuthorize("hasAuthority('DOCUMENT:SHARE') or hasRole('ROLE_USER')")
+    public ResponseEntity<FileItemDTO> toggleShareWithClient(@PathVariable Long fileId) {
+        try {
+            FileItemDTO updatedFile = fileManagerService.toggleShareWithClient(fileId);
+            return ResponseEntity.ok(updatedFile);
+        } catch (RuntimeException e) {
+            log.error("Error toggling share with client for file {}: {}", fileId, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
