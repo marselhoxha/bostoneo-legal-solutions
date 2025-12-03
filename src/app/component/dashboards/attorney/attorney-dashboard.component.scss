@@ -138,6 +138,45 @@
   }
 }
 
+// Event Type Legend
+.event-type-legend {
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--vz-secondary-color);
+    font-weight: 400;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .legend-dot.court {
+    background-color: #f06548 !important; // Coral/Red
+  }
+
+  .legend-dot.hearing {
+    background-color: #865ce2 !important; // Purple
+  }
+
+  .legend-dot.deadline {
+    background-color: #f7b84b !important; // Orange/Amber
+  }
+
+  .legend-dot.meeting {
+    background-color: #299cdb !important; // Blue
+  }
+
+  .legend-dot.reminder {
+    background-color: #45c8de !important; // Teal/Cyan
+  }
+}
+
 // Schedule Date Badge
 .schedule-date-badge {
   width: 56px;
@@ -285,6 +324,8 @@
 .activity-feed {
   position: relative;
   padding-left: 6px;
+  height: 440px;
+  overflow: hidden;
 
   // Dashed connecting line
   &::before {
@@ -295,6 +336,30 @@
     bottom: 24px;
     width: 0;
     border-left: 2px dashed rgba(var(--vz-primary-rgb), 0.25);
+  }
+
+  // Scrollable state - same height, enables vertical scroll only
+  &.activity-feed-scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(var(--vz-primary-rgb), 0.2);
+      border-radius: 4px;
+
+      &:hover {
+        background: rgba(var(--vz-primary-rgb), 0.3);
+      }
+    }
   }
 
   .activity-feed-item {
@@ -416,6 +481,38 @@
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+    }
+
+    .activity-context {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+
+      .activity-user {
+        display: inline-flex;
+        align-items: center;
+        color: var(--vz-primary);
+
+        i {
+          font-size: 11px;
+        }
+      }
+
+      .activity-case-link {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        transition: color 0.15s ease;
+
+        i {
+          font-size: 11px;
+        }
+
+        &:hover {
+          color: var(--vz-primary) !important;
+        }
+      }
     }
 
     .activity-meta {

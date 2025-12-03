@@ -141,4 +141,108 @@ public interface CaseActivityService {
     default void logReminderDeleted(Long caseId, Long reminderId, String reminderTitle) {
         logReminderDeleted(caseId, reminderId, reminderTitle, null);
     }
+
+    // =====================================================
+    // CASE STATUS & PRIORITY ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a case status change activity
+     */
+    void logStatusChanged(Long caseId, String oldStatus, String newStatus, Long userId);
+
+    /**
+     * Log a case priority change activity
+     */
+    void logPriorityChanged(Long caseId, String oldPriority, String newPriority, Long userId);
+
+    /**
+     * Log a case creation activity
+     */
+    void logCaseCreated(Long caseId, String caseTitle, String clientName, Long userId);
+
+    // =====================================================
+    // DOCUMENT ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a document uploaded activity
+     */
+    void logDocumentUploaded(Long caseId, Long documentId, String documentName, Long userId);
+
+    /**
+     * Log a document downloaded activity
+     */
+    void logDocumentDownloaded(Long caseId, Long documentId, String documentName, Long userId);
+
+    /**
+     * Log a document version added activity
+     */
+    void logDocumentVersionAdded(Long caseId, Long documentId, String documentName, int versionNumber, Long userId);
+
+    // =====================================================
+    // CALENDAR & HEARING ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a hearing/event scheduled activity
+     */
+    void logHearingScheduled(Long caseId, Long eventId, String eventTitle, String eventType, Long userId);
+
+    /**
+     * Log a hearing/event updated activity
+     */
+    void logHearingUpdated(Long caseId, Long eventId, String eventTitle, Long userId);
+
+    /**
+     * Log a hearing/event cancelled activity
+     */
+    void logHearingCancelled(Long caseId, Long eventId, String eventTitle, Long userId);
+
+    // =====================================================
+    // ASSIGNMENT ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a case assignment activity
+     */
+    void logAssignmentAdded(Long caseId, Long assigneeId, String assigneeName, String roleType, Long userId);
+
+    /**
+     * Log a case unassignment activity
+     */
+    void logAssignmentRemoved(Long caseId, Long assigneeId, String assigneeName, Long userId);
+
+    // =====================================================
+    // COMMUNICATION ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a client contacted activity
+     */
+    void logClientContacted(Long caseId, String contactMethod, String subject, Long userId);
+
+    /**
+     * Log an email sent activity
+     */
+    void logEmailSent(Long caseId, String recipient, String subject, Long userId);
+
+    // =====================================================
+    // FINANCIAL ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a payment received activity
+     */
+    void logPaymentReceived(Long caseId, Long paymentId, Double amount, Long userId);
+
+    /**
+     * Log a time entry added activity
+     */
+    void logTimeEntryAdded(Long caseId, Long timeEntryId, Double hours, String description, Long userId);
+
+    /**
+     * Log an invoice created activity
+     */
+    void logInvoiceCreated(Long caseId, Long invoiceId, Double amount, Long userId);
 } 

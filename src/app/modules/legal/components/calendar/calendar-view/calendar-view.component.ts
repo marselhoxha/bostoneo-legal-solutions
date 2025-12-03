@@ -86,36 +86,43 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       // Add custom classes based on event type
       const eventType = arg.event.extendedProps['eventType'];
       let className = '';
-      
+
       switch(eventType) {
         case 'COURT_DATE':
-          className = 'bg-danger-subtle';
+        case 'COURT':
+          className = 'event-court';
+          break;
+        case 'HEARING':
+          className = 'event-hearing';
           break;
         case 'DEADLINE':
-          className = 'bg-warning-subtle';
+        case 'FILING':
+          className = 'event-deadline';
           break;
         case 'CLIENT_MEETING':
-          className = 'bg-primary-subtle';
-          break;
         case 'TEAM_MEETING':
-          className = 'bg-info-subtle';
+        case 'MEETING':
+          className = 'event-meeting';
           break;
         case 'DEPOSITION':
-          className = 'bg-secondary-subtle';
-          break;  
+          className = 'event-deposition';
+          break;
         case 'MEDIATION':
           className = 'bg-success-subtle';
           break;
         case 'CONSULTATION':
-          className = 'bg-primary-subtle';
+          className = 'event-consultation';
           break;
         case 'REMINDER':
-          className = 'bg-info-subtle';
+          className = 'event-reminder';
+          break;
+        case 'DOCUMENT_REVIEW':
+          className = 'event-document';
           break;
         default:
-          className = 'bg-dark-subtle';
+          className = 'event-default';
       }
-      
+
       return [className];
     }
   };

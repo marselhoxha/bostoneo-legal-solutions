@@ -375,4 +375,524 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     public void logReminderDeleted(Long caseId, Long reminderId, String reminderTitle) {
         logReminderDeleted(caseId, reminderId, reminderTitle, null);
     }
+
+    // =====================================================
+    // CASE STATUS & PRIORITY ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logStatusChanged(Long caseId, String oldStatus, String newStatus, Long userId) {
+        log.info("Logging status change for case ID: {} from {} to {}", caseId, oldStatus, newStatus);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("STATUS_CHANGED");
+            activity.setReferenceType("case");
+            activity.setDescription("Case status changed from " + oldStatus + " to " + newStatus);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("oldStatus", oldStatus);
+            metadata.put("newStatus", newStatus);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing status change metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+            log.info("Successfully logged status change activity");
+        } catch (Exception e) {
+            log.error("Failed to log status change activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logPriorityChanged(Long caseId, String oldPriority, String newPriority, Long userId) {
+        log.info("Logging priority change for case ID: {} from {} to {}", caseId, oldPriority, newPriority);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("PRIORITY_CHANGED");
+            activity.setReferenceType("case");
+            activity.setDescription("Case priority changed from " + oldPriority + " to " + newPriority);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("oldPriority", oldPriority);
+            metadata.put("newPriority", newPriority);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing priority change metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log priority change activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logCaseCreated(Long caseId, String caseTitle, String clientName, Long userId) {
+        log.info("Logging case creation for case ID: {}", caseId);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("CASE_CREATED");
+            activity.setReferenceType("case");
+            activity.setDescription("Case \"" + caseTitle + "\" created for client " + clientName);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("caseTitle", caseTitle);
+            metadata.put("clientName", clientName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing case creation metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log case creation activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // DOCUMENT ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logDocumentUploaded(Long caseId, Long documentId, String documentName, Long userId) {
+        log.info("Logging document upload for case ID: {}, document: {}", caseId, documentName);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("DOCUMENT_UPLOADED");
+            activity.setReferenceId(documentId);
+            activity.setReferenceType("document");
+            activity.setDescription("Uploaded document \"" + documentName + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("documentId", documentId);
+            metadata.put("documentName", documentName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing document upload metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log document upload activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logDocumentDownloaded(Long caseId, Long documentId, String documentName, Long userId) {
+        log.info("Logging document download for case ID: {}, document: {}", caseId, documentName);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("DOCUMENT_DOWNLOADED");
+            activity.setReferenceId(documentId);
+            activity.setReferenceType("document");
+            activity.setDescription("Downloaded document \"" + documentName + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("documentId", documentId);
+            metadata.put("documentName", documentName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing document download metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log document download activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logDocumentVersionAdded(Long caseId, Long documentId, String documentName, int versionNumber, Long userId) {
+        log.info("Logging document version for case ID: {}, document: {}, version: {}", caseId, documentName, versionNumber);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("DOCUMENT_VERSION_ADDED");
+            activity.setReferenceId(documentId);
+            activity.setReferenceType("document");
+            activity.setDescription("Added version " + versionNumber + " of document \"" + documentName + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("documentId", documentId);
+            metadata.put("documentName", documentName);
+            metadata.put("versionNumber", versionNumber);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing document version metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log document version activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // CALENDAR & HEARING ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logHearingScheduled(Long caseId, Long eventId, String eventTitle, String eventType, Long userId) {
+        log.info("Logging hearing scheduled for case ID: {}, event: {}", caseId, eventTitle);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("HEARING_SCHEDULED");
+            activity.setReferenceId(eventId);
+            activity.setReferenceType("calendar_event");
+            activity.setDescription("Scheduled " + eventType.toLowerCase().replace("_", " ") + ": \"" + eventTitle + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("eventId", eventId);
+            metadata.put("eventTitle", eventTitle);
+            metadata.put("eventType", eventType);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing hearing scheduled metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log hearing scheduled activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logHearingUpdated(Long caseId, Long eventId, String eventTitle, Long userId) {
+        log.info("Logging hearing update for case ID: {}, event: {}", caseId, eventTitle);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("HEARING_UPDATED");
+            activity.setReferenceId(eventId);
+            activity.setReferenceType("calendar_event");
+            activity.setDescription("Updated hearing/event: \"" + eventTitle + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("eventId", eventId);
+            metadata.put("eventTitle", eventTitle);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing hearing update metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log hearing update activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logHearingCancelled(Long caseId, Long eventId, String eventTitle, Long userId) {
+        log.info("Logging hearing cancellation for case ID: {}, event: {}", caseId, eventTitle);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("HEARING_CANCELLED");
+            activity.setReferenceId(eventId);
+            activity.setReferenceType("calendar_event");
+            activity.setDescription("Cancelled hearing/event: \"" + eventTitle + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("eventId", eventId);
+            metadata.put("eventTitle", eventTitle);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing hearing cancellation metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log hearing cancellation activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // ASSIGNMENT ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logAssignmentAdded(Long caseId, Long assigneeId, String assigneeName, String roleType, Long userId) {
+        log.info("Logging assignment for case ID: {}, assignee: {}", caseId, assigneeName);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("ASSIGNMENT_ADDED");
+            activity.setReferenceId(assigneeId);
+            activity.setReferenceType("user");
+            activity.setDescription(assigneeName + " assigned as " + roleType.toLowerCase().replace("_", " "));
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("assigneeId", assigneeId);
+            metadata.put("assigneeName", assigneeName);
+            metadata.put("roleType", roleType);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing assignment metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log assignment activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logAssignmentRemoved(Long caseId, Long assigneeId, String assigneeName, Long userId) {
+        log.info("Logging unassignment for case ID: {}, assignee: {}", caseId, assigneeName);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("ASSIGNMENT_REMOVED");
+            activity.setReferenceId(assigneeId);
+            activity.setReferenceType("user");
+            activity.setDescription(assigneeName + " removed from case");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("assigneeId", assigneeId);
+            metadata.put("assigneeName", assigneeName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing unassignment metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log unassignment activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // COMMUNICATION ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logClientContacted(Long caseId, String contactMethod, String subject, Long userId) {
+        log.info("Logging client contact for case ID: {}, method: {}", caseId, contactMethod);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("CLIENT_CONTACTED");
+            activity.setReferenceType("communication");
+            activity.setDescription("Contacted client via " + contactMethod + ": " + subject);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("contactMethod", contactMethod);
+            metadata.put("subject", subject);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing client contact metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log client contact activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logEmailSent(Long caseId, String recipient, String subject, Long userId) {
+        log.info("Logging email sent for case ID: {}, to: {}", caseId, recipient);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("EMAIL_SENT");
+            activity.setReferenceType("email");
+            activity.setDescription("Email sent to " + recipient + ": \"" + subject + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("recipient", recipient);
+            metadata.put("subject", subject);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing email sent metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log email sent activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // FINANCIAL ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logPaymentReceived(Long caseId, Long paymentId, Double amount, Long userId) {
+        log.info("Logging payment received for case ID: {}, amount: ${}", caseId, amount);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("PAYMENT_RECEIVED");
+            activity.setReferenceId(paymentId);
+            activity.setReferenceType("payment");
+            activity.setDescription(String.format("Payment received: $%.2f", amount));
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("paymentId", paymentId);
+            metadata.put("amount", amount);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing payment metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log payment activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logTimeEntryAdded(Long caseId, Long timeEntryId, Double hours, String description, Long userId) {
+        log.info("Logging time entry for case ID: {}, hours: {}", caseId, hours);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TIME_ENTRY_ADDED");
+            activity.setReferenceId(timeEntryId);
+            activity.setReferenceType("time_entry");
+            activity.setDescription(String.format("Logged %.1f hours: %s", hours, description));
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("timeEntryId", timeEntryId);
+            metadata.put("hours", hours);
+            metadata.put("description", description);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing time entry metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log time entry activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logInvoiceCreated(Long caseId, Long invoiceId, Double amount, Long userId) {
+        log.info("Logging invoice created for case ID: {}, amount: ${}", caseId, amount);
+
+        try {
+            CaseActivity activity = new CaseActivity();
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("INVOICE_CREATED");
+            activity.setReferenceId(invoiceId);
+            activity.setReferenceType("invoice");
+            activity.setDescription(String.format("Invoice created for $%.2f", amount));
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("invoiceId", invoiceId);
+            metadata.put("amount", amount);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing invoice metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log invoice activity: {}", e.getMessage());
+        }
+    }
 } 

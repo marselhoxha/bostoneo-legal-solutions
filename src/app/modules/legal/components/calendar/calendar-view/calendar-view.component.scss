@@ -14,6 +14,119 @@
   width: 8px;
   border-radius: 50%;
   margin-right: 1px;
+
+  &.dot-court {
+    background-color: #f06548 !important; // Coral/Red
+  }
+
+  &.dot-hearing {
+    background-color: #865ce2 !important; // Purple
+  }
+
+  &.dot-deadline {
+    background-color: #f7b84b !important; // Orange/Amber
+  }
+
+  &.dot-meeting {
+    background-color: #299cdb !important; // Blue
+  }
+
+  &.dot-reminder {
+    background-color: #45c8de !important; // Teal/Cyan
+  }
+}
+
+// Event Type Colors - matching the legend
+::ng-deep {
+  // Court Dates - Coral/Red
+  .fc-event.event-court {
+    background-color: rgba(240, 101, 72, 0.15) !important;
+    border-color: rgba(240, 101, 72, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #c9533a !important;
+    }
+  }
+
+  // Hearings - Purple
+  .fc-event.event-hearing {
+    background-color: rgba(134, 92, 226, 0.15) !important;
+    border-color: rgba(134, 92, 226, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #6f4bc7 !important;
+    }
+  }
+
+  // Deadlines - Orange/Amber
+  .fc-event.event-deadline {
+    background-color: rgba(247, 184, 75, 0.15) !important;
+    border-color: rgba(247, 184, 75, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #d19a2f !important;
+    }
+  }
+
+  // Meetings - Blue
+  .fc-event.event-meeting {
+    background-color: rgba(41, 156, 219, 0.15) !important;
+    border-color: rgba(41, 156, 219, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #2085bd !important;
+    }
+  }
+
+  // Reminders - Teal/Cyan
+  .fc-event.event-reminder {
+    background-color: rgba(69, 200, 222, 0.15) !important;
+    border-color: rgba(69, 200, 222, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #35a8bc !important;
+    }
+  }
+
+  // Consultations - Teal (similar to reminders)
+  .fc-event.event-consultation {
+    background-color: rgba(69, 200, 222, 0.15) !important;
+    border-color: rgba(69, 200, 222, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #35a8bc !important;
+    }
+  }
+
+  // Depositions - Purple (lighter than hearings)
+  .fc-event.event-deposition {
+    background-color: rgba(149, 117, 205, 0.15) !important;
+    border-color: rgba(149, 117, 205, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #7e57c2 !important;
+    }
+  }
+
+  // Document Review - Gray/Secondary
+  .fc-event.event-document {
+    background-color: rgba(108, 117, 125, 0.15) !important;
+    border-color: rgba(108, 117, 125, 0.3) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #5a6268 !important;
+    }
+  }
+
+  // Default - Light gray
+  .fc-event.event-default {
+    background-color: rgba(108, 117, 125, 0.1) !important;
+    border-color: rgba(108, 117, 125, 0.2) !important;
+
+    .fc-event-title, .fc-event-main {
+      color: #5a6268 !important;
+    }
+  }
 }
 
 .badge-info {

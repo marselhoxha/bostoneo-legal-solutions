@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy, Input, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, of } from 'rxjs';
-import { takeUntil, catchError } from 'rxjs/operators';
+import { Subject, of, forkJoin } from 'rxjs';
+import { takeUntil, catchError, map } from 'rxjs/operators';
 import { User } from 'src/app/interface/user';
 import { CaseService } from 'src/app/modules/legal/services/case.service';
 import { TimeTrackingService, TimeEntry } from 'src/app/modules/time-tracking/services/time-tracking.service';
 import { CalendarService } from 'src/app/modules/legal/services/calendar.service';
+import { CaseActivitiesService } from 'src/app/modules/legal/services/case-activities.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { AiBriefingService, BriefingRequest } from 'src/app/core/services/ai-briefing.service';
 
@@ -150,6 +151,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     private caseService: CaseService,
     private timeTrackingService: TimeTrackingService,
     private calendarService: CalendarService,
+    private caseActivitiesService: CaseActivitiesService,
     private rbacService: RbacService,
     private aiBriefingService: AiBriefingService,
     private cdr: ChangeDetectorRef
@@ -157,118 +159,189 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initializeWeekDays();
-    this.initializeScheduleEvents();
-    this.initializeUrgentItems();
     this.loadDashboardData();
   }
 
-  private initializeUrgentItems(): void {
-    // Sample urgent items - in production, load from API
-    this.urgentItems = [
-      {
-        id: 1,
-        title: 'Court Filing Due',
-        description: 'Motion Response - Smith vs. Johnson',
-        type: 'deadline',
-        priority: 'critical',
-        dueLabel: '2 days',
-        caseNumber: '#2025-CV-1234',
-        caseId: 1,
-        route: '/legal/cases/1'
-      },
-      {
-        id: 2,
-        title: 'Contract Review',
-        description: '3 contracts pending your approval',
-        type: 'document',
-        priority: 'high',
-        dueLabel: 'Today',
-        client: 'ABC Corporation',
-        route: '/legal/documents'
-      },
-      {
-        id: 3,
-        title: 'Client Response Needed',
-        description: 'John Doe awaiting update on case status',
-        type: 'message',
-        priority: 'medium',
-        dueLabel: 'New',
-        client: 'John Doe',
-        caseNumber: '#2025-CV-5678',
-        route: '/legal/messages'
-      },
-      {
-        id: 4,
-        title: 'Discovery Deadline',
-        description: 'Interrogatories due for Williams case',
-        type: 'deadline',
-        priority: 'high',
-        dueLabel: '5 days',
-        caseNumber: '#2025-CV-9012',
-        caseId: 3,
-        route: '/legal/cases/3'
-      },
-      {
-        id: 5,
-        title: 'Invoice Overdue',
-        description: 'Payment pending from Tech Solutions',
-        type: 'billing',
-        priority: 'medium',
-        dueLabel: '10 days',
-        client: 'Tech Solutions Inc.',
-        route: '/billing'
-      },
-      {
-        id: 6,
-        title: 'Hearing Preparation',
-        description: 'Prepare exhibits for Davis hearing',
-        type: 'task',
-        priority: 'high',
-        dueLabel: 'Tomorrow',
-        caseNumber: '#2025-CV-3456',
-        caseId: 4,
-        route: '/legal/cases/4'
+  private loadUrgentItems(): void {
+    // Load upcoming deadlines from calendar events
+    this.calendarService.getEvents(100).pipe(
+      takeUntil(this.destroy$),
+      catchError(error => {
+        console.error('Error loading calendar events for urgent items:', error);
+        return of([]);
+      })
+    ).subscribe({
+      next: (events: any[]) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+
+        // Filter for deadlines and upcoming important events
+        const urgentEvents = events
+          .filter(event => {
+            const eventDate = new Date(event.start || event.startTime);
+            // Include events in the next 7 days that are deadlines or hearings
+            return eventDate >= today && eventDate <= nextWeek &&
+              (event.eventType === 'DEADLINE' || event.eventType === 'HEARING' ||
+               event.eventType === 'COURT' || event.eventType === 'FILING' ||
+               event.highPriority);
+          })
+          .sort((a, b) => new Date(a.start || a.startTime).getTime() - new Date(b.start || b.startTime).getTime())
+          .slice(0, 10);
+
+        // Map to UrgentItem format
+        this.urgentItems = urgentEvents.map((event, index) => ({
+          id: event.id || index,
+          title: event.title || 'Urgent Item',
+          description: event.description || event.caseTitle || '',
+          type: this.mapEventToUrgentType(event.eventType),
+          priority: this.determineUrgentPriority(event),
+          dueLabel: this.formatDueLabel(event.start || event.startTime),
+          caseNumber: event.caseNumber || null,
+          caseId: event.caseId || null,
+          client: event.clientName || null,
+          route: event.caseId ? `/legal/cases/${event.caseId}` : '/legal/calendar'
+        }));
+        this.cdr.detectChanges();
       }
-    ];
+    });
   }
 
-  private initializeScheduleEvents(): void {
-    // Sample schedule events - in production, load from CalendarService
-    this.scheduleEvents = [
-      {
-        id: 1,
-        title: 'Client Consultation',
-        description: 'Initial Case Review',
-        startTime: '9:00 AM',
-        endTime: '10:00 AM',
-        duration: '1 hr',
-        type: 'consultation',
-        client: 'John Doe',
-        meetingType: 'video'
-      },
-      {
-        id: 2,
-        title: 'Motion Hearing',
-        description: 'Smith vs. Johnson',
-        startTime: '2:00 PM',
-        endTime: '3:30 PM',
-        duration: 'Court',
-        type: 'hearing',
-        location: 'Courtroom 4B',
-        caseInfo: 'Motion for Summary Judgment',
-        caseId: 1
-      },
-      {
-        id: 3,
-        title: 'Document Review',
-        description: 'Contract Analysis',
-        startTime: '4:30 PM',
-        endTime: '6:00 PM',
-        duration: '1.5 hrs',
-        type: 'review',
-        client: 'ABC Corporation'
+  private mapEventToUrgentType(eventType: string): 'deadline' | 'document' | 'message' | 'task' | 'billing' {
+    const typeMap: { [key: string]: any } = {
+      'DEADLINE': 'deadline',
+      'FILING': 'deadline',
+      'HEARING': 'deadline',
+      'COURT': 'deadline',
+      'DOCUMENT_REVIEW': 'document',
+      'MEETING': 'task',
+      'CONSULTATION': 'task'
+    };
+    return typeMap[eventType?.toUpperCase()] || 'task';
+  }
+
+  private determineUrgentPriority(event: any): 'critical' | 'high' | 'medium' {
+    const eventDate = new Date(event.start || event.startTime);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (event.highPriority || diffDays <= 0) return 'critical';
+    if (diffDays <= 2 || event.eventType === 'HEARING' || event.eventType === 'COURT') return 'high';
+    return 'medium';
+  }
+
+  private formatDueLabel(dateStr: string): string {
+    if (!dateStr) return 'No date';
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffMs = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'Overdue';
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays <= 7) return `${diffDays} days`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  private loadScheduleEvents(): void {
+    this.eventsLoading = true;
+
+    // Fetch today's events from CalendarService
+    this.calendarService.getEvents(50).pipe(
+      takeUntil(this.destroy$),
+      catchError(error => {
+        console.error('Error loading calendar events:', error);
+        return of([]);
+      })
+    ).subscribe({
+      next: (events: any[]) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Filter for today's events
+        const todayEvents = events.filter(event => {
+          const eventDate = new Date(event.start || event.startTime);
+          return eventDate >= today && eventDate < tomorrow;
+        });
+
+        // Map to ScheduleEvent format
+        this.scheduleEvents = todayEvents.map(event => ({
+          id: event.id,
+          title: event.title || 'Untitled Event',
+          description: event.description || event.caseTitle || '',
+          startTime: this.formatEventTime(event.start || event.startTime),
+          endTime: this.formatEventTime(event.end || event.endTime),
+          duration: this.calculateDuration(event.start || event.startTime, event.end || event.endTime),
+          type: this.mapEventType(event.eventType || event.type),
+          client: event.clientName || null,
+          location: event.location || null,
+          meetingType: event.meetingType || null,
+          caseInfo: event.caseTitle || event.caseName || null,
+          caseId: event.caseId || null
+        }));
+
+        // Count week events
+        const weekEnd = new Date(today);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        this.thisWeekEvents = events.filter(event => {
+          const eventDate = new Date(event.start || event.startTime);
+          return eventDate >= today && eventDate < weekEnd;
+        }).length;
+
+        this.eventsLoading = false;
+        // Load AI briefing after we have schedule data
+        this.loadAiBriefing();
+        this.cdr.detectChanges();
       }
-    ];
+    });
+  }
+
+  private formatEventTime(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  private calculateDuration(startStr: string, endStr: string): string {
+    if (!startStr || !endStr) return '';
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours < 1) {
+      const mins = Math.round(diffMs / 60000);
+      return `${mins} min`;
+    }
+    return diffHours === 1 ? '1 hr' : `${diffHours.toFixed(1)} hrs`;
+  }
+
+  private mapEventType(type: string): 'consultation' | 'hearing' | 'review' | 'meeting' | 'deposition' {
+    const typeMap: { [key: string]: any } = {
+      'CONSULTATION': 'consultation',
+      'CLIENT_MEETING': 'consultation',
+      'COURT_HEARING': 'hearing',
+      'HEARING': 'hearing',
+      'COURT': 'hearing',
+      'TRIAL': 'hearing',
+      'DOCUMENT_REVIEW': 'review',
+      'REVIEW': 'review',
+      'DEADLINE': 'review',
+      'MEETING': 'meeting',
+      'INTERNAL_MEETING': 'meeting',
+      'DEPOSITION': 'deposition'
+    };
+    return typeMap[type?.toUpperCase()] || 'meeting';
   }
 
   private initializeWeekDays(): void {
@@ -291,11 +364,12 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   private loadDashboardData(): void {
     this.isLoading = true;
 
-    // Load cases first, then time entries
+    // Load all data in parallel
     this.loadCases();
     this.loadTimeEntries();
-    this.loadTodayEvents();
-    this.loadAiBriefing();
+    this.loadScheduleEvents();
+    this.loadUrgentItems();
+    this.loadRecentActivity();
   }
 
   private loadAiBriefing(): void {
@@ -453,102 +527,127 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadTodayEvents(): void {
-    this.eventsLoading = true;
-    // Initialize with empty - calendar events can be loaded from CalendarService if available
-    this.todayEvents = [];
-    this.thisWeekEvents = 0;
-    this.eventsLoading = false;
+  private loadRecentActivity(): void {
+    if (this.recentCases.length === 0) {
+      return;
+    }
+
+    const caseIds = this.recentCases.map(c => c.id);
+    const activityObservables = caseIds.map(caseId =>
+      this.caseActivitiesService.getActivitiesByCaseId(caseId).pipe(
+        catchError(() => of([]))
+      )
+    );
+
+    // Create a map of caseId -> case info for quick lookup
+    const caseMap = new Map<number, any>();
+    this.recentCases.forEach(c => caseMap.set(c.id, c));
+
+    forkJoin(activityObservables).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (activitiesArrays: any[][]) => {
+        const allActivities = activitiesArrays.flat();
+        const sortedActivities = allActivities
+          .sort((a, b) => new Date(b.createdAt || b.timestamp).getTime() - new Date(a.createdAt || a.timestamp).getTime())
+          .slice(0, 15);
+
+        this.recentActivity = sortedActivities.map((activity, index) => {
+          const activityInfo = this.mapActivityType(activity.activityType);
+          // Get case info from caseMap
+          const caseInfo = caseMap.get(activity.caseId);
+          // Get user name from activity.user if available
+          const userName = activity.user
+            ? `${activity.user.firstName || ''} ${activity.user.lastName || ''}`.trim()
+            : null;
+
+          return {
+            id: activity.id || index,
+            type: activityInfo.type,
+            title: activityInfo.title,
+            description: activity.description || '',
+            timestamp: new Date(activity.createdAt || activity.timestamp),
+            caseNumber: caseInfo?.caseNumber || activity.caseNumber || null,
+            caseName: caseInfo?.title || activity.caseTitle || null,
+            clientName: caseInfo?.clientName || activity.clientName || null,
+            userName: userName,
+            icon: activityInfo.icon,
+            color: activityInfo.color,
+            displayType: activityInfo.displayType,
+            route: activity.caseId ? `/legal/cases/${activity.caseId}` : null
+          };
+        });
+
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  private loadRecentActivity(): void {
-    // Activity log - what has happened in the app
-    this.recentActivity = [
-      {
-        id: 1,
-        type: 'document',
-        title: 'Document Uploaded',
-        description: 'Motion_Response_Final.pdf added to Smith vs. Johnson',
-        timestamp: new Date(Date.now() - 1800000), // 30 min ago
-        caseNumber: '#2025-CV-1234',
-        icon: 'ri-upload-2-line',
-        color: 'primary',
-        displayType: 'Upload',
-        route: '/legal/cases/1'
-      },
-      {
-        id: 2,
-        type: 'billing',
-        title: 'Time Entry Logged',
-        description: '2.5 hours - Legal research for Williams Estate case',
-        timestamp: new Date(Date.now() - 3600000), // 1 hr ago
-        caseNumber: '#2025-CV-9012',
-        icon: 'ri-time-line',
-        color: 'success',
-        displayType: 'Time',
-        route: '/time-tracking'
-      },
-      {
-        id: 3,
-        type: 'task',
-        title: 'Note Added',
-        description: 'Added case notes to Johnson corporate matter',
-        timestamp: new Date(Date.now() - 5400000), // 1.5 hrs ago
-        clientName: 'ABC Corporation',
-        icon: 'ri-sticky-note-line',
-        color: 'info',
-        displayType: 'Note',
-        route: '/legal/cases/2'
-      },
-      {
-        id: 4,
-        type: 'filing',
-        title: 'Case Status Updated',
-        description: 'Smith vs. Johnson moved to Discovery phase',
-        timestamp: new Date(Date.now() - 7200000), // 2 hrs ago
-        caseNumber: '#2025-CV-1234',
-        icon: 'ri-refresh-line',
-        color: 'warning',
-        displayType: 'Update',
-        route: '/legal/cases/1'
-      },
-      {
-        id: 5,
-        type: 'document',
-        title: 'Document Viewed',
-        description: 'Opened Contract_Draft_v2.docx',
-        timestamp: new Date(Date.now() - 10800000), // 3 hrs ago
-        clientName: 'Tech Solutions Inc.',
-        icon: 'ri-eye-line',
-        color: 'secondary',
-        displayType: 'View',
-        route: '/legal/documents'
-      },
-      {
-        id: 6,
-        type: 'filing',
-        title: 'Case Created',
-        description: 'New case opened for Martinez family',
-        timestamp: new Date(Date.now() - 14400000), // 4 hrs ago
-        caseNumber: '#2025-CV-7890',
-        icon: 'ri-folder-add-line',
-        color: 'success',
-        displayType: 'New',
-        route: '/legal/cases/5'
-      },
-      {
-        id: 7,
-        type: 'communication',
-        title: 'Email Sent',
-        description: 'Sent settlement proposal to opposing counsel',
-        timestamp: new Date(Date.now() - 18000000), // 5 hrs ago
-        caseNumber: '#2025-CV-1234',
-        icon: 'ri-mail-send-line',
-        color: 'info',
-        displayType: 'Email',
-        route: '/legal/cases/1'
-      }
-    ];
+  private mapActivityType(activityType: string): { type: ActivityItem['type'], title: string, icon: string, color: string, displayType: string } {
+    const typeMap: { [key: string]: any } = {
+      // Notes
+      'NOTE_ADDED': { type: 'task', title: 'Note Added', icon: 'ri-sticky-note-line', color: 'info', displayType: 'Note' },
+      'NOTE_UPDATED': { type: 'task', title: 'Note Updated', icon: 'ri-edit-line', color: 'info', displayType: 'Update' },
+      'NOTE_DELETED': { type: 'task', title: 'Note Deleted', icon: 'ri-delete-bin-line', color: 'warning', displayType: 'Delete' },
+
+      // Documents
+      'DOCUMENT_UPLOADED': { type: 'document', title: 'Document Uploaded', icon: 'ri-upload-2-line', color: 'primary', displayType: 'Upload' },
+      'DOCUMENT_DOWNLOADED': { type: 'document', title: 'Document Downloaded', icon: 'ri-download-2-line', color: 'secondary', displayType: 'Download' },
+      'DOCUMENT_VIEWED': { type: 'document', title: 'Document Viewed', icon: 'ri-eye-line', color: 'secondary', displayType: 'View' },
+      'DOCUMENT_VERSION_ADDED': { type: 'document', title: 'New Version', icon: 'ri-file-add-line', color: 'primary', displayType: 'Version' },
+
+      // Case Management
+      'CASE_CREATED': { type: 'filing', title: 'Case Created', icon: 'ri-folder-add-line', color: 'success', displayType: 'New Case' },
+      'CASE_UPDATED': { type: 'filing', title: 'Case Updated', icon: 'ri-refresh-line', color: 'warning', displayType: 'Update' },
+      'STATUS_CHANGED': { type: 'filing', title: 'Status Changed', icon: 'ri-exchange-line', color: 'warning', displayType: 'Status' },
+      'PRIORITY_CHANGED': { type: 'filing', title: 'Priority Changed', icon: 'ri-flag-line', color: 'danger', displayType: 'Priority' },
+
+      // Hearings & Calendar
+      'HEARING_SCHEDULED': { type: 'court', title: 'Hearing Scheduled', icon: 'ri-calendar-check-line', color: 'danger', displayType: 'Hearing' },
+      'HEARING_UPDATED': { type: 'court', title: 'Hearing Updated', icon: 'ri-calendar-line', color: 'warning', displayType: 'Hearing' },
+      'HEARING_CANCELLED': { type: 'court', title: 'Hearing Cancelled', icon: 'ri-calendar-close-line', color: 'secondary', displayType: 'Cancelled' },
+
+      // Assignments
+      'ASSIGNMENT_ADDED': { type: 'task', title: 'Team Member Assigned', icon: 'ri-user-add-line', color: 'success', displayType: 'Assignment' },
+      'ASSIGNMENT_REMOVED': { type: 'task', title: 'Team Member Removed', icon: 'ri-user-unfollow-line', color: 'secondary', displayType: 'Unassigned' },
+
+      // Communications
+      'CLIENT_CONTACTED': { type: 'communication', title: 'Client Contacted', icon: 'ri-phone-line', color: 'info', displayType: 'Contact' },
+      'EMAIL_SENT': { type: 'communication', title: 'Email Sent', icon: 'ri-mail-send-line', color: 'info', displayType: 'Email' },
+
+      // Financial
+      'PAYMENT_RECEIVED': { type: 'billing', title: 'Payment Received', icon: 'ri-money-dollar-circle-line', color: 'success', displayType: 'Payment' },
+      'TIME_ENTRY_ADDED': { type: 'billing', title: 'Time Logged', icon: 'ri-time-line', color: 'primary', displayType: 'Time' },
+      'TIME_ENTRY': { type: 'billing', title: 'Time Entry', icon: 'ri-time-line', color: 'primary', displayType: 'Time' },
+      'INVOICE_CREATED': { type: 'billing', title: 'Invoice Created', icon: 'ri-bill-line', color: 'warning', displayType: 'Invoice' },
+
+      // Tasks/Reminders
+      'TASK_CREATED': { type: 'task', title: 'Task Created', icon: 'ri-task-line', color: 'primary', displayType: 'Task' },
+      'TASK_UPDATED': { type: 'task', title: 'Task Updated', icon: 'ri-edit-line', color: 'info', displayType: 'Task' },
+      'TASK_COMPLETED': { type: 'task', title: 'Task Completed', icon: 'ri-checkbox-circle-line', color: 'success', displayType: 'Completed' },
+      'TASK_DELETED': { type: 'task', title: 'Task Deleted', icon: 'ri-delete-bin-line', color: 'secondary', displayType: 'Deleted' },
+
+      // Deadlines
+      'DEADLINE_ADDED': { type: 'deadline', title: 'Deadline Added', icon: 'ri-calendar-todo-line', color: 'danger', displayType: 'Deadline' }
+    };
+
+    return typeMap[activityType?.toUpperCase()] || {
+      type: 'task',
+      title: this.formatActivityTitle(activityType),
+      icon: 'ri-information-line',
+      color: 'secondary',
+      displayType: 'Activity'
+    };
+  }
+
+  private formatActivityTitle(activityType: string): string {
+    if (!activityType) return 'Activity';
+    // Convert SNAKE_CASE to Title Case
+    return activityType
+      .toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   private determinePriority(caseData: any): 'high' | 'medium' | 'low' {

@@ -278,7 +278,9 @@
             </div>
             <div class="card-body pt-0 d-flex flex-column">
               <!-- Activity Feed -->
-              <div class="activity-feed flex-grow-1" *ngIf="recentActivity.length > 0">
+              <div class="activity-feed flex-grow-1"
+                   [class.activity-feed-scrollable]="showAllActivities && recentActivity.length > 4"
+                   *ngIf="recentActivity.length > 0">
                 <div *ngFor="let activity of getVisibleActivities(); let i = index; let last = last"
                      class="activity-feed-item"
                      [class.mb-0]="last && (showAllActivities || recentActivity.length <= 4)">
@@ -289,18 +291,22 @@
                       </div>
                     </div>
                     <div class="flex-grow-1 ms-3 overflow-hidden">
-                      <div class="d-flex align-items-start justify-content-between mb-1">
-                        <div class="flex-grow-1 me-2">
-                          <h6 class="activity-title mb-0">{{activity.title}}</h6>
-                        </div>
-                        <span class="activity-badge" [ngClass]="'activity-badge-' + activity.color">{{activity.displayType}}</span>
+                      <h6 class="activity-title mb-1">{{activity.title}}</h6>
+                      <p class="activity-desc mb-1">{{activity.description}}</p>
+                      <div class="activity-context mb-2" *ngIf="activity.userName || activity.caseName">
+                        <span class="activity-user text-primary fw-medium" *ngIf="activity.userName">
+                          <i class="ri-user-line me-1"></i>{{activity.userName}}
+                        </span>
+                        <span class="mx-1 text-muted" *ngIf="activity.userName && activity.caseName">•</span>
+                        <a [routerLink]="activity.route" class="activity-case-link text-muted" *ngIf="activity.caseName">
+                          <i class="ri-briefcase-line me-1"></i>{{activity.caseName}}
+                        </a>
                       </div>
-                      <p class="activity-desc mb-2">{{activity.description}}</p>
                       <div class="activity-meta">
                         <span class="activity-time">
                           <i class="ri-time-line"></i>{{getActivityTimestamp(activity.timestamp)}}
                         </span>
-                        <span class="activity-case" *ngIf="activity.caseNumber">
+                        <span class="activity-case text-muted" *ngIf="activity.caseNumber && !activity.caseName">
                           <i class="ri-folder-line"></i>{{activity.caseNumber}}
                         </span>
                       </div>
