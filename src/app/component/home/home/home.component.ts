@@ -31,13 +31,13 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log('Home component initializing...');
-    
+
     // Clear any stale session data when component initializes
     this.clearStaleSessionData();
-    
+
     // Get current user and role
     this.currentUser = this.userService.getCurrentUser();
-    
+
     // If no current user, try to load from profile
     if (!this.currentUser) {
       console.log('No current user found, attempting to load from profile...');
@@ -46,23 +46,37 @@ export class HomeComponent implements OnInit, OnDestroy {
           if (response?.data?.user) {
             this.currentUser = response.data.user;
             this.userRole = this.detectUserRole();
+            this.redirectBasedOnRole();
             this.cdr.detectChanges();
           }
         },
         error: (error) => {
           console.error('Failed to load user profile:', error);
           this.userRole = this.detectUserRole();
+          this.redirectBasedOnRole();
         }
       });
     } else {
       this.userRole = this.detectUserRole();
+      this.redirectBasedOnRole();
     }
-    
+
     // Detect and monitor theme changes
     this.detectTheme();
     this.setupThemeObserver();
-    
+
     console.log('Home component initialized with role:', this.userRole);
+  }
+
+  /**
+   * Redirect users to their role-specific dashboard if needed
+   */
+  private redirectBasedOnRole(): void {
+    // Redirect CLIENT users to the client portal dashboard
+    if (this.userRole === 'CLIENT') {
+      console.log('🔄 Redirecting CLIENT user to /client/dashboard');
+      this.router.navigate(['/client/dashboard']);
+    }
   }
 
   ngOnDestroy(): void {

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, Input, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, of } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { User } from 'src/app/interface/user';
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
@@ -26,6 +26,9 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
   @Input() currentUser: User | null = null;
   @Input() isDarkMode: boolean = false;
 
+  // Current date
+  currentDate = new Date();
+
   // Dashboard metrics
   departmentCases = 0;
   todayAppointments = 0;
@@ -48,6 +51,9 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
   appointmentsLoading = false;
   documentsLoading = false;
   tasksLoading = false;
+
+  // UI state
+  showAllAppointments = false;
 
   // Department info
   departmentName = '';
@@ -74,9 +80,50 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // =====================================================
+  // GREETING & WELCOME METHODS
+  // =====================================================
+
+  getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  getWelcomeMessage(): string {
+    const tasks = this.administrativeTasks;
+    const appts = this.todayAppointments;
+    const docs = this.pendingDocuments;
+
+    if (tasks === 0 && appts === 0 && docs === 0) {
+      return 'Your schedule is clear. All caught up!';
+    }
+
+    const parts = [];
+    if (appts > 0) parts.push(`${appts} appointment${appts > 1 ? 's' : ''} scheduled`);
+    if (tasks > 0) parts.push(`${tasks} task${tasks > 1 ? 's' : ''} pending`);
+    if (docs > 0) parts.push(`${docs} document${docs > 1 ? 's' : ''} need attention`);
+
+    return `You have ${parts.join(', ')}.`;
+  }
+
+  getCurrentDayFormatted(): string {
+    return this.currentDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  // =====================================================
+  // DATA LOADING METHODS
+  // =====================================================
+
   private loadDashboardData(): void {
     this.isLoading = true;
-    
+
     // Load department-specific data
     this.loadDepartmentInfo();
     this.loadDepartmentCases();
@@ -85,7 +132,7 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
     this.loadUpcomingTasks();
     this.loadClientCommunications();
     this.loadAttorneySchedules();
-    
+
     // Set loading to false after initial load
     setTimeout(() => {
       this.isLoading = false;
@@ -104,13 +151,13 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
 
   private loadDepartmentCases(): void {
     this.casesLoading = true;
-    
+
     this.caseService.getAllCases(0, 10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           if (response?.data?.page?.content) {
-            this.recentCases = response.data.page.content.slice(0, 5);
+            this.recentCases = response.data.page.content.slice(0, 6);
             this.departmentCases = response.data.page.totalElements || 0;
           }
           this.casesLoading = false;
@@ -132,12 +179,12 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
 
   private loadTodaysAppointments(): void {
     this.appointmentsLoading = true;
-    
+
     // Simulated data for appointments
     this.todaysAppointments = [
-      { id: 1, time: '9:00 AM', client: 'John Doe', attorney: 'John Smith', type: 'Consultation' },
-      { id: 2, time: '11:00 AM', client: 'ABC Corp', attorney: 'Jane Doe', type: 'Meeting' },
-      { id: 3, time: '2:00 PM', client: 'Mary Johnson', attorney: 'John Smith', type: 'Deposition' }
+      { id: 1, time: '9:00 AM', client: 'John Doe', attorney: 'John Smith', type: 'Consultation', caseNumber: 'CASE-2024-001' },
+      { id: 2, time: '11:00 AM', client: 'ABC Corp', attorney: 'Jane Doe', type: 'Meeting', caseNumber: 'CASE-2024-002' },
+      { id: 3, time: '2:00 PM', client: 'Mary Johnson', attorney: 'John Smith', type: 'Deposition', caseNumber: 'CASE-2024-003' }
     ];
     this.todayAppointments = this.todaysAppointments.length;
     this.appointmentsLoading = false;
@@ -146,7 +193,7 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
 
   private loadPendingDocuments(): void {
     this.documentsLoading = true;
-    
+
     // Simulated pending documents
     this.pendingDocumentsList = [
       { id: 1, name: 'Contract Draft v2', case: 'CASE-2024-001', dueDate: '2024-01-25', status: 'Review' },
@@ -159,7 +206,7 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
 
   private loadUpcomingTasks(): void {
     this.tasksLoading = true;
-    
+
     // Simulated tasks using the inline interface
     this.upcomingTasks = [
       { id: 1, title: 'Prepare meeting agenda', dueDate: '2024-01-24', priority: 'High', status: 'Pending' },
@@ -195,17 +242,20 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  // Navigation methods
+  // =====================================================
+  // NAVIGATION METHODS
+  // =====================================================
+
   navigateToCases(): void {
-    this.router.navigate(['/cases']);
+    this.router.navigate(['/legal/cases']);
   }
 
   navigateToCalendar(): void {
-    this.router.navigate(['/calendar']);
+    this.router.navigate(['/legal/calendar']);
   }
 
   navigateToDocuments(): void {
-    this.router.navigate(['/documents']);
+    this.router.navigate(['/legal/documents']);
   }
 
   navigateToTasks(): void {
@@ -217,11 +267,27 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
   }
 
   viewCase(caseId: number): void {
-    this.router.navigate(['/cases', caseId]);
+    this.router.navigate(['/legal/cases', caseId]);
   }
 
   viewDocument(documentId: number): void {
-    this.router.navigate(['/documents', documentId]);
+    this.router.navigate(['/legal/documents', documentId]);
+  }
+
+  viewAppointment(appointmentId: number): void {
+    this.router.navigate(['/legal/calendar']);
+  }
+
+  viewAttorneySchedule(attorneyId: number): void {
+    this.router.navigate(['/legal/calendar']);
+  }
+
+  scheduleAppointment(): void {
+    this.router.navigate(['/legal/calendar']);
+  }
+
+  createNewTask(): void {
+    this.router.navigate(['/tasks']);
   }
 
   completeTask(taskId: number): void {
@@ -229,11 +295,19 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
     // Implement task completion logic
   }
 
-  scheduleAppointment(): void {
-    this.router.navigate(['/calendar/new-appointment']);
+  // =====================================================
+  // HELPER METHODS
+  // =====================================================
+
+  getInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   }
 
-  // Helper methods
   getCaseStatusClass(status: string): string {
     const statusClasses: { [key: string]: string } = {
       'Active': 'badge bg-success',
@@ -242,6 +316,32 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
       'Closed': 'badge bg-secondary'
     };
     return statusClasses[status] || 'badge bg-secondary';
+  }
+
+  getCaseStatusBadgeStyle(status: string): string {
+    const statusClasses: { [key: string]: string } = {
+      'Active': 'case-badge-success',
+      'In Progress': 'case-badge-primary',
+      'Pending': 'case-badge-warning',
+      'Closed': 'case-badge-secondary',
+      'ACTIVE': 'case-badge-success',
+      'IN_PROGRESS': 'case-badge-primary',
+      'PENDING': 'case-badge-warning',
+      'CLOSED': 'case-badge-secondary'
+    };
+    return statusClasses[status] || 'case-badge-secondary';
+  }
+
+  getCaseAvatarClass(title: string): string {
+    const colors = [
+      'bg-primary-subtle text-primary',
+      'bg-success-subtle text-success',
+      'bg-info-subtle text-info',
+      'bg-warning-subtle text-warning',
+      'bg-danger-subtle text-danger'
+    ];
+    const index = title ? title.length % colors.length : 0;
+    return colors[index];
   }
 
   getTaskPriorityClass(priority: string): string {
@@ -257,7 +357,62 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
     return status === 'Busy' ? 'text-danger' : 'text-success';
   }
 
+  getAppointmentTypeBadgeClass(type: string): string {
+    const typeClasses: { [key: string]: string } = {
+      'Consultation': 'bg-primary-subtle text-primary',
+      'Meeting': 'bg-success-subtle text-success',
+      'Deposition': 'bg-warning-subtle text-warning',
+      'Hearing': 'bg-danger-subtle text-danger',
+      'Review': 'bg-info-subtle text-info'
+    };
+    return typeClasses[type] || 'bg-secondary-subtle text-secondary';
+  }
+
+  getAttorneyStatusBadge(attorney: any): string {
+    if (!attorney.todaySchedule || attorney.todaySchedule.length === 0) {
+      return 'bg-success-subtle text-success';
+    }
+
+    // Check current time slot
+    const currentHour = new Date().getHours();
+    const isBusy = attorney.todaySchedule.some((slot: any) => {
+      const slotHour = parseInt(slot.time.split(':')[0]);
+      return slot.status === 'Busy' && Math.abs(slotHour - currentHour) <= 1;
+    });
+
+    return isBusy ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success';
+  }
+
+  getAttorneyCurrentStatus(attorney: any): string {
+    if (!attorney.todaySchedule || attorney.todaySchedule.length === 0) {
+      return 'Available';
+    }
+
+    const currentHour = new Date().getHours();
+    const currentSlot = attorney.todaySchedule.find((slot: any) => {
+      const slotHour = parseInt(slot.time.split(':')[0]);
+      return Math.abs(slotHour - currentHour) <= 1;
+    });
+
+    if (currentSlot && currentSlot.status === 'Busy') {
+      return 'In Meeting';
+    }
+    return 'Available';
+  }
+
+  // =====================================================
+  // UI TOGGLE METHODS
+  // =====================================================
+
+  toggleShowAllAppointments(): void {
+    this.showAllAppointments = !this.showAllAppointments;
+  }
+
   refreshDashboard(): void {
     this.loadDashboardData();
+  }
+
+  refreshAttorneySchedules(): void {
+    this.loadAttorneySchedules();
   }
 }
