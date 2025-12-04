@@ -9,6 +9,8 @@ import { CalendarService } from 'src/app/modules/legal/services/calendar.service
 import { CaseActivitiesService } from 'src/app/modules/legal/services/case-activities.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { AiBriefingService, BriefingRequest } from 'src/app/core/services/ai-briefing.service';
+import { AppointmentService, AppointmentRequest } from 'src/app/core/services/appointment.service';
+import Swal from 'sweetalert2';
 
 interface DashboardCase {
   id: number;
@@ -139,6 +141,37 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   showAllUrgentItems = false;
   showAllCases = false;
 
+  // Availability settings modal
+  showAvailabilityModal = false;
+
+  // Appointment requests
+  pendingAppointments: AppointmentRequest[] = [];
+  pendingAppointmentsCount = 0;
+  loadingPendingAppointments = false;
+
+  // Appointment action modals
+  showApproveModal = false;
+  showDeclineModal = false;
+  selectedAppointment: AppointmentRequest | null = null;
+  approveForm = {
+    confirmedDatetime: '',
+    location: '',
+    meetingLink: '',
+    isVirtual: false,
+    notes: ''
+  };
+  declineReason = '';
+  processingAction = false;
+
+  // Pending reschedule requests
+  pendingRescheduleRequests: AppointmentRequest[] = [];
+  pendingRescheduleCount = 0;
+  loadingRescheduleRequests = false;
+  showRescheduleApproveModal = false;
+  showRescheduleDeclineModal = false;
+  selectedRescheduleRequest: AppointmentRequest | null = null;
+  rescheduleDeclineReason = '';
+
   // AI Briefing
   aiBriefing: string | null = null;
   aiBriefingLoading = false;
@@ -154,12 +187,15 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     private caseActivitiesService: CaseActivitiesService,
     private rbacService: RbacService,
     private aiBriefingService: AiBriefingService,
+    private appointmentService: AppointmentService,
     private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
     this.initializeWeekDays();
     this.loadDashboardData();
+    this.loadPendingAppointments();
+    this.loadPendingRescheduleRequests();
   }
 
   private loadUrgentItems(): void {
@@ -1231,5 +1267,386 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return this.urgentItems.filter(item =>
       item.type === 'document'
     ).length;
+  }
+
+  // Availability settings modal methods
+  openAvailabilitySettings(): void {
+    this.showAvailabilityModal = true;
+  }
+
+  closeAvailabilitySettings(): void {
+    this.showAvailabilityModal = false;
+  }
+
+  onAvailabilitySaved(): void {
+    this.showAvailabilityModal = false;
+    // Optionally refresh schedule data
+  }
+
+  // =====================================================
+  // PENDING APPOINTMENT REQUESTS
+  // =====================================================
+
+  loadPendingAppointments(): void {
+    this.loadingPendingAppointments = true;
+    this.appointmentService.getAttorneyPendingRequests()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.pendingAppointments = response.appointments || [];
+          this.pendingAppointmentsCount = response.count || this.pendingAppointments.length;
+          this.loadingPendingAppointments = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading pending appointments:', err);
+          this.loadingPendingAppointments = false;
+        }
+      });
+  }
+
+  openApproveModal(appointment: AppointmentRequest): void {
+    this.selectedAppointment = appointment;
+    // Pre-fill with preferred datetime
+    if (appointment.preferredDatetime) {
+      this.approveForm.confirmedDatetime = appointment.preferredDatetime.substring(0, 16);
+    }
+    this.approveForm.isVirtual = appointment.isVirtual || false;
+    this.showApproveModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeApproveModal(): void {
+    this.showApproveModal = false;
+    this.selectedAppointment = null;
+    this.approveForm = {
+      confirmedDatetime: '',
+      location: '',
+      meetingLink: '',
+      isVirtual: false,
+      notes: ''
+    };
+    this.cdr.detectChanges();
+  }
+
+  openDeclineModal(appointment: AppointmentRequest): void {
+    this.selectedAppointment = appointment;
+    this.declineReason = '';
+    this.showDeclineModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeclineModal(): void {
+    this.showDeclineModal = false;
+    this.selectedAppointment = null;
+    this.declineReason = '';
+    this.cdr.detectChanges();
+  }
+
+  confirmAppointment(): void {
+    if (!this.selectedAppointment || !this.approveForm.confirmedDatetime) return;
+
+    const clientName = this.selectedAppointment.clientName || 'the client';
+    const appointmentDate = this.formatAppointmentDate(this.approveForm.confirmedDatetime);
+    const appointmentTime = this.formatAppointmentTime(this.approveForm.confirmedDatetime);
+
+    Swal.fire({
+      title: 'Confirm Appointment?',
+      html: `You are about to confirm the appointment with <strong>${clientName}</strong> for <strong>${appointmentDate}</strong> at <strong>${appointmentTime}</strong>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0ab39c',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Confirm',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.processingAction = true;
+        this.cdr.detectChanges();
+
+        this.appointmentService.confirmAppointment(this.selectedAppointment!.id!, {
+          confirmedDatetime: this.approveForm.confirmedDatetime,
+          location: this.approveForm.location || undefined,
+          meetingLink: this.approveForm.meetingLink || undefined,
+          isVirtual: this.approveForm.isVirtual,
+          attorneyNotes: this.approveForm.notes || undefined
+        }).pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.closeApproveModal();
+              this.loadPendingAppointments();
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Appointment Confirmed!',
+                text: `The appointment with ${clientName} has been confirmed. They will be notified.`,
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error confirming appointment:', err);
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Error',
+                text: 'Failed to confirm appointment. Please try again.',
+                icon: 'error'
+              });
+              this.cdr.detectChanges();
+            }
+          });
+      }
+    });
+  }
+
+  declineAppointment(): void {
+    if (!this.selectedAppointment) return;
+
+    const clientName = this.selectedAppointment.clientName || 'the client';
+
+    Swal.fire({
+      title: 'Decline Appointment?',
+      html: `Are you sure you want to decline the appointment request from <strong>${clientName}</strong>?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Decline',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.processingAction = true;
+        this.cdr.detectChanges();
+
+        this.appointmentService.cancelAppointmentByAttorney(
+          this.selectedAppointment!.id!,
+          this.declineReason || 'Declined by attorney'
+        ).pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.closeDeclineModal();
+              this.loadPendingAppointments();
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Appointment Declined',
+                text: `The appointment request from ${clientName} has been declined. They will be notified.`,
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error declining appointment:', err);
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Error',
+                text: 'Failed to decline appointment. Please try again.',
+                icon: 'error'
+              });
+              this.cdr.detectChanges();
+            }
+          });
+      }
+    });
+  }
+
+  formatAppointmentDate(dateStr: string): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  formatAppointmentTime(dateStr: string): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  getAppointmentTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'CONSULTATION': 'Consultation',
+      'CASE_REVIEW': 'Case Review',
+      'DOCUMENT_SIGNING': 'Document Signing',
+      'COURT_PREPARATION': 'Court Prep',
+      'DEPOSITION': 'Deposition',
+      'OTHER': 'Other'
+    };
+    return labels[type] || type;
+  }
+
+  // =====================================================
+  // PENDING RESCHEDULE REQUESTS
+  // =====================================================
+
+  loadPendingRescheduleRequests(): void {
+    this.loadingRescheduleRequests = true;
+    this.appointmentService.getAttorneyPendingRescheduleRequests()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.pendingRescheduleRequests = response.appointments || [];
+          this.pendingRescheduleCount = response.count || this.pendingRescheduleRequests.length;
+          this.loadingRescheduleRequests = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading pending reschedule requests:', err);
+          this.loadingRescheduleRequests = false;
+        }
+      });
+  }
+
+  openRescheduleApproveModal(appointment: AppointmentRequest): void {
+    this.selectedRescheduleRequest = appointment;
+    this.showRescheduleApproveModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeRescheduleApproveModal(): void {
+    this.showRescheduleApproveModal = false;
+    this.selectedRescheduleRequest = null;
+    this.cdr.detectChanges();
+  }
+
+  openRescheduleDeclineModal(appointment: AppointmentRequest): void {
+    this.selectedRescheduleRequest = appointment;
+    this.rescheduleDeclineReason = '';
+    this.showRescheduleDeclineModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeRescheduleDeclineModal(): void {
+    this.showRescheduleDeclineModal = false;
+    this.selectedRescheduleRequest = null;
+    this.rescheduleDeclineReason = '';
+    this.cdr.detectChanges();
+  }
+
+  approveReschedule(): void {
+    if (!this.selectedRescheduleRequest?.id) return;
+
+    const clientName = this.selectedRescheduleRequest.clientName || 'the client';
+    const newTime = this.formatRescheduleTime(this.selectedRescheduleRequest.requestedRescheduleTime);
+
+    Swal.fire({
+      title: 'Approve Reschedule?',
+      html: `You are about to approve the reschedule request from <strong>${clientName}</strong> to <strong>${newTime}</strong>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0ab39c',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Approve',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.processingAction = true;
+        this.cdr.detectChanges();
+
+        this.appointmentService.approveReschedule(this.selectedRescheduleRequest!.id!)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.closeRescheduleApproveModal();
+              this.loadPendingRescheduleRequests();
+              this.loadScheduleEvents(); // Refresh calendar
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Reschedule Approved!',
+                text: `The appointment with ${clientName} has been rescheduled. They will be notified.`,
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error approving reschedule:', err);
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Error',
+                text: 'Failed to approve reschedule. Please try again.',
+                icon: 'error'
+              });
+              this.cdr.detectChanges();
+            }
+          });
+      }
+    });
+  }
+
+  declineReschedule(): void {
+    if (!this.selectedRescheduleRequest?.id) return;
+
+    const clientName = this.selectedRescheduleRequest.clientName || 'the client';
+
+    Swal.fire({
+      title: 'Decline Reschedule?',
+      html: `Are you sure you want to decline the reschedule request from <strong>${clientName}</strong>? The original appointment time will be kept.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Decline',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.processingAction = true;
+        this.cdr.detectChanges();
+
+        this.appointmentService.declineReschedule(
+          this.selectedRescheduleRequest!.id!,
+          this.rescheduleDeclineReason || undefined
+        ).pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.closeRescheduleDeclineModal();
+              this.loadPendingRescheduleRequests();
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Reschedule Declined',
+                text: `The reschedule request from ${clientName} has been declined. The original appointment time remains. They will be notified.`,
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error declining reschedule:', err);
+              this.processingAction = false;
+              Swal.fire({
+                title: 'Error',
+                text: 'Failed to decline reschedule. Please try again.',
+                icon: 'error'
+              });
+              this.cdr.detectChanges();
+            }
+          });
+      }
+    });
+  }
+
+  formatRescheduleTime(dateStr: string | undefined): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   }
 }

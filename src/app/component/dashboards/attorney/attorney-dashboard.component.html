@@ -137,6 +137,9 @@
                 </div>
               </div>
               <div class="flex-shrink-0 d-flex gap-2">
+                <button type="button" class="btn btn-soft-info btn-sm" (click)="openAvailabilitySettings()" title="Set your availability for appointments">
+                  <i class="ri-time-line align-middle me-1"></i> Availability
+                </button>
                 <button type="button" class="btn btn-soft-success btn-sm" (click)="openCalendar()">
                   <i class="ri-add-line align-middle"></i> Add Event
                 </button>
@@ -257,6 +260,172 @@
                 <button class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
                   <i class="ri-add-line me-1"></i>Add Event
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3.5: Pending Appointment Requests -->
+      <div class="row" *ngIf="pendingAppointments.length > 0 || loadingPendingAppointments">
+        <div class="col-12">
+          <div class="card border-warning">
+            <div class="card-header border-0 d-flex align-items-center">
+              <div class="flex-grow-1 d-flex align-items-center gap-2">
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                    <i class="ri-calendar-todo-line fs-18"></i>
+                  </span>
+                </div>
+                <div>
+                  <h4 class="card-title mb-0">Pending Appointment Requests</h4>
+                  <span class="text-muted fs-12">Clients awaiting your confirmation</span>
+                </div>
+                <span class="badge bg-warning ms-2" *ngIf="pendingAppointmentsCount > 0">
+                  {{ pendingAppointmentsCount }}
+                </span>
+              </div>
+              <div class="flex-shrink-0">
+                <button type="button" class="btn btn-soft-secondary btn-sm btn-icon" (click)="loadPendingAppointments()">
+                  <i class="ri-refresh-line"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <!-- Loading -->
+              <div *ngIf="loadingPendingAppointments" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                <p class="text-muted mt-2 mb-0 fs-13">Loading requests...</p>
+              </div>
+
+              <!-- Request List -->
+              <div *ngIf="!loadingPendingAppointments && pendingAppointments.length > 0" class="row g-3">
+                <div class="col-lg-6 col-xl-4" *ngFor="let appt of pendingAppointments.slice(0, 6)">
+                  <div class="border rounded-3 p-3 h-100">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                      <div>
+                        <h6 class="mb-1 fw-semibold">{{ appt.clientName || 'Client' }}</h6>
+                        <p class="text-muted fs-12 mb-0" *ngIf="appt.caseNumber">
+                          <i class="ri-briefcase-line me-1"></i>{{ appt.caseNumber }}
+                        </p>
+                      </div>
+                      <span class="badge bg-info-subtle text-info">
+                        {{ getAppointmentTypeLabel(appt.appointmentType) }}
+                      </span>
+                    </div>
+                    <div class="mb-3">
+                      <div class="d-flex align-items-center text-muted fs-13 mb-1">
+                        <i class="ri-calendar-line me-2"></i>
+                        {{ formatAppointmentDate(appt.preferredDatetime) }}
+                      </div>
+                      <div class="d-flex align-items-center text-muted fs-13">
+                        <i class="ri-time-line me-2"></i>
+                        {{ formatAppointmentTime(appt.preferredDatetime) }}
+                      </div>
+                    </div>
+                    <p class="text-muted fs-12 mb-3 text-truncate" *ngIf="appt.description" title="{{ appt.description }}">
+                      {{ appt.description }}
+                    </p>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-success btn-sm flex-fill" (click)="openApproveModal(appt)">
+                        <i class="ri-check-line me-1"></i>Approve
+                      </button>
+                      <button class="btn btn-soft-danger btn-sm flex-fill" (click)="openDeclineModal(appt)">
+                        <i class="ri-close-line me-1"></i>Decline
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Show more link -->
+              <div class="text-center mt-3" *ngIf="pendingAppointments.length > 6">
+                <a href="javascript:void(0)" class="text-primary fs-13" (click)="navigateTo('/legal/appointments')">
+                  View all {{ pendingAppointments.length }} requests <i class="ri-arrow-right-line ms-1"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3.6: Pending Reschedule Requests -->
+      <div class="row" *ngIf="pendingRescheduleRequests.length > 0 || loadingRescheduleRequests">
+        <div class="col-12">
+          <div class="card border-info">
+            <div class="card-header border-0 d-flex align-items-center">
+              <div class="flex-grow-1 d-flex align-items-center gap-2">
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-info-subtle text-info rounded-circle">
+                    <i class="ri-calendar-2-line fs-18"></i>
+                  </span>
+                </div>
+                <div>
+                  <h4 class="card-title mb-0">Reschedule Requests</h4>
+                  <span class="text-muted fs-12">Clients requesting to change appointment times</span>
+                </div>
+                <span class="badge bg-info ms-2" *ngIf="pendingRescheduleCount > 0">
+                  {{ pendingRescheduleCount }}
+                </span>
+              </div>
+              <div class="flex-shrink-0">
+                <button type="button" class="btn btn-soft-secondary btn-sm btn-icon" (click)="loadPendingRescheduleRequests()">
+                  <i class="ri-refresh-line"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <!-- Loading -->
+              <div *ngIf="loadingRescheduleRequests" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                <p class="text-muted mt-2 mb-0 fs-13">Loading requests...</p>
+              </div>
+
+              <!-- Reschedule Request List -->
+              <div *ngIf="!loadingRescheduleRequests && pendingRescheduleRequests.length > 0" class="row g-3">
+                <div class="col-lg-6 col-xl-4" *ngFor="let appt of pendingRescheduleRequests.slice(0, 6)">
+                  <div class="border rounded-3 p-3 h-100">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                      <div>
+                        <h6 class="mb-1 fw-semibold">{{ appt.clientName || 'Client' }}</h6>
+                        <p class="text-muted fs-12 mb-0" *ngIf="appt.caseNumber">
+                          <i class="ri-briefcase-line me-1"></i>{{ appt.caseNumber }}
+                        </p>
+                      </div>
+                      <span class="badge bg-info-subtle text-info">
+                        Reschedule
+                      </span>
+                    </div>
+                    <div class="mb-2">
+                      <div class="d-flex align-items-center text-muted fs-13 mb-1">
+                        <i class="ri-calendar-line me-2 text-danger"></i>
+                        <span class="text-decoration-line-through">{{ formatRescheduleTime(appt.originalConfirmedTime || appt.confirmedDatetime) }}</span>
+                      </div>
+                      <div class="d-flex align-items-center text-success fs-13 fw-medium">
+                        <i class="ri-arrow-right-line me-2"></i>
+                        {{ formatRescheduleTime(appt.requestedRescheduleTime) }}
+                      </div>
+                    </div>
+                    <p class="text-muted fs-12 mb-3 text-truncate" *ngIf="appt.rescheduleReason" title="{{ appt.rescheduleReason }}">
+                      <i class="ri-message-2-line me-1"></i>{{ appt.rescheduleReason }}
+                    </p>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-success btn-sm flex-fill" (click)="openRescheduleApproveModal(appt)">
+                        <i class="ri-check-line me-1"></i>Approve
+                      </button>
+                      <button class="btn btn-soft-danger btn-sm flex-fill" (click)="openRescheduleDeclineModal(appt)">
+                        <i class="ri-close-line me-1"></i>Decline
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Show more link -->
+              <div class="text-center mt-3" *ngIf="pendingRescheduleRequests.length > 6">
+                <a href="javascript:void(0)" class="text-primary fs-13" (click)="navigateTo('/legal/appointments')">
+                  View all {{ pendingRescheduleRequests.length }} reschedule requests <i class="ri-arrow-right-line ms-1"></i>
+                </a>
               </div>
             </div>
           </div>
@@ -416,3 +585,258 @@
     </div>
   </div>
 </div>
+
+<!-- Availability Settings Modal -->
+<div class="modal fade" [class.show]="showAvailabilityModal" [style.display]="showAvailabilityModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="availabilityModalLabel" [attr.aria-hidden]="!showAvailabilityModal">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="availabilityModalLabel">
+          <i class="ri-time-line me-2 text-primary"></i>Set Your Availability
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAvailabilitySettings()"></button>
+      </div>
+      <div class="modal-body">
+        <app-availability-settings
+          (saved)="onAvailabilitySaved()"
+          (closed)="closeAvailabilitySettings()">
+        </app-availability-settings>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showAvailabilityModal" *ngIf="showAvailabilityModal"></div>
+
+<!-- Approve Appointment Modal -->
+<div class="modal fade" [class.show]="showApproveModal" [style.display]="showApproveModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="approveModalLabel" [attr.aria-hidden]="!showApproveModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="approveModalLabel">
+          <i class="ri-check-line me-2 text-success"></i>Approve Appointment
+        </h5>
+        <button type="button" class="btn-close" (click)="closeApproveModal()" [disabled]="processingAction"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedAppointment">
+        <div class="alert alert-light mb-3">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-3">
+              <span class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                {{ (selectedAppointment.clientName || 'C').charAt(0) }}
+              </span>
+            </div>
+            <div>
+              <h6 class="mb-0">{{ selectedAppointment.clientName || 'Client' }}</h6>
+              <small class="text-muted">{{ selectedAppointment.caseNumber }}</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Confirmed Date & Time <span class="text-danger">*</span></label>
+          <input type="datetime-local" class="form-control" [(ngModel)]="approveForm.confirmedDatetime">
+          <small class="text-muted">
+            Client requested: {{ formatAppointmentDate(selectedAppointment.preferredDatetime) }} at {{ formatAppointmentTime(selectedAppointment.preferredDatetime) }}
+          </small>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" class="form-control" [(ngModel)]="approveForm.location" placeholder="Office, Room, etc.">
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="form-check mt-4">
+              <input type="checkbox" class="form-check-input" id="isVirtual" [(ngModel)]="approveForm.isVirtual">
+              <label class="form-check-label" for="isVirtual">Virtual Meeting</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3" *ngIf="approveForm.isVirtual">
+          <label class="form-label">Meeting Link</label>
+          <input type="url" class="form-control" [(ngModel)]="approveForm.meetingLink" placeholder="https://zoom.us/j/...">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Notes for Client (Optional)</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="approveForm.notes"
+                    placeholder="Any instructions or information for the client..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeApproveModal()" [disabled]="processingAction">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="confirmAppointment()"
+                [disabled]="processingAction || !approveForm.confirmedDatetime">
+          <span *ngIf="processingAction" class="spinner-border spinner-border-sm me-1"></span>
+          {{ processingAction ? 'Confirming...' : 'Confirm Appointment' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showApproveModal" *ngIf="showApproveModal"></div>
+
+<!-- Decline Appointment Modal -->
+<div class="modal fade" [class.show]="showDeclineModal" [style.display]="showDeclineModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="declineModalLabel" [attr.aria-hidden]="!showDeclineModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="declineModalLabel">
+          <i class="ri-close-line me-2 text-danger"></i>Decline Appointment
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDeclineModal()" [disabled]="processingAction"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedAppointment">
+        <div class="alert alert-warning mb-3">
+          <i class="ri-error-warning-line me-2"></i>
+          Are you sure you want to decline this appointment request?
+        </div>
+
+        <div class="card bg-light border-0 mb-3">
+          <div class="card-body">
+            <h6 class="mb-2">{{ selectedAppointment.clientName || 'Client' }}</h6>
+            <p class="text-muted mb-1 fs-13">
+              <i class="ri-briefcase-line me-1"></i>{{ selectedAppointment.caseNumber }}
+            </p>
+            <p class="text-muted mb-0 fs-13">
+              <i class="ri-calendar-line me-1"></i>
+              {{ formatAppointmentDate(selectedAppointment.preferredDatetime) }} at {{ formatAppointmentTime(selectedAppointment.preferredDatetime) }}
+            </p>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Reason for Declining (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="declineReason"
+                    placeholder="Let the client know why you're declining..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeDeclineModal()" [disabled]="processingAction">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="declineAppointment()" [disabled]="processingAction">
+          <span *ngIf="processingAction" class="spinner-border spinner-border-sm me-1"></span>
+          {{ processingAction ? 'Declining...' : 'Decline Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showDeclineModal" *ngIf="showDeclineModal"></div>
+
+<!-- Approve Reschedule Modal -->
+<div class="modal fade" [class.show]="showRescheduleApproveModal" [style.display]="showRescheduleApproveModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="approveRescheduleModalLabel" [attr.aria-hidden]="!showRescheduleApproveModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="approveRescheduleModalLabel">
+          <i class="ri-check-line me-2"></i>Approve Reschedule
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRescheduleApproveModal()" [disabled]="processingAction"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedRescheduleRequest">
+        <div class="alert alert-info mb-3">
+          <i class="ri-information-line me-2"></i>
+          The client has requested to reschedule their appointment.
+        </div>
+
+        <div class="card bg-light border-0 mb-3">
+          <div class="card-body">
+            <h6 class="mb-2">{{ selectedRescheduleRequest.clientName || 'Client' }}</h6>
+            <p class="text-muted mb-2 fs-13" *ngIf="selectedRescheduleRequest.caseNumber">
+              <i class="ri-briefcase-line me-1"></i>{{ selectedRescheduleRequest.caseNumber }}
+            </p>
+            <div class="d-flex flex-column gap-1">
+              <p class="mb-0 fs-13">
+                <span class="text-muted">From:</span>
+                <span class="text-decoration-line-through ms-2">
+                  {{ formatRescheduleTime(selectedRescheduleRequest.originalConfirmedTime || selectedRescheduleRequest.confirmedDatetime) }}
+                </span>
+              </p>
+              <p class="mb-0 fs-13 text-success fw-medium">
+                <span class="text-muted">To:</span>
+                <span class="ms-2">{{ formatRescheduleTime(selectedRescheduleRequest.requestedRescheduleTime) }}</span>
+              </p>
+            </div>
+            <p class="text-muted fs-12 mt-2 mb-0" *ngIf="selectedRescheduleRequest.rescheduleReason">
+              <i class="ri-message-2-line me-1"></i>{{ selectedRescheduleRequest.rescheduleReason }}
+            </p>
+          </div>
+        </div>
+
+        <p class="text-muted fs-13 mb-0">
+          <i class="ri-calendar-check-line me-1"></i>
+          Approving will update the appointment and calendar event to the new time.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeRescheduleApproveModal()" [disabled]="processingAction">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="approveReschedule()" [disabled]="processingAction">
+          <span *ngIf="processingAction" class="spinner-border spinner-border-sm me-1"></span>
+          {{ processingAction ? 'Approving...' : 'Approve Reschedule' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showRescheduleApproveModal" *ngIf="showRescheduleApproveModal"></div>
+
+<!-- Decline Reschedule Modal -->
+<div class="modal fade" [class.show]="showRescheduleDeclineModal" [style.display]="showRescheduleDeclineModal ? 'block' : 'none'"
+     tabindex="-1" aria-labelledby="declineRescheduleModalLabel" [attr.aria-hidden]="!showRescheduleDeclineModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="declineRescheduleModalLabel">
+          <i class="ri-close-line me-2 text-danger"></i>Decline Reschedule
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRescheduleDeclineModal()" [disabled]="processingAction"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedRescheduleRequest">
+        <div class="alert alert-warning mb-3">
+          <i class="ri-error-warning-line me-2"></i>
+          Are you sure you want to decline this reschedule request? The appointment will remain at its original time.
+        </div>
+
+        <div class="card bg-light border-0 mb-3">
+          <div class="card-body">
+            <h6 class="mb-2">{{ selectedRescheduleRequest.clientName || 'Client' }}</h6>
+            <p class="text-muted mb-2 fs-13" *ngIf="selectedRescheduleRequest.caseNumber">
+              <i class="ri-briefcase-line me-1"></i>{{ selectedRescheduleRequest.caseNumber }}
+            </p>
+            <div class="d-flex flex-column gap-1">
+              <p class="mb-0 fs-13">
+                <span class="text-muted">Original time (will be kept):</span>
+                <span class="fw-medium ms-2">
+                  {{ formatRescheduleTime(selectedRescheduleRequest.originalConfirmedTime || selectedRescheduleRequest.confirmedDatetime) }}
+                </span>
+              </p>
+              <p class="mb-0 fs-13 text-danger">
+                <span class="text-muted">Requested time (declined):</span>
+                <span class="text-decoration-line-through ms-2">{{ formatRescheduleTime(selectedRescheduleRequest.requestedRescheduleTime) }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Reason for Declining (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="rescheduleDeclineReason"
+                    placeholder="Let the client know why you're declining the reschedule..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeRescheduleDeclineModal()" [disabled]="processingAction">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="declineReschedule()" [disabled]="processingAction">
+          <span *ngIf="processingAction" class="spinner-border spinner-border-sm me-1"></span>
+          {{ processingAction ? 'Declining...' : 'Decline Reschedule' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showRescheduleDeclineModal" *ngIf="showRescheduleDeclineModal"></div>

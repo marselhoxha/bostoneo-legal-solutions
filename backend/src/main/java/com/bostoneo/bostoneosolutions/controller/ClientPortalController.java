@@ -131,6 +131,23 @@ public class ClientPortalController {
                         .build());
     }
 
+    @GetMapping("/cases/{caseId}/attorney")
+    public ResponseEntity<HttpResponse> getCaseAttorney(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long caseId) {
+        log.info("Client {} fetching attorney for case {}", userId, caseId);
+        Long attorneyId = clientPortalService.getCaseAttorneyId(userId, caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("attorneyId", attorneyId))
+                        .message("Case attorney retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     // =====================================================
     // DOCUMENTS
     // =====================================================
@@ -242,6 +259,25 @@ public class ClientPortalController {
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .message("Appointment cancelled successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    @PutMapping("/appointments/{appointmentId}/reschedule")
+    public ResponseEntity<HttpResponse> rescheduleAppointment(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long appointmentId,
+            @RequestBody RescheduleRequestDTO request) {
+        log.info("Client {} rescheduling appointment {}", userId, appointmentId);
+        ClientPortalAppointmentDTO appointment = clientPortalService.rescheduleAppointment(
+                userId, appointmentId, request.getNewDateTime(), request.getReason());
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("appointment", appointment))
+                        .message("Appointment rescheduled successfully")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());

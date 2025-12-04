@@ -83,6 +83,9 @@ export interface ClientAppointment {
   attorneyName: string;
   isVirtual: boolean;
   meetingLink: string;
+  // Reschedule request fields
+  requestedRescheduleTime?: string;
+  rescheduleReason?: string;
 }
 
 export interface ClientAppointmentRequest {
@@ -276,6 +279,15 @@ export class ClientPortalService {
     );
   }
 
+  rescheduleAppointment(appointmentId: number, newDateTime: string, reason?: string): Observable<ClientAppointment> {
+    return this.http.put<any>(`${this.apiUrl}/appointments/${appointmentId}/reschedule`, {
+      newDateTime,
+      reason: reason || ''
+    }).pipe(
+      map(response => response.data.appointment)
+    );
+  }
+
   // =====================================================
   // MESSAGES
   // =====================================================
@@ -330,6 +342,16 @@ export class ClientPortalService {
   getInvoice(invoiceId: number): Observable<ClientInvoice> {
     return this.http.get<any>(`${this.apiUrl}/invoices/${invoiceId}`).pipe(
       map(response => response.data.invoice)
+    );
+  }
+
+  // =====================================================
+  // CASE ATTORNEY
+  // =====================================================
+
+  getCaseAttorneyId(caseId: number): Observable<number | null> {
+    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/attorney`).pipe(
+      map(response => response.data?.attorneyId || null)
     );
   }
 }

@@ -1,19 +1,27 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
 import com.bostoneo.bostoneosolutions.dto.filemanager.FileUploadResponseDTO;
 import com.bostoneo.bostoneosolutions.enumeration.CaseRoleType;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.AppointmentRequest;
+import com.bostoneo.bostoneosolutions.model.Attorney;
 import com.bostoneo.bostoneosolutions.model.Client;
 import com.bostoneo.bostoneosolutions.model.FileItem;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.AppointmentRequestRepository;
+import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import com.bostoneo.bostoneosolutions.service.ClientPortalService;
 import com.bostoneo.bostoneosolutions.service.FileManagerService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
@@ -29,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,12 +53,16 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     private final ClientRepository clientRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final CalendarEventRepository calendarEventRepository;
+    private final CalendarEventService calendarEventService;
     private final InvoiceRepository invoiceRepository;
     private final FileManagerService fileManagerService;
     private final FileItemRepository fileItemRepository;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final NotificationService notificationService;
     private final CaseActivityService caseActivityService;
+    private final AppointmentRequestRepository appointmentRequestRepository;
+    private final UserRepository<User> userRepository;
+    private final AttorneyRepository attorneyRepository;
 
     // =====================================================
     // CLIENT PROFILE
@@ -105,6 +118,63 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .orElseThrow(() -> new ApiException("Case not found"));
 
         return mapToCaseDTO(legalCase);
+    }
+
+    /**
+     * Convert user ID to attorney ID from attorneys table
+     */
+    private Long getAttorneyIdFromUserId(Long assignedUserId) {
+        return attorneyRepository.findByUserId(assignedUserId)
+                .map(Attorney::getId)
+                .orElseGet(() -> {
+                    // Auto-create attorney record if it doesn't exist
+                    log.info("Creating attorney record for user: {}", assignedUserId);
+                    Attorney newAttorney = Attorney.builder()
+                            .userId(assignedUserId)
+                            .practiceAreas("[]")
+                            .isActive(true)
+                            .currentCaseLoad(0)
+                            .maxCaseLoad(50)
+                            .build();
+                    Attorney saved = attorneyRepository.save(newAttorney);
+                    return saved.getId();
+                });
+    }
+
+    @Override
+    public Long getCaseAttorneyId(Long userId, Long caseId) {
+        if (!verifyCaseAccess(userId, caseId)) {
+            throw new ApiException("You do not have access to this case");
+        }
+
+        // Find lead attorney for the case from case assignments
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+
+        // First look for lead attorney
+        for (CaseAssignment assignment : assignments) {
+            if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
+                Long assignedUserId = assignment.getAssignedTo().getId();
+                return getAttorneyIdFromUserId(assignedUserId);
+            }
+        }
+
+        // If no lead attorney, return first supporting attorney or associate found
+        for (CaseAssignment assignment : assignments) {
+            if (assignment.getRoleType() == CaseRoleType.SUPPORTING_ATTORNEY ||
+                assignment.getRoleType() == CaseRoleType.ASSOCIATE ||
+                assignment.getRoleType() == CaseRoleType.CO_COUNSEL) {
+                Long assignedUserId = assignment.getAssignedTo().getId();
+                return getAttorneyIdFromUserId(assignedUserId);
+            }
+        }
+
+        // If still nothing, return first assignment
+        if (!assignments.isEmpty()) {
+            Long assignedUserId = assignments.get(0).getAssignedTo().getId();
+            return getAttorneyIdFromUserId(assignedUserId);
+        }
+
+        return null;
     }
 
     // =====================================================
@@ -341,33 +411,349 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     public List<ClientPortalAppointmentDTO> getClientAppointments(Long userId) {
         Client client = getClientByUserId(userId);
 
-        // Get cases for this client
-        List<LegalCase> clientCases = legalCaseRepository.findAllByClientNameIgnoreCase(client.getName());
-        List<Long> caseIds = clientCases.stream().map(LegalCase::getId).collect(Collectors.toList());
+        // Get all appointments for this client
+        List<AppointmentRequest> confirmed = appointmentRequestRepository
+                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "CONFIRMED");
 
-        if (caseIds.isEmpty()) {
-            return new ArrayList<>();
-        }
+        // Also get pending appointments (awaiting attorney approval)
+        List<AppointmentRequest> pending = appointmentRequestRepository
+                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "PENDING");
 
-        // Get events for client's cases
-        // TODO: Filter events by case IDs
-        return new ArrayList<>();
+        // Also get appointments with pending reschedule requests
+        List<AppointmentRequest> pendingReschedule = appointmentRequestRepository
+                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "PENDING_RESCHEDULE");
+
+        List<AppointmentRequest> allAppointments = new ArrayList<>();
+        allAppointments.addAll(confirmed);
+        allAppointments.addAll(pending);
+        allAppointments.addAll(pendingReschedule);
+
+        return allAppointments.stream()
+                .map(this::mapToAppointmentDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public ClientPortalAppointmentDTO requestAppointment(Long userId, ClientPortalAppointmentRequestDTO request) {
+        Client client = getClientByUserId(userId);
+
         if (request.getCaseId() != null && !verifyCaseAccess(userId, request.getCaseId())) {
             throw new ApiException("You do not have access to this case");
         }
 
-        // TODO: Create appointment request
-        throw new ApiException("Appointment request not yet implemented");
+        // Find the attorney for this case
+        Long attorneyId = null;
+        if (request.getCaseId() != null) {
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(request.getCaseId());
+            for (CaseAssignment assignment : assignments) {
+                if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
+                    attorneyId = assignment.getAssignedTo().getId();
+                    break;
+                }
+            }
+            if (attorneyId == null && !assignments.isEmpty()) {
+                // Use first available attorney if no lead attorney
+                attorneyId = assignments.get(0).getAssignedTo().getId();
+            }
+        }
+
+        if (attorneyId == null) {
+            throw new ApiException("No attorney assigned to this case. Please contact your attorney directly.");
+        }
+
+        // Create appointment request
+        AppointmentRequest appointmentRequest = AppointmentRequest.builder()
+                .clientId(client.getId())
+                .attorneyId(attorneyId)
+                .caseId(request.getCaseId())
+                .title(request.getTitle() != null ? request.getTitle() : "Client Appointment Request")
+                .description(request.getDescription())
+                .appointmentType(request.getType() != null ? request.getType() : "CONSULTATION")
+                .preferredDatetime(request.getPreferredDateTime())
+                .alternativeDatetime(request.getAlternativeDateTime())
+                .isVirtual(request.isPreferVirtual())
+                .notes(request.getNotes())
+                .status("PENDING")
+                .durationMinutes(30)
+                .build();
+
+        appointmentRequest = appointmentRequestRepository.save(appointmentRequest);
+
+        log.info("Client {} requested appointment with attorney {} for case {}",
+                client.getName(), attorneyId, request.getCaseId());
+
+        // Notify attorney of new appointment request
+        notifyAttorneyOfAppointmentRequest(client, appointmentRequest);
+
+        return mapToAppointmentDTO(appointmentRequest);
     }
 
     @Override
     public void cancelAppointment(Long userId, Long appointmentId) {
-        // TODO: Verify appointment belongs to client and cancel
-        throw new ApiException("Appointment cancellation not yet implemented");
+        Client client = getClientByUserId(userId);
+
+        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
+                .orElseThrow(() -> new ApiException("Appointment not found"));
+
+        // Verify appointment belongs to this client
+        if (!appointment.getClientId().equals(client.getId())) {
+            throw new ApiException("You do not have permission to cancel this appointment");
+        }
+
+        // Check if appointment can be cancelled
+        if (appointment.isCompleted()) {
+            throw new ApiException("Cannot cancel a completed appointment");
+        }
+        if (appointment.isCancelled()) {
+            throw new ApiException("Appointment is already cancelled");
+        }
+
+        // Cancel the appointment
+        appointment.setStatus("CANCELLED");
+        appointment.setCancelledBy("CLIENT");
+        appointmentRequestRepository.save(appointment);
+
+        log.info("Client {} cancelled appointment {}", client.getName(), appointmentId);
+
+        // Send notification to attorney about cancellation
+        sendCancellationNotificationToAttorney(appointment, client.getName());
+
+        // Delete the calendar event if it exists
+        deleteCalendarEventForAppointment(appointment);
+    }
+
+    @Override
+    public ClientPortalAppointmentDTO rescheduleAppointment(Long userId, Long appointmentId, String newDateTime, String reason) {
+        Client client = getClientByUserId(userId);
+
+        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
+                .orElseThrow(() -> new ApiException("Appointment not found"));
+
+        // Verify appointment belongs to this client
+        if (!appointment.getClientId().equals(client.getId())) {
+            throw new ApiException("You do not have permission to reschedule this appointment");
+        }
+
+        // Check if appointment can be rescheduled
+        if (appointment.isCompleted()) {
+            throw new ApiException("Cannot reschedule a completed appointment");
+        }
+        if (appointment.isCancelled()) {
+            throw new ApiException("Cannot reschedule a cancelled appointment");
+        }
+        if (appointment.isPendingReschedule()) {
+            throw new ApiException("A reschedule request is already pending for this appointment");
+        }
+
+        // Parse the new datetime
+        LocalDateTime newDatetime = LocalDateTime.parse(newDateTime);
+
+        // Store current confirmed time as backup (in case attorney declines)
+        LocalDateTime currentConfirmedTime = appointment.getConfirmedDatetime() != null
+                ? appointment.getConfirmedDatetime()
+                : appointment.getPreferredDatetime();
+
+        // Create reschedule REQUEST (not immediate update)
+        appointment.setRequestedRescheduleTime(newDatetime);
+        appointment.setRescheduleReason(reason);
+        appointment.setOriginalConfirmedTime(currentConfirmedTime);
+        appointment.setStatus("PENDING_RESCHEDULE");
+
+        appointment = appointmentRequestRepository.save(appointment);
+
+        log.info("Client {} requested reschedule for appointment {} from {} to {}",
+                client.getName(), appointmentId, currentConfirmedTime, newDatetime);
+
+        // Send notification to attorney about reschedule REQUEST
+        sendRescheduleRequestNotificationToAttorney(appointment, client.getName(), currentConfirmedTime, newDatetime);
+
+        return mapToAppointmentDTO(appointment);
+    }
+
+    /**
+     * Send push notification to attorney when client requests to reschedule an appointment
+     */
+    private void sendRescheduleRequestNotificationToAttorney(AppointmentRequest appointment, String clientName, LocalDateTime oldDatetime, LocalDateTime newDatetime) {
+        try {
+            String oldDateStr = oldDatetime != null
+                    ? oldDatetime.format(DateTimeFormatter.ofPattern("MMM d 'at' h:mm a"))
+                    : "the original time";
+            String newDateStr = newDatetime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy 'at' h:mm a"));
+
+            String title = "Reschedule Request";
+            String message = String.format(
+                    "%s is requesting to reschedule their appointment from %s to %s. Please approve or decline.",
+                    clientName,
+                    oldDateStr,
+                    newDateStr
+            );
+
+            // Send push notification via CRM notification (includes push, email, in-app)
+            notificationService.sendCrmNotification(
+                    title,
+                    message,
+                    appointment.getAttorneyId(),
+                    "RESCHEDULE_REQUEST",
+                    Map.of("appointmentId", appointment.getId(), "clientName", clientName,
+                           "requestedTime", newDatetime.toString(), "originalTime", oldDatetime.toString())
+            );
+
+            log.info("Reschedule request notification sent to attorney {} for appointment {}", appointment.getAttorneyId(), appointment.getId());
+        } catch (Exception e) {
+            log.error("Failed to send reschedule request notification for appointment {}: {}", appointment.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Update the calendar event when appointment is rescheduled
+     */
+    private void updateCalendarEventForReschedule(AppointmentRequest appointment, LocalDateTime newDatetime) {
+        try {
+            if (appointment.getCalendarEventId() != null) {
+                log.info("Updating calendar event {} for rescheduled appointment {}", appointment.getCalendarEventId(), appointment.getId());
+
+                // Calculate end time based on duration
+                int duration = appointment.getDurationMinutes() != null ? appointment.getDurationMinutes() : 30;
+                LocalDateTime endTime = newDatetime.plusMinutes(duration);
+
+                // Create DTO with updated times
+                CalendarEventDTO updateDTO = CalendarEventDTO.builder()
+                        .startTime(newDatetime)
+                        .endTime(endTime)
+                        .build();
+
+                calendarEventService.updateEvent(appointment.getCalendarEventId(), updateDTO);
+
+                log.info("Successfully updated calendar event for appointment {}", appointment.getId());
+            } else {
+                log.warn("No calendar event ID found for appointment {} - nothing to update", appointment.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to update calendar event for appointment {}: {}", appointment.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Send push notification to attorney when client cancels an appointment
+     */
+    private void sendCancellationNotificationToAttorney(AppointmentRequest appointment, String clientName) {
+        try {
+            // Format the date
+            LocalDateTime appointmentTime = appointment.getConfirmedDatetime() != null ?
+                    appointment.getConfirmedDatetime() : appointment.getPreferredDatetime();
+            String dateStr = appointmentTime != null ?
+                    appointmentTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy 'at' h:mm a")) :
+                    "the scheduled time";
+
+            String title = "Appointment Cancelled";
+            String message = String.format(
+                    "%s has cancelled their appointment scheduled for %s.",
+                    clientName,
+                    dateStr
+            );
+
+            // Send push notification via CRM notification (includes push, email, in-app)
+            notificationService.sendCrmNotification(
+                    title,
+                    message,
+                    appointment.getAttorneyId(),
+                    "APPOINTMENT_CANCELLED",
+                    Map.of("appointmentId", appointment.getId(), "clientName", clientName)
+            );
+
+            log.info("Cancellation notification sent to attorney {} for appointment {}", appointment.getAttorneyId(), appointment.getId());
+        } catch (Exception e) {
+            log.error("Failed to send cancellation notification for appointment {}: {}", appointment.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Delete the calendar event associated with an appointment
+     */
+    private void deleteCalendarEventForAppointment(AppointmentRequest appointment) {
+        try {
+            if (appointment.getCalendarEventId() != null) {
+                log.info("Deleting calendar event {} for cancelled appointment {}", appointment.getCalendarEventId(), appointment.getId());
+                calendarEventService.deleteEvent(appointment.getCalendarEventId());
+                log.info("Successfully deleted calendar event for appointment {}", appointment.getId());
+            } else {
+                log.warn("No calendar event ID found for appointment {} - nothing to delete", appointment.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to delete calendar event for appointment {}: {}", appointment.getId(), e.getMessage());
+        }
+    }
+
+    private ClientPortalAppointmentDTO mapToAppointmentDTO(AppointmentRequest appointment) {
+        String caseNumber = null;
+        if (appointment.getCaseId() != null) {
+            LegalCase legalCase = legalCaseRepository.findById(appointment.getCaseId()).orElse(null);
+            if (legalCase != null) {
+                caseNumber = legalCase.getCaseNumber();
+            }
+        }
+
+        // Get attorney name
+        String attorneyName = null;
+        if (appointment.getAttorneyId() != null) {
+            User attorney = userRepository.get(appointment.getAttorneyId());
+            if (attorney != null) {
+                attorneyName = attorney.getFirstName() + " " + attorney.getLastName();
+            }
+        }
+
+        LocalDateTime startTime = appointment.getConfirmedDatetime() != null
+                ? appointment.getConfirmedDatetime()
+                : appointment.getPreferredDatetime();
+        LocalDateTime endTime = startTime != null
+                ? startTime.plusMinutes(appointment.getDurationMinutes() != null ? appointment.getDurationMinutes() : 30)
+                : null;
+
+        return ClientPortalAppointmentDTO.builder()
+                .id(appointment.getId())
+                .caseId(appointment.getCaseId())
+                .caseNumber(caseNumber)
+                .title(appointment.getTitle())
+                .description(appointment.getDescription())
+                .type(appointment.getAppointmentType())
+                .status(appointment.getStatus())
+                .startTime(startTime)
+                .endTime(endTime)
+                .location(appointment.getLocation())
+                .attorneyName(attorneyName)
+                .isVirtual(Boolean.TRUE.equals(appointment.getIsVirtual()))
+                .meetingLink(appointment.getMeetingLink())
+                .requestedRescheduleTime(appointment.getRequestedRescheduleTime())
+                .rescheduleReason(appointment.getRescheduleReason())
+                .build();
+    }
+
+    private void notifyAttorneyOfAppointmentRequest(Client client, AppointmentRequest appointment) {
+        try {
+            String title = "New Appointment Request";
+            String message = String.format(
+                    "%s has requested an appointment for %s",
+                    client.getName(),
+                    appointment.getPreferredDatetime().format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a"))
+            );
+
+            Map<String, Object> notificationData = new HashMap<>();
+            notificationData.put("userId", appointment.getAttorneyId());
+            notificationData.put("title", title);
+            notificationData.put("message", message);
+            notificationData.put("type", "APPOINTMENT_REQUEST");
+            notificationData.put("priority", "HIGH");
+            notificationData.put("triggeredByUserId", client.getUserId());
+            notificationData.put("triggeredByName", client.getName());
+            notificationData.put("entityId", appointment.getId());
+            notificationData.put("entityType", "APPOINTMENT");
+            notificationData.put("url", "/appointments?id=" + appointment.getId());
+
+            notificationService.createUserNotification(notificationData);
+            log.info("Notification sent to attorney {} for appointment request", appointment.getAttorneyId());
+        } catch (Exception e) {
+            log.error("Failed to send notification for appointment request: {}", e.getMessage());
+        }
     }
 
     // =====================================================
@@ -454,6 +840,17 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                     .count();
         }
 
+        // Count upcoming appointments
+        List<AppointmentRequest> upcomingAppts = appointmentRequestRepository
+                .findUpcomingByClientId(client.getId(), LocalDateTime.now());
+        int upcomingAppointmentsCount = upcomingAppts.size();
+
+        // Get next appointment
+        ClientPortalAppointmentDTO nextAppointment = null;
+        if (!upcomingAppts.isEmpty()) {
+            nextAppointment = mapToAppointmentDTO(upcomingAppts.get(0));
+        }
+
         // Build recent cases list
         List<ClientPortalCaseDTO> recentCases = clientCases.stream()
                 .sorted((a, b) -> {
@@ -474,8 +871,8 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .closedCases(closedCases)
                 .totalDocuments(totalDocuments)
                 .recentDocuments(recentDocuments)
-                .upcomingAppointments(0) // TODO: Count appointments
-                .nextAppointment(null)
+                .upcomingAppointments(upcomingAppointmentsCount)
+                .nextAppointment(nextAppointment)
                 .unreadMessages(0) // TODO: Count unread
                 .totalOutstanding(BigDecimal.ZERO) // TODO: Calculate from invoices
                 .pendingInvoices(0)

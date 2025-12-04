@@ -1,9 +1,9 @@
-<div class="container-fluid">
+<div class="container-fluid" style="margin-top: 100px;">
   <!-- Page Header -->
   <div class="row">
     <div class="col-12">
       <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Appointments</h4>
+        <h4 class="mb-sm-0">My Appointments</h4>
         <div class="page-title-right">
           <ol class="breadcrumb m-0">
             <li class="breadcrumb-item"><a routerLink="/client/dashboard">Portal</a></li>
@@ -17,8 +17,9 @@
   <!-- Success Message -->
   <div *ngIf="successMessage" class="row">
     <div class="col-12">
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="ri-check-double-line me-2"></i> {{ successMessage }}
+      <div class="alert alert-success alert-dismissible alert-label-icon label-arrow fade show" role="alert">
+        <i class="ri-check-double-line label-icon"></i>
+        <strong>Success!</strong> {{ successMessage }}
         <button type="button" class="btn-close" (click)="successMessage = null"></button>
       </div>
     </div>
@@ -27,8 +28,9 @@
   <!-- Error Message -->
   <div *ngIf="error" class="row">
     <div class="col-12">
-      <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="ri-error-warning-line me-2"></i> {{ error }}
+      <div class="alert alert-danger alert-dismissible alert-label-icon label-arrow fade show" role="alert">
+        <i class="ri-error-warning-line label-icon"></i>
+        <strong>Error!</strong> {{ error }}
         <button type="button" class="btn-close" (click)="error = null"></button>
       </div>
     </div>
@@ -50,172 +52,200 @@
 
   <!-- Appointments Content -->
   <ng-container *ngIf="!loading">
-    <!-- Stats Row -->
+    <!-- Stats Cards -->
     <div class="row">
-      <div class="col-md-4">
-        <div class="card card-animate">
+      <div class="col-xl-4 col-md-6">
+        <div class="card card-animate overflow-hidden">
           <div class="card-body">
             <div class="d-flex align-items-center">
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title bg-soft-primary text-primary rounded-circle fs-3">
-                  <i class="ri-calendar-check-line"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <p class="text-uppercase fw-medium text-muted mb-1">Upcoming</p>
-                <h4 class="fs-4 mb-0">{{ upcomingAppointments.length }}</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card card-animate">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title bg-soft-secondary text-secondary rounded-circle fs-3">
-                  <i class="ri-history-line"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <p class="text-uppercase fw-medium text-muted mb-1">Past</p>
-                <h4 class="fs-4 mb-0">{{ pastAppointments.length }}</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card card-animate">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div class="d-flex align-items-center">
-                <div class="avatar-sm flex-shrink-0">
-                  <span class="avatar-title bg-soft-success text-success rounded-circle fs-3">
-                    <i class="ri-add-line"></i>
+              <div class="flex-shrink-0">
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
+                    <i class="ri-calendar-check-line"></i>
                   </span>
                 </div>
-                <div class="flex-grow-1 ms-3">
-                  <p class="text-uppercase fw-medium text-muted mb-1">Request</p>
-                  <h6 class="mb-0">New Appointment</h6>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-1">Upcoming</p>
+                <h4 class="fs-22 fw-bold mb-0">{{ upcomingAppointments.length }}</h4>
+              </div>
+            </div>
+          </div>
+          <div class="progress progress-sm" style="height: 3px;">
+            <div class="progress-bar bg-primary" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-4 col-md-6">
+        <div class="card card-animate overflow-hidden">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-secondary-subtle text-secondary rounded-circle fs-4">
+                    <i class="ri-history-line"></i>
+                  </span>
                 </div>
               </div>
-              <button class="btn btn-primary btn-sm" (click)="openRequestModal()" [disabled]="cases.length === 0">
-                <i class="ri-add-line me-1"></i> Request
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-1">Past</p>
+                <h4 class="fs-22 fw-bold mb-0">{{ pastAppointments.length }}</h4>
+              </div>
+            </div>
+          </div>
+          <div class="progress progress-sm" style="height: 3px;">
+            <div class="progress-bar bg-secondary" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-4 col-md-12">
+        <div class="card card-animate overflow-hidden bg-primary">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <p class="text-white-75 fs-12 fw-semibold mb-1">SCHEDULE NEW</p>
+                <h5 class="text-white mb-0">Book Appointment</h5>
+              </div>
+              <button class="btn btn-light btn-sm" (click)="openBookingModal()" [disabled]="cases.length === 0">
+                <i class="ri-add-line me-1"></i> Book Now
               </button>
             </div>
+          </div>
+          <div class="progress progress-sm" style="height: 3px;">
+            <div class="progress-bar bg-white" style="width: 100%"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tabs -->
+    <!-- Main Content -->
     <div class="row">
       <div class="col-12">
         <div class="card">
-          <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" [class.active]="activeTab === 'upcoming'"
-                        (click)="setActiveTab('upcoming')" type="button">
-                  <i class="ri-calendar-check-line me-1"></i>
-                  Upcoming ({{ upcomingAppointments.length }})
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" [class.active]="activeTab === 'past'"
-                        (click)="setActiveTab('past')" type="button">
-                  <i class="ri-history-line me-1"></i>
-                  Past ({{ pastAppointments.length }})
-                </button>
-              </li>
-            </ul>
+          <div class="card-header border-0">
+            <div class="d-flex align-items-center">
+              <h5 class="card-title mb-0 flex-grow-1">Appointments</h5>
+              <div class="flex-shrink-0">
+                <ul class="nav nav-pills nav-custom-pills" role="tablist">
+                  <li class="nav-item">
+                    <button class="nav-link" [class.active]="activeTab === 'upcoming'"
+                            (click)="setActiveTab('upcoming')" type="button">
+                      <i class="ri-calendar-check-line me-1"></i>
+                      Upcoming <span class="badge bg-primary-subtle text-primary ms-1">{{ upcomingAppointments.length }}</span>
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link" [class.active]="activeTab === 'past'"
+                            (click)="setActiveTab('past')" type="button">
+                      <i class="ri-history-line me-1"></i>
+                      Past <span class="badge bg-secondary-subtle text-secondary ms-1">{{ pastAppointments.length }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <div class="card-body">
+
+          <div class="card-body pt-0">
             <!-- Empty State -->
             <div *ngIf="currentAppointments.length === 0" class="text-center py-5">
-              <i class="ri-calendar-line fs-1 text-muted"></i>
-              <h5 class="mt-3">No {{ activeTab }} appointments</h5>
-              <p class="text-muted" *ngIf="activeTab === 'upcoming'">
+              <div class="avatar-lg mx-auto mb-4">
+                <div class="avatar-title bg-light text-primary rounded-circle fs-1">
+                  <i class="ri-calendar-line"></i>
+                </div>
+              </div>
+              <h5 class="mb-2">No {{ activeTab }} appointments</h5>
+              <p class="text-muted mb-4" *ngIf="activeTab === 'upcoming'">
                 You don't have any upcoming appointments scheduled.
               </p>
-              <p class="text-muted" *ngIf="activeTab === 'past'">
+              <p class="text-muted mb-4" *ngIf="activeTab === 'past'">
                 Your past appointments will appear here.
               </p>
-              <button *ngIf="activeTab === 'upcoming'" class="btn btn-primary mt-2"
-                      (click)="openRequestModal()" [disabled]="cases.length === 0">
-                <i class="ri-add-line me-1"></i> Request Appointment
+              <button *ngIf="activeTab === 'upcoming'" class="btn btn-primary"
+                      (click)="openBookingModal()" [disabled]="cases.length === 0">
+                <i class="ri-add-line me-1"></i> Book an Appointment
               </button>
             </div>
 
             <!-- Appointments List -->
             <div *ngIf="currentAppointments.length > 0" class="appointments-list">
-              <div *ngFor="let appt of currentAppointments" class="appointment-item mb-3">
-                <div class="card mb-0">
-                  <div class="card-body">
-                    <div class="row align-items-center">
-                      <!-- Date/Time Column -->
-                      <div class="col-md-2 text-center">
-                        <div class="date-box bg-soft-primary rounded p-3">
-                          <h4 class="mb-0 text-primary">{{ formatDate(appt.startTime).split(' ')[2] }}</h4>
-                          <p class="text-muted mb-0 fs-12">{{ formatDate(appt.startTime).split(' ')[1] }}</p>
+              <div *ngFor="let appt of currentAppointments; trackBy: trackByAppointmentId" class="appointment-card mb-3">
+                <div class="card mb-0 border shadow-sm">
+                  <div class="card-body p-0">
+                    <div class="row g-0">
+                      <!-- Date Column -->
+                      <div class="col-auto">
+                        <div class="date-column text-center p-3" [ngClass]="getStatusBadgeClass(appt.status)">
+                          <div class="date-month text-uppercase fs-11 fw-semibold">{{ formatDate(appt.startTime).split(' ')[1] }}</div>
+                          <div class="date-day fs-2 fw-bold lh-1">{{ formatDate(appt.startTime).split(' ')[2] }}</div>
+                          <div class="date-time fs-12 mt-1">{{ formatTime(appt.startTime) }}</div>
                         </div>
-                        <p class="mt-2 mb-0 text-muted fs-12">{{ formatTime(appt.startTime) }}</p>
                       </div>
 
                       <!-- Details Column -->
-                      <div class="col-md-6">
-                        <div class="d-flex align-items-start">
-                          <div class="avatar-sm flex-shrink-0 me-3">
-                            <span class="avatar-title bg-soft-info text-info rounded-circle fs-4">
-                              <i [class]="getTypeIcon(appt.type)"></i>
+                      <div class="col">
+                        <div class="p-3">
+                          <div class="d-flex align-items-start justify-content-between mb-2">
+                            <div>
+                              <h6 class="mb-1 fw-semibold">{{ appt.title }}</h6>
+                              <span class="badge fs-10" [ngClass]="getStatusBadgeClass(appt.status)">
+                                {{ formatStatus(appt.status) }}
+                              </span>
+                            </div>
+                            <span class="badge bg-light text-muted">
+                              {{ formatDuration(appt.startTime, appt.endTime) }}
                             </span>
                           </div>
-                          <div class="flex-grow-1">
-                            <h6 class="mb-1">{{ appt.title }}</h6>
-                            <p class="text-muted mb-1 fs-13">
-                              <i class="ri-briefcase-4-line me-1"></i>
-                              {{ appt.caseNumber }}
-                            </p>
-                            <p class="text-muted mb-1 fs-13" *ngIf="appt.attorneyName">
-                              <i class="ri-user-line me-1"></i>
-                              {{ appt.attorneyName }}
-                            </p>
-                            <p class="text-muted mb-0 fs-13">
+
+                          <div class="d-flex flex-wrap gap-3 text-muted fs-13 mb-2">
+                            <span *ngIf="appt.caseNumber">
+                              <i class="ri-briefcase-4-line me-1"></i>{{ appt.caseNumber }}
+                            </span>
+                            <span *ngIf="appt.attorneyName">
+                              <i class="ri-user-line me-1"></i>{{ appt.attorneyName }}
+                            </span>
+                            <span>
                               <i class="ri-map-pin-line me-1"></i>
                               {{ appt.isVirtual ? 'Virtual Meeting' : appt.location || 'TBD' }}
-                            </p>
+                            </span>
+                          </div>
+
+                          <p *ngIf="appt.description" class="text-muted fs-13 mb-0 text-truncate" style="max-width: 400px;">
+                            {{ appt.description }}
+                          </p>
+
+                          <!-- Pending Reschedule Info -->
+                          <div *ngIf="isPendingReschedule(appt)" class="alert alert-warning alert-sm mb-0 mt-2 py-2 px-3 d-flex align-items-center">
+                            <i class="ri-time-line me-2"></i>
+                            <div class="fs-12">
+                              <strong>Reschedule requested:</strong>
+                              {{ appt.requestedRescheduleTime | date:'MMM d, y \'at\' h:mm a' }}
+                              <br>
+                              <span class="text-muted">Waiting for attorney approval</span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <!-- Status & Actions Column -->
-                      <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                        <div class="mb-2">
-                          <span class="badge" [ngClass]="getStatusBadgeClass(appt.status)">
-                            {{ formatStatus(appt.status) }}
-                          </span>
-                          <span class="badge bg-soft-secondary text-secondary ms-1">
-                            {{ formatDuration(appt.startTime, appt.endTime) }}
-                          </span>
-                        </div>
-                        <div class="btn-group" *ngIf="activeTab === 'upcoming'">
+                      <!-- Actions Column -->
+                      <div class="col-auto d-flex align-items-center pe-3" *ngIf="activeTab === 'upcoming'">
+                        <div class="d-flex flex-column gap-1">
                           <a *ngIf="appt.isVirtual && appt.meetingLink" [href]="appt.meetingLink"
-                             target="_blank" class="btn btn-sm btn-soft-primary">
+                             target="_blank" class="btn btn-sm btn-soft-success">
                             <i class="ri-video-chat-line me-1"></i> Join
                           </a>
+                          <button *ngIf="canReschedule(appt)" class="btn btn-sm btn-soft-info"
+                                  (click)="openRescheduleModal(appt)">
+                            <i class="ri-calendar-2-line me-1"></i> Reschedule
+                          </button>
                           <button *ngIf="canCancel(appt)" class="btn btn-sm btn-soft-danger"
                                   (click)="cancelAppointment(appt)">
                             <i class="ri-close-line me-1"></i> Cancel
                           </button>
                         </div>
                       </div>
-                    </div>
-
-                    <!-- Description -->
-                    <div *ngIf="appt.description" class="mt-3 pt-3 border-top">
-                      <p class="text-muted mb-0 fs-13">{{ appt.description }}</p>
                     </div>
                   </div>
                 </div>
@@ -228,88 +258,398 @@
   </ng-container>
 </div>
 
-<!-- Request Appointment Modal -->
-<div class="modal fade" [class.show]="showRequestModal" [style.display]="showRequestModal ? 'block' : 'none'"
-     tabindex="-1" aria-labelledby="requestModalLabel" [attr.aria-hidden]="!showRequestModal">
+<!-- Book Appointment Modal -->
+<div class="modal fade" [class.show]="showBookingModal" [style.display]="showBookingModal ? 'block' : 'none'"
+     tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="requestModalLabel">Request Appointment</h5>
-        <button type="button" class="btn-close" (click)="closeRequestModal()"></button>
+    <div class="modal-content border-0 shadow-lg">
+      <!-- Modal Header -->
+      <div class="modal-header bg-primary text-white border-0">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm me-3">
+            <span class="avatar-title bg-white-subtle rounded-circle">
+              <i class="ri-calendar-check-line text-white fs-4"></i>
+            </span>
+          </div>
+          <div>
+            <h5 class="modal-title mb-0">Book an Appointment</h5>
+            <p class="mb-0 fs-12 text-white-75">Schedule a meeting with your attorney</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeBookingModal()"></button>
       </div>
-      <div class="modal-body">
-        <form>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="requestCase" class="form-label">Select Case <span class="text-danger">*</span></label>
-              <select class="form-select" id="requestCase" [(ngModel)]="requestForm.caseId" name="caseId" required>
-                <option [ngValue]="0">Select a case...</option>
-                <option *ngFor="let c of cases" [ngValue]="c.id">
-                  {{ c.caseNumber }} - {{ c.title }}
-                </option>
-              </select>
+
+      <!-- Progress Steps -->
+      <div class="progress-wrapper px-4 py-3 bg-light border-bottom">
+        <div class="step-progress d-flex justify-content-between position-relative">
+          <div class="progress-line"></div>
+          <div class="progress-line-active" [style.width]="((currentStep - 1) / 3 * 100) + '%'"></div>
+
+          <div *ngFor="let step of bookingSteps"
+               class="step-item text-center"
+               [class.active]="currentStep === step.number"
+               [class.completed]="step.completed || currentStep > step.number"
+               (click)="goToStep(step.number)">
+            <div class="step-icon-wrapper">
+              <div class="step-icon">
+                <i *ngIf="!(step.completed || currentStep > step.number)" [class]="step.icon"></i>
+                <i *ngIf="step.completed || currentStep > step.number" class="ri-check-line"></i>
+              </div>
+            </div>
+            <span class="step-label">{{ step.title }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-body p-4">
+        <!-- Step 1: Select Case -->
+        <div *ngIf="currentStep === 1" class="step-content animate-fade-in">
+          <div class="text-center mb-4">
+            <h5 class="mb-1">Select a Case</h5>
+            <p class="text-muted mb-0">Which case is this appointment regarding?</p>
+          </div>
+
+          <div class="case-selection-grid">
+            <div *ngFor="let c of cases; trackBy: trackByCaseId"
+                 class="case-option"
+                 [class.selected]="requestForm.caseId === c.id"
+                 (click)="requestForm.caseId = c.id">
+              <div class="case-option-inner">
+                <div class="d-flex align-items-center">
+                  <div class="case-radio">
+                    <div class="radio-indicator"></div>
+                  </div>
+                  <div class="case-info">
+                    <h6 class="mb-1">{{ c.caseNumber }}</h6>
+                    <p class="mb-0 text-muted fs-13">{{ c.title }}</p>
+                    <small class="text-primary" *ngIf="c.attorneyName">
+                      <i class="ri-user-line me-1"></i>{{ c.attorneyName }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+            <button class="btn btn-primary px-4" [disabled]="!requestForm.caseId" (click)="onCaseSelected()">
+              Continue <i class="ri-arrow-right-line ms-1"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Select Date -->
+        <div *ngIf="currentStep === 2" class="step-content animate-fade-in">
+          <div class="text-center mb-4">
+            <h5 class="mb-1">Choose a Date</h5>
+            <p class="text-muted mb-0">Select your preferred appointment date</p>
+          </div>
+
+          <div class="date-picker-grid">
+            <div *ngFor="let date of availableDates; trackBy: trackByDate"
+                 class="date-picker-item"
+                 [class.selected]="isDateSelected(date)"
+                 [class.weekend]="isWeekend(date)"
+                 [class.unavailable]="!isDayAvailable(date)"
+                 (click)="isDayAvailable(date) && selectDate(date)">
+              <div class="date-day-name">{{ getDayOfWeek(date) }}</div>
+              <div class="date-day-num">{{ getDayNumber(date) }}</div>
+              <div class="date-month-name">{{ getMonth(date) }}</div>
+              <div *ngIf="!isDayAvailable(date)" class="unavailable-badge">
+                <i class="ri-close-line"></i>
+              </div>
+            </div>
+          </div>
+          <p *ngIf="loadingActiveDays" class="text-muted text-center mt-3 mb-0">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Loading available days...
+          </p>
+
+          <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <button class="btn btn-soft-secondary" (click)="previousStep()">
+              <i class="ri-arrow-left-line me-1"></i> Back
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Select Time Slot -->
+        <div *ngIf="currentStep === 3" class="step-content animate-fade-in">
+          <div class="text-center mb-4">
+            <h5 class="mb-1">Pick a Time</h5>
+            <p class="text-muted mb-0">
+              <i class="ri-calendar-line me-1"></i>
+              {{ selectedDate | date:'EEEE, MMMM d, y' }}
+            </p>
+          </div>
+
+          <!-- Loading Slots -->
+          <div *ngIf="loadingSlots" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-3 mb-0">Loading available times...</p>
+          </div>
+
+          <!-- Available Slots Grid -->
+          <div *ngIf="!loadingSlots && availableSlots.length > 0 && !useCustomTime">
+            <p class="text-muted fs-13 mb-3">
+              <i class="ri-time-line me-1"></i>
+              Select an available time slot with <strong>{{ selectedAttorneyName }}</strong>
+            </p>
+            <div class="time-slots-grid">
+              <div *ngFor="let slot of availableSlots; trackBy: trackBySlotTime"
+                   class="time-slot-item"
+                   [class.selected]="selectedSlot === slot"
+                   (click)="selectSlot(slot)">
+                <i class="ri-time-line slot-icon"></i>
+                <span class="slot-time">{{ formatSlotTime(slot) }}</span>
+                <span class="slot-duration">{{ slot.durationMinutes }} min</span>
+              </div>
             </div>
 
-            <div class="col-md-6 mb-3">
-              <label for="requestType" class="form-label">Appointment Type <span class="text-danger">*</span></label>
-              <select class="form-select" id="requestType" [(ngModel)]="requestForm.type" name="type" required>
+            <div class="mt-3 text-center">
+              <a href="javascript:void(0)" class="text-primary fs-13" (click)="toggleCustomTime()">
+                <i class="ri-add-circle-line me-1"></i>Can't find a suitable time? Request a custom time
+              </a>
+            </div>
+          </div>
+
+          <!-- No Slots Available -->
+          <div *ngIf="!loadingSlots && availableSlots.length === 0 && !useCustomTime" class="text-center py-4">
+            <div class="avatar-lg mx-auto mb-3">
+              <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-1">
+                <i class="ri-calendar-close-line"></i>
+              </div>
+            </div>
+            <h6 class="mb-2">No Available Slots</h6>
+            <p class="text-muted mb-3 fs-13">{{ slotError || 'No time slots available for this date.' }}</p>
+            <div class="d-flex justify-content-center gap-2">
+              <button class="btn btn-soft-primary btn-sm" (click)="previousStep()">
+                <i class="ri-calendar-line me-1"></i> Choose Another Date
+              </button>
+              <button class="btn btn-soft-secondary btn-sm" (click)="toggleCustomTime()">
+                <i class="ri-time-line me-1"></i> Request Custom Time
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Time Input -->
+          <div *ngIf="useCustomTime" class="custom-time-section">
+            <div class="alert alert-soft-info d-flex align-items-start mb-4">
+              <i class="ri-information-line fs-5 me-2 mt-1"></i>
+              <div>
+                <strong class="d-block mb-1">Custom Time Request</strong>
+                <span class="fs-13">Your attorney will review and confirm the requested time.</span>
+              </div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Preferred Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control"
+                       [(ngModel)]="requestForm.preferredDateTime">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Alternative Date & Time <span class="text-muted">(Optional)</span></label>
+                <input type="datetime-local" class="form-control"
+                       [(ngModel)]="requestForm.alternativeDateTime">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+              <a *ngIf="availableSlots.length > 0" href="javascript:void(0)" class="text-muted fs-13" (click)="toggleCustomTime()">
+                <i class="ri-arrow-left-line me-1"></i> Back to available slots
+              </a>
+              <button class="btn btn-primary"
+                      [disabled]="!requestForm.preferredDateTime"
+                      (click)="onCustomTimeSelected()">
+                Continue <i class="ri-arrow-right-line ms-1"></i>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="!loadingSlots && !useCustomTime" class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <button class="btn btn-soft-secondary" (click)="previousStep()">
+              <i class="ri-arrow-left-line me-1"></i> Back
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 4: Confirm Details -->
+        <div *ngIf="currentStep === 4" class="step-content animate-fade-in">
+          <div class="text-center mb-4">
+            <h5 class="mb-1">Confirm Details</h5>
+            <p class="text-muted mb-0">Review and complete your booking</p>
+          </div>
+
+          <!-- Summary Card -->
+          <div class="booking-summary mb-4">
+            <div class="summary-header">
+              <i class="ri-calendar-check-fill me-2"></i>
+              Appointment Summary
+            </div>
+            <div class="summary-body">
+              <div class="row">
+                <div class="col-sm-6 mb-3">
+                  <label class="summary-label">Case</label>
+                  <p class="summary-value">{{ getSelectedCaseName() }}</p>
+                </div>
+                <div class="col-sm-6 mb-3">
+                  <label class="summary-label">Attorney</label>
+                  <p class="summary-value">{{ selectedAttorneyName }}</p>
+                </div>
+                <div class="col-sm-6 mb-3">
+                  <label class="summary-label">Date</label>
+                  <p class="summary-value">{{ requestForm.preferredDateTime | date:'EEEE, MMMM d, y' }}</p>
+                </div>
+                <div class="col-sm-6 mb-3">
+                  <label class="summary-label">Time</label>
+                  <p class="summary-value">{{ requestForm.preferredDateTime | date:'h:mm a' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Details Form -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Appointment Type</label>
+              <select class="form-select" [(ngModel)]="requestForm.type">
                 <option *ngFor="let t of appointmentTypes" [value]="t.value">{{ t.label }}</option>
               </select>
             </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="requestTitle" class="form-label">Title/Purpose <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="requestTitle" [(ngModel)]="requestForm.title" name="title"
-                   placeholder="Brief title for the appointment" required>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="preferredDateTime" class="form-label">Preferred Date & Time <span class="text-danger">*</span></label>
-              <input type="datetime-local" class="form-control" id="preferredDateTime"
-                     [(ngModel)]="requestForm.preferredDateTime" name="preferredDateTime" required>
+            <div class="col-md-6">
+              <label class="form-label">Meeting Preference</label>
+              <div class="form-check form-switch mt-2">
+                <input type="checkbox" class="form-check-input" id="preferVirtual"
+                       [(ngModel)]="requestForm.preferVirtual">
+                <label class="form-check-label" for="preferVirtual">
+                  Virtual meeting (video call)
+                </label>
+              </div>
             </div>
-
-            <div class="col-md-6 mb-3">
-              <label for="alternativeDateTime" class="form-label">Alternative Date & Time</label>
-              <input type="datetime-local" class="form-control" id="alternativeDateTime"
-                     [(ngModel)]="requestForm.alternativeDateTime" name="alternativeDateTime">
+            <div class="col-12">
+              <label class="form-label">What would you like to discuss?</label>
+              <textarea class="form-control" rows="2"
+                        [(ngModel)]="requestForm.description"
+                        placeholder="Briefly describe the purpose of this appointment..."></textarea>
             </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="requestDescription" class="form-label">Description</label>
-            <textarea class="form-control" id="requestDescription" [(ngModel)]="requestForm.description" name="description"
-                      rows="3" placeholder="What would you like to discuss?"></textarea>
-          </div>
-
-          <div class="mb-3">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="preferVirtual"
-                     [(ngModel)]="requestForm.preferVirtual" name="preferVirtual">
-              <label class="form-check-label" for="preferVirtual">
-                I prefer a virtual meeting (video call)
-              </label>
+            <div class="col-12">
+              <label class="form-label">Additional Notes <span class="text-muted">(Optional)</span></label>
+              <textarea class="form-control" rows="2"
+                        [(ngModel)]="requestForm.notes"
+                        placeholder="Any other information you'd like to share..."></textarea>
             </div>
           </div>
 
-          <div class="mb-3">
-            <label for="requestNotes" class="form-label">Additional Notes</label>
-            <textarea class="form-control" id="requestNotes" [(ngModel)]="requestForm.notes" name="notes"
-                      rows="2" placeholder="Any additional information..."></textarea>
+          <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <button class="btn btn-soft-secondary" (click)="previousStep()">
+              <i class="ri-arrow-left-line me-1"></i> Back
+            </button>
+            <button class="btn btn-primary px-4" (click)="submitBooking()" [disabled]="submitting">
+              <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+              {{ submitting ? 'Booking...' : 'Confirm Booking' }}
+            </button>
           </div>
-        </form>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeRequestModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" (click)="submitRequest()"
-                [disabled]="submitting || !requestForm.caseId || !requestForm.title || !requestForm.preferredDateTime">
-          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
-          {{ submitting ? 'Submitting...' : 'Submit Request' }}
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showBookingModal" *ngIf="showBookingModal"></div>
+
+<!-- Reschedule Modal -->
+<div class="modal fade" [class.show]="showRescheduleModal" [style.display]="showRescheduleModal ? 'block' : 'none'"
+     tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-info text-white border-0">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm me-3">
+            <span class="avatar-title bg-white-subtle rounded-circle">
+              <i class="ri-calendar-2-line text-white fs-4"></i>
+            </span>
+          </div>
+          <div>
+            <h5 class="modal-title mb-0">Reschedule Appointment</h5>
+            <p class="mb-0 fs-12 text-white-75">Choose a new date and time</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRescheduleModal()"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <!-- Current Appointment Info -->
+        <div class="current-appointment-info mb-4" *ngIf="rescheduleAppointment">
+          <label class="form-label text-muted fs-12 text-uppercase">Current Appointment</label>
+          <div class="d-flex align-items-center p-3 bg-light rounded">
+            <div class="me-3">
+              <i class="ri-calendar-line fs-4 text-muted"></i>
+            </div>
+            <div>
+              <h6 class="mb-0">{{ rescheduleAppointment.title }}</h6>
+              <p class="text-muted mb-0 fs-13">
+                {{ formatDate(rescheduleAppointment.startTime) }} at {{ formatTime(rescheduleAppointment.startTime) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Select New Date -->
+        <div class="mb-4">
+          <label class="form-label">Select New Date</label>
+          <div class="date-picker-grid compact">
+            <div *ngFor="let date of availableDates.slice(0, 14); trackBy: trackByDate"
+                 class="date-picker-item"
+                 [class.selected]="isRescheduleDateSelected(date)"
+                 [class.weekend]="isWeekend(date)"
+                 (click)="selectRescheduleDate(date)">
+              <div class="date-day-name">{{ getDayOfWeek(date) }}</div>
+              <div class="date-day-num">{{ getDayNumber(date) }}</div>
+              <div class="date-month-name">{{ getMonth(date) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Slots -->
+        <div *ngIf="rescheduleDate">
+          <label class="form-label">Select New Time</label>
+
+          <div *ngIf="loadingRescheduleSlots" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="ms-2 text-muted">Loading times...</span>
+          </div>
+
+          <div *ngIf="!loadingRescheduleSlots && rescheduleSlots.length > 0" class="time-slots-grid compact">
+            <div *ngFor="let slot of rescheduleSlots; trackBy: trackBySlotTime"
+                 class="time-slot-item"
+                 [class.selected]="selectedRescheduleSlot === slot"
+                 (click)="selectRescheduleSlot(slot)">
+              <span class="slot-time">{{ formatSlotTime(slot) }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="!loadingRescheduleSlots && rescheduleSlots.length === 0" class="text-center py-3">
+            <p class="text-muted mb-0 fs-13">No available slots on this date. Try another date.</p>
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="mt-4" *ngIf="selectedRescheduleSlot">
+          <label class="form-label">Reason for rescheduling <span class="text-muted">(Optional)</span></label>
+          <textarea class="form-control" rows="2" [(ngModel)]="rescheduleReason"
+                    placeholder="Let your attorney know why you're rescheduling..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" (click)="closeRescheduleModal()">Cancel</button>
+        <button type="button" class="btn btn-info"
+                [disabled]="!selectedRescheduleSlot || rescheduling"
+                (click)="confirmReschedule()">
+          <span *ngIf="rescheduling" class="spinner-border spinner-border-sm me-1"></span>
+          {{ rescheduling ? 'Rescheduling...' : 'Confirm Reschedule' }}
         </button>
       </div>
     </div>
   </div>
 </div>
-<div class="modal-backdrop fade" [class.show]="showRequestModal" *ngIf="showRequestModal"></div>
+<div class="modal-backdrop fade" [class.show]="showRescheduleModal" *ngIf="showRescheduleModal"></div>

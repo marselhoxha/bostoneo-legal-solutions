@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ConfirmationDialogModule } from './components/confirmation-dialog/confirmation-dialog.module';
 import { VirtualListComponent } from './components/virtual-list/virtual-list.component';
 import { VirtualTableComponent } from './components/virtual-table/virtual-table.component';
+import { AvailabilitySettingsComponent } from './components/availability-settings/availability-settings.component';
 
 /**
  * Note about standalone components:
@@ -42,34 +43,36 @@ import { VirtualTableComponent } from './components/virtual-table/virtual-table.
  */
 
 @NgModule({
-  declarations: [ 
-    ExtractArrayValue, 
+  declarations: [
+    ExtractArrayValue,
     SafePipe,
     CountUpDirective,
     VirtualListComponent,
-    VirtualTableComponent
+    VirtualTableComponent,
+    AvailabilitySettingsComponent
   ],
-  imports: [ 
-    RouterModule, 
-    CommonModule, 
+  imports: [
+    RouterModule,
+    CommonModule,
     FormsModule,
-    ReactiveFormsModule, 
+    ReactiveFormsModule,
     ScrollingModule,
     MatDialogModule,
     MatButtonModule,
     ConfirmationDialogModule
   ],
-  exports: [ 
-    RouterModule, 
-    CommonModule, 
+  exports: [
+    RouterModule,
+    CommonModule,
     FormsModule,
-    ReactiveFormsModule, 
+    ReactiveFormsModule,
     ScrollingModule,
-    ExtractArrayValue, 
+    ExtractArrayValue,
     SafePipe,
     CountUpDirective,
     VirtualListComponent,
     VirtualTableComponent,
+    AvailabilitySettingsComponent,
     MatDialogModule,
     MatButtonModule
   ]

@@ -40,6 +40,11 @@ public interface ClientPortalService {
      */
     ClientPortalCaseDTO getClientCase(Long userId, Long caseId);
 
+    /**
+     * Get the lead attorney ID for a case
+     */
+    Long getCaseAttorneyId(Long userId, Long caseId);
+
     // =====================================================
     // DOCUMENTS
     // =====================================================
@@ -82,6 +87,11 @@ public interface ClientPortalService {
      * Cancel an appointment - only if it belongs to client
      */
     void cancelAppointment(Long userId, Long appointmentId);
+
+    /**
+     * Reschedule an appointment - only if it belongs to client
+     */
+    ClientPortalAppointmentDTO rescheduleAppointment(Long userId, Long appointmentId, String newDateTime, String reason);
 
     // =====================================================
     // MESSAGES

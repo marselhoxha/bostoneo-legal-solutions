@@ -1,0 +1,119 @@
+<div class="availability-settings">
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h5 class="mb-1">Availability Settings</h5>
+      <p class="text-muted mb-0 fs-13">Set your weekly availability for client appointments</p>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="ri-error-warning-line me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mt-2">Loading availability settings...</p>
+  </div>
+
+  <!-- Days List -->
+  <div *ngIf="!loading" class="days-list">
+    <div *ngFor="let day of days" class="day-row card mb-2" [class.inactive]="!day.isActive">
+      <div class="card-body py-3">
+        <div class="row align-items-center">
+          <!-- Day Toggle -->
+          <div class="col-lg-2 col-md-3 col-12 mb-2 mb-md-0">
+            <div class="form-check form-switch form-switch-lg">
+              <input class="form-check-input" type="checkbox"
+                     [id]="'day-' + day.dayOfWeek"
+                     [(ngModel)]="day.isActive"
+                     (change)="toggleDay(day)">
+              <label class="form-check-label fw-semibold" [for]="'day-' + day.dayOfWeek">
+                {{ day.dayName }}
+              </label>
+            </div>
+          </div>
+
+          <!-- Time Range -->
+          <div class="col-lg-5 col-md-5 col-12 mb-2 mb-md-0" *ngIf="day.isActive">
+            <div class="d-flex align-items-center gap-2">
+              <select class="form-select form-select-sm" [(ngModel)]="day.startTime" style="width: 110px;">
+                <option *ngFor="let time of timeSlots" [value]="time">{{ formatTime(time) }}</option>
+              </select>
+              <span class="text-muted">to</span>
+              <select class="form-select form-select-sm" [(ngModel)]="day.endTime" style="width: 110px;">
+                <option *ngFor="let time of timeSlots" [value]="time">{{ formatTime(time) }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Unavailable Message -->
+          <div class="col-lg-5 col-md-5 col-12" *ngIf="!day.isActive">
+            <span class="text-muted fs-13">
+              <i class="ri-calendar-close-line me-1"></i>Unavailable
+            </span>
+          </div>
+
+          <!-- Duration & Buffer -->
+          <div class="col-lg-5 col-md-4 col-12" *ngIf="day.isActive">
+            <div class="d-flex align-items-center gap-3">
+              <div class="d-flex align-items-center gap-1">
+                <i class="ri-time-line text-muted"></i>
+                <select class="form-select form-select-sm" [(ngModel)]="day.slotDurationMinutes" style="width: 85px;">
+                  <option *ngFor="let dur of durationOptions" [value]="dur">{{ dur }} min</option>
+                </select>
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <i class="ri-pause-circle-line text-muted" title="Buffer between appointments"></i>
+                <select class="form-select form-select-sm" [(ngModel)]="day.bufferMinutes" style="width: 80px;">
+                  <option *ngFor="let buf of bufferOptions" [value]="buf">{{ buf }} min</option>
+                </select>
+              </div>
+              <button class="btn btn-soft-secondary btn-sm"
+                      title="Copy to all weekdays"
+                      (click)="copyToWeekdays(day)">
+                <i class="ri-file-copy-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Settings -->
+  <div *ngIf="!loading" class="card bg-light border-0 mt-3">
+    <div class="card-body py-3">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <p class="mb-0 fs-13 text-muted">
+            <i class="ri-information-line me-1"></i>
+            Slot duration is the default appointment length. Buffer time prevents back-to-back bookings.
+          </p>
+        </div>
+        <div class="col-md-6 text-md-end mt-2 mt-md-0">
+          <span class="badge bg-info-subtle text-info me-2">
+            <i class="ri-calendar-check-line me-1"></i>
+            {{ activeDaysCount }} days available
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div *ngIf="!loading" class="d-flex justify-content-end gap-2 mt-4">
+    <button type="button" class="btn btn-light" (click)="cancel()">Cancel</button>
+    <button type="button" class="btn btn-primary"
+            [disabled]="saving"
+            (click)="saveAvailability()">
+      <span *ngIf="saving" class="spinner-border spinner-border-sm me-1"></span>
+      {{ saving ? 'Saving...' : 'Save Availability' }}
+    </button>
+  </div>
+</div>

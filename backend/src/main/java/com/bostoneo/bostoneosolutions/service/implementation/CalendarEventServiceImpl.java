@@ -109,38 +109,42 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         }
         
         // Send calendar event creation notifications
-        try {
-            String title = "New Calendar Event Created";
-            String message = String.format("Calendar event \"%s\" has been created for %s", 
-                savedEvent.getTitle(), savedEvent.getStartTime());
-            
-            Set<Long> notificationUserIds = new HashSet<>();
-            
-            // Notify the event creator
-            if (savedEvent.getUserId() != null) {
-                notificationUserIds.add(savedEvent.getUserId());
-            }
-            
-            // Get users assigned to the case if this event is related to a case
-            if (savedEvent.getCaseId() != null) {
-                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedEvent.getCaseId());
-                for (CaseAssignment assignment : caseAssignments) {
-                    if (assignment.getAssignedTo() != null) {
-                        notificationUserIds.add(assignment.getAssignedTo().getId());
+        // Skip notification for CLIENT_MEETING events - these are created when attorney confirms an appointment
+        // and the attorney already knows about it (they just confirmed it)
+        if (!"CLIENT_MEETING".equals(savedEvent.getEventType())) {
+            try {
+                String title = "New Calendar Event Created";
+                String message = String.format("Calendar event \"%s\" has been created for %s",
+                    savedEvent.getTitle(), savedEvent.getStartTime());
+
+                Set<Long> notificationUserIds = new HashSet<>();
+
+                // Notify the event creator
+                if (savedEvent.getUserId() != null) {
+                    notificationUserIds.add(savedEvent.getUserId());
+                }
+
+                // Get users assigned to the case if this event is related to a case
+                if (savedEvent.getCaseId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedEvent.getCaseId());
+                    for (CaseAssignment assignment : caseAssignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                        }
                     }
                 }
+
+                for (Long userId : notificationUserIds) {
+                    notificationService.sendCrmNotification(title, message, userId,
+                        "CALENDAR_EVENT_CREATED", Map.of("eventId", savedEvent.getId(),
+                                                         "eventTitle", savedEvent.getTitle(),
+                                                         "caseId", savedEvent.getCaseId() != null ? savedEvent.getCaseId() : 0));
+                }
+
+                //log.info("Calendar event creation notifications sent to {} users", notificationUserIds.size());
+            } catch (Exception e) {
+                log.error("Failed to send calendar event creation notifications: {}", e.getMessage());
             }
-            
-            for (Long userId : notificationUserIds) {
-                notificationService.sendCrmNotification(title, message, userId, 
-                    "CALENDAR_EVENT_CREATED", Map.of("eventId", savedEvent.getId(),
-                                                     "eventTitle", savedEvent.getTitle(),
-                                                     "caseId", savedEvent.getCaseId() != null ? savedEvent.getCaseId() : 0));
-            }
-            
-            //log.info("Calendar event creation notifications sent to {} users", notificationUserIds.size());
-        } catch (Exception e) {
-            log.error("Failed to send calendar event creation notifications: {}", e.getMessage());
         }
         
         return CalendarEventDTOMapper.fromCalendarEvent(savedEvent);

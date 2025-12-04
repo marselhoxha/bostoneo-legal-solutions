@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,11 @@ public class ClientPortalAppointmentDTO {
     private LocalDateTime endTime;
     private String location;
     private String attorneyName;
+    @JsonProperty("isVirtual")
     private boolean isVirtual;
     private String meetingLink;
+
+    // Reschedule request fields (for client-initiated reschedule requests)
+    private LocalDateTime requestedRescheduleTime;
+    private String rescheduleReason;
 }
