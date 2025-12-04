@@ -8,13 +8,11 @@
 
 .modal-dialog:not(.modal-dialog-scrollable) {
     .modal-header {
-        padding-bottom: 0;
-    
         .btn-close {
             margin-top: -$modal-header-padding;
         }
     }
-    
+
     .modal-footer {
         padding-top: 0;
     }

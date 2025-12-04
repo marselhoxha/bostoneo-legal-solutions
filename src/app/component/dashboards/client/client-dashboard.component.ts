@@ -45,7 +45,14 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
 
   // Next appointment
   nextAppointment: any = null;
-  
+
+  // Countdown timer
+  countdownDays = 0;
+  countdownHours = 0;
+  countdownMinutes = 0;
+  countdownSeconds = 0;
+  private countdownInterval: any = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -63,6 +70,9 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
   }
 
   private initializeClient(): void {
@@ -234,6 +244,7 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
 
           this.upcomingAppointments = this.appointments.length;
           this.nextAppointment = this.appointments.length > 0 ? this.appointments[0] : null;
+          this.startCountdownTimer();
           this.cdr.detectChanges();
         },
         error: (error) => {
@@ -244,6 +255,51 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         }
       });
+  }
+
+  // Countdown timer methods
+  private startCountdownTimer(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    this.updateCountdown();
+    this.countdownInterval = setInterval(() => {
+      this.updateCountdown();
+    }, 1000);
+  }
+
+  private updateCountdown(): void {
+    if (!this.nextAppointment?.date) {
+      this.countdownDays = 0;
+      this.countdownHours = 0;
+      this.countdownMinutes = 0;
+      this.countdownSeconds = 0;
+      return;
+    }
+
+    const targetDate = new Date(this.nextAppointment.date);
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      this.countdownDays = 0;
+      this.countdownHours = 0;
+      this.countdownMinutes = 0;
+      this.countdownSeconds = 0;
+      return;
+    }
+
+    this.countdownDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    this.countdownHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    this.countdownMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    this.countdownSeconds = Math.floor((diff % (1000 * 60)) / 1000);
+    this.cdr.detectChanges();
+  }
+
+  getNextAppointmentWeekday(): string {
+    if (!this.nextAppointment?.date) return '';
+    const date = new Date(this.nextAppointment.date);
+    return date.toLocaleString('default', { weekday: 'long' });
   }
 
   private loadCaseTimeline(caseId: number): void {

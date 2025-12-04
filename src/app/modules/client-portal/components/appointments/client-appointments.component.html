@@ -58,28 +58,25 @@
         <div class="card">
           <div class="card-header border-0">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-              <h5 class="card-title mb-0">Appointments</h5>
-              <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
-                <ul class="nav nav-pills nav-custom-pills mb-0" role="tablist">
-                  <li class="nav-item">
-                    <button class="nav-link" [class.active]="activeTab === 'upcoming'"
-                            (click)="setActiveTab('upcoming')" type="button">
-                      <i class="ri-calendar-check-line me-1 d-none d-sm-inline"></i>
-                      Upcoming <span class="badge bg-primary-subtle text-primary ms-1">{{ upcomingAppointments.length }}</span>
-                    </button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" [class.active]="activeTab === 'past'"
-                            (click)="setActiveTab('past')" type="button">
-                      <i class="ri-history-line me-1 d-none d-sm-inline"></i>
-                      Past <span class="badge bg-secondary-subtle text-secondary ms-1">{{ pastAppointments.length }}</span>
-                    </button>
-                  </li>
-                </ul>
-                <button class="btn btn-success" (click)="openBookingModal()" [disabled]="cases.length === 0">
-                  <i class="ri-add-line me-1"></i> <span class="d-none d-sm-inline">Book </span>Appointment
-                </button>
-              </div>
+              <ul class="nav nav-pills nav-custom-pills mb-0" role="tablist">
+                <li class="nav-item">
+                  <button class="nav-link" [class.active]="activeTab === 'upcoming'"
+                          (click)="setActiveTab('upcoming')" type="button">
+                    <i class="ri-calendar-check-line me-1 d-none d-sm-inline"></i>
+                    Upcoming <span class="badge bg-primary-subtle text-primary ms-1">{{ upcomingAppointments.length }}</span>
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" [class.active]="activeTab === 'past'"
+                          (click)="setActiveTab('past')" type="button">
+                    <i class="ri-history-line me-1 d-none d-sm-inline"></i>
+                    Past <span class="badge bg-secondary-subtle text-secondary ms-1">{{ pastAppointments.length }}</span>
+                  </button>
+                </li>
+              </ul>
+              <button class="btn btn-success" (click)="openBookingModal()" [disabled]="cases.length === 0">
+                <i class="ri-add-line me-1"></i> <span class="d-none d-sm-inline">Book </span>Appointment
+              </button>
             </div>
           </div>
 
@@ -221,7 +218,7 @@
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content border-0 shadow-lg">
       <!-- Modal Header -->
-      <div class="modal-header bg-primary text-white border-0">
+      <div class="modal-header text-white" style="background: linear-gradient( 61deg, #6591e7 0%, #7bacf8 100%);">
         <div class="d-flex align-items-center">
           <div class="avatar-sm me-3">
             <span class="avatar-title bg-white-subtle rounded-circle">
@@ -229,7 +226,7 @@
             </span>
           </div>
           <div>
-            <h5 class="modal-title mb-0">Book an Appointment</h5>
+            <h5 class="modal-title mb-0 text-white-75">Book an Appointment</h5>
             <p class="mb-0 fs-12 text-white-75">Schedule a meeting with your attorney</p>
           </div>
         </div>
@@ -475,10 +472,12 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Meeting Preference</label>
-              <div class="form-check form-switch mt-2">
-                <input type="checkbox" class="form-check-input" id="preferVirtual"
-                       [(ngModel)]="requestForm.preferVirtual">
-                <label class="form-check-label" for="preferVirtual">
+              <div class="d-flex align-items-center gap-2 mt-2">
+                <div class="form-check form-switch mb-0 ps-0">
+                  <input type="checkbox" class="form-check-input ms-0 me-2" id="preferVirtual" role="switch"
+                         [(ngModel)]="requestForm.preferVirtual" style="width: 40px; height: 20px;">
+                </div>
+                <label class="mb-0" for="preferVirtual" style="cursor: pointer;">
                   Virtual meeting (video call)
                 </label>
               </div>

@@ -24,6 +24,13 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   showAllCases = false;
   showAllActivities = false;
 
+  // Countdown timer
+  countdownDays = 0;
+  countdownHours = 0;
+  countdownMinutes = 0;
+  countdownSeconds = 0;
+  private countdownInterval: any = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -38,6 +45,9 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
   }
 
   loadDashboard(): void {
@@ -65,10 +75,59 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
         next: (data) => {
           if (data) {
             this.dashboard = data;
+            this.startCountdownTimer();
           }
           this.cdr.markForCheck();
         }
       });
+  }
+
+  // Countdown timer methods
+  private startCountdownTimer(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+
+    this.updateCountdown();
+
+    this.countdownInterval = setInterval(() => {
+      this.updateCountdown();
+    }, 1000);
+  }
+
+  private updateCountdown(): void {
+    if (!this.dashboard?.nextAppointment?.startTime) {
+      this.countdownDays = 0;
+      this.countdownHours = 0;
+      this.countdownMinutes = 0;
+      this.countdownSeconds = 0;
+      return;
+    }
+
+    const targetDate = new Date(this.dashboard.nextAppointment.startTime);
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      this.countdownDays = 0;
+      this.countdownHours = 0;
+      this.countdownMinutes = 0;
+      this.countdownSeconds = 0;
+      return;
+    }
+
+    this.countdownDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    this.countdownHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    this.countdownMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    this.countdownSeconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    this.cdr.markForCheck();
+  }
+
+  getNextAppointmentWeekday(): string {
+    if (!this.dashboard?.nextAppointment?.startTime) return '';
+    const date = new Date(this.dashboard.nextAppointment.startTime);
+    return date.toLocaleString('default', { weekday: 'long' });
   }
 
   // Greeting helpers
@@ -264,6 +323,16 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit'
+    });
+  }
+
+  formatTime(dateString: string | undefined): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
   }
 

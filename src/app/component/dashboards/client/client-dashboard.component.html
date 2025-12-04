@@ -177,129 +177,153 @@
         </div>
       </div>
 
-      <!-- Row 4: Next Appointment & Quick Actions -->
-      <div class="row">
-        <!-- Next Appointment -->
-        <div class="col-xxl-8 col-xl-7">
-          <div class="card appointment-card">
-            <div class="card-header border-0 d-flex align-items-center">
-              <div class="flex-shrink-0 me-3" *ngIf="nextAppointment">
-                <div class="appointment-date-badge">
-                  <span class="day">{{getAppointmentDay(nextAppointment.date)}}</span>
-                  <span class="month">{{getAppointmentMonth(nextAppointment.date)}}</span>
-                </div>
-              </div>
-              <div class="flex-grow-1">
-                <h4 class="card-title mb-1">
-                  {{nextAppointment ? 'Next Appointment' : 'Upcoming Appointments'}}
-                </h4>
-                <span class="text-muted fs-13" *ngIf="nextAppointment">
-                  {{nextAppointment.date | date:'fullDate'}} at {{nextAppointment.time}}
-                </span>
-                <span class="text-muted fs-13" *ngIf="!nextAppointment">
-                  No upcoming appointments scheduled
-                </span>
-              </div>
-              <div class="flex-shrink-0">
-                <a href="javascript:void(0);" class="btn btn-soft-warning btn-sm" (click)="navigateToAppointments()">
-                  <i class="ri-calendar-line align-middle me-1"></i> View All
-                </a>
-              </div>
+      <!-- Row 4: Quick Actions - Inline -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+          <a href="javascript:void(0);" class="quick-action-inline" (click)="sendMessage()">
+            <div class="quick-action-icon-box bg-success-subtle">
+              <i class="ri-message-2-line text-success"></i>
             </div>
-            <div class="card-body pt-0">
-              <!-- Appointment Details -->
-              <div *ngIf="nextAppointment" class="appointment-details">
-                <div class="row">
-                  <div class="col-md-8">
-                    <h5 class="fs-17 mb-2">{{nextAppointment.title}}</h5>
-                    <div class="appointment-meta mb-3">
-                      <span class="me-3">
-                        <i [ngClass]="getAppointmentTypeIcon(nextAppointment.type)" class="text-warning me-1"></i>
-                        {{nextAppointment.type}}
-                      </span>
-                      <span *ngIf="nextAppointment.attorney">
-                        <i class="ri-user-line text-primary me-1"></i>
-                        {{nextAppointment.attorney}}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                    <div class="countdown-badge">
-                      <span class="countdown-label">Coming up in</span>
-                      <span class="countdown-value">{{getTimeUntil(nextAppointment.date)}}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="quick-action-info">
+              <h6>Send Message</h6>
+              <p>Contact attorney</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a href="javascript:void(0);" class="quick-action-inline" (click)="navigateToDocuments()">
+            <div class="quick-action-icon-box bg-info-subtle">
+              <i class="ri-upload-2-line text-info"></i>
+            </div>
+            <div class="quick-action-info">
+              <h6>Upload Document</h6>
+              <p>Share files securely</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a href="javascript:void(0);" class="quick-action-inline" (click)="navigateToAppointments()">
+            <div class="quick-action-icon-box bg-warning-subtle">
+              <i class="ri-calendar-line text-warning"></i>
+            </div>
+            <div class="quick-action-info">
+              <h6>Book Appointment</h6>
+              <p>Schedule meeting</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a href="javascript:void(0);" class="quick-action-inline" (click)="navigateToInvoices()">
+            <div class="quick-action-icon-box bg-primary-subtle">
+              <i class="ri-bill-line text-primary"></i>
+            </div>
+            <div class="quick-action-info">
+              <h6>View Invoices</h6>
+              <p>Check billing</p>
+            </div>
+          </a>
+        </div>
+      </div>
 
-              <!-- Empty State -->
-              <div *ngIf="!nextAppointment" class="text-center py-4">
-                <div class="avatar-md mx-auto mb-3">
-                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-24">
-                    <i class="ri-calendar-check-line"></i>
-                  </span>
+      <!-- Row 5: Next Appointment with Countdown -->
+      <div class="row" *ngIf="nextAppointment">
+        <div class="col-12">
+          <div class="card next-appt-card">
+            <div class="card-body p-0">
+              <div class="next-appt-layout">
+                <!-- Date Column -->
+                <div class="next-appt-date">
+                  <div class="date-month">{{ getAppointmentMonth(nextAppointment.date) }}</div>
+                  <div class="date-day">{{ getAppointmentDay(nextAppointment.date) }}</div>
+                  <div class="date-weekday">{{ getNextAppointmentWeekday() }}</div>
+                  <div class="date-time">
+                    <i class="ri-time-line"></i>
+                    {{ nextAppointment.time }}
+                  </div>
                 </div>
-                <h6 class="text-muted mb-2">No Upcoming Appointments</h6>
-                <p class="text-muted fs-13 mb-3">Schedule a meeting with your attorney</p>
-                <a href="javascript:void(0);" class="btn btn-soft-warning btn-sm" (click)="navigateToAppointments()">
-                  <i class="ri-add-line me-1"></i> Request Appointment
-                </a>
+
+                <!-- Details Column -->
+                <div class="next-appt-details">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-warning-subtle text-warning fs-11">
+                      <i class="ri-calendar-check-line me-1"></i>Next Appointment
+                    </span>
+                  </div>
+
+                  <h5 class="next-appt-title mb-2">{{ nextAppointment.title }}</h5>
+
+                  <div class="next-appt-meta">
+                    <span class="meta-item">
+                      <i [ngClass]="getAppointmentTypeIcon(nextAppointment.type)" class="text-info"></i> {{ nextAppointment.type }}
+                    </span>
+                    <span class="meta-item" *ngIf="nextAppointment.attorney">
+                      <i class="ri-user-line text-primary"></i> {{ nextAppointment.attorney }}
+                    </span>
+                    <span class="meta-item" *ngIf="nextAppointment.caseNumber">
+                      <i class="ri-briefcase-line text-warning"></i> {{ nextAppointment.caseNumber }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Countdown Column -->
+                <div class="next-appt-countdown">
+                  <div class="countdown-label">Coming up in</div>
+                  <div class="countdown-timer">
+                    <div class="countdown-block">
+                      <span class="countdown-num">{{ countdownDays }}</span>
+                      <span class="countdown-txt">days</span>
+                    </div>
+                    <span class="countdown-sep">:</span>
+                    <div class="countdown-block">
+                      <span class="countdown-num">{{ countdownHours }}</span>
+                      <span class="countdown-txt">hrs</span>
+                    </div>
+                    <span class="countdown-sep">:</span>
+                    <div class="countdown-block">
+                      <span class="countdown-num">{{ countdownMinutes }}</span>
+                      <span class="countdown-txt">min</span>
+                    </div>
+                    <span class="countdown-sep">:</span>
+                    <div class="countdown-block">
+                      <span class="countdown-num">{{ countdownSeconds }}</span>
+                      <span class="countdown-txt">sec</span>
+                    </div>
+                  </div>
+
+                  <div class="countdown-actions">
+                    <a *ngIf="nextAppointment.type === 'Virtual'"
+                       href="javascript:void(0);" class="btn btn-success"
+                       (click)="navigateToAppointments()">
+                      <i class="ri-video-chat-line me-1"></i> Join Meeting
+                    </a>
+                    <a href="javascript:void(0);" class="btn btn-soft-info"
+                       (click)="navigateToAppointments()">
+                      <i class="ri-calendar-2-line me-1"></i> Reschedule
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Quick Actions -->
-        <div class="col-xxl-4 col-xl-5">
-          <div class="card h-100">
-            <div class="card-header border-0">
-              <h4 class="card-title mb-0">Quick Actions</h4>
-            </div>
-            <div class="card-body pt-0">
-              <div class="quick-actions-grid">
-                <a href="javascript:void(0);" class="quick-action-item" (click)="sendMessage()">
-                  <div class="quick-action-icon bg-success-subtle text-success">
-                    <i class="ri-message-2-line"></i>
-                  </div>
-                  <div class="quick-action-content">
-                    <h6>Send Message</h6>
-                    <p>Contact your attorney</p>
-                  </div>
-                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
-                </a>
-
-                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToDocuments()">
-                  <div class="quick-action-icon bg-info-subtle text-info">
-                    <i class="ri-upload-2-line"></i>
-                  </div>
-                  <div class="quick-action-content">
-                    <h6>Upload Document</h6>
-                    <p>Share files securely</p>
-                  </div>
-                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
-                </a>
-
-                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToAppointments()">
-                  <div class="quick-action-icon bg-warning-subtle text-warning">
-                    <i class="ri-calendar-line"></i>
-                  </div>
-                  <div class="quick-action-content">
-                    <h6>Request Appointment</h6>
-                    <p>Schedule a meeting</p>
-                  </div>
-                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
-                </a>
-
-                <a href="javascript:void(0);" class="quick-action-item" (click)="navigateToInvoices()">
-                  <div class="quick-action-icon bg-primary-subtle text-primary">
-                    <i class="ri-bill-line"></i>
-                  </div>
-                  <div class="quick-action-content">
-                    <h6>View Invoices</h6>
-                    <p>Check billing status</p>
-                  </div>
-                  <i class="ri-arrow-right-s-line quick-action-arrow"></i>
-                </a>
+      <!-- Empty State -->
+      <div class="row" *ngIf="!nextAppointment">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-body">
+              <div class="empty-appointment-state">
+                <div class="empty-icon">
+                  <i class="ri-calendar-check-line"></i>
+                </div>
+                <div class="empty-content">
+                  <h5>No Upcoming Appointments</h5>
+                  <p>Schedule a meeting with your attorney to discuss your case</p>
+                  <a href="javascript:void(0);" class="btn btn-warning" (click)="navigateToAppointments()">
+                    <i class="ri-add-line me-1"></i> Book Appointment
+                  </a>
+                </div>
               </div>
             </div>
           </div>
