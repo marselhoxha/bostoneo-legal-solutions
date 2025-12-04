@@ -52,98 +52,33 @@
 
   <!-- Appointments Content -->
   <ng-container *ngIf="!loading">
-    <!-- Stats Cards -->
-    <div class="row">
-      <div class="col-xl-4 col-md-6">
-        <div class="card card-animate overflow-hidden">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avatar-sm">
-                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
-                    <i class="ri-calendar-check-line"></i>
-                  </span>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <p class="text-uppercase fw-semibold text-muted fs-12 mb-1">Upcoming</p>
-                <h4 class="fs-22 fw-bold mb-0">{{ upcomingAppointments.length }}</h4>
-              </div>
-            </div>
-          </div>
-          <div class="progress progress-sm" style="height: 3px;">
-            <div class="progress-bar bg-primary" style="width: 100%"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-4 col-md-6">
-        <div class="card card-animate overflow-hidden">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avatar-sm">
-                  <span class="avatar-title bg-secondary-subtle text-secondary rounded-circle fs-4">
-                    <i class="ri-history-line"></i>
-                  </span>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <p class="text-uppercase fw-semibold text-muted fs-12 mb-1">Past</p>
-                <h4 class="fs-22 fw-bold mb-0">{{ pastAppointments.length }}</h4>
-              </div>
-            </div>
-          </div>
-          <div class="progress progress-sm" style="height: 3px;">
-            <div class="progress-bar bg-secondary" style="width: 100%"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-4 col-md-12">
-        <div class="card card-animate overflow-hidden bg-primary">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <p class="text-white-75 fs-12 fw-semibold mb-1">SCHEDULE NEW</p>
-                <h5 class="text-white mb-0">Book Appointment</h5>
-              </div>
-              <button class="btn btn-light btn-sm" (click)="openBookingModal()" [disabled]="cases.length === 0">
-                <i class="ri-add-line me-1"></i> Book Now
-              </button>
-            </div>
-          </div>
-          <div class="progress progress-sm" style="height: 3px;">
-            <div class="progress-bar bg-white" style="width: 100%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Content -->
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header border-0">
-            <div class="d-flex align-items-center">
-              <h5 class="card-title mb-0 flex-grow-1">Appointments</h5>
-              <div class="flex-shrink-0">
-                <ul class="nav nav-pills nav-custom-pills" role="tablist">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <h5 class="card-title mb-0">Appointments</h5>
+              <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
+                <ul class="nav nav-pills nav-custom-pills mb-0" role="tablist">
                   <li class="nav-item">
                     <button class="nav-link" [class.active]="activeTab === 'upcoming'"
                             (click)="setActiveTab('upcoming')" type="button">
-                      <i class="ri-calendar-check-line me-1"></i>
+                      <i class="ri-calendar-check-line me-1 d-none d-sm-inline"></i>
                       Upcoming <span class="badge bg-primary-subtle text-primary ms-1">{{ upcomingAppointments.length }}</span>
                     </button>
                   </li>
                   <li class="nav-item">
                     <button class="nav-link" [class.active]="activeTab === 'past'"
                             (click)="setActiveTab('past')" type="button">
-                      <i class="ri-history-line me-1"></i>
+                      <i class="ri-history-line me-1 d-none d-sm-inline"></i>
                       Past <span class="badge bg-secondary-subtle text-secondary ms-1">{{ pastAppointments.length }}</span>
                     </button>
                   </li>
                 </ul>
+                <button class="btn btn-success" (click)="openBookingModal()" [disabled]="cases.length === 0">
+                  <i class="ri-add-line me-1"></i> <span class="d-none d-sm-inline">Book </span>Appointment
+                </button>
               </div>
             </div>
           </div>
@@ -174,73 +109,95 @@
               <div *ngFor="let appt of currentAppointments; trackBy: trackByAppointmentId" class="appointment-card mb-3">
                 <div class="card mb-0 border shadow-sm">
                   <div class="card-body p-0">
-                    <div class="row g-0">
-                      <!-- Date Column -->
-                      <div class="col-auto">
-                        <div class="date-column text-center p-3" [ngClass]="getStatusBadgeClass(appt.status)">
-                          <div class="date-month text-uppercase fs-11 fw-semibold">{{ formatDate(appt.startTime).split(' ')[1] }}</div>
-                          <div class="date-day fs-2 fw-bold lh-1">{{ formatDate(appt.startTime).split(' ')[2] }}</div>
-                          <div class="date-time fs-12 mt-1">{{ formatTime(appt.startTime) }}</div>
+                    <div class="row g-0 align-items-stretch">
+                      <!-- Date Column - Hidden on mobile, shown on tablet+ -->
+                      <div class="col-auto d-none d-md-block">
+                        <div class="date-column text-center px-4 py-3 d-flex flex-column justify-content-center h-100 bg-primary-subtle" style="min-width: 110px;">
+                          <div class="text-primary fs-1 fw-bold lh-1 mb-1">{{ appt.startTime | date:'d' }}</div>
+                          <div class="text-primary fs-14 fw-semibold mb-2">{{ appt.startTime | date:'MMMM' }}</div>
+                          <div class="text-primary fs-5 fw-medium">{{ formatTime(appt.startTime) }}</div>
                         </div>
                       </div>
 
                       <!-- Details Column -->
                       <div class="col">
                         <div class="p-3">
-                          <div class="d-flex align-items-start justify-content-between mb-2">
+                          <!-- Mobile Date Row - Only visible on mobile -->
+                          <div class="d-flex d-md-none align-items-center gap-2 mb-2 text-primary fw-semibold fs-14">
+                            <i class="ri-calendar-line"></i>
+                            <span>{{ appt.startTime | date:'d MMMM' }} at {{ formatTime(appt.startTime) }}</span>
+                          </div>
+
+                          <div class="d-flex align-items-start justify-content-between mb-2 flex-wrap gap-2">
                             <div>
-                              <h6 class="mb-1 fw-semibold">{{ appt.title }}</h6>
-                              <span class="badge fs-10" [ngClass]="getStatusBadgeClass(appt.status)">
+                              <h5 class="mb-1 fw-semibold">{{ appt.title }}</h5>
+                              <span class="badge fs-12" [ngClass]="getStatusBadgeClass(appt.status)">
                                 {{ formatStatus(appt.status) }}
                               </span>
                             </div>
-                            <span class="badge bg-light text-muted">
-                              {{ formatDuration(appt.startTime, appt.endTime) }}
+                            <span class="badge bg-light text-muted fs-12 px-2 py-1">
+                              <i class="ri-time-line me-1"></i>{{ formatDuration(appt.startTime, appt.endTime) }}
                             </span>
                           </div>
 
-                          <div class="d-flex flex-wrap gap-3 text-muted fs-13 mb-2">
-                            <span *ngIf="appt.caseNumber">
-                              <i class="ri-briefcase-4-line me-1"></i>{{ appt.caseNumber }}
+                          <div class="d-flex flex-wrap gap-2 gap-md-3 text-body fs-14 mb-2">
+                            <span *ngIf="appt.caseNumber" class="d-flex align-items-center">
+                              <i class="ri-briefcase-4-line me-1 text-primary"></i>{{ appt.caseNumber }}
                             </span>
-                            <span *ngIf="appt.attorneyName">
-                              <i class="ri-user-line me-1"></i>{{ appt.attorneyName }}
+                            <span *ngIf="appt.attorneyName" class="d-flex align-items-center">
+                              <i class="ri-user-line me-1 text-info"></i>{{ appt.attorneyName }}
                             </span>
-                            <span>
-                              <i class="ri-map-pin-line me-1"></i>
+                            <span class="d-flex align-items-center">
+                              <i class="ri-map-pin-line me-1 text-success"></i>
                               {{ appt.isVirtual ? 'Virtual Meeting' : appt.location || 'TBD' }}
                             </span>
                           </div>
 
-                          <p *ngIf="appt.description" class="text-muted fs-13 mb-0 text-truncate" style="max-width: 400px;">
+                          <p *ngIf="appt.description" class="text-muted fs-14 mb-0 text-truncate" style="max-width: 500px;">
                             {{ appt.description }}
                           </p>
 
                           <!-- Pending Reschedule Info -->
-                          <div *ngIf="isPendingReschedule(appt)" class="alert alert-warning alert-sm mb-0 mt-2 py-2 px-3 d-flex align-items-center">
-                            <i class="ri-time-line me-2"></i>
-                            <div class="fs-12">
+                          <div *ngIf="isPendingReschedule(appt)" class="alert alert-warning mb-0 mt-2 py-2 px-3 d-flex align-items-center">
+                            <i class="ri-time-line me-2 fs-18"></i>
+                            <div class="fs-13">
                               <strong>Reschedule requested:</strong>
                               {{ appt.requestedRescheduleTime | date:'MMM d, y \'at\' h:mm a' }}
                               <br>
                               <span class="text-muted">Waiting for attorney approval</span>
                             </div>
                           </div>
+
+                          <!-- Mobile Actions - Only visible on mobile -->
+                          <div class="d-flex d-md-none gap-2 mt-3 flex-wrap" *ngIf="activeTab === 'upcoming'">
+                            <a *ngIf="appt.isVirtual && appt.meetingLink" [href]="appt.meetingLink"
+                               target="_blank" class="btn btn-sm btn-soft-success flex-grow-1">
+                              <i class="ri-video-chat-line me-1"></i> Join
+                            </a>
+                            <button *ngIf="canReschedule(appt)" class="btn btn-sm btn-soft-info flex-grow-1"
+                                    (click)="openRescheduleModal(appt)">
+                              <i class="ri-calendar-2-line me-1"></i> Reschedule
+                            </button>
+                            <button *ngIf="canCancel(appt)" class="btn btn-sm btn-soft-danger flex-grow-1"
+                                    (click)="cancelAppointment(appt)">
+                              <i class="ri-close-line me-1"></i> Cancel
+                            </button>
+                          </div>
                         </div>
                       </div>
 
-                      <!-- Actions Column -->
-                      <div class="col-auto d-flex align-items-center pe-3" *ngIf="activeTab === 'upcoming'">
-                        <div class="d-flex flex-column gap-1">
+                      <!-- Actions Column - Hidden on mobile, shown on tablet+ -->
+                      <div class="col-auto d-none d-md-flex align-items-center p-3" *ngIf="activeTab === 'upcoming'">
+                        <div class="d-flex flex-column gap-2">
                           <a *ngIf="appt.isVirtual && appt.meetingLink" [href]="appt.meetingLink"
-                             target="_blank" class="btn btn-sm btn-soft-success">
+                             target="_blank" class="btn btn-soft-success">
                             <i class="ri-video-chat-line me-1"></i> Join
                           </a>
-                          <button *ngIf="canReschedule(appt)" class="btn btn-sm btn-soft-info"
+                          <button *ngIf="canReschedule(appt)" class="btn btn-soft-info"
                                   (click)="openRescheduleModal(appt)">
                             <i class="ri-calendar-2-line me-1"></i> Reschedule
                           </button>
-                          <button *ngIf="canCancel(appt)" class="btn btn-sm btn-soft-danger"
+                          <button *ngIf="canCancel(appt)" class="btn btn-soft-danger"
                                   (click)="cancelAppointment(appt)">
                             <i class="ri-close-line me-1"></i> Cancel
                           </button>
