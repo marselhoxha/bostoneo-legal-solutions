@@ -74,3 +74,5 @@ __pycache__/
 # Cursor Rules Files
 *.mdc
 .cursor/
+Velzon/
+Velzon
