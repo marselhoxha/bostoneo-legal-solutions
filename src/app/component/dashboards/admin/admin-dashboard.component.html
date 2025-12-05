@@ -786,6 +786,106 @@
                   </div>
                 </div>
                 
+<!-- SMS Test Card -->
+<div class="row g-4 mb-4">
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-success bg-opacity-10 border-0">
+        <h6 class="card-title mb-0 fw-semibold text-success">
+          <i class="ri-smartphone-line me-2"></i>SMS Communication Test
+        </h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="mb-3">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-control" [(ngModel)]="smsTestPhone"
+                 placeholder="+1 (555) 123-4567" />
+          <small class="text-muted">Enter phone number in any format</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Message</label>
+          <textarea class="form-control" [(ngModel)]="smsTestMessage" rows="3"
+                    placeholder="Enter your test message here..."></textarea>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-success" (click)="sendTestSms()" [disabled]="smsSending">
+            <i class="ri-send-plane-line me-1"></i>
+            {{ smsSending ? 'Sending...' : 'Send Test SMS' }}
+          </button>
+          <button class="btn btn-outline-info" (click)="sendTemplatedTestSms()" [disabled]="smsSending">
+            <i class="ri-file-text-line me-1"></i>
+            Send Template
+          </button>
+        </div>
+
+        <!-- SMS Result -->
+        <div *ngIf="smsResult" class="mt-3 p-3 rounded"
+             [ngClass]="smsResult.success ? 'bg-success-subtle' : 'bg-danger-subtle'">
+          <div class="d-flex align-items-center">
+            <i [ngClass]="smsResult.success ? 'ri-check-circle-line text-success' : 'ri-error-warning-line text-danger'"
+               class="fs-20 me-2"></i>
+            <div>
+              <strong>{{ smsResult.success ? 'SMS Sent Successfully!' : 'SMS Failed' }}</strong>
+              <p class="mb-0 small">
+                {{ smsResult.success ? 'Message SID: ' + smsResult.messageSid : smsResult.errorMessage }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMS Service Status -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-info bg-opacity-10 border-0">
+        <h6 class="card-title mb-0 fw-semibold text-info">
+          <i class="ri-settings-3-line me-2"></i>Communication Service Status
+        </h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="p-3 bg-light rounded text-center">
+              <i class="ri-smartphone-line fs-24 mb-2"
+                 [ngClass]="smsServiceStatus?.smsEnabled ? 'text-success' : 'text-danger'"></i>
+              <h6 class="mb-1">SMS Service</h6>
+              <span class="badge" [ngClass]="smsServiceStatus?.smsEnabled ? 'bg-success' : 'bg-danger'">
+                {{ smsServiceStatus?.smsEnabled ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 bg-light rounded text-center">
+              <i class="ri-whatsapp-line fs-24 mb-2"
+                 [ngClass]="smsServiceStatus?.whatsappEnabled ? 'text-success' : 'text-secondary'"></i>
+              <h6 class="mb-1">WhatsApp</h6>
+              <span class="badge" [ngClass]="smsServiceStatus?.whatsappEnabled ? 'bg-success' : 'bg-secondary'">
+                {{ smsServiceStatus?.whatsappEnabled ? 'Active' : 'Not Configured' }}
+              </span>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="p-3 bg-warning-subtle rounded">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="ri-error-warning-line text-warning me-2"></i>
+                  <span>Failed Messages (Last 30 days)</span>
+                </div>
+                <span class="badge bg-warning">{{ smsServiceStatus?.failedCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-outline-info btn-sm mt-3" (click)="refreshSmsStatus()">
+          <i class="ri-refresh-line me-1"></i>Refresh Status
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- System Activity Heatmap -->
 <div class="row g-4">
   <div class="col-12">
@@ -796,7 +896,7 @@
         </h6>
                         </div>
       <div class="card-body p-4">
-        <apx-chart 
+        <apx-chart
           *ngIf="heatMapChart && heatMapChart.series"
           [series]="heatMapChart.series"
           [chart]="heatMapChart.chart"

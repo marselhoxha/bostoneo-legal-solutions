@@ -9,6 +9,7 @@ import { AuthService } from 'src/app/services/auth.service';
 import { AuditService } from 'src/app/service/audit.service';
 import { InvoicePaymentService } from 'src/app/service/invoice-payment.service';
 import { InvoicePayment } from 'src/app/interface/invoice-payment';
+import { CommunicationService, SmsResponse } from 'src/app/core/services/communication.service';
 import { ApexLegend, ApexYAxis, ChartComponent } from 'ng-apexcharts';
 import { ApexAxisChartSeries, ApexChart, ApexXAxis, ApexGrid, ApexStroke, ApexFill, ApexMarkers, ApexTooltip } from 'ng-apexcharts';
 
@@ -78,6 +79,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     massachusetts: { percentage: 0 }
   };
 
+  // SMS Test properties
+  smsTestPhone: string = '';
+  smsTestMessage: string = 'This is a test message from Bostoneo Legal Solutions.';
+  smsSending: boolean = false;
+  smsResult: SmsResponse | null = null;
+  smsServiceStatus: { smsEnabled: boolean; whatsappEnabled: boolean; failedCount: number } | null = null;
+
   private activityPollingInterval: any;
   private destroy$ = new Subject<void>();
 
@@ -92,7 +100,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private authService: AuthService,
     private auditService: AuditService,
-    private invoicePaymentService: InvoicePaymentService
+    private invoicePaymentService: InvoicePaymentService,
+    private communicationService: CommunicationService
   ) { }
 
   ngOnInit(): void {
@@ -102,6 +111,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.loadRealActivityData();
     this.loadRecentPayments();
     this.startActivityPolling();
+    this.refreshSmsStatus();
   }
 
   ngOnDestroy(): void {
@@ -851,10 +861,125 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const now = new Date();
     const time = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  }
+
+  // SMS Test Methods
+  sendTestSms(): void {
+    if (!this.smsTestPhone || !this.smsTestMessage) {
+      this.smsResult = {
+        success: false,
+        errorMessage: 'Please enter both phone number and message',
+        errorCode: 'VALIDATION_ERROR'
+      };
+      return;
+    }
+
+    this.smsSending = true;
+    this.smsResult = null;
+
+    this.communicationService.sendSms({
+      to: this.smsTestPhone,
+      message: this.smsTestMessage
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response) => {
+        this.smsSending = false;
+        if (response?.data?.result) {
+          this.smsResult = response.data.result;
+        } else {
+          this.smsResult = {
+            success: false,
+            errorMessage: 'Unexpected response format'
+          };
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.smsSending = false;
+        this.smsResult = {
+          success: false,
+          errorMessage: error.error?.message || error.message || 'Failed to send SMS',
+          errorCode: error.status?.toString()
+        };
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  sendTemplatedTestSms(): void {
+    if (!this.smsTestPhone) {
+      this.smsResult = {
+        success: false,
+        errorMessage: 'Please enter a phone number',
+        errorCode: 'VALIDATION_ERROR'
+      };
+      return;
+    }
+
+    this.smsSending = true;
+    this.smsResult = null;
+
+    this.communicationService.sendTemplatedSms(
+      this.smsTestPhone,
+      'APPOINTMENT_REMINDER',
+      {
+        clientName: this.currentUser?.firstName || 'Test User',
+        appointmentTitle: 'Legal Consultation',
+        date: 'December 10, 2024',
+        time: '2:00 PM'
+      }
+    ).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response) => {
+        this.smsSending = false;
+        if (response?.data?.result) {
+          this.smsResult = response.data.result;
+        } else {
+          this.smsResult = {
+            success: false,
+            errorMessage: 'Unexpected response format'
+          };
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.smsSending = false;
+        this.smsResult = {
+          success: false,
+          errorMessage: error.error?.message || error.message || 'Failed to send templated SMS',
+          errorCode: error.status?.toString()
+        };
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  refreshSmsStatus(): void {
+    this.communicationService.getServiceStatus()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response?.data) {
+            this.smsServiceStatus = {
+              smsEnabled: response.data.smsEnabled,
+              whatsappEnabled: response.data.whatsappEnabled,
+              failedCount: response.data.failedCount || 0
+            };
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to get SMS service status:', error);
+          this.smsServiceStatus = {
+            smsEnabled: false,
+            whatsappEnabled: false,
+            failedCount: 0
+          };
+          this.cdr.detectChanges();
+        }
+      });
   }
 } 

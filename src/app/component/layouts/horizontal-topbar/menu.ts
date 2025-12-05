@@ -321,6 +321,12 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/clients'
   },
   {
+    id: 'att-signatures',
+    label: 'E-Signatures',
+    icon: 'ri-quill-pen-line',
+    link: '/signatures'
+  },
+  {
     id: 'att-files',
     label: 'File Manager',
     icon: 'ri-folder-2-line',
@@ -454,6 +460,12 @@ export const ADMIN_MENU: MenuItem[] = [
     label: 'Clients',
     icon: 'ri-user-3-line',
     link: '/clients'
+  },
+  {
+    id: 'admin-signatures',
+    label: 'E-Signatures',
+    icon: 'ri-quill-pen-line',
+    link: '/signatures'
   },
   {
     id: 'admin-files',

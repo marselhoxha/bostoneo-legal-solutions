@@ -1,0 +1,672 @@
+// Variables
+$primary: #405189;
+$success: #0ab39c;
+$warning: #f7b84b;
+$danger: #f06548;
+$info: #299cdb;
+
+// Stats Cards
+.stats-card {
+  transition: all 0.3s ease;
+  border-radius: 0.75rem;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .counter-value {
+    font-size: 1.75rem;
+    letter-spacing: -0.5px;
+  }
+}
+
+// Avatar Styles
+.avatar-sm {
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.avatar-md {
+  height: 3.5rem;
+  width: 3.5rem;
+}
+
+.avatar-lg {
+  height: 4.5rem;
+  width: 4.5rem;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.rounded-lg {
+  border-radius: 0.75rem !important;
+}
+
+// Font Sizes
+.fs-11 {
+  font-size: 0.6875rem;
+}
+
+.fs-12 {
+  font-size: 0.75rem;
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+.fs-16 {
+  font-size: 1rem;
+}
+
+// Nav Pills Custom
+.nav-custom-pills {
+  .nav-link {
+    padding: 0.65rem 1.25rem;
+    border-radius: 0.5rem;
+    color: var(--vz-body-color);
+    font-weight: 500;
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba($primary, 0.08);
+      color: $primary;
+    }
+
+    &.active {
+      background-color: $primary;
+      color: #fff;
+      border-color: $primary;
+
+      .badge {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        color: #fff !important;
+      }
+    }
+  }
+}
+
+// Step Progress
+.step-progress {
+  .step-line {
+    position: absolute;
+    top: 1.25rem;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background-color: var(--vz-border-color);
+    z-index: 0;
+  }
+
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+    position: relative;
+    flex: 1;
+
+    .step-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background-color: var(--vz-light);
+      border: 2px solid var(--vz-border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vz-body-color);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .step-label {
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--vz-body-color);
+      font-weight: 500;
+    }
+
+    &.active {
+      .step-icon {
+        background-color: $primary;
+        border-color: $primary;
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba($primary, 0.2);
+      }
+
+      .step-label {
+        color: $primary;
+        font-weight: 600;
+      }
+    }
+
+    &.completed {
+      .step-icon {
+        background-color: $success;
+        border-color: $success;
+        color: #fff;
+      }
+    }
+  }
+}
+
+// Dropzone Area
+.dropzone-area {
+  position: relative;
+  border: 2px dashed var(--vz-border-color);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--vz-light);
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $primary;
+    background-color: rgba($primary, 0.02);
+  }
+
+  &.has-file {
+    border-color: $success;
+    background-color: rgba($success, 0.05);
+    border-style: solid;
+  }
+
+  .dropzone-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .dropzone-label {
+    cursor: pointer;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .selected-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    border: 1px solid var(--vz-border-color);
+    margin-top: 0.5rem;
+  }
+}
+
+// Form Section
+.form-section {
+  padding: 1.5rem;
+  background-color: var(--vz-light);
+  border-radius: 0.75rem;
+  height: 100%;
+}
+
+.form-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+// Template Card
+.template-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 0.75rem !important;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+
+  &.border-primary {
+    border-width: 1px !important;
+
+    &:hover {
+      border-color: darken($primary, 10%) !important;
+    }
+  }
+
+  &.border-warning {
+    border-width: 1px !important;
+
+    &:hover {
+      border-color: darken($warning, 10%) !important;
+    }
+  }
+}
+
+// Text Truncate 2 Lines
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Empty State
+.empty-state-icon {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba($primary, 0.1) 0%, rgba($primary, 0.05) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 2.5rem;
+    color: $primary;
+  }
+}
+
+.empty-state-icon-sm {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background-color: var(--vz-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.5rem;
+    color: var(--vz-body-color);
+  }
+}
+
+// Timeline Modern
+.timeline-modern {
+  position: relative;
+  padding-left: 2rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background: linear-gradient(to bottom, $primary, rgba($primary, 0.2));
+  }
+}
+
+.timeline-item-modern {
+  position: relative;
+  padding-bottom: 1.5rem;
+
+  &.last {
+    padding-bottom: 0;
+  }
+}
+
+.timeline-icon-modern {
+  position: absolute;
+  left: -1.625rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: #fff;
+  border: 2px solid $primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: $primary;
+}
+
+.timeline-content-modern {
+  background-color: var(--vz-light);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-left: 0.75rem;
+  border-left: 3px solid $primary;
+}
+
+// Template Steps
+.template-steps {
+  .d-flex {
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .template-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    background-color: var(--vz-light);
+    color: var(--vz-body-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+
+    .step-number {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background-color: var(--vz-border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--vz-body-color);
+    }
+
+    &.active {
+      background-color: rgba($primary, 0.1);
+      color: $primary;
+
+      .step-number {
+        background-color: $primary;
+        color: #fff;
+      }
+    }
+
+    &.completed {
+      background-color: rgba($success, 0.1);
+      color: $success;
+
+      .step-number {
+        background-color: $success;
+        color: #fff;
+      }
+    }
+  }
+
+  .step-connector {
+    flex: 1;
+    height: 2px;
+    max-width: 3rem;
+    background-color: var(--vz-border-color);
+    transition: all 0.3s ease;
+
+    &.active {
+      background-color: $primary;
+    }
+  }
+}
+
+// Info Item
+.info-item {
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+}
+
+// BoldSign Iframe Container - Modern styling for embedded experience
+.boldsign-iframe-container {
+  width: 100%;
+  height: 75vh;
+  min-height: 600px;
+  max-height: 900px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--vz-border-color);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+
+  app-boldsign-embed {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  // Subtle inner shadow for depth
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.03), transparent);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  // For modals - taller iframe
+  &.modal-iframe {
+    height: calc(100vh - 250px);
+    min-height: 500px;
+    max-height: none;
+    border-radius: 0.75rem;
+  }
+}
+
+// Legacy wrapper support (keeping for backwards compatibility)
+.boldsign-embed-wrapper,
+.template-embed-wrapper {
+  width: 100%;
+  min-height: 700px;
+  background-color: var(--vz-light);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--vz-border-color);
+
+  app-boldsign-embed {
+    display: block;
+    width: 100%;
+    height: 700px;
+  }
+}
+
+.template-embed-wrapper {
+  min-height: 80vh;
+
+  app-boldsign-embed {
+    height: 80vh;
+  }
+}
+
+// Button Label Style
+.btn-label {
+  position: relative;
+  padding-left: 2.75rem;
+
+  .label-icon {
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem 0 0 0.375rem;
+  }
+}
+
+// Soft Button Variants
+.btn-soft-primary {
+  background-color: rgba($primary, 0.1);
+  color: $primary;
+  border: none;
+
+  &:hover {
+    background-color: $primary;
+    color: #fff;
+  }
+}
+
+.btn-soft-secondary {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #6c757d;
+  border: none;
+
+  &:hover {
+    background-color: #6c757d;
+    color: #fff;
+  }
+}
+
+.btn-soft-success {
+  background-color: rgba($success, 0.1);
+  color: $success;
+  border: none;
+
+  &:hover {
+    background-color: $success;
+    color: #fff;
+  }
+}
+
+.btn-soft-warning {
+  background-color: rgba($warning, 0.1);
+  color: darken($warning, 15%);
+  border: none;
+
+  &:hover {
+    background-color: $warning;
+    color: #fff;
+  }
+}
+
+.btn-soft-danger {
+  background-color: rgba($danger, 0.1);
+  color: $danger;
+  border: none;
+
+  &:hover {
+    background-color: $danger;
+    color: #fff;
+  }
+}
+
+.btn-soft-info {
+  background-color: rgba($info, 0.1);
+  color: $info;
+  border: none;
+
+  &:hover {
+    background-color: $info;
+    color: #fff;
+  }
+}
+
+// Bg Soft Info
+.bg-soft-info {
+  background-color: rgba($info, 0.1) !important;
+}
+
+// Spin Animation
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+// Modal Improvements
+.modal-header {
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+}
+
+// Responsive
+@media (max-width: 991px) {
+  .form-section {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-card {
+    .counter-value {
+      font-size: 1.5rem;
+    }
+  }
+
+  .step-progress {
+    .step-item {
+      .step-icon {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.875rem;
+      }
+
+      .step-label {
+        font-size: 0.75rem;
+      }
+    }
+  }
+
+  .boldsign-embed-wrapper,
+  .template-embed-wrapper {
+    min-height: 500px;
+
+    app-boldsign-embed {
+      height: 500px;
+    }
+  }
+
+  .nav-custom-pills .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .dropzone-area {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .template-steps {
+    .template-step {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+
+      span:not(.step-number) {
+        display: none;
+      }
+    }
+  }
+
+  .boldsign-iframe-container {
+    height: 60vh;
+    min-height: 450px;
+
+    &.modal-iframe {
+      height: calc(100vh - 200px);
+      min-height: 400px;
+    }
+  }
+}

@@ -1,0 +1,225 @@
+<div class="modal-header">
+  <h5 class="modal-title">
+    <i class="ri-quill-pen-line me-2"></i>
+    Request Signature
+  </h5>
+  <button type="button" class="btn-close" (click)="close()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Context Info -->
+  <div class="alert alert-soft-info mb-3" *ngIf="caseName || clientName">
+    <div class="d-flex align-items-center">
+      <i class="ri-information-line me-2"></i>
+      <div>
+        <span *ngIf="caseName">Case: <strong>{{ caseName }}</strong></span>
+        <span *ngIf="caseName && clientName"> | </span>
+        <span *ngIf="clientName">Client: <strong>{{ clientName }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="text-center py-4" *ngIf="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading templates...</p>
+  </div>
+
+  <!-- Error -->
+  <div class="alert alert-danger" *ngIf="error">
+    <i class="ri-error-warning-line me-2"></i>
+    {{ error }}
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!loading">
+    <!-- Template Selection -->
+    <div class="mb-4" *ngIf="templates.length > 0 && !selectedTemplate">
+      <label class="form-label fw-semibold">Select a Template (Optional)</label>
+      <div class="row g-2">
+        <div class="col-md-4" *ngFor="let template of templates">
+          <div class="card card-body template-card"
+               [class.border-primary]="selectedTemplate?.id === template.id"
+               (click)="selectTemplate(template)">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0 me-2">
+                <span class="avatar-title bg-primary-subtle text-primary rounded">
+                  <i [class]="getCategoryIcon(template.category || '')"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1 overflow-hidden">
+                <h6 class="mb-0 text-truncate">{{ template.name }}</h6>
+                <small class="text-muted">{{ template.category }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Template -->
+    <div class="mb-3" *ngIf="selectedTemplate">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm flex-shrink-0 me-2">
+            <span class="avatar-title bg-primary-subtle text-primary rounded">
+              <i [class]="getCategoryIcon(selectedTemplate.category || '')"></i>
+            </span>
+          </div>
+          <div>
+            <h6 class="mb-0">{{ selectedTemplate.name }}</h6>
+            <small class="text-muted">{{ selectedTemplate.description }}</small>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-soft-secondary" (click)="clearTemplate()">
+          <i class="ri-close-line"></i> Change
+        </button>
+      </div>
+    </div>
+
+    <!-- Document Title -->
+    <div class="mb-3">
+      <label class="form-label">Document Title <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" formControlName="title"
+             placeholder="e.g., Retainer Agreement - John Doe"
+             [class.is-invalid]="form.get('title')?.invalid && form.get('title')?.touched">
+      <div class="invalid-feedback" *ngIf="form.get('title')?.errors?.['required']">
+        Title is required
+      </div>
+    </div>
+
+    <!-- Message -->
+    <div class="mb-3">
+      <label class="form-label">Message to Signer (Optional)</label>
+      <textarea class="form-control" formControlName="message" rows="2"
+                placeholder="Add a personal message to the signer..."></textarea>
+    </div>
+
+    <!-- Primary Signer -->
+    <div class="card mb-3">
+      <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="ri-user-line me-2"></i>Primary Signer</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="signerName"
+                   [class.is-invalid]="form.get('signerName')?.invalid && form.get('signerName')?.touched">
+            <div class="invalid-feedback">Name is required</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" formControlName="signerEmail"
+                   [class.is-invalid]="form.get('signerEmail')?.invalid && form.get('signerEmail')?.touched">
+            <div class="invalid-feedback">Valid email is required</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone (for SMS reminders)</label>
+            <input type="tel" class="form-control" formControlName="signerPhone"
+                   placeholder="+1 (555) 123-4567">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Signers -->
+    <div class="card mb-3" *ngIf="additionalSigners.length > 0">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="ri-team-line me-2"></i>Additional Signers</h6>
+      </div>
+      <div class="card-body">
+        <div *ngFor="let signer of additionalSigners.controls; let i = index" class="mb-3 pb-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold">Signer {{ i + 2 }}</span>
+            <button type="button" class="btn btn-sm btn-soft-danger" (click)="removeSigner(i)">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+          <div class="row g-2" [formGroupName]="i">
+            <div class="col-md-4">
+              <input type="text" class="form-control form-control-sm" formControlName="name" placeholder="Name">
+            </div>
+            <div class="col-md-4">
+              <input type="email" class="form-control form-control-sm" formControlName="email" placeholder="Email">
+            </div>
+            <div class="col-md-4">
+              <input type="tel" class="form-control form-control-sm" formControlName="phone" placeholder="Phone">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-soft-primary btn-sm mb-3" (click)="addSigner()">
+      <i class="ri-add-line me-1"></i> Add Another Signer
+    </button>
+
+    <!-- Reminder Settings -->
+    <div class="card mb-3">
+      <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="ri-notification-3-line me-2"></i>Reminder Settings</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" formControlName="reminderEmail" id="reminderEmail">
+              <label class="form-check-label" for="reminderEmail">
+                <i class="ri-mail-line me-1"></i> Email Reminders
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" formControlName="reminderSms" id="reminderSms">
+              <label class="form-check-label" for="reminderSms">
+                <i class="ri-smartphone-line me-1"></i> SMS Reminders
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" formControlName="reminderWhatsapp" id="reminderWhatsapp">
+              <label class="form-check-label" for="reminderWhatsapp">
+                <i class="ri-whatsapp-line me-1"></i> WhatsApp Reminders
+              </label>
+            </div>
+          </div>
+        </div>
+        <small class="text-muted mt-2 d-block">
+          Reminders will be sent 7, 3, and 1 days before expiry
+        </small>
+      </div>
+    </div>
+
+    <!-- Expiry & Send Options -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Expires In (Days)</label>
+        <input type="number" class="form-control" formControlName="expiryDays" min="1" max="365">
+      </div>
+      <div class="col-md-6 d-flex align-items-end">
+        <div class="form-check">
+          <input type="checkbox" class="form-check-input" formControlName="sendImmediately" id="sendImmediately">
+          <label class="form-check-label" for="sendImmediately">
+            Send immediately after creation
+          </label>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="close()" [disabled]="submitting">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" (click)="onSubmit()"
+          [disabled]="form.invalid || submitting || loading">
+    <span class="spinner-border spinner-border-sm me-1" *ngIf="submitting"></span>
+    <i class="ri-send-plane-line me-1" *ngIf="!submitting"></i>
+    {{ form.get('sendImmediately')?.value ? 'Send for Signature' : 'Save as Draft' }}
+  </button>
+</div>

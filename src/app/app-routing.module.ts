@@ -73,9 +73,16 @@ const routes: Routes = [
       },
 
       // Billing Dashboard
-      { 
-        path: 'billing-dashboard', 
+      {
+        path: 'billing-dashboard',
         component: BillingDashboardComponent,
+        canActivate: [AuthenticationGuard]
+      },
+
+      // E-Signatures
+      {
+        path: 'signatures',
+        loadComponent: () => import('./component/signatures/signatures.component').then(m => m.SignaturesComponent),
         canActivate: [AuthenticationGuard]
       },
       

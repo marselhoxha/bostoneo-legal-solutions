@@ -32,6 +32,9 @@ public class LegalCase {
     @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
     private Long id;
 
+    @Column(name = "organization_id", columnDefinition = "BIGINT UNSIGNED")
+    private Long organizationId;
+
     @Column(name = "case_number", nullable = false, unique = true)
     private String caseNumber;
 

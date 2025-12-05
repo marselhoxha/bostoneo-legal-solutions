@@ -1,0 +1,48 @@
+.template-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--vz-border-color);
+
+  &:hover {
+    border-color: var(--vz-primary);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+
+  &.border-primary {
+    border-width: 2px;
+    background-color: rgba(var(--vz-primary-rgb), 0.05);
+  }
+}
+
+.modal-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.alert-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  border-color: rgba(var(--vz-info-rgb), 0.2);
+  color: var(--vz-info);
+}
+
+.card-header.bg-light {
+  background-color: var(--vz-light) !important;
+}
+
+.form-check-label {
+  cursor: pointer;
+}
+
+.avatar-sm {
+  height: 2rem;
+  width: 2rem;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 0.875rem;
+}

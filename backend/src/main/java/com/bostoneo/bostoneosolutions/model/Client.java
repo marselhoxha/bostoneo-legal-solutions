@@ -30,6 +30,9 @@ public class Client {
     @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
     private Long id;
 
+    @Column(name = "organization_id", columnDefinition = "BIGINT UNSIGNED")
+    private Long organizationId;
+
     @Column(name = "user_id", columnDefinition = "BIGINT UNSIGNED")
     private Long userId;
 

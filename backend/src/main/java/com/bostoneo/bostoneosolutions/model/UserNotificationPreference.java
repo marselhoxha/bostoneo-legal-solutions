@@ -47,7 +47,10 @@ public class UserNotificationPreference {
     
     @Column(name = "push_enabled", nullable = false)
     private Boolean pushEnabled = true;
-    
+
+    @Column(name = "sms_enabled", nullable = false)
+    private Boolean smsEnabled = true;
+
     @Column(name = "in_app_enabled", nullable = false)
     private Boolean inAppEnabled = true;
     
@@ -137,11 +140,19 @@ public class UserNotificationPreference {
     public Boolean getInAppEnabled() {
         return inAppEnabled;
     }
-    
+
     public void setInAppEnabled(Boolean inAppEnabled) {
         this.inAppEnabled = inAppEnabled;
     }
-    
+
+    public Boolean getSmsEnabled() {
+        return smsEnabled;
+    }
+
+    public void setSmsEnabled(Boolean smsEnabled) {
+        this.smsEnabled = smsEnabled;
+    }
+
     public NotificationPriority getPriority() {
         return priority;
     }
@@ -182,7 +193,11 @@ public class UserNotificationPreference {
     public boolean shouldReceiveInAppNotification() {
         return shouldReceiveNotification() && inAppEnabled != null && inAppEnabled;
     }
-    
+
+    public boolean shouldReceiveSmsNotification() {
+        return shouldReceiveNotification() && smsEnabled != null && smsEnabled;
+    }
+
     public boolean isCriticalPriority() {
         return priority == NotificationPriority.CRITICAL;
     }
