@@ -136,6 +136,92 @@ export interface SignatureStats {
   completionRate: number;
 }
 
+export interface DocumentSummary {
+  documentId: string;
+  title: string;
+  signerName: string;
+  signerEmail: string;
+  status: string;
+  statusMessage: string;
+  createdDate: string;
+}
+
+export interface BoldSignDocument {
+  documentId: string;
+  messageTitle: string;
+  status: string;
+  createdDate: string;
+  expiryDate?: string;
+  senderName: string;
+  senderEmail: string;
+  signerName: string;
+  signerEmail: string;
+  signerStatus: string;
+  lastActivityDate: string;
+  lastActivityBy: string;
+  lastActivityAction: string;
+}
+
+export interface BoldSignDocumentList {
+  documents: BoldSignDocument[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BoldSignDashboard {
+  waitingForMe: number;
+  waitingForOthers: number;
+  needsAttention: number;
+  completed: number;
+  revoked: number;
+  totalDocuments: number;
+  sentThisMonth?: number;
+  receivedThisMonth?: number;
+  waitingForOthersList: DocumentSummary[];
+  needsAttentionList: DocumentSummary[];
+  recentActivityList: DocumentSummary[];
+}
+
+export interface DocumentProperties {
+  documentId: string;
+  messageTitle: string;
+  documentDescription: string;
+  status: string;
+  statusDescription: string;        // e.g., "Needs to be signed by Jane Smith"
+  createdDate: string;
+  sentOn: string;                   // Formatted sent date
+  lastActivityDate: string;
+  lastActivityDescription: string;  // e.g., "Marsel Hoxha has viewed the document"
+  expiryDate?: string;
+  expiryDays: number;
+  enableSigningOrder: boolean;
+  files: string[];                  // List of file names
+  brandName: string;
+  senderDetail: {
+    name: string;
+    emailAddress: string;
+  };
+  signerDetails: {
+    signerName: string;
+    signerEmail: string;
+    signerType: string;
+    status: string;
+    signedDate?: string;
+    signerOrder: number;
+    deliveryMode: string;           // Email, SMS, etc.
+    lastActivity: string;           // Last activity date for this signer
+    authenticationType: string;     // None, OTP, etc.
+  }[];
+  documentHistory: {
+    activityBy: string;
+    activityDate: string;
+    activityAction: string;
+    ipAddress: string;
+    action: string;     // Short action type: "Sent", "Viewed", "Reminder", etc.
+  }[];
+}
+
 export type SignatureStatus =
   | 'DRAFT'
   | 'SENT'
@@ -161,7 +247,42 @@ export class SignatureService {
 
   private readonly apiUrl = `${environment.apiUrl}/api/signatures`;
 
+  // ==================== Frontend Cache ====================
+  // Cache to reduce API calls (BoldSign has 50/hr sandbox, 2000/hr production limit)
+  private cache = new Map<string, { data: any; expiry: number }>();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(private http: HttpClient) {}
+
+  /**
+   * Get cached data if valid, otherwise return null
+   */
+  private getCached<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data as T;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  /**
+   * Store data in cache with TTL
+   */
+  private setCache(key: string, data: any, ttlMs: number = this.CACHE_TTL_MS): void {
+    this.cache.set(key, { data, expiry: Date.now() + ttlMs });
+  }
+
+  /**
+   * Clear specific cache entry or all entries
+   */
+  clearCache(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
+    }
+  }
 
   // ==================== Signature Requests ====================
 
@@ -356,6 +477,109 @@ export class SignatureService {
     return this.http.get(`${this.apiUrl}/stats/organization/${organizationId}`);
   }
 
+  /**
+   * Get dashboard data from BoldSign API (cached for 5 minutes)
+   */
+  getDashboard(organizationId: number, forceRefresh: boolean = false): Observable<any> {
+    const cacheKey = `dashboard-${organizationId}`;
+
+    // Return cached data if available and not forcing refresh
+    if (!forceRefresh) {
+      const cached = this.getCached<any>(cacheKey);
+      if (cached) {
+        return new Observable(observer => {
+          observer.next(cached);
+          observer.complete();
+        });
+      }
+    }
+
+    // Fetch fresh data and cache it
+    return new Observable(observer => {
+      this.http.get(`${this.apiUrl}/dashboard/${organizationId}`).subscribe({
+        next: (response) => {
+          this.setCache(cacheKey, response);
+          observer.next(response);
+          observer.complete();
+        },
+        error: (err) => observer.error(err)
+      });
+    });
+  }
+
+  /**
+   * Get document properties from BoldSign API
+   */
+  getDocumentProperties(boldsignDocumentId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/document/${boldsignDocumentId}/properties`);
+  }
+
+  /**
+   * Download audit trail PDF for a document
+   */
+  downloadAuditTrail(boldsignDocumentId: string): void {
+    this.http.get(`${this.apiUrl}/document/${boldsignDocumentId}/audit-trail`, {
+      responseType: 'blob'
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-trail-${boldsignDocumentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Failed to download audit trail:', err);
+      }
+    });
+  }
+
+  /**
+   * Download document by BoldSign document ID
+   */
+  downloadDocumentByBoldsignId(boldsignDocumentId: string): void {
+    this.http.get(`${this.apiUrl}/document/${boldsignDocumentId}/download`, {
+      responseType: 'blob'
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `document-${boldsignDocumentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Failed to download document:', err);
+      }
+    });
+  }
+
+  /**
+   * List documents directly from BoldSign API
+   * Provides real-time data with optional status filtering
+   */
+  listBoldSignDocuments(
+    status?: string,
+    page: number = 1,
+    pageSize: number = 20
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    if (status && status !== 'All') {
+      params = params.set('status', status);
+    }
+
+    return this.http.get(`${this.apiUrl}/documents/boldsign`, { params });
+  }
+
   // ==================== Embedded URLs ====================
 
   /**
@@ -446,10 +670,31 @@ export class SignatureService {
   }
 
   /**
-   * Get embedded URL for editing a template
+   * Get embedded URL for editing a template (cached for 5 minutes)
    */
   getEmbeddedEditTemplateUrl(boldsignTemplateId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/embedded/edit-template/${boldsignTemplateId}`);
+    const cacheKey = `edit-template-${boldsignTemplateId}`;
+
+    // Return cached URL if available
+    const cached = this.getCached<any>(cacheKey);
+    if (cached) {
+      return new Observable(observer => {
+        observer.next(cached);
+        observer.complete();
+      });
+    }
+
+    // Fetch fresh URL and cache it
+    return new Observable(observer => {
+      this.http.get(`${this.apiUrl}/embedded/edit-template/${boldsignTemplateId}`).subscribe({
+        next: (response) => {
+          this.setCache(cacheKey, response);
+          observer.next(response);
+          observer.complete();
+        },
+        error: (err) => observer.error(err)
+      });
+    });
   }
 
   /**
@@ -617,4 +862,43 @@ export class SignatureService {
   syncTemplates(organizationId: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/sync/templates/${organizationId}`, {});
   }
+
+  // ==================== Branding (Multi-Tenant) ====================
+
+  /**
+   * Get brand settings for an organization
+   */
+  getBrand(organizationId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/brand/${organizationId}`);
+  }
+
+  /**
+   * Create or update brand for an organization
+   */
+  saveBrand(organizationId: number, brand: BrandSettings): Observable<any> {
+    return this.http.post(`${this.apiUrl}/brand/${organizationId}`, brand);
+  }
+
+  /**
+   * Delete brand for an organization
+   */
+  deleteBrand(organizationId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/brand/${organizationId}`);
+  }
+}
+
+// Brand settings interface
+export interface BrandSettings {
+  brandId?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  brandLogoBase64?: string;     // Base64 encoded logo file for upload
+  brandLogoFileName?: string;   // Logo file name (e.g., "logo.png")
+  primaryColor?: string;
+  backgroundColor?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  emailDisplayName?: string;
+  disclaimerTitle?: string;
+  disclaimerDescription?: string;
 }

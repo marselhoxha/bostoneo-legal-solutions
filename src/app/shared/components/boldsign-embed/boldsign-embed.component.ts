@@ -589,26 +589,61 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
   @HostListener('window:message', ['$event'])
   onMessage(event: MessageEvent): void {
     // Only process messages from BoldSign domains
+    // BoldSign uses app.boldsign.com and possibly other subdomains
     if (!event.origin.includes('boldsign.com')) {
       return;
     }
 
+    console.log('[BoldSign] Received postMessage from:', event.origin, 'data:', event.data);
+
     try {
-      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      let data: any;
+
+      // Handle different data formats BoldSign might send
+      if (typeof event.data === 'string') {
+        // Try parsing as JSON
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          // If not valid JSON, check if it's an event name string
+          data = { action: event.data };
+        }
+      } else if (typeof event.data === 'object' && event.data !== null) {
+        data = event.data;
+      } else {
+        // Unknown format
+        console.log('[BoldSign] Unknown data format:', typeof event.data, event.data);
+        return;
+      }
+
       this.handleBoldSignMessage(data);
     } catch (e) {
-      // Not a JSON message, ignore
+      console.error('[BoldSign] Error handling message:', e);
     }
   }
 
   /**
    * Handle BoldSign postMessage events
+   * BoldSign event names (as per their API documentation):
+   * - onCreateSuccess: Document/Template created successfully (document sent)
+   * - onCreateFailed: Document/Template creation failed
+   * - onDraftSuccess / onDraftSavedSuccess: Draft saved successfully
+   * - onDraftFailed: Draft save failed
+   * - onLoadComplete: Page finished loading
+   * - onTemplateEditingCompleted: Template editing completed
+   * - onTemplateEditingFailed: Template editing failed
+   * - onPageNavigation: Page navigation event
    */
   private handleBoldSignMessage(data: any): void {
     const eventType = data.type || data.action || data.event || data.status;
     console.log('[BoldSign Event]', eventType, data);
 
-    switch (eventType?.toLowerCase()) {
+    // Normalize event type for comparison (lowercase, trim)
+    const normalizedEvent = eventType?.toLowerCase()?.trim();
+
+    switch (normalizedEvent) {
+      // === Load Events ===
+      case 'onloadcomplete':
       case 'onload':
       case 'loaded':
         this.loading = false;
@@ -617,22 +652,11 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.detectChanges();
         break;
 
-      case 'oncomplete':
-      case 'completed':
-      case 'onsigned':
-      case 'signed':
-      case 'onsigncompleted':
-      case 'signcompleted':
-        this.loading = false;
-        this.stopLoadingProgress();
-        this.completed.emit({
-          type: 'completed',
-          documentId: data.documentId || data.document_id,
-          templateId: data.templateId || data.template_id,
-          message: data.message
-        });
-        break;
-
+      // === Document/Template Created Successfully ===
+      // onCreateSuccess is used by BoldSign for BOTH document sending AND template creation
+      // We differentiate based on the mode input
+      case 'oncreatesuccess':
+      case 'createsuccess':
       case 'onsent':
       case 'sent':
       case 'onsendcompleted':
@@ -643,38 +667,89 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       case 'documentsent':
         this.loading = false;
         this.stopLoadingProgress();
-        this.sent.emit({
-          type: 'sent',
-          documentId: data.documentId || data.document_id,
-          message: data.message
-        });
+
+        // Check mode to emit appropriate event
+        if (this.mode === 'create-template' || this.mode === 'edit-template') {
+          console.log('[BoldSign] Template created/updated successfully!');
+          this.completed.emit({
+            type: 'completed',
+            templateId: data.templateId || data.template_id || data.id,
+            message: data.message || 'Template saved successfully'
+          });
+        } else {
+          // send-document or send-from-template mode
+          console.log('[BoldSign] Document sent successfully!');
+          this.sent.emit({
+            type: 'sent',
+            documentId: data.documentId || data.document_id || data.id,
+            message: data.message || 'Document sent successfully'
+          });
+        }
+        this.cdr.detectChanges();
         break;
 
+      // === Template Editing Completed ===
+      case 'ontemplateeditingcompleted':
+      case 'templateeditingcompleted':
+        console.log('[BoldSign] Template editing completed!');
+        this.loading = false;
+        this.stopLoadingProgress();
+        this.completed.emit({
+          type: 'completed',
+          templateId: data.templateId || data.template_id || data.id,
+          message: data.message
+        });
+        this.cdr.detectChanges();
+        break;
+
+      // === Signing Completed ===
+      case 'oncomplete':
+      case 'completed':
+      case 'onsigned':
+      case 'signed':
+      case 'onsigncompleted':
+      case 'signcompleted':
+        console.log('[BoldSign] Signing completed!');
+        this.loading = false;
+        this.stopLoadingProgress();
+        this.completed.emit({
+          type: 'completed',
+          documentId: data.documentId || data.document_id || data.id,
+          message: data.message
+        });
+        this.cdr.detectChanges();
+        break;
+
+      // === Draft Saved ===
+      case 'ondraftsuccess':
+      case 'ondraftsavedsuccess':
+      case 'draftsuccess':
+      case 'draftsavedsuccess':
       case 'onsave':
       case 'saved':
       case 'ontemplatecreated':
       case 'templatecreated':
       case 'template_created':
+        console.log('[BoldSign] Draft/Template saved successfully!');
         this.saved.emit({
           type: 'saved',
-          documentId: data.documentId || data.document_id,
+          documentId: data.documentId || data.document_id || data.id,
           templateId: data.templateId || data.template_id,
           message: data.message
         });
+        this.cdr.detectChanges();
         break;
 
-      case 'oncancel':
-      case 'cancelled':
-      case 'closed':
-      case 'onclose':
-        this.cancelled.emit({
-          type: 'cancelled',
-          message: data.message
-        });
-        break;
-
+      // === Creation/Editing Failed ===
+      case 'oncreatefailed':
+      case 'createfailed':
+      case 'ondraftfailed':
+      case 'draftfailed':
+      case 'ontemplateeditingfailed':
+      case 'templateeditingfailed':
       case 'onerror':
       case 'error':
+        console.error('[BoldSign] Error:', data.message || data);
         this.error = data.message || 'An error occurred while processing your document';
         this.loading = false;
         this.stopLoadingProgress();
@@ -683,6 +758,32 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
           message: data.message
         });
         this.cdr.detectChanges();
+        break;
+
+      // === Cancelled ===
+      case 'oncancel':
+      case 'cancelled':
+      case 'closed':
+      case 'onclose':
+        console.log('[BoldSign] Operation cancelled');
+        this.cancelled.emit({
+          type: 'cancelled',
+          message: data.message
+        });
+        this.cdr.detectChanges();
+        break;
+
+      // === Page Navigation (informational, don't emit anything) ===
+      case 'onpagenavigation':
+      case 'pagenavigation':
+        console.log('[BoldSign] Page navigation:', data.pageType, data.category);
+        break;
+
+      default:
+        // Log unknown events for debugging
+        if (eventType) {
+          console.log('[BoldSign] Unhandled event type:', eventType, data);
+        }
         break;
     }
   }

@@ -303,6 +303,36 @@ public class SignatureController {
     }
 
     /**
+     * Download audit trail PDF for a document
+     */
+    @GetMapping("/document/{boldsignDocumentId}/audit-trail")
+    public ResponseEntity<byte[]> downloadAuditTrail(@PathVariable String boldsignDocumentId) {
+        log.info("Downloading audit trail for document {}", boldsignDocumentId);
+        byte[] auditTrail = boldSignService.downloadAuditTrail(boldsignDocumentId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "audit-trail-" + boldsignDocumentId + ".pdf");
+
+        return new ResponseEntity<>(auditTrail, headers, OK);
+    }
+
+    /**
+     * Download signed document by BoldSign document ID
+     */
+    @GetMapping("/document/{boldsignDocumentId}/download")
+    public ResponseEntity<byte[]> downloadDocumentByBoldsignId(@PathVariable String boldsignDocumentId) {
+        log.info("Downloading document {}", boldsignDocumentId);
+        byte[] document = boldSignService.downloadDocumentFromBoldSign(boldsignDocumentId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "document-" + boldsignDocumentId + ".pdf");
+
+        return new ResponseEntity<>(document, headers, OK);
+    }
+
+    /**
      * Refresh status from BoldSign
      */
     @PostMapping("/requests/{id}/refresh")
@@ -767,6 +797,73 @@ public class SignatureController {
         );
     }
 
+    /**
+     * Get dashboard data from BoldSign API
+     */
+    @GetMapping("/dashboard/{organizationId}")
+    public ResponseEntity<HttpResponse> getDashboard(@PathVariable Long organizationId) {
+        log.info("Fetching dashboard for organization {}", organizationId);
+        BoldSignDashboardDTO dashboard = boldSignService.getDashboard(organizationId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .data(Map.of("dashboard", dashboard))
+                        .message("Dashboard retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    /**
+     * Get document properties from BoldSign API
+     */
+    @GetMapping("/document/{boldsignDocumentId}/properties")
+    public ResponseEntity<HttpResponse> getDocumentProperties(@PathVariable String boldsignDocumentId) {
+        log.info("Fetching document properties for {}", boldsignDocumentId);
+        BoldSignService.DocumentPropertiesDTO properties = boldSignService.getDocumentProperties(boldsignDocumentId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .data(Map.of("document", properties))
+                        .message("Document properties retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    /**
+     * List documents directly from BoldSign API
+     * Provides real-time data from BoldSign with optional status filtering
+     */
+    @GetMapping("/documents/boldsign")
+    public ResponseEntity<HttpResponse> listDocumentsFromBoldSign(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+
+        log.info("Listing documents from BoldSign - status: {}, page: {}, pageSize: {}", status, page, pageSize);
+        BoldSignService.BoldSignDocumentListDTO result = boldSignService.listDocumentsFromBoldSign(status, page, pageSize);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .data(Map.of(
+                                "documents", result.documents(),
+                                "totalCount", result.totalCount(),
+                                "page", result.page(),
+                                "pageSize", result.pageSize()
+                        ))
+                        .message("Documents retrieved from BoldSign")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
     // ==================== Sync ====================
 
     /**
@@ -807,6 +904,88 @@ public class SignatureController {
                         .timeStamp(LocalDateTime.now().toString())
                         .data(Map.of("syncResult", result))
                         .message(result.message())
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    // ==================== Branding (Multi-Tenant) ====================
+
+    /**
+     * Get brand settings for an organization
+     */
+    @GetMapping("/brand/{organizationId}")
+    public ResponseEntity<HttpResponse> getBrand(@PathVariable Long organizationId) {
+        BoldSignService.BrandDTO brand = boldSignService.getBrand(organizationId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .data(Map.of("brand", brand != null ? brand : Map.of()))
+                        .message(brand != null ? "Brand retrieved" : "No brand configured")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    /**
+     * Create or update brand for an organization
+     */
+    @PostMapping("/brand/{organizationId}")
+    public ResponseEntity<HttpResponse> createOrUpdateBrand(
+            @PathVariable Long organizationId,
+            @RequestBody Map<String, String> brandData) {
+
+        log.info("Creating/updating brand for organization {}", organizationId);
+
+        BoldSignService.BrandDTO brandDTO = new BoldSignService.BrandDTO(
+                brandData.get("brandId"),
+                brandData.get("brandName"),
+                brandData.get("brandLogoUrl"),
+                brandData.get("brandLogoBase64"),
+                brandData.get("brandLogoFileName"),
+                brandData.get("primaryColor"),
+                brandData.get("backgroundColor"),
+                brandData.get("buttonColor"),
+                brandData.get("buttonTextColor"),
+                brandData.get("emailDisplayName"),
+                brandData.get("disclaimerTitle"),
+                brandData.get("disclaimerDescription")
+        );
+
+        BoldSignService.BrandDTO result;
+        // If brandId exists, update; otherwise create
+        if (brandData.get("brandId") != null && !brandData.get("brandId").isEmpty()) {
+            result = boldSignService.updateBrand(organizationId, brandDTO);
+        } else {
+            result = boldSignService.createBrand(organizationId, brandDTO);
+        }
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .data(Map.of("brand", result))
+                        .message("Brand saved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    /**
+     * Delete brand for an organization
+     */
+    @DeleteMapping("/brand/{organizationId}")
+    public ResponseEntity<HttpResponse> deleteBrand(@PathVariable Long organizationId) {
+        log.info("Deleting brand for organization {}", organizationId);
+        boldSignService.deleteBrand(organizationId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(LocalDateTime.now().toString())
+                        .message("Brand deleted successfully")
                         .status(OK)
                         .statusCode(OK.value())
                         .build()

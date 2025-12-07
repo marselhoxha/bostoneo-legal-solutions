@@ -20,11 +20,16 @@ export class CaseListComponent implements OnInit {
   isLoading = false;
   error: string | null = null;
 
-  // Stats
-  activeCasesCount = 0;
-  pendingCasesCount = 0;
-  closedCasesCount = 0;
-  highPriorityCount = 0;
+  // Stats - Attorney Focused
+  hearingsThisWeekCount = 0;
+  deadlinesDueCount = 0;
+  awaitingResponseCount = 0;
+  needsAttentionCount = 0;
+
+  // Search and Filter
+  searchTerm = '';
+  selectedFilter: string | null = null;
+  sortBy: string = 'deadline';
 
   // Pagination-related variables
   state: { dataState: DataState, appData?: any } = { dataState: DataState.LOADING };
@@ -298,17 +303,404 @@ export class CaseListComponent implements OnInit {
   }
 
   private calculateStats(): void {
-    this.activeCasesCount = this.cases.filter(c =>
-      c.status === CaseStatus.OPEN || c.status === CaseStatus.IN_PROGRESS
-    ).length;
-    this.pendingCasesCount = this.cases.filter(c =>
+    const now = new Date();
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Hearings this week - cases with next hearing within 7 days
+    this.hearingsThisWeekCount = this.cases.filter(c => {
+      const hearing = c.importantDates?.nextHearing;
+      if (!hearing) return false;
+      const hearingDate = new Date(hearing);
+      return hearingDate >= now && hearingDate <= oneWeekFromNow;
+    }).length;
+
+    // Deadlines due - cases with important dates within 7 days (filing, trial)
+    this.deadlinesDueCount = this.cases.filter(c => {
+      if (!c.importantDates) return false;
+      const filing = c.importantDates.filingDate ? new Date(c.importantDates.filingDate) : null;
+      const trial = c.importantDates.trialDate ? new Date(c.importantDates.trialDate) : null;
+      const hasUpcomingFiling = filing && filing >= now && filing <= oneWeekFromNow;
+      const hasUpcomingTrial = trial && trial >= now && trial <= oneWeekFromNow;
+      return hasUpcomingFiling || hasUpcomingTrial;
+    }).length;
+
+    // Awaiting response - cases in PENDING status
+    this.awaitingResponseCount = this.cases.filter(c =>
       c.status === CaseStatus.PENDING
     ).length;
-    this.closedCasesCount = this.cases.filter(c =>
-      c.status === CaseStatus.CLOSED || c.status === CaseStatus.ARCHIVED
-    ).length;
-    this.highPriorityCount = this.cases.filter(c =>
-      c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT
-    ).length;
+
+    // Needs attention - High priority OR overdue billing OR past deadlines
+    this.needsAttentionCount = this.cases.filter(c => {
+      const isHighPriority = c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT;
+      const isOverdue = c.billingInfo?.paymentStatus === PaymentStatus.OVERDUE;
+      const hasPastHearing = c.importantDates?.nextHearing && new Date(c.importantDates.nextHearing) < now;
+      return isHighPriority || isOverdue || hasPastHearing;
+    }).length;
+  }
+
+  // Filter and Search methods
+  filterByStatus(filter: string): void {
+    if (this.selectedFilter === filter) {
+      this.selectedFilter = null;
+    } else {
+      this.selectedFilter = filter;
+    }
+  }
+
+  clearFilter(): void {
+    this.selectedFilter = null;
+    this.searchTerm = '';
+  }
+
+  onSearch(): void {
+    // Search is handled by getFilteredCases()
+  }
+
+  getFilteredCases(): LegalCase[] {
+    let filtered = [...this.cases];
+    const now = new Date();
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Apply status filter
+    if (this.selectedFilter) {
+      switch (this.selectedFilter) {
+        case 'hearings':
+          filtered = filtered.filter(c => {
+            const hearing = c.importantDates?.nextHearing;
+            if (!hearing) return false;
+            const hearingDate = new Date(hearing);
+            return hearingDate >= now && hearingDate <= oneWeekFromNow;
+          });
+          break;
+        case 'deadlines':
+          filtered = filtered.filter(c => {
+            if (!c.importantDates) return false;
+            const filing = c.importantDates.filingDate ? new Date(c.importantDates.filingDate) : null;
+            const trial = c.importantDates.trialDate ? new Date(c.importantDates.trialDate) : null;
+            const hasUpcomingFiling = filing && filing >= now && filing <= oneWeekFromNow;
+            const hasUpcomingTrial = trial && trial >= now && trial <= oneWeekFromNow;
+            return hasUpcomingFiling || hasUpcomingTrial;
+          });
+          break;
+        case 'awaiting':
+          filtered = filtered.filter(c => c.status === CaseStatus.PENDING);
+          break;
+        case 'attention':
+          filtered = filtered.filter(c => {
+            const isHighPriority = c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT;
+            const isOverdue = c.billingInfo?.paymentStatus === PaymentStatus.OVERDUE;
+            const hasPastHearing = c.importantDates?.nextHearing && new Date(c.importantDates.nextHearing) < now;
+            return isHighPriority || isOverdue || hasPastHearing;
+          });
+          break;
+      }
+    }
+
+    // Apply search filter
+    if (this.searchTerm && this.searchTerm.trim()) {
+      const term = this.searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(c =>
+        c.caseNumber?.toLowerCase().includes(term) ||
+        c.title?.toLowerCase().includes(term) ||
+        c.clientName?.toLowerCase().includes(term) ||
+        c.type?.toLowerCase().includes(term) ||
+        this.getLeadAttorneyName(c)?.toLowerCase().includes(term)
+      );
+    }
+
+    // Apply sorting
+    filtered = this.sortCases(filtered);
+
+    return filtered;
+  }
+
+  sortCases(cases: LegalCase[]): LegalCase[] {
+    return [...cases].sort((a, b) => {
+      switch (this.sortBy) {
+        case 'deadline':
+          const dateA = this.getNextDeadline(a);
+          const dateB = this.getNextDeadline(b);
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA.getTime() - dateB.getTime();
+        case 'priority':
+          const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+          return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
+        case 'updated':
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        case 'client':
+          return (a.clientName || '').localeCompare(b.clientName || '');
+        default:
+          return 0;
+      }
+    });
+  }
+
+  // Helper methods for template
+  getNextDeadline(caseItem: LegalCase): Date | null {
+    if (!caseItem.importantDates) return null;
+    const dates = [
+      caseItem.importantDates.nextHearing,
+      caseItem.importantDates.filingDate,
+      caseItem.importantDates.trialDate
+    ].filter(d => d && new Date(d) >= new Date()).map(d => new Date(d!));
+
+    if (dates.length === 0) return null;
+    return dates.reduce((min, d) => d < min ? d : min);
+  }
+
+  getDaysUntilDeadline(caseItem: LegalCase): number | null {
+    const deadline = this.getNextDeadline(caseItem);
+    if (!deadline) return null;
+    const now = new Date();
+    const diffTime = deadline.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  getDeadlineUrgency(caseItem: LegalCase): string {
+    const days = this.getDaysUntilDeadline(caseItem);
+    if (days === null) return '';
+    if (days < 0) return 'overdue';
+    if (days <= 3) return 'urgent';
+    if (days <= 7) return 'warning';
+    return 'normal';
+  }
+
+  getLeadAttorneyName(caseItem: LegalCase): string {
+    if (caseItem.assignedAttorneys && caseItem.assignedAttorneys.length > 0) {
+      const lead = caseItem.assignedAttorneys.find(a => a.roleType === 'LEAD') || caseItem.assignedAttorneys[0];
+      return `${lead.firstName} ${lead.lastName}`;
+    }
+    if (caseItem.assignedTo) {
+      return `${caseItem.assignedTo.firstName || ''} ${caseItem.assignedTo.lastName || ''}`.trim();
+    }
+    return '';
+  }
+
+  getLeadAttorneyInitials(caseItem: LegalCase): string {
+    const name = this.getLeadAttorneyName(caseItem);
+    if (!name) return '?';
+    const parts = name.split(' ').filter(p => p);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  getPaymentStatusClass(caseItem: LegalCase): string {
+    const status = caseItem.billingInfo?.paymentStatus;
+    switch (status) {
+      case PaymentStatus.PAID: return 'bg-success-subtle text-success';
+      case PaymentStatus.PENDING: return 'bg-warning-subtle text-warning';
+      case PaymentStatus.OVERDUE: return 'bg-danger-subtle text-danger';
+      default: return 'bg-secondary-subtle text-secondary';
+    }
+  }
+
+  getPaymentStatusText(caseItem: LegalCase): string {
+    return caseItem.billingInfo?.paymentStatus || 'N/A';
+  }
+
+  getRelativeTime(date: Date | string): string {
+    if (!date) return 'Never';
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  getNextHearing(caseItem: LegalCase): Date | null {
+    return caseItem.importantDates?.nextHearing ? new Date(caseItem.importantDates.nextHearing) : null;
+  }
+
+  // Tooltip helper methods
+  getStatusTooltip(status: string): string {
+    switch (status) {
+      case 'OPEN': return 'Case is open and active - ready for work';
+      case 'IN_PROGRESS': return 'Case is currently being worked on';
+      case 'PENDING': return 'Awaiting response from client, court, or opposing counsel';
+      case 'CLOSED': return 'Case has been resolved and closed';
+      case 'ARCHIVED': return 'Case is archived for record-keeping';
+      default: return status;
+    }
+  }
+
+  getDeadlineTooltip(caseItem: LegalCase): string {
+    const deadline = this.getNextDeadline(caseItem);
+    if (!deadline) return 'No upcoming deadlines';
+
+    const days = this.getDaysUntilDeadline(caseItem);
+    const dateStr = deadline.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    if (days === null) return dateStr;
+    if (days < 0) return `OVERDUE: ${dateStr} (${Math.abs(days)} days ago)`;
+    if (days === 0) return `TODAY: ${dateStr}`;
+    if (days === 1) return `TOMORROW: ${dateStr}`;
+    return `${dateStr} (in ${days} days)`;
+  }
+
+  getBillingTooltip(caseItem: LegalCase): string {
+    if (!caseItem.billingInfo) return 'No billing information available';
+
+    const { paymentStatus, totalAmount, totalHours, hourlyRate } = caseItem.billingInfo;
+    let tooltip = `Status: ${paymentStatus}`;
+
+    if (totalAmount) {
+      tooltip += ` | Total: $${totalAmount.toLocaleString()}`;
+    }
+    if (totalHours && hourlyRate) {
+      tooltip += ` | ${totalHours} hrs @ $${hourlyRate}/hr`;
+    }
+
+    return tooltip;
+  }
+
+  // Case type badge styling helpers
+  getCaseTypeBadgeClass(type: string): string {
+    if (!type) return 'bg-secondary-subtle text-secondary';
+
+    const typeLower = type.toLowerCase();
+
+    // Criminal cases - Red/Danger
+    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui') || typeLower.includes('felony')) {
+      return 'bg-danger-subtle text-danger';
+    }
+    // Family law - Pink/Purple
+    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody') || typeLower.includes('adoption')) {
+      return 'bg-pink-subtle text-pink';
+    }
+    // Immigration - Teal/Cyan
+    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum') || typeLower.includes('naturalization')) {
+      return 'bg-info-subtle text-info';
+    }
+    // Corporate/Business - Blue
+    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('merger') || typeLower.includes('contract')) {
+      return 'bg-primary-subtle text-primary';
+    }
+    // Real Estate - Green
+    if (typeLower.includes('real estate') || typeLower.includes('property') || typeLower.includes('landlord') || typeLower.includes('tenant')) {
+      return 'bg-success-subtle text-success';
+    }
+    // Personal Injury - Orange/Warning
+    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical') || typeLower.includes('malpractice')) {
+      return 'bg-warning-subtle text-warning';
+    }
+    // Estate/Probate - Purple
+    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust') || typeLower.includes('will')) {
+      return 'bg-purple-subtle text-purple';
+    }
+    // Employment/Labor - Indigo
+    if (typeLower.includes('employment') || typeLower.includes('labor') || typeLower.includes('discrimination') || typeLower.includes('wrongful')) {
+      return 'bg-indigo-subtle text-indigo';
+    }
+    // Intellectual Property - Cyan
+    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark') || typeLower.includes('copyright')) {
+      return 'bg-cyan-subtle text-cyan';
+    }
+    // Bankruptcy - Dark
+    if (typeLower.includes('bankruptcy') || typeLower.includes('debt') || typeLower.includes('insolvency')) {
+      return 'bg-dark-subtle text-dark';
+    }
+    // Litigation - Orange
+    if (typeLower.includes('litigation') || typeLower.includes('civil') || typeLower.includes('dispute')) {
+      return 'bg-orange-subtle text-orange';
+    }
+
+    // Default
+    return 'bg-secondary-subtle text-secondary';
+  }
+
+  getCaseTypeIcon(type: string): string {
+    if (!type) return 'ri-briefcase-line';
+
+    const typeLower = type.toLowerCase();
+
+    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui')) {
+      return 'ri-shield-user-line';
+    }
+    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody')) {
+      return 'ri-parent-line';
+    }
+    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum')) {
+      return 'ri-global-line';
+    }
+    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('contract')) {
+      return 'ri-building-2-line';
+    }
+    if (typeLower.includes('real estate') || typeLower.includes('property')) {
+      return 'ri-home-line';
+    }
+    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical')) {
+      return 'ri-heart-pulse-line';
+    }
+    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust')) {
+      return 'ri-file-list-3-line';
+    }
+    if (typeLower.includes('employment') || typeLower.includes('labor')) {
+      return 'ri-user-settings-line';
+    }
+    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark')) {
+      return 'ri-lightbulb-line';
+    }
+    if (typeLower.includes('bankruptcy') || typeLower.includes('debt')) {
+      return 'ri-money-dollar-circle-line';
+    }
+    if (typeLower.includes('litigation') || typeLower.includes('civil')) {
+      return 'ri-scales-3-line';
+    }
+
+    return 'ri-briefcase-line';
+  }
+
+  getCaseTypeIconClass(type: string): string {
+    if (!type) return 'bg-secondary-subtle text-secondary';
+
+    const typeLower = type.toLowerCase();
+
+    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui')) {
+      return 'bg-danger-subtle text-danger';
+    }
+    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody')) {
+      return 'bg-pink-subtle text-pink';
+    }
+    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum')) {
+      return 'bg-info-subtle text-info';
+    }
+    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('contract')) {
+      return 'bg-primary-subtle text-primary';
+    }
+    if (typeLower.includes('real estate') || typeLower.includes('property')) {
+      return 'bg-success-subtle text-success';
+    }
+    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical')) {
+      return 'bg-warning-subtle text-warning';
+    }
+    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust')) {
+      return 'bg-purple-subtle text-purple';
+    }
+    if (typeLower.includes('employment') || typeLower.includes('labor')) {
+      return 'bg-indigo-subtle text-indigo';
+    }
+    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark')) {
+      return 'bg-cyan-subtle text-cyan';
+    }
+    if (typeLower.includes('bankruptcy') || typeLower.includes('debt')) {
+      return 'bg-dark-subtle text-dark';
+    }
+    if (typeLower.includes('litigation') || typeLower.includes('civil')) {
+      return 'bg-orange-subtle text-orange';
+    }
+
+    return 'bg-secondary-subtle text-secondary';
   }
 } 

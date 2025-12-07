@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.dto.BoldSignDashboardDTO;
 import com.bostoneo.bostoneosolutions.dto.CreateSignatureRequestDTO;
 import com.bostoneo.bostoneosolutions.dto.SignatureAuditLogDTO;
 import com.bostoneo.bostoneosolutions.dto.SignatureRequestDTO;
@@ -81,6 +82,16 @@ public interface BoldSignService {
      * Download the signed document
      */
     byte[] downloadSignedDocument(Long requestId);
+
+    /**
+     * Download the audit trail PDF for a document
+     */
+    byte[] downloadAuditTrail(String boldsignDocumentId);
+
+    /**
+     * Download document directly from BoldSign by document ID
+     */
+    byte[] downloadDocumentFromBoldSign(String boldsignDocumentId);
 
     /**
      * Refresh status from BoldSign
@@ -252,6 +263,105 @@ public interface BoldSignService {
      */
     void processWebhookEvent(String eventType, String payload, String signature);
 
+    // ==================== Dashboard ====================
+
+    /**
+     * Get dashboard data from BoldSign API
+     * Returns counts and recent documents for each status category
+     */
+    BoldSignDashboardDTO getDashboard(Long organizationId);
+
+    /**
+     * List documents directly from BoldSign API
+     * @param status Optional status filter (e.g., "WaitingForOthers", "Completed", "Revoked")
+     * @param page Page number (1-based)
+     * @param pageSize Number of documents per page
+     * @return List of documents with pagination info
+     */
+    BoldSignDocumentListDTO listDocumentsFromBoldSign(String status, int page, int pageSize);
+
+    /**
+     * Document list response from BoldSign
+     */
+    record BoldSignDocumentListDTO(
+            java.util.List<BoldSignDocumentDTO> documents,
+            int totalCount,
+            int page,
+            int pageSize
+    ) {}
+
+    /**
+     * Document DTO matching BoldSign's document structure
+     */
+    record BoldSignDocumentDTO(
+            String documentId,
+            String messageTitle,
+            String status,
+            String createdDate,
+            String expiryDate,
+            String senderName,
+            String senderEmail,
+            String signerName,
+            String signerEmail,
+            String signerStatus,
+            String lastActivityDate,
+            String lastActivityBy,
+            String lastActivityAction
+    ) {}
+
+    /**
+     * Get document properties from BoldSign API
+     */
+    DocumentPropertiesDTO getDocumentProperties(String boldsignDocumentId);
+
+    /**
+     * Document properties DTO - matches BoldSign document details view
+     */
+    record DocumentPropertiesDTO(
+            String documentId,
+            String messageTitle,
+            String documentDescription,
+            String status,
+            String statusDescription,      // e.g., "Needs to be signed by Jane Smith"
+            String createdDate,
+            String sentOn,                  // Formatted sent date
+            String lastActivityDate,
+            String lastActivityDescription, // e.g., "Marsel Hoxha has viewed the document"
+            String expiryDate,
+            int expiryDays,
+            boolean enableSigningOrder,
+            java.util.List<String> files,   // List of file names
+            String brandName,
+            SenderDetailDTO senderDetail,
+            java.util.List<SignerDetailDTO> signerDetails,
+            java.util.List<ActivityDTO> documentHistory
+    ) {}
+
+    record SenderDetailDTO(
+            String name,
+            String emailAddress
+    ) {}
+
+    record SignerDetailDTO(
+            String signerName,
+            String signerEmail,
+            String signerType,
+            String status,
+            String signedDate,
+            int signerOrder,
+            String deliveryMode,        // Email, SMS, etc.
+            String lastActivity,        // Last activity date for this signer
+            String authenticationType   // None, OTP, etc.
+    ) {}
+
+    record ActivityDTO(
+            String activityBy,
+            String activityDate,
+            String activityAction,
+            String ipAddress,
+            String action           // Short action type: "Sent", "Viewed", "Reminder", etc.
+    ) {}
+
     // ==================== Statistics ====================
 
     /**
@@ -293,5 +403,45 @@ public interface BoldSignService {
             int skipped,
             int failed,
             String message
+    ) {}
+
+    // ==================== Branding (Multi-Tenant) ====================
+
+    /**
+     * Create a brand for an organization
+     */
+    BrandDTO createBrand(Long organizationId, BrandDTO brand);
+
+    /**
+     * Get brand for an organization
+     */
+    BrandDTO getBrand(Long organizationId);
+
+    /**
+     * Update brand for an organization
+     */
+    BrandDTO updateBrand(Long organizationId, BrandDTO brand);
+
+    /**
+     * Delete brand for an organization
+     */
+    void deleteBrand(Long organizationId);
+
+    /**
+     * Brand settings DTO
+     */
+    record BrandDTO(
+            String brandId,
+            String brandName,
+            String brandLogoUrl,
+            String brandLogoBase64,  // Base64 encoded logo file for upload
+            String brandLogoFileName, // Logo file name (e.g., "logo.png")
+            String primaryColor,
+            String backgroundColor,
+            String buttonColor,
+            String buttonTextColor,
+            String emailDisplayName,
+            String disclaimerTitle,
+            String disclaimerDescription
     ) {}
 }

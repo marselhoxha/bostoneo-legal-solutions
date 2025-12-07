@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -86,6 +87,9 @@ public class LegalCaseDTO {
     
     private Date createdAt;
     private Date updatedAt;
+
+    // Assigned attorneys for display in case list
+    private List<AssignedAttorneyDTO> assignedAttorneys;
 
     // Helper method to generate rate configuration summary
     public String getRateConfigurationSummary() {

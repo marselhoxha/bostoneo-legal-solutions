@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.dto.AssignedAttorneyDTO;
 import com.bostoneo.bostoneosolutions.dto.CaseActivityDTO;
 import com.bostoneo.bostoneosolutions.dto.CaseDocumentDTO;
 import com.bostoneo.bostoneosolutions.dto.DocumentDTO;
@@ -221,7 +222,40 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         Page<LegalCase> cases = legalCaseRepository.findAll(
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
-        return cases.map(legalCaseDTOMapper::toDTO);
+        return cases.map(this::toDTOWithAttorneys);
+    }
+
+    /**
+     * Converts a LegalCase entity to DTO and populates assigned attorneys
+     */
+    private LegalCaseDTO toDTOWithAttorneys(LegalCase legalCase) {
+        LegalCaseDTO dto = legalCaseDTOMapper.toDTO(legalCase);
+
+        // Fetch and populate assigned attorneys
+        try {
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(legalCase.getId());
+            if (assignments != null && !assignments.isEmpty()) {
+                List<AssignedAttorneyDTO> attorneys = assignments.stream()
+                    .filter(a -> a.getAssignedTo() != null)
+                    .map(a -> AssignedAttorneyDTO.builder()
+                        .id(a.getAssignedTo().getId())
+                        .firstName(a.getAssignedTo().getFirstName())
+                        .lastName(a.getAssignedTo().getLastName())
+                        .email(a.getAssignedTo().getEmail())
+                        .roleType(a.getRoleType() != null ? a.getRoleType().name() : null)
+                        .workloadWeight(a.getWorkloadWeight() != null ? a.getWorkloadWeight().doubleValue() : null)
+                        .assignmentId(a.getId())
+                        .assignedAt(a.getAssignedAt() != null ? java.sql.Timestamp.valueOf(a.getAssignedAt()) : null)
+                        .active(a.isActive())
+                        .build())
+                    .collect(Collectors.toList());
+                dto.setAssignedAttorneys(attorneys);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch attorneys for case {}: {}", legalCase.getId(), e.getMessage());
+        }
+
+        return dto;
     }
 
     @Override
@@ -242,7 +276,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) || "ROLE_MANAGER".equals(userRole) ||
             "MANAGING_PARTNER".equals(userRole) || "SENIOR_PARTNER".equals(userRole) || "OF_COUNSEL".equals(userRole)) {
             log.info("User has admin/senior role, returning all cases");
-            return getAllCases(page, size);
+            Page<LegalCase> cases = legalCaseRepository.findAll(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+            );
+            return cases.map(this::toDTOWithAttorneys);
         }
         
         // ATTORNEY-LEVEL ROLES: See assigned cases (Associates, Paralegals, etc.)

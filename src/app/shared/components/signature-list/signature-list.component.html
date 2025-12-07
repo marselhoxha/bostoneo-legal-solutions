@@ -1,5 +1,19 @@
-<!-- Header with Search & Filters -->
-<div class="d-flex flex-wrap gap-2 mb-3" *ngIf="!compact">
+<!-- BoldSign Filter Tabs (for BoldSign data source) -->
+<div class="mb-4" *ngIf="dataSource === 'boldsign' && !compact">
+  <ul class="nav nav-pills gap-2 flex-wrap">
+    <li class="nav-item" *ngFor="let tab of boldsignStatusTabs">
+      <a class="nav-link py-2 px-3"
+         [class.active]="boldsignStatusFilter === tab.value"
+         (click)="onBoldsignStatusChange(tab.value)"
+         style="cursor: pointer;">
+        {{ tab.label }}
+      </a>
+    </li>
+  </ul>
+</div>
+
+<!-- Header with Search & Filters (for local data source) -->
+<div class="d-flex flex-wrap gap-2 mb-3" *ngIf="dataSource === 'local' && !compact">
   <div class="flex-grow-1">
     <div class="search-box">
       <input type="text" class="form-control" placeholder="Search signatures..."
@@ -18,175 +32,227 @@
 </div>
 
 <!-- Loading -->
-<div class="text-center py-4" *ngIf="loading">
-  <div class="spinner-border text-primary" role="status">
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
     <span class="visually-hidden">Loading...</span>
   </div>
+  <p class="text-muted mt-3 mb-0">Loading documents...</p>
 </div>
 
 <!-- Error -->
-<div class="alert alert-danger" *ngIf="error">
-  <i class="ri-error-warning-line me-2"></i>
-  {{ error }}
-  <button class="btn btn-sm btn-danger ms-2" (click)="loadRequests()">Retry</button>
-</div>
-
-<!-- Empty State -->
-<div class="text-center py-5" *ngIf="!loading && !error && filteredRequests.length === 0">
-  <div class="avatar-lg mx-auto mb-3">
-    <div class="avatar-title bg-light text-secondary rounded-circle fs-24">
-      <i class="ri-file-list-3-line"></i>
-    </div>
-  </div>
-  <h5 class="text-muted">No Signature Requests</h5>
-  <p class="text-muted" *ngIf="searchQuery || statusFilter !== 'ALL'">
-    Try adjusting your filters
-  </p>
-  <button class="btn btn-primary" (click)="createRequest.emit()" *ngIf="showActions">
-    <i class="ri-add-line me-1"></i> Create First Request
+<div class="alert alert-danger d-flex align-items-center" *ngIf="error">
+  <i class="ri-error-warning-line fs-4 me-3"></i>
+  <div class="flex-grow-1">{{ error }}</div>
+  <button class="btn btn-sm btn-danger" (click)="loadRequests()">
+    <i class="ri-refresh-line me-1"></i> Retry
   </button>
 </div>
 
-<!-- List -->
-<div class="table-responsive" *ngIf="!loading && filteredRequests.length > 0">
-  <table class="table table-hover align-middle mb-0" [class.table-sm]="compact">
-    <thead class="table-light">
-      <tr>
-        <th>Document</th>
-        <th>Signer</th>
-        <th>Status</th>
-        <th *ngIf="!compact">Sent</th>
-        <th *ngIf="!compact">Expires</th>
-        <th *ngIf="showActions" class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let request of filteredRequests"
-          class="cursor-pointer"
-          (click)="selectRequest(request)">
-        <!-- Document -->
-        <td>
-          <div class="d-flex align-items-center">
-            <div class="avatar-sm flex-shrink-0 me-2">
-              <span class="avatar-title bg-primary-subtle text-primary rounded">
-                <i class="ri-file-text-line"></i>
-              </span>
-            </div>
-            <div>
-              <h6 class="mb-0 text-truncate" style="max-width: 200px;" [title]="request.title">
-                {{ request.title }}
-              </h6>
-              <small class="text-muted" *ngIf="request.caseName">{{ request.caseName }}</small>
-            </div>
-          </div>
-        </td>
+<!-- ==================== BoldSign Document List ==================== -->
+<ng-container *ngIf="dataSource === 'boldsign'">
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && !error && boldsignDocuments.length === 0">
+    <div class="empty-state-icon">
+      <i class="ri-file-list-3-line"></i>
+    </div>
+    <h5 class="fw-semibold mb-2">No Documents Found</h5>
+    <p class="text-muted mb-0" *ngIf="boldsignStatusFilter !== 'All'">
+      Try selecting a different status filter
+    </p>
+  </div>
 
-        <!-- Signer -->
-        <td>
-          <div>
-            <span class="fw-medium">{{ request.signerName }}</span>
-            <br>
-            <small class="text-muted">{{ request.signerEmail }}</small>
-          </div>
-        </td>
+  <!-- BoldSign Document List (Modern Card Design) -->
+  <div class="document-list" [class.compact-list]="compact" *ngIf="!loading && boldsignDocuments.length > 0">
+    <div class="document-item"
+         *ngFor="let doc of boldsignDocuments"
+         [ngClass]="getDocumentStatusClass(doc)"
+         (click)="selectDocument(doc)">
 
-        <!-- Status -->
-        <td>
-          <app-signature-status-badge
-            [status]="request.status"
-            [daysUntilExpiry]="request.daysUntilExpiry">
-          </app-signature-status-badge>
-          <div *ngIf="request.daysUntilExpiry !== undefined && request.daysUntilExpiry <= 3 && request.daysUntilExpiry >= 0"
-               class="mt-1">
-            <small class="text-danger">
-              <i class="ri-alarm-warning-line me-1"></i>
-              {{ request.daysUntilExpiry === 0 ? 'Expires today' :
-                 request.daysUntilExpiry === 1 ? 'Expires tomorrow' :
-                 'Expires in ' + request.daysUntilExpiry + ' days' }}
-            </small>
-          </div>
-        </td>
+      <!-- Document Icon -->
+      <div class="document-icon" [ngClass]="getDocumentIconBgClass(doc)">
+        <i [class]="getDocumentIcon(doc)"></i>
+      </div>
 
-        <!-- Sent Date -->
-        <td *ngIf="!compact">
-          <span *ngIf="request.sentAt">{{ formatDate(request.sentAt) }}</span>
-          <span *ngIf="!request.sentAt" class="text-muted">-</span>
-        </td>
+      <!-- Document Content -->
+      <div class="document-content">
+        <div class="document-title">
+          <span [title]="doc.messageTitle">{{ doc.messageTitle || 'Untitled Document' }}</span>
+        </div>
+        <div class="document-recipient">
+          <i class="ri-user-line"></i>
+          <span>To:</span>
+          <span class="recipient-name">{{ doc.signerName || 'Unknown' }}</span>
+        </div>
+      </div>
 
-        <!-- Expires -->
-        <td *ngIf="!compact">
-          <span *ngIf="request.expiresAt">{{ formatDate(request.expiresAt) }}</span>
-          <span *ngIf="!request.expiresAt" class="text-muted">-</span>
-        </td>
+      <!-- Status -->
+      <div class="document-status">
+        <span class="status-badge" [ngClass]="getStatusBadgeClass(doc)">
+          <i [class]="getBoldsignStatusIcon(doc)"></i>
+          {{ getBoldsignStatusDisplay(doc) }}
+        </span>
+        <span class="status-message">{{ getBoldsignStatusMessage(doc) }}</span>
+      </div>
 
-        <!-- Actions -->
-        <td *ngIf="showActions" class="text-end">
-          <div class="dropdown" (click)="$event.stopPropagation()">
-            <button class="btn btn-sm btn-soft-secondary dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown">
-              <i class="ri-more-2-fill"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <a class="dropdown-item" (click)="selectRequest(request)">
-                  <i class="ri-eye-line me-2"></i> View Details
-                </a>
-              </li>
-              <li *ngIf="canRemind(request)">
-                <a class="dropdown-item" (click)="sendReminder(request, $event)">
-                  <i class="ri-notification-3-line me-2"></i> Send Reminder
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" (click)="refreshStatus(request, $event)">
-                  <i class="ri-refresh-line me-2"></i> Refresh Status
-                </a>
-              </li>
-              <li *ngIf="canDownload(request)">
-                <a class="dropdown-item" (click)="downloadDocument(request, $event)">
-                  <i class="ri-download-line me-2"></i> Download
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" (click)="openAuditLog(request, $event)">
-                  <i class="ri-history-line me-2"></i> Audit Log
-                </a>
-              </li>
-              <li *ngIf="canVoid(request)">
-                <hr class="dropdown-divider">
-              </li>
-              <li *ngIf="canVoid(request)">
-                <a class="dropdown-item text-danger" (click)="voidRequest(request, $event)">
-                  <i class="ri-close-circle-line me-2"></i> Void Request
-                </a>
-              </li>
-            </ul>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <!-- Meta Info -->
+      <div class="document-meta" *ngIf="!compact">
+        <span class="meta-date">{{ formatBoldsignDate(doc.lastActivityDate || doc.createdDate) }}</span>
+        <span class="meta-activity" [title]="formatBoldsignLastActivity(doc)">
+          {{ formatBoldsignLastActivity(doc) }}
+        </span>
+      </div>
+
+      <!-- Arrow -->
+      <div class="document-arrow" *ngIf="!compact">
+        <i class="ri-arrow-right-s-line"></i>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<!-- ==================== Local Database List ==================== -->
+<ng-container *ngIf="dataSource === 'local'">
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && !error && filteredRequests.length === 0">
+    <div class="empty-state-icon">
+      <i class="ri-file-list-3-line"></i>
+    </div>
+    <h5 class="fw-semibold mb-2">No Signature Requests</h5>
+    <p class="text-muted mb-3" *ngIf="searchQuery || statusFilter !== 'ALL'">
+      Try adjusting your filters
+    </p>
+    <button class="btn btn-primary" (click)="createRequest.emit()" *ngIf="showActions">
+      <i class="ri-add-line me-1"></i> Create First Request
+    </button>
+  </div>
+
+  <!-- Local Document List (Modern Card Design) -->
+  <div class="document-list" [class.compact-list]="compact" *ngIf="!loading && filteredRequests.length > 0">
+    <div class="document-item"
+         *ngFor="let request of filteredRequests"
+         [ngClass]="getLocalStatusClass(request)"
+         (click)="selectRequest(request)">
+
+      <!-- Document Icon -->
+      <div class="document-icon bg-primary-subtle">
+        <i class="ri-file-text-line text-primary"></i>
+      </div>
+
+      <!-- Document Content -->
+      <div class="document-content">
+        <div class="document-title">
+          <span [title]="request.title">{{ request.title }}</span>
+        </div>
+        <div class="document-recipient">
+          <i class="ri-user-line"></i>
+          <span class="recipient-name">{{ request.signerName }}</span>
+          <span class="text-muted mx-1">·</span>
+          <span class="text-muted">{{ request.signerEmail }}</span>
+        </div>
+        <div class="document-recipient mt-1" *ngIf="request.caseName">
+          <i class="ri-folder-line"></i>
+          <span class="text-muted">{{ request.caseName }}</span>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="document-status">
+        <app-signature-status-badge
+          [status]="request.status"
+          [daysUntilExpiry]="request.daysUntilExpiry">
+        </app-signature-status-badge>
+        <span class="status-message text-danger"
+              *ngIf="request.daysUntilExpiry !== undefined && request.daysUntilExpiry <= 3 && request.daysUntilExpiry >= 0">
+          <i class="ri-alarm-warning-line me-1"></i>
+          {{ request.daysUntilExpiry === 0 ? 'Expires today' :
+             request.daysUntilExpiry === 1 ? 'Expires tomorrow' :
+             'Expires in ' + request.daysUntilExpiry + ' days' }}
+        </span>
+      </div>
+
+      <!-- Meta Info -->
+      <div class="document-meta" *ngIf="!compact">
+        <span class="meta-date" *ngIf="request.sentAt">{{ formatDate(request.sentAt) }}</span>
+        <span class="meta-date text-muted" *ngIf="!request.sentAt">Not sent</span>
+        <span class="meta-activity" *ngIf="request.expiresAt">
+          Expires: {{ formatDate(request.expiresAt) }}
+        </span>
+      </div>
+
+      <!-- Actions -->
+      <div class="dropdown" *ngIf="showActions && !compact" (click)="$event.stopPropagation()">
+        <button class="btn btn-sm btn-soft-secondary btn-action"
+                type="button"
+                data-bs-toggle="dropdown">
+          <i class="ri-more-2-fill"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" (click)="selectRequest(request)">
+              <i class="ri-eye-line me-2"></i> View Details
+            </a>
+          </li>
+          <li *ngIf="canRemind(request)">
+            <a class="dropdown-item" (click)="sendReminder(request, $event)">
+              <i class="ri-notification-3-line me-2"></i> Send Reminder
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" (click)="refreshStatus(request, $event)">
+              <i class="ri-refresh-line me-2"></i> Refresh Status
+            </a>
+          </li>
+          <li *ngIf="canDownload(request)">
+            <a class="dropdown-item" (click)="downloadDocument(request, $event)">
+              <i class="ri-download-line me-2"></i> Download
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" (click)="openAuditLog(request, $event)">
+              <i class="ri-history-line me-2"></i> Audit Log
+            </a>
+          </li>
+          <li *ngIf="canVoid(request)">
+            <hr class="dropdown-divider">
+          </li>
+          <li *ngIf="canVoid(request)">
+            <a class="dropdown-item text-danger" (click)="voidRequest(request, $event)">
+              <i class="ri-close-circle-line me-2"></i> Void Request
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Arrow (for non-action view) -->
+      <div class="document-arrow" *ngIf="!showActions && !compact">
+        <i class="ri-arrow-right-s-line"></i>
+      </div>
+    </div>
+  </div>
+</ng-container>
 
 <!-- Pagination -->
-<div class="d-flex justify-content-between align-items-center mt-3"
+<div class="d-flex justify-content-between align-items-center mt-4"
      *ngIf="!compact && !loading && totalPages > 1">
-  <div class="text-muted">
+  <div class="text-muted fs-13">
     Showing {{ (currentPage * pageSize) + 1 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }}
-    of {{ totalElements }}
+    of {{ totalElements }} documents
   </div>
   <nav>
     <ul class="pagination pagination-sm mb-0">
       <li class="page-item" [class.disabled]="currentPage === 0">
-        <a class="page-link" (click)="onPageChange(currentPage - 1)">Previous</a>
+        <a class="page-link" (click)="onPageChange(currentPage - 1)">
+          <i class="ri-arrow-left-s-line"></i>
+        </a>
       </li>
       <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index"
           [class.active]="i === currentPage">
         <a class="page-link" (click)="onPageChange(i)">{{ i + 1 }}</a>
       </li>
       <li class="page-item" [class.disabled]="currentPage >= totalPages - 1">
-        <a class="page-link" (click)="onPageChange(currentPage + 1)">Next</a>
+        <a class="page-link" (click)="onPageChange(currentPage + 1)">
+          <i class="ri-arrow-right-s-line"></i>
+        </a>
       </li>
     </ul>
   </nav>

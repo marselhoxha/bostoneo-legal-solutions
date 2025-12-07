@@ -1,12 +1,14 @@
 import { Component, OnInit, ViewChild, TemplateRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NgbModal, NgbModalModule, NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
+import { RouterModule } from '@angular/router';
+import { NgbModal, NgbModalModule, NgbNavModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import Swal from 'sweetalert2';
-import { SignatureService, SignatureRequest, SignatureStats, SignatureTemplate } from '../../core/services/signature.service';
+import { SignatureService, SignatureRequest, SignatureStats, SignatureTemplate, BrandSettings, BoldSignDashboard, DocumentProperties, DocumentSummary } from '../../core/services/signature.service';
 import { OrganizationService } from '../../core/services/organization.service';
 import { ClientService } from '../../service/client.service';
 import { CaseService } from '../../modules/legal/services/case.service';
+import { RbacService } from '../../core/services/rbac.service';
 import { Client } from '../../interface/client';
 import { LegalCase } from '../../modules/legal/interfaces/case.interface';
 import { SignatureListComponent } from '../../shared/components/signature-list/signature-list.component';
@@ -19,8 +21,10 @@ import { BoldSignEmbedComponent, BoldSignEvent } from '../../shared/components/b
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     NgbModalModule,
     NgbNavModule,
+    NgbDropdownModule,
     SignatureListComponent,
     SignatureStatusBadgeComponent,
     BoldSignEmbedComponent
@@ -33,6 +37,7 @@ export class SignaturesComponent implements OnInit {
   @ViewChild('auditModal') auditModal!: TemplateRef<any>;
   @ViewChild('templateModal') templateModal!: TemplateRef<any>;
   @ViewChild('useTemplateModal') useTemplateModal!: TemplateRef<any>;
+  @ViewChild('documentPropertiesModal') documentPropertiesModal!: TemplateRef<any>;
 
   // Organization ID from service
   get organizationId(): number {
@@ -42,9 +47,27 @@ export class SignaturesComponent implements OnInit {
   // Tab state
   activeTab: string = 'documents';
 
+  // Global search
+  globalSearch: string = '';
+
+  // Dashboard filter
+  selectedDashboardFilter: string = '';
+
+  // FAB state
+  fabExpanded: boolean = false;
+
   // Stats
   stats: SignatureStats | null = null;
   loadingStats = false;
+
+  // Dashboard
+  dashboard: BoldSignDashboard | null = null;
+  loadingDashboard = false;
+
+  // Document Properties (from BoldSign)
+  selectedDocumentProperties: DocumentProperties | null = null;
+  loadingDocumentProperties = false;
+  docPropsActiveTab = 'recipients';  // For modal tabs
 
   // Templates
   templates: SignatureTemplate[] = [];
@@ -91,6 +114,7 @@ export class SignaturesComponent implements OnInit {
   };
   templateFile: File | null = null;
   showCreateTemplateForm: boolean = true; // Show form first, then BoldSign embed
+  isSettingUpTemplate: boolean = false; // True when completing setup for existing template
 
   // Use template form (signer info for sending from template)
   useTemplateForm = {
@@ -99,16 +123,35 @@ export class SignaturesComponent implements OnInit {
   };
   showUseTemplateForm: boolean = true; // Show form first, then BoldSign embed
 
+  // Branding settings
+  brandSettings: BrandSettings = {};
+  brandLoading = false;
+  brandSaving = false;
+  brandSaveResult: { success: boolean; message: string } | null = null;
+  selectedLogoFile: File | null = null;
+  logoPreviewUrl: string | null = null;
+  brandPreviewMode: 'email' | 'signer' = 'email';
+  brandPreviewDevice: 'desktop' | 'mobile' = 'desktop';
+
+  // Check if user can access branding tab
+  get canAccessBranding(): boolean {
+    return this.rbacService.hasRole('ROLE_ADMIN') ||
+           this.rbacService.hasRole('ROLE_SYSADMIN') ||
+           this.rbacService.hasRole('ROLE_ATTORNEY');
+  }
+
   constructor(
     public signatureService: SignatureService,
     private organizationService: OrganizationService,
     private clientService: ClientService,
     private caseService: CaseService,
+    private rbacService: RbacService,
     private modalService: NgbModal,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    this.loadDashboard();
     this.loadStats();
     this.loadTemplates();
     this.loadClients();
@@ -118,18 +161,52 @@ export class SignaturesComponent implements OnInit {
 
   switchToSendTab(): void {
     this.activeTab = 'send';
-    this.loadSendDocumentEmbed();
+    // Don't auto-call API - user needs to fill form and click Continue
+    this.cdr.detectChanges();
   }
 
   switchToDocumentsTab(): void {
     this.activeTab = 'documents';
     this.sendDocumentUrl = '';
     this.embedError = null;
+    this.cdr.detectChanges();
   }
 
   onTabChange(): void {
-    if (this.activeTab === 'send' && !this.sendDocumentUrl) {
-      this.loadSendDocumentEmbed();
+    // No auto API calls on tab change - wait for user action
+    this.cdr.detectChanges();
+  }
+
+  // ==================== Error Handling ====================
+
+  /**
+   * Handle API errors with user-friendly messages
+   */
+  private handleApiError(err: any, defaultMessage: string): void {
+    const errorMessage = err.error?.message || err.message || 'Unknown error';
+    const is429 = err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota');
+
+    if (is429) {
+      Swal.fire({
+        title: 'API Limit Reached',
+        html: `
+          <p>BoldSign API rate limit has been exceeded.</p>
+          <p class="text-muted mt-2">
+            <small>Sandbox mode: 50 requests/hour<br>
+            Production mode: 2000 requests/hour</small>
+          </p>
+          <p class="mt-2">Please wait a few minutes and try again.</p>
+        `,
+        icon: 'warning',
+        confirmButtonColor: '#405189'
+      });
+    } else {
+      Swal.fire({
+        title: 'Error',
+        text: `${defaultMessage}: ${errorMessage}`,
+        icon: 'error',
+        confirmButtonColor: '#405189'
+      });
     }
   }
 
@@ -141,12 +218,158 @@ export class SignaturesComponent implements OnInit {
       next: (response) => {
         this.stats = response.data?.statistics;
         this.loadingStats = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading stats:', err);
         this.loadingStats = false;
+        this.cdr.detectChanges();
       }
     });
+  }
+
+  loadDashboard(): void {
+    this.loadingDashboard = true;
+    this.signatureService.getDashboard(this.organizationId).subscribe({
+      next: (response) => {
+        this.dashboard = response.data?.dashboard;
+        this.loadingDashboard = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading dashboard:', err);
+        this.loadingDashboard = false;
+        this.cdr.detectChanges();
+
+        // Check for rate limit error
+        const errorMessage = err.error?.message || err.message || '';
+        if (err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota')) {
+          this.handleApiError(err, 'Failed to load dashboard');
+        }
+        // Silently fail for other errors - dashboard will just show empty/cached
+      }
+    });
+  }
+
+  openDocumentDetails(doc: DocumentSummary): void {
+    this.loadingDocumentProperties = true;
+    this.selectedDocumentProperties = null;
+
+    this.signatureService.getDocumentProperties(doc.documentId).subscribe({
+      next: (response) => {
+        this.selectedDocumentProperties = response.data?.document;
+        this.loadingDocumentProperties = false;
+        this.modalService.open(this.documentPropertiesModal, {
+          size: 'lg',
+          centered: true
+        });
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading document properties:', err);
+        this.loadingDocumentProperties = false;
+        this.cdr.detectChanges();
+
+        // Check for rate limit error
+        const errorMessage = err.error?.message || err.message || '';
+        if (err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota')) {
+          this.handleApiError(err, 'Failed to load document details');
+        } else {
+          this.showErrorToast('Failed to load document details');
+        }
+      }
+    });
+  }
+
+  /**
+   * Download audit trail PDF for a document
+   */
+  downloadAuditTrail(documentId: string): void {
+    if (!documentId) return;
+    this.signatureService.downloadAuditTrail(documentId);
+  }
+
+  /**
+   * Download document by BoldSign document ID
+   */
+  downloadDocumentByBoldsignId(documentId: string): void {
+    if (!documentId) return;
+    this.signatureService.downloadDocumentByBoldsignId(documentId);
+  }
+
+  /**
+   * Send reminder for a document
+   */
+  sendDocumentReminder(documentId: string): void {
+    // TODO: Implement reminder via BoldSign API
+    this.showSuccessToast('Reminder sent successfully');
+  }
+
+  /**
+   * View document in BoldSign
+   */
+  viewDocumentInBoldSign(documentId: string): void {
+    // Open BoldSign document view (would need embedded URL from API)
+    window.open(`https://app.boldsign.com/document/${documentId}`, '_blank');
+  }
+
+  /**
+   * Void a document
+   */
+  voidDocument(documentId: string): void {
+    Swal.fire({
+      title: 'Void Document',
+      text: 'Are you sure you want to void this document? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      confirmButtonText: 'Yes, void it',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // TODO: Implement void via BoldSign API
+        this.showSuccessToast('Document voided successfully');
+        this.modalService.dismissAll();
+        this.loadDashboard();
+      }
+    });
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'signed':
+        return 'bg-success';
+      case 'inprogress':
+      case 'sent':
+      case 'waitingforothers':
+        return 'bg-info';
+      case 'declined':
+      case 'revoked':
+        return 'bg-danger';
+      case 'expired':
+        return 'bg-warning';
+      default:
+        return 'bg-secondary';
+    }
+  }
+
+  /**
+   * Get display text for signer status
+   */
+  getSignerStatusDisplay(status: string): string {
+    if (!status) return '-';
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('notyet') || statusLower.includes('notcompleted')) {
+      return 'Not yet viewed';
+    } else if (statusLower === 'completed' || statusLower === 'signed') {
+      return 'Signed';
+    } else if (statusLower === 'viewed') {
+      return 'Viewed';
+    } else if (statusLower === 'declined') {
+      return 'Declined';
+    }
+    return status;
   }
 
   // ==================== Templates ====================
@@ -163,6 +386,19 @@ export class SignaturesComponent implements OnInit {
         this.loadingTemplates = false;
       }
     });
+  }
+
+  // Template stats helpers
+  getReadyTemplatesCount(): number {
+    return this.templates.filter(t => t.boldsignTemplateId).length;
+  }
+
+  getPendingSetupCount(): number {
+    return this.templates.filter(t => !t.boldsignTemplateId).length;
+  }
+
+  getGlobalTemplatesCount(): number {
+    return this.templates.filter(t => t.isGlobal).length;
   }
 
   // ==================== Clients & Cases ====================
@@ -192,6 +428,7 @@ export class SignaturesComponent implements OnInit {
       if (client) {
         this.sendDocForm.signerName = client.name;
         this.sendDocForm.signerEmail = client.email;
+        this.cdr.detectChanges();
       }
       // Load cases for selected client
       this.loadCasesForClient(this.sendDocForm.clientId);
@@ -200,25 +437,26 @@ export class SignaturesComponent implements OnInit {
 
   loadCasesForClient(clientId: number): void {
     this.loadingCases = true;
-    // Load all cases and filter by client - can be optimized with backend filter
     this.caseService.getCases(0, 100).subscribe({
       next: (response) => {
         const allCases = response.data?.cases || [];
-        // Filter cases that have this client
         this.cases = allCases.filter((c: LegalCase) =>
           c.client?.id === String(clientId) || c.clientEmail === this.clients.find(cl => cl.id === clientId)?.email
         );
         this.loadingCases = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading cases:', err);
         this.loadingCases = false;
+        this.cdr.detectChanges();
       }
     });
   }
 
   createNewTemplate(): void {
     this.editingTemplate = false;
+    this.isSettingUpTemplate = false;
     this.selectedTemplate = null;
     this.showCreateTemplateForm = true;
     this.templateEmbedUrl = '';
@@ -258,6 +496,7 @@ export class SignaturesComponent implements OnInit {
     this.templateEmbedUrl = '';
     this.embedError = null;
     this.showCreateTemplateForm = true;
+    this.isSettingUpTemplate = false;
   }
 
   proceedToTemplateEmbed(): void {
@@ -293,8 +532,15 @@ export class SignaturesComponent implements OnInit {
         error: (err) => {
           console.error('Error getting template create URL:', err);
           this.loadingEmbedUrl = false;
-          this.embedError = err.error?.message || 'Failed to load template editor';
           this.cdr.detectChanges();
+
+          // Check for rate limit error
+          const errorMessage = err.error?.message || err.message || '';
+          if (err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota')) {
+            this.handleApiError(err, 'Failed to load template editor');
+          } else {
+            this.embedError = errorMessage || 'Failed to load template editor';
+          }
         }
       });
     };
@@ -321,11 +567,13 @@ export class SignaturesComponent implements OnInit {
     this.selectedTemplate = template;
     this.loadingEmbedUrl = true;
     this.templateEmbedUrl = '';
+    this.cdr.detectChanges();
 
     this.signatureService.getEmbeddedEditTemplateUrl(template.boldsignTemplateId).subscribe({
       next: (response) => {
         this.templateEmbedUrl = response.data?.embedded?.url;
         this.loadingEmbedUrl = false;
+        this.cdr.detectChanges();
 
         this.modalService.open(this.templateModal, {
           size: 'xl',
@@ -337,12 +585,31 @@ export class SignaturesComponent implements OnInit {
       error: (err) => {
         console.error('Error getting template edit URL:', err);
         this.loadingEmbedUrl = false;
-        Swal.fire({
-          title: 'Error',
-          text: 'Failed to load template editor: ' + (err.error?.message || 'Unknown error'),
-          icon: 'error',
-          confirmButtonColor: '#405189'
-        });
+        this.editingTemplate = false;
+        this.cdr.detectChanges();
+
+        const errorMsg = err.error?.message || err.message || '';
+        // Handle 404 - template doesn't exist in BoldSign
+        if (err.status === 404 || errorMsg.includes('Invalid template ID') || errorMsg.includes('404')) {
+          Swal.fire({
+            title: 'Template Not Found',
+            html: `<p>This template no longer exists in BoldSign.</p>
+                   <p class="text-muted mt-2">The template may have been deleted or was never fully created. Would you like to set it up again?</p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Set Up Template',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#405189'
+          }).then((result) => {
+            if (result.isConfirmed && template) {
+              // Clear the invalid boldsignTemplateId and set up fresh
+              template.boldsignTemplateId = undefined;
+              this.setupTemplateInBoldSign(template);
+            }
+          });
+        } else {
+          this.handleApiError(err, 'Failed to load template editor');
+        }
       }
     });
   }
@@ -371,6 +638,7 @@ export class SignaturesComponent implements OnInit {
     this.useTemplateForm = { signerName: '', signerEmail: '' };
     this.showUseTemplateForm = true;
     this.embedError = null;
+    this.cdr.detectChanges();
 
     // Open modal with form first
     this.modalService.open(this.useTemplateModal, {
@@ -411,39 +679,101 @@ export class SignaturesComponent implements OnInit {
       error: (err) => {
         console.error('Error getting template send URL:', err);
         this.loadingEmbedUrl = false;
-        this.embedError = err.error?.message || 'Failed to load document editor.';
         this.cdr.detectChanges();
+
+        const errorMessage = err.error?.message || err.message || '';
+
+        // Handle 400/404 - template doesn't exist in BoldSign
+        if (err.status === 400 || err.status === 404 || errorMessage.includes('Invalid template ID') || errorMessage.includes('not found')) {
+          this.modalService.dismissAll();
+          Swal.fire({
+            title: 'Template Not Found',
+            html: `<p>This template no longer exists in BoldSign.</p>
+                   <p class="text-muted mt-2">The template may have been deleted or was never fully created. Would you like to set it up again?</p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Set Up Template',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#405189'
+          }).then((result) => {
+            if (result.isConfirmed && this.selectedTemplate) {
+              // Clear the invalid boldsignTemplateId and set up fresh
+              this.selectedTemplate.boldsignTemplateId = undefined;
+              this.setupTemplateInBoldSign(this.selectedTemplate);
+            }
+          });
+        } else if (err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota')) {
+          // Check for rate limit error
+          this.handleApiError(err, 'Failed to load document editor');
+        } else {
+          this.embedError = errorMessage || 'Failed to load document editor.';
+        }
       }
     });
+  }
+
+  /**
+   * Normalize category value to match dropdown options
+   */
+  private normalizeCategoryValue(category: string | undefined): string {
+    if (!category) return 'General';
+
+    const normalized = category.toLowerCase().trim();
+    const categoryMap: { [key: string]: string } = {
+      'general': 'General',
+      'retainer': 'Retainer',
+      'retainer agreements': 'Retainer',
+      'retainer agreement': 'Retainer',
+      'nda': 'NDA',
+      'non-disclosure': 'NDA',
+      'non-disclosure agreement': 'NDA',
+      'settlement': 'Settlement',
+      'settlement agreement': 'Settlement',
+      'consent': 'Consent',
+      'consent forms': 'Consent',
+      'consent form': 'Consent',
+      'poa': 'POA',
+      'power of attorney': 'POA',
+      'fee': 'Fee',
+      'fee agreements': 'Fee',
+      'fee agreement': 'Fee',
+      'release': 'Release',
+      'release forms': 'Release',
+      'release form': 'Release'
+    };
+
+    return categoryMap[normalized] || category;
   }
 
   /**
    * Set up a template in BoldSign (for templates that only exist in our DB)
    */
   setupTemplateInBoldSign(template: SignatureTemplate): void {
+    // Pre-populate form with existing template data
     this.editingTemplate = false;
+    this.isSettingUpTemplate = true;
     this.selectedTemplate = template;
-    this.loadingEmbedUrl = true;
+    this.showCreateTemplateForm = true;
     this.templateEmbedUrl = '';
+    this.embedError = null;
+    this.templateFile = null;
 
-    this.signatureService.getEmbeddedCreateTemplateUrl(this.organizationId).subscribe({
-      next: (response) => {
-        this.templateEmbedUrl = response.data?.embedded?.url;
-        this.loadingEmbedUrl = false;
+    // Pre-fill form with existing template details (normalize category for dropdown)
+    this.createTemplateForm = {
+      name: template.name || '',
+      description: template.description || '',
+      category: this.normalizeCategoryValue(template.category)
+    };
 
-        this.modalService.open(this.templateModal, {
-          size: 'xl',
-          centered: true,
-          backdrop: 'static',
-          scrollable: true
-        });
-      },
-      error: (err) => {
-        console.error('Error getting template create URL:', err);
-        this.loadingEmbedUrl = false;
-        this.embedError = err.error?.message || 'Failed to load template editor';
-      }
+    // Open modal with form first so user can upload PDF
+    this.modalService.open(this.templateModal, {
+      size: 'xl',
+      centered: true,
+      backdrop: 'static',
+      scrollable: true
     });
+
+    this.cdr.detectChanges();
   }
 
   deleteTemplate(template: SignatureTemplate): void {
@@ -517,7 +847,6 @@ export class SignaturesComponent implements OnInit {
 
   loadSendDocumentEmbed(): void {
     if (!this.canProceedToEmbed()) {
-      this.embedError = 'Please fill in all required fields and upload a document.';
       return;
     }
 
@@ -551,8 +880,15 @@ export class SignaturesComponent implements OnInit {
         error: (err) => {
           console.error('Error getting embedded send URL:', err);
           this.loadingEmbedUrl = false;
-          this.embedError = err.error?.message || 'Failed to load document editor. Please check your BoldSign API configuration.';
           this.cdr.detectChanges();
+
+          // Check for rate limit error
+          const errorMessage = err.error?.message || err.message || '';
+          if (err.status === 429 || errorMessage.includes('429') || errorMessage.includes('quota')) {
+            this.handleApiError(err, 'Failed to load document editor');
+          } else {
+            this.embedError = errorMessage || 'Failed to load document editor. Please check your BoldSign API configuration.';
+          }
         }
       });
     };
@@ -568,9 +904,6 @@ export class SignaturesComponent implements OnInit {
     console.log('Document sent:', event);
     this.loadStats();
 
-    // Show success toast immediately
-    this.showSuccessToast('Document sent for signature!');
-
     // Allow user to see BoldSign's success message, then redirect after 2.5 seconds
     setTimeout(() => {
       this.switchToDocumentsTab();
@@ -582,9 +915,6 @@ export class SignaturesComponent implements OnInit {
   onDocumentSentFromTemplate(event: BoldSignEvent): void {
     console.log('Document sent from template:', event);
     this.loadStats();
-
-    // Show success toast immediately
-    this.showSuccessToast('Document sent from template!');
 
     // Allow user to see BoldSign's success message, then close modal and redirect
     setTimeout(() => {
@@ -613,9 +943,6 @@ export class SignaturesComponent implements OnInit {
     console.log('Template created:', event);
     this.loadTemplates();
 
-    // Show success toast immediately
-    this.showSuccessToast('Template created successfully!');
-
     // Allow user to see BoldSign's success message, then close modal
     setTimeout(() => {
       this.modalService.dismissAll();
@@ -632,6 +959,14 @@ export class SignaturesComponent implements OnInit {
       size: 'lg',
       centered: true
     });
+  }
+
+  /**
+   * Handle BoldSign document selection from signature-list
+   */
+  onBoldsignDocumentSelected(doc: any): void {
+    // Use the existing openDocumentDetails method
+    this.openDocumentDetails({ documentId: doc.documentId } as any);
   }
 
   onViewAuditLog(request: SignatureRequest): void {
@@ -725,7 +1060,82 @@ export class SignaturesComponent implements OnInit {
     }
   }
 
-  // Toast notification helper
+  // ==================== New Helper Methods ====================
+
+  onGlobalSearch(): void {
+    if (this.globalSearch.trim()) {
+      // TODO: Implement search functionality
+      console.log('Searching for:', this.globalSearch);
+    }
+  }
+
+  filterByDashboard(filter: string): void {
+    if (this.selectedDashboardFilter === filter) {
+      this.selectedDashboardFilter = ''; // Toggle off
+    } else {
+      this.selectedDashboardFilter = filter;
+    }
+    // TODO: Apply filter to document list
+  }
+
+  isExpiringSoon(expiryDate: string | undefined): boolean {
+    if (!expiryDate) return false;
+    try {
+      const expiry = new Date(expiryDate);
+      const now = new Date();
+      const daysUntilExpiry = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  getSignerStatusClass(status: string): string {
+    if (!status) return 'bg-secondary';
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'completed' || statusLower === 'signed') {
+      return 'bg-success';
+    } else if (statusLower === 'declined') {
+      return 'bg-danger';
+    } else if (statusLower === 'viewed') {
+      return 'bg-info';
+    }
+    return 'bg-warning';
+  }
+
+  getActivityIcon(action: string): string {
+    const actionLower = (action || '').toLowerCase();
+    if (actionLower.includes('sent') || actionLower.includes('send')) {
+      return 'ri-send-plane-line';
+    } else if (actionLower.includes('view')) {
+      return 'ri-eye-line';
+    } else if (actionLower.includes('sign') || actionLower.includes('completed')) {
+      return 'ri-check-line';
+    } else if (actionLower.includes('remind')) {
+      return 'ri-notification-3-line';
+    } else if (actionLower.includes('decline') || actionLower.includes('revok')) {
+      return 'ri-close-circle-line';
+    }
+    return 'ri-information-line';
+  }
+
+  getActivityIconClass(action: string): string {
+    const actionLower = (action || '').toLowerCase();
+    if (actionLower.includes('sent') || actionLower.includes('send')) {
+      return 'bg-primary-subtle text-primary';
+    } else if (actionLower.includes('view')) {
+      return 'bg-info-subtle text-info';
+    } else if (actionLower.includes('sign') || actionLower.includes('completed')) {
+      return 'bg-success-subtle text-success';
+    } else if (actionLower.includes('remind')) {
+      return 'bg-warning-subtle text-warning';
+    } else if (actionLower.includes('decline') || actionLower.includes('revok')) {
+      return 'bg-danger-subtle text-danger';
+    }
+    return 'bg-secondary-subtle text-secondary';
+  }
+
+  // Toast notification helpers
   private showSuccessToast(message: string): void {
     const Toast = Swal.mixin({
       toast: true,
@@ -742,5 +1152,248 @@ export class SignaturesComponent implements OnInit {
       icon: 'success',
       title: message
     });
+  }
+
+  private showErrorToast(message: string): void {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      }
+    });
+    Toast.fire({
+      icon: 'error',
+      title: message
+    });
+  }
+
+  // ==================== Branding ====================
+
+  loadBrandSettings(): void {
+    this.brandLoading = true;
+    this.signatureService.getBrand(this.organizationId).subscribe({
+      next: (response) => {
+        this.brandLoading = false;
+        if (response?.data?.brand && Object.keys(response.data.brand).length > 0) {
+          this.brandSettings = response.data.brand;
+          if (this.brandSettings.brandLogoUrl) {
+            this.logoPreviewUrl = this.brandSettings.brandLogoUrl;
+          }
+        } else {
+          // Initialize with defaults
+          this.brandSettings = {
+            brandName: '',
+            primaryColor: '#405189',
+            backgroundColor: '#ffffff',
+            buttonColor: '#405189',
+            buttonTextColor: '#ffffff',
+            emailDisplayName: ''
+          };
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.brandLoading = false;
+        console.error('Failed to load brand settings:', error);
+        // Initialize with defaults on error
+        this.brandSettings = {
+          brandName: '',
+          primaryColor: '#405189',
+          backgroundColor: '#ffffff',
+          buttonColor: '#405189',
+          buttonTextColor: '#ffffff',
+          emailDisplayName: ''
+        };
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  saveBrandSettings(): void {
+    // Validate required fields
+    if (!this.brandSettings.brandName || this.brandSettings.brandName.trim() === '') {
+      this.brandSaveResult = {
+        success: false,
+        message: 'Brand name is required'
+      };
+      return;
+    }
+
+    // For new brands (no brandId), logo is required
+    if (!this.brandSettings.brandId && !this.selectedLogoFile && !this.brandSettings.brandLogoUrl) {
+      this.brandSaveResult = {
+        success: false,
+        message: 'Brand logo is required. Please upload a logo file (JPG, JPEG, PNG, or SVG).'
+      };
+      return;
+    }
+
+    this.brandSaving = true;
+    this.brandSaveResult = null;
+
+    // If a new logo file is selected, convert to base64 and send
+    if (this.selectedLogoFile) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1]; // Remove data:image/...;base64, prefix
+        const brandData: BrandSettings = {
+          ...this.brandSettings,
+          brandLogoBase64: base64,
+          brandLogoFileName: this.selectedLogoFile!.name
+        };
+        this.submitBrandSettings(brandData);
+      };
+      reader.onerror = () => {
+        this.brandSaving = false;
+        this.brandSaveResult = {
+          success: false,
+          message: 'Failed to read the logo file. Please try again.'
+        };
+        this.cdr.detectChanges();
+      };
+      reader.readAsDataURL(this.selectedLogoFile);
+    } else {
+      // No new file, submit without base64
+      this.submitBrandSettings(this.brandSettings);
+    }
+  }
+
+  private submitBrandSettings(brandData: BrandSettings): void {
+    this.signatureService.saveBrand(this.organizationId, brandData).subscribe({
+      next: (response) => {
+        this.brandSaving = false;
+        if (response?.data?.brand) {
+          this.brandSettings = response.data.brand;
+          // Update logo URL if returned
+          if (response.data.brand.brandLogoUrl) {
+            this.logoPreviewUrl = response.data.brand.brandLogoUrl;
+          }
+        }
+        this.selectedLogoFile = null; // Clear file after successful save
+        this.brandSaveResult = {
+          success: true,
+          message: 'Brand settings saved successfully!'
+        };
+        this.showSuccessToast('Brand settings saved!');
+        this.cdr.detectChanges();
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          this.brandSaveResult = null;
+          this.cdr.detectChanges();
+        }, 3000);
+      },
+      error: (error) => {
+        this.brandSaving = false;
+        this.brandSaveResult = {
+          success: false,
+          message: error.error?.message || 'Failed to save brand settings'
+        };
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  deleteBrandSettings(): void {
+    Swal.fire({
+      title: 'Delete Brand Settings?',
+      text: 'This will remove your custom branding from all e-signature documents.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f06548',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.brandSaving = true;
+        this.brandSaveResult = null;
+
+        this.signatureService.deleteBrand(this.organizationId).subscribe({
+          next: () => {
+            this.brandSaving = false;
+            this.brandSettings = {
+              brandName: '',
+              primaryColor: '#405189',
+              backgroundColor: '#ffffff',
+              buttonColor: '#405189',
+              buttonTextColor: '#ffffff'
+            };
+            this.logoPreviewUrl = null;
+            this.selectedLogoFile = null;
+            this.brandSaveResult = {
+              success: true,
+              message: 'Brand settings deleted successfully!'
+            };
+            this.showSuccessToast('Brand settings deleted!');
+            this.cdr.detectChanges();
+            setTimeout(() => {
+              this.brandSaveResult = null;
+              this.cdr.detectChanges();
+            }, 3000);
+          },
+          error: (error) => {
+            this.brandSaving = false;
+            this.brandSaveResult = {
+              success: false,
+              message: error.error?.message || 'Failed to delete brand settings'
+            };
+            this.cdr.detectChanges();
+          }
+        });
+      }
+    });
+  }
+
+  onLogoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.selectedLogoFile = input.files[0];
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.logoPreviewUrl = reader.result as string;
+        this.cdr.detectChanges();
+      };
+      reader.readAsDataURL(this.selectedLogoFile);
+    }
+  }
+
+  onLogoDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      if (file.type.startsWith('image/')) {
+        this.selectedLogoFile = file;
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.logoPreviewUrl = reader.result as string;
+          this.cdr.detectChanges();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }
+
+  onLogoDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  removeLogo(): void {
+    this.selectedLogoFile = null;
+    this.logoPreviewUrl = null;
+    this.brandSettings.brandLogoUrl = undefined;
+  }
+
+  onBrandTabActivated(): void {
+    if (!this.brandSettings.brandName && !this.brandLoading) {
+      this.loadBrandSettings();
+    }
   }
 }

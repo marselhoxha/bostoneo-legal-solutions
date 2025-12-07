@@ -29,6 +29,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -237,6 +238,33 @@ public class BoldSignServiceImpl implements BoldSignService {
         }
 
         return downloadFromBoldSign(request.getBoldsignDocumentId());
+    }
+
+    @Override
+    public byte[] downloadAuditTrail(String boldsignDocumentId) {
+        validateBoldSignEnabled();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    boldSignConfig.getAuditTrailUrl(boldsignDocumentId),
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    byte[].class
+            );
+            return response.getBody();
+
+        } catch (Exception e) {
+            log.error("Failed to download audit trail from BoldSign: {}", e.getMessage());
+            throw new ApiException("Failed to download audit trail: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public byte[] downloadDocumentFromBoldSign(String boldsignDocumentId) {
+        return downloadFromBoldSign(boldsignDocumentId);
     }
 
     @Override
@@ -478,12 +506,21 @@ public class BoldSignServiceImpl implements BoldSignService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // BoldSign requires POST with JSON body for embedded template edit
+        var requestBody = new java.util.HashMap<String, Object>();
+        requestBody.put("ShowToolbar", true);
+        requestBody.put("ShowSaveButton", true);
+        requestBody.put("ShowPreviewButton", true);
+        requestBody.put("ShowNavigationButtons", true);
+
+        HttpEntity<java.util.Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
+            ResponseEntity<String> response = restTemplate.postForEntity(
                     boldSignConfig.getEmbeddedTemplateEditUrl(boldsignTemplateId),
-                    HttpMethod.GET,
-                    new HttpEntity<>(headers),
+                    request,
                     String.class
             );
 
@@ -697,6 +734,584 @@ public class BoldSignServiceImpl implements BoldSignService {
         } catch (JsonProcessingException e) {
             log.error("Failed to parse webhook payload: {}", e.getMessage());
             throw new ApiException("Invalid webhook payload");
+        }
+    }
+
+    // ==================== Dashboard ====================
+
+    // Cache for dashboard data to reduce API calls (50 calls/hour limit)
+    private BoldSignDashboardDTO cachedDashboard = null;
+    private Long cachedDashboardOrgId = null;
+    private LocalDateTime cachedDashboardTime = null;
+    private static final int DASHBOARD_CACHE_MINUTES = 5;
+
+    @Override
+    @Transactional(readOnly = true)
+    public BoldSignDashboardDTO getDashboard(Long organizationId) {
+        validateBoldSignEnabled();
+
+        // Check cache first (5 minute cache to reduce API calls)
+        if (cachedDashboard != null
+                && organizationId.equals(cachedDashboardOrgId)
+                && cachedDashboardTime != null
+                && LocalDateTime.now().isBefore(cachedDashboardTime.plusMinutes(DASHBOARD_CACHE_MINUTES))) {
+            log.debug("Returning cached dashboard for organization {}", organizationId);
+            return cachedDashboard;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            // Use a single API call to fetch all documents and categorize them locally
+            // This reduces from 7+ API calls to just 1
+            var allDocsResponse = fetchAllDocuments(headers, 50);
+
+            int waitingForMe = 0;
+            int waitingForOthers = 0;
+            int needsAttention = 0;
+            int completed = 0;
+            int revoked = 0;
+
+            List<BoldSignDashboardDTO.DocumentSummaryDTO> waitingForOthersList = new ArrayList<>();
+            List<BoldSignDashboardDTO.DocumentSummaryDTO> needsAttentionList = new ArrayList<>();
+            List<BoldSignDashboardDTO.DocumentSummaryDTO> recentActivityList = new ArrayList<>();
+
+            // Categorize documents locally
+            for (var doc : allDocsResponse) {
+                String status = doc.getStatus();
+                switch (status.toUpperCase()) {
+                    case "WAITINGFORME" -> waitingForMe++;
+                    case "WAITINGFOROTHERS", "SENT", "INPROGRESS" -> {
+                        waitingForOthers++;
+                        if (waitingForOthersList.size() < 5) {
+                            waitingForOthersList.add(doc);
+                        }
+                    }
+                    case "NEEDSATTENTION", "EXPIRED", "DECLINED" -> {
+                        needsAttention++;
+                        if (needsAttentionList.size() < 5) {
+                            needsAttentionList.add(doc);
+                        }
+                    }
+                    case "COMPLETED" -> {
+                        completed++;
+                        if (recentActivityList.size() < 5) {
+                            recentActivityList.add(doc);
+                        }
+                    }
+                    case "REVOKED", "VOIDED" -> {
+                        revoked++;
+                        if (recentActivityList.size() < 5) {
+                            recentActivityList.add(0, doc); // Add revoked at the beginning
+                        }
+                    }
+                }
+            }
+
+            BoldSignDashboardDTO dashboard = BoldSignDashboardDTO.builder()
+                    .waitingForMe(waitingForMe)
+                    .waitingForOthers(waitingForOthers)
+                    .needsAttention(needsAttention)
+                    .completed(completed)
+                    .revoked(revoked)
+                    .totalDocuments(waitingForMe + waitingForOthers + completed + revoked)
+                    .waitingForOthersList(waitingForOthersList)
+                    .needsAttentionList(needsAttentionList)
+                    .recentActivityList(recentActivityList)
+                    .build();
+
+            // Cache the result
+            cachedDashboard = dashboard;
+            cachedDashboardOrgId = organizationId;
+            cachedDashboardTime = LocalDateTime.now();
+
+            return dashboard;
+
+        } catch (Exception e) {
+            log.error("Failed to fetch dashboard from BoldSign: {}", e.getMessage());
+            // Return empty dashboard on error
+            return BoldSignDashboardDTO.builder()
+                    .waitingForMe(0)
+                    .waitingForOthers(0)
+                    .needsAttention(0)
+                    .completed(0)
+                    .revoked(0)
+                    .totalDocuments(0)
+                    .waitingForOthersList(new ArrayList<>())
+                    .needsAttentionList(new ArrayList<>())
+                    .recentActivityList(new ArrayList<>())
+                    .build();
+        }
+    }
+
+    /**
+     * Fetch all recent documents in a single API call and return them categorized.
+     * This is much more efficient than making separate calls for each status.
+     */
+    private List<BoldSignDashboardDTO.DocumentSummaryDTO> fetchAllDocuments(HttpHeaders headers, int limit) {
+        List<BoldSignDashboardDTO.DocumentSummaryDTO> documents = new ArrayList<>();
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    boldSignConfig.getBaseUrl() + "/document/list?PageSize=" + limit,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+            JsonNode body = objectMapper.readTree(response.getBody());
+            JsonNode results = body.path("result");
+
+            if (results.isArray()) {
+                for (JsonNode doc : results) {
+                    String signerName = "";
+                    String signerEmail = "";
+                    String statusMessage = "";
+                    String status = doc.path("status").asText("Unknown");
+
+                    // Get first signer info
+                    JsonNode signers = doc.path("signerDetails");
+                    if (signers.isArray() && signers.size() > 0) {
+                        JsonNode firstSigner = signers.get(0);
+                        signerName = firstSigner.path("signerName").asText("");
+                        signerEmail = firstSigner.path("signerEmail").asText("");
+                        statusMessage = firstSigner.path("status").asText("");
+                    }
+
+                    documents.add(BoldSignDashboardDTO.DocumentSummaryDTO.builder()
+                            .documentId(doc.path("documentId").asText())
+                            .title(doc.path("messageTitle").asText(doc.path("documentId").asText()))
+                            .signerName(signerName)
+                            .signerEmail(signerEmail)
+                            .status(status)
+                            .statusMessage(statusMessage)
+                            .createdDate(doc.path("createdDate").asText())
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch documents: {}", e.getMessage());
+        }
+
+        return documents;
+    }
+
+    @Override
+    public BoldSignDocumentListDTO listDocumentsFromBoldSign(String status, int page, int pageSize) {
+        validateBoldSignEnabled();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            StringBuilder urlBuilder = new StringBuilder(boldSignConfig.getBaseUrl())
+                    .append("/document/list?Page=").append(page)
+                    .append("&PageSize=").append(pageSize);
+
+            // Add status filter if provided
+            if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("All")) {
+                urlBuilder.append("&Status=").append(status);
+            }
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    urlBuilder.toString(),
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            JsonNode body = objectMapper.readTree(response.getBody());
+            int totalCount = body.path("pageDetails").path("totalRecordsCount").asInt(0);
+
+            List<BoldSignDocumentDTO> documents = new ArrayList<>();
+            JsonNode results = body.path("result");
+
+            if (results.isArray()) {
+                for (JsonNode doc : results) {
+                    String signerName = "";
+                    String signerEmail = "";
+                    String signerStatus = "";
+
+                    // Get first signer info
+                    JsonNode signers = doc.path("signerDetails");
+                    if (signers.isArray() && signers.size() > 0) {
+                        JsonNode firstSigner = signers.get(0);
+                        signerName = firstSigner.path("signerName").asText("");
+                        signerEmail = firstSigner.path("signerEmail").asText("");
+                        signerStatus = firstSigner.path("status").asText("");
+                    }
+
+                    // Get activity info - activityDate is a Unix timestamp (seconds since epoch)
+                    String lastActivityDate = "";
+                    String lastActivityBy = doc.path("activityBy").asText("");
+                    String lastActivityAction = doc.path("activity").asText("");
+
+                    // Parse activityDate - it's a Unix timestamp (long)
+                    JsonNode activityDateNode = doc.path("activityDate");
+                    if (!activityDateNode.isMissingNode() && activityDateNode.isNumber()) {
+                        long timestamp = activityDateNode.asLong();
+                        if (timestamp > 0) {
+                            // Convert Unix timestamp to ISO date string
+                            java.time.Instant instant = java.time.Instant.ofEpochSecond(timestamp);
+                            lastActivityDate = instant.atZone(java.time.ZoneId.systemDefault())
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+                        }
+                    }
+
+                    // Build the activity description from action and actor
+                    if (lastActivityAction.isEmpty() && !lastActivityBy.isEmpty()) {
+                        // Try to infer action from status
+                        String docStatus = doc.path("status").asText("").toLowerCase();
+                        if (docStatus.contains("completed")) {
+                            lastActivityAction = "has completed the document";
+                        } else if (docStatus.contains("sent") || docStatus.contains("inprogress") || docStatus.contains("waitingforothers")) {
+                            lastActivityAction = "has sent the document";
+                        } else if (docStatus.contains("viewed")) {
+                            lastActivityAction = "has viewed the document";
+                        } else if (docStatus.contains("revoked") || docStatus.contains("voided")) {
+                            lastActivityAction = "has revoked the document";
+                        } else if (docStatus.contains("declined")) {
+                            lastActivityAction = "has declined the document";
+                        }
+                    }
+
+                    // Fallback: use createdDate if no activity date
+                    if (lastActivityDate.isEmpty()) {
+                        String createdDate = doc.path("createdDate").asText("");
+                        if (!createdDate.isEmpty()) {
+                            try {
+                                java.time.ZonedDateTime zdt = java.time.ZonedDateTime.parse(createdDate);
+                                lastActivityDate = zdt.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+                            } catch (Exception e) {
+                                lastActivityDate = createdDate;
+                            }
+                        }
+                    }
+
+                    documents.add(new BoldSignDocumentDTO(
+                            doc.path("documentId").asText(),
+                            doc.path("messageTitle").asText("Untitled Document"),
+                            doc.path("status").asText("Unknown"),
+                            doc.path("createdDate").asText(""),
+                            doc.path("expiryDate").asText(null),
+                            doc.path("senderDetail").path("name").asText(""),
+                            doc.path("senderDetail").path("emailAddress").asText(""),
+                            signerName,
+                            signerEmail,
+                            signerStatus,
+                            lastActivityDate,
+                            lastActivityBy,
+                            lastActivityAction
+                    ));
+                }
+            }
+
+            return new BoldSignDocumentListDTO(documents, totalCount, page, pageSize);
+
+        } catch (Exception e) {
+            log.error("Failed to list documents from BoldSign: {}", e.getMessage());
+            return new BoldSignDocumentListDTO(new ArrayList<>(), 0, page, pageSize);
+        }
+    }
+
+    @Override
+    public DocumentPropertiesDTO getDocumentProperties(String boldsignDocumentId) {
+        validateBoldSignEnabled();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    boldSignConfig.getBaseUrl() + "/document/properties?documentId=" + boldsignDocumentId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            JsonNode body = objectMapper.readTree(response.getBody());
+
+            // Parse sender details
+            JsonNode senderNode = body.path("senderDetail");
+            SenderDetailDTO senderDetail = new SenderDetailDTO(
+                    senderNode.path("name").asText(""),
+                    senderNode.path("emailAddress").asText("")
+            );
+
+            // Get first signer name for status description
+            String firstSignerName = "";
+            JsonNode signersNode = body.path("signerDetails");
+            if (signersNode.isArray() && signersNode.size() > 0) {
+                firstSignerName = signersNode.get(0).path("signerName").asText("");
+            }
+
+            // Build status description
+            String status = body.path("status").asText("");
+            String statusDescription = buildStatusDescription(status, firstSignerName);
+
+            // Format dates - use formatBoldSignDateNode to handle both Unix timestamps and ISO strings
+            String createdDate = body.path("createdDate").asText("");
+            String sentOn = formatBoldSignDateNode(body.path("createdDate"));
+
+            // Get last activity from document history
+            // BoldSign API fields: timestamp (Unix epoch), name, action, ipaddress (lowercase)
+            String lastActivityDate = "";
+            String lastActivityDescription = "";
+            JsonNode historyNode = body.path("documentHistory");
+            if (historyNode.isArray() && historyNode.size() > 0) {
+                JsonNode lastActivity = historyNode.get(0);
+                // BoldSign uses "timestamp" (Unix epoch)
+                lastActivityDate = formatBoldSignDateNode(lastActivity.path("timestamp"));
+                // BoldSign uses "name" for actor
+                String activityBy = lastActivity.path("name").asText("");
+                // BoldSign uses "action" for action description
+                String activityAction = lastActivity.path("action").asText("");
+                if (!activityBy.isEmpty()) {
+                    lastActivityDescription = activityBy + " " + activityAction.toLowerCase();
+                }
+            }
+
+            // Parse files - try multiple paths
+            List<String> files = new ArrayList<>();
+            // Try "files" array
+            JsonNode filesNode = body.path("files");
+            if (filesNode.isArray()) {
+                for (JsonNode file : filesNode) {
+                    String fileName = file.path("fileName").asText(file.path("name").asText(""));
+                    if (!fileName.isEmpty()) {
+                        files.add(fileName);
+                    }
+                }
+            }
+            // Try "documentDetails" array
+            if (files.isEmpty()) {
+                JsonNode docDetailsNode = body.path("documentDetails");
+                if (docDetailsNode.isArray()) {
+                    for (JsonNode doc : docDetailsNode) {
+                        String fileName = doc.path("documentName").asText(doc.path("fileName").asText(""));
+                        if (!fileName.isEmpty()) {
+                            files.add(fileName);
+                        }
+                    }
+                }
+            }
+            // Try single fileName field
+            if (files.isEmpty()) {
+                String fileName = body.path("fileName").asText("");
+                if (!fileName.isEmpty()) {
+                    files.add(fileName);
+                }
+            }
+            // Fallback: use messageTitle + .pdf
+            if (files.isEmpty()) {
+                String title = body.path("messageTitle").asText("");
+                if (!title.isEmpty()) {
+                    files.add(title + ".pdf");
+                }
+            }
+
+            // Get brand name - try brandName first, then look up by brandId
+            String brandName = body.path("brandName").asText("");
+            String brandId = body.path("brandId").asText("");
+            if (brandName.isEmpty() && !brandId.isEmpty()) {
+                // Try to get brand name from our cached brands or make API call
+                brandName = getBrandNameById(brandId);
+            }
+
+            // Parse signer details with additional fields
+            List<SignerDetailDTO> signerDetails = new ArrayList<>();
+            if (signersNode.isArray()) {
+                for (JsonNode signer : signersNode) {
+                    String signerStatus = signer.path("status").asText("");
+                    String deliveryMode = signer.path("deliveryMode").asText("Email");
+                    String authenticationType = signer.path("authenticationType").asText("-");
+
+                    // Get signer's last activity
+                    String signerLastActivity = "";
+                    JsonNode signerActivityNode = signer.path("lastActivityDate");
+                    if (!signerActivityNode.isMissingNode()) {
+                        signerLastActivity = formatBoldSignDate(signerActivityNode.asText(""));
+                    }
+
+                    signerDetails.add(new SignerDetailDTO(
+                            signer.path("signerName").asText(""),
+                            signer.path("signerEmail").asText(""),
+                            signer.path("signerType").asText("Signer"),
+                            signerStatus,
+                            signer.path("signedDate").asText(null),
+                            signer.path("signerOrder").asInt(1),
+                            deliveryMode,
+                            signerLastActivity,
+                            authenticationType
+                    ));
+                }
+            }
+
+            // Parse document history with all fields
+            // BoldSign API fields: timestamp (Unix epoch), name, action, ipaddress (lowercase), email
+            List<ActivityDTO> documentHistory = new ArrayList<>();
+            if (historyNode.isArray()) {
+                for (JsonNode activityNode : historyNode) {
+                    // BoldSign uses "timestamp" (Unix epoch)
+                    String activityDate = formatBoldSignDateNode(activityNode.path("timestamp"));
+                    // BoldSign uses "action" for the action description (e.g., "Signed", "Viewed", "Sent")
+                    String activityAction = activityNode.path("action").asText("");
+                    // BoldSign uses "name" for the actor
+                    String activityBy = activityNode.path("name").asText("");
+                    // BoldSign uses "ipaddress" (lowercase!)
+                    String ipAddress = activityNode.path("ipaddress").asText("-");
+                    // The action field IS the short action type
+                    String action = activityAction;
+
+                    documentHistory.add(new ActivityDTO(
+                            activityBy,
+                            activityDate,
+                            activityAction,
+                            ipAddress,
+                            action
+                    ));
+                }
+            }
+
+            // Format expiry date
+            String expiryDate = formatBoldSignDateNode(body.path("expiryDate"));
+
+            return new DocumentPropertiesDTO(
+                    body.path("documentId").asText(),
+                    body.path("messageTitle").asText(""),
+                    body.path("documentDescription").asText(""),
+                    status,
+                    statusDescription,
+                    createdDate,
+                    sentOn,
+                    lastActivityDate,
+                    lastActivityDescription,
+                    expiryDate.isEmpty() ? null : expiryDate,
+                    body.path("expiryDays").asInt(0),
+                    body.path("enableSigningOrder").asBoolean(false),
+                    files,
+                    brandName,
+                    senderDetail,
+                    signerDetails,
+                    documentHistory
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to get document properties for {}: {}", boldsignDocumentId, e.getMessage());
+            throw new ApiException("Failed to get document properties: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Build a human-readable status description
+     */
+    private String buildStatusDescription(String status, String signerName) {
+        if (status == null || status.isEmpty()) return "";
+
+        String statusLower = status.toLowerCase();
+        if (statusLower.contains("waitingforothers") || statusLower.equals("inprogress") || statusLower.equals("sent")) {
+            return "Needs to be signed by " + (signerName.isEmpty() ? "recipient" : signerName);
+        } else if (statusLower.equals("completed")) {
+            return "Signed by all parties";
+        } else if (statusLower.equals("declined")) {
+            return "Declined by " + (signerName.isEmpty() ? "recipient" : signerName);
+        } else if (statusLower.equals("expired")) {
+            return "Document has expired";
+        } else if (statusLower.contains("revoked") || statusLower.equals("voided")) {
+            return "Revoked by sender";
+        }
+        return "";
+    }
+
+    /**
+     * Format a BoldSign date for display - handles both Unix timestamps and ISO date strings
+     */
+    private String formatBoldSignDate(String dateString) {
+        if (dateString == null || dateString.isEmpty()) return "";
+
+        try {
+            // First, check if it's a Unix timestamp (all digits)
+            if (dateString.matches("\\d+")) {
+                long timestamp = Long.parseLong(dateString);
+                // BoldSign uses seconds, not milliseconds
+                java.time.Instant instant = java.time.Instant.ofEpochSecond(timestamp);
+                return instant.atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+            }
+
+            // Try parsing as ISO date string
+            java.time.ZonedDateTime zdt = java.time.ZonedDateTime.parse(dateString);
+            return zdt.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+        } catch (Exception e) {
+            // Try other common formats
+            try {
+                java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(dateString,
+                        java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                return ldt.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+            } catch (Exception e2) {
+                // Return as-is if all parsing fails
+                return dateString;
+            }
+        }
+    }
+
+    /**
+     * Format a BoldSign date from JsonNode - handles both number and string types
+     */
+    private String formatBoldSignDateNode(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) return "";
+
+        if (node.isNumber()) {
+            long timestamp = node.asLong();
+            if (timestamp > 0) {
+                java.time.Instant instant = java.time.Instant.ofEpochSecond(timestamp);
+                return instant.atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+            }
+            return "";
+        }
+
+        return formatBoldSignDate(node.asText(""));
+    }
+
+    /**
+     * Extract short action type from activity action description
+     */
+    private String extractActionType(String activityAction) {
+        if (activityAction == null || activityAction.isEmpty()) return "-";
+        String lower = activityAction.toLowerCase();
+        if (lower.contains("sent")) return "Sent";
+        if (lower.contains("viewed")) return "Viewed";
+        if (lower.contains("signed") || lower.contains("completed")) return "Signed";
+        if (lower.contains("reminder")) return "Reminder";
+        if (lower.contains("declined")) return "Declined";
+        if (lower.contains("revoked") || lower.contains("voided")) return "Revoked";
+        if (lower.contains("created")) return "Created";
+        if (lower.contains("downloaded")) return "Downloaded";
+        return "-";
+    }
+
+    /**
+     * Get brand name by brand ID from BoldSign API
+     */
+    private String getBrandNameById(String brandId) {
+        if (brandId == null || brandId.isEmpty()) return "";
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    boldSignConfig.getBaseUrl() + "/brand/get?brandId=" + brandId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            JsonNode body = objectMapper.readTree(response.getBody());
+            return body.path("brandName").asText(brandId);
+        } catch (Exception e) {
+            log.debug("Could not fetch brand name for {}: {}", brandId, e.getMessage());
+            return brandId; // Return brandId as fallback
         }
     }
 
@@ -1336,6 +1951,254 @@ public class BoldSignServiceImpl implements BoldSignService {
                     java.time.format.DateTimeFormatter.ISO_DATE_TIME);
         } catch (Exception e) {
             return LocalDateTime.now();
+        }
+    }
+
+    // ==================== Branding (Multi-Tenant) ====================
+
+    @Override
+    public BrandDTO createBrand(Long organizationId, BrandDTO brand) {
+        validateBoldSignEnabled();
+
+        // Validate required fields
+        if (brand.brandName() == null || brand.brandName().trim().isEmpty()) {
+            throw new ApiException("Brand name is required");
+        }
+        if (brand.brandLogoBase64() == null || brand.brandLogoBase64().trim().isEmpty()) {
+            throw new ApiException("Brand logo is required. Please upload a logo file (JPG, JPEG, PNG, or SVG).");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        // Required fields
+        body.add("BrandName", brand.brandName());
+
+        // Add logo file from base64
+        byte[] logoBytes = java.util.Base64.getDecoder().decode(brand.brandLogoBase64());
+        String logoFileName = brand.brandLogoFileName() != null ? brand.brandLogoFileName() : "logo.png";
+        org.springframework.core.io.ByteArrayResource logoResource = new org.springframework.core.io.ByteArrayResource(logoBytes) {
+            @Override
+            public String getFilename() {
+                return logoFileName;
+            }
+        };
+        body.add("BrandLogo", logoResource);
+
+        // Optional fields
+        if (brand.backgroundColor() != null) {
+            body.add("BackgroundColor", brand.backgroundColor());
+        }
+        if (brand.buttonColor() != null) {
+            body.add("ButtonColor", brand.buttonColor());
+        }
+        if (brand.buttonTextColor() != null) {
+            body.add("ButtonTextColor", brand.buttonTextColor());
+        }
+        if (brand.emailDisplayName() != null) {
+            body.add("EmailDisplayName", brand.emailDisplayName());
+        }
+        // Note: BoldSign uses "brandColor" for primary color in branding
+        if (brand.primaryColor() != null) {
+            body.add("BrandColor", brand.primaryColor());
+        }
+
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    boldSignConfig.getBaseUrl() + "/brand/create",
+                    request,
+                    String.class
+            );
+
+            JsonNode responseBody = objectMapper.readTree(response.getBody());
+            String brandId = responseBody.path("brandId").asText();
+
+            log.info("Created brand {} for organization {}", brandId, organizationId);
+
+            return new BrandDTO(
+                    brandId,
+                    brand.brandName(),
+                    brand.brandLogoUrl(),
+                    null,  // Don't return the base64 back
+                    brand.brandLogoFileName(),
+                    brand.primaryColor(),
+                    brand.backgroundColor(),
+                    brand.buttonColor(),
+                    brand.buttonTextColor(),
+                    brand.emailDisplayName(),
+                    brand.disclaimerTitle(),
+                    brand.disclaimerDescription()
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to create brand: {}", e.getMessage());
+            throw new ApiException("Failed to create brand: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public BrandDTO getBrand(Long organizationId) {
+        validateBoldSignEnabled();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    boldSignConfig.getBaseUrl() + "/brand/list",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            JsonNode responseBody = objectMapper.readTree(response.getBody());
+            JsonNode brands = responseBody.path("result");
+
+            if (brands.isArray() && brands.size() > 0) {
+                // Return the first brand (or you could match by organizationId if stored)
+                JsonNode brand = brands.get(0);
+                return new BrandDTO(
+                        brand.path("brandId").asText(),
+                        brand.path("brandName").asText(),
+                        brand.path("brandLogo").asText(null),
+                        null,  // brandLogoBase64 - not returned from API
+                        null,  // brandLogoFileName - not returned from API
+                        brand.path("brandColor").asText(null),
+                        brand.path("backgroundColor").asText(null),
+                        brand.path("buttonColor").asText(null),
+                        brand.path("buttonTextColor").asText(null),
+                        brand.path("emailDisplayName").asText(null),
+                        brand.path("disclaimerTitle").asText(null),
+                        brand.path("disclaimerDescription").asText(null)
+                );
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            log.error("Failed to get brand: {}", e.getMessage());
+            // Return null instead of throwing - brand may not exist yet
+            return null;
+        }
+    }
+
+    @Override
+    public BrandDTO updateBrand(Long organizationId, BrandDTO brand) {
+        validateBoldSignEnabled();
+
+        // Validate required fields
+        if (brand.brandId() == null || brand.brandId().trim().isEmpty()) {
+            throw new ApiException("Brand ID is required for update");
+        }
+        if (brand.brandName() == null || brand.brandName().trim().isEmpty()) {
+            throw new ApiException("Brand name is required");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        // brandId is passed as query parameter, not in body
+        // Add brandName to body
+        body.add("BrandName", brand.brandName());
+
+        // Add logo file from base64 if provided
+        if (brand.brandLogoBase64() != null && !brand.brandLogoBase64().trim().isEmpty()) {
+            byte[] logoBytes = java.util.Base64.getDecoder().decode(brand.brandLogoBase64());
+            String logoFileName = brand.brandLogoFileName() != null ? brand.brandLogoFileName() : "logo.png";
+            org.springframework.core.io.ByteArrayResource logoResource = new org.springframework.core.io.ByteArrayResource(logoBytes) {
+                @Override
+                public String getFilename() {
+                    return logoFileName;
+                }
+            };
+            body.add("BrandLogo", logoResource);
+        }
+
+        // Optional fields
+        if (brand.backgroundColor() != null) {
+            body.add("BackgroundColor", brand.backgroundColor());
+        }
+        if (brand.buttonColor() != null) {
+            body.add("ButtonColor", brand.buttonColor());
+        }
+        if (brand.buttonTextColor() != null) {
+            body.add("ButtonTextColor", brand.buttonTextColor());
+        }
+        if (brand.emailDisplayName() != null) {
+            body.add("EmailDisplayName", brand.emailDisplayName());
+        }
+        if (brand.primaryColor() != null) {
+            body.add("BrandColor", brand.primaryColor());
+        }
+
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            // BoldSign uses POST (not PATCH) for brand edit, with brandId as query parameter
+            restTemplate.postForEntity(
+                    boldSignConfig.getBaseUrl() + "/brand/edit?brandId=" + brand.brandId(),
+                    request,
+                    String.class
+            );
+
+            log.info("Updated brand {} for organization {}", brand.brandId(), organizationId);
+
+            return new BrandDTO(
+                    brand.brandId(),
+                    brand.brandName(),
+                    brand.brandLogoUrl(),
+                    null,  // Don't return the base64 back
+                    brand.brandLogoFileName(),
+                    brand.primaryColor(),
+                    brand.backgroundColor(),
+                    brand.buttonColor(),
+                    brand.buttonTextColor(),
+                    brand.emailDisplayName(),
+                    brand.disclaimerTitle(),
+                    brand.disclaimerDescription()
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to update brand: {}", e.getMessage());
+            throw new ApiException("Failed to update brand: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void deleteBrand(Long organizationId) {
+        validateBoldSignEnabled();
+
+        // First get the brand to get its ID
+        BrandDTO brand = getBrand(organizationId);
+        if (brand == null || brand.brandId() == null) {
+            log.warn("No brand found for organization {}", organizationId);
+            return;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+
+        try {
+            restTemplate.exchange(
+                    boldSignConfig.getBaseUrl() + "/brand/delete?brandId=" + brand.brandId(),
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            log.info("Deleted brand {} for organization {}", brand.brandId(), organizationId);
+
+        } catch (Exception e) {
+            log.error("Failed to delete brand: {}", e.getMessage());
+            throw new ApiException("Failed to delete brand: " + e.getMessage());
         }
     }
 }

@@ -106,6 +106,13 @@ public class BoldSignConfig {
         return apiUrl + "/document/download?documentId=" + documentId;
     }
 
+    /**
+     * Get the audit trail download endpoint
+     */
+    public String getAuditTrailUrl(String documentId) {
+        return apiUrl + "/document/downloadAuditLog?documentId=" + documentId;
+    }
+
     // ==================== Embedded URLs ====================
 
     /**

@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectorRef } fro
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { SignatureService, SignatureRequest, SignatureStatus } from '../../../core/services/signature.service';
+import { SignatureService, SignatureRequest, SignatureStatus, BoldSignDocument } from '../../../core/services/signature.service';
 import { SignatureStatusBadgeComponent } from '../signature-status-badge/signature-status-badge.component';
 
 @Component({
@@ -13,19 +13,29 @@ import { SignatureStatusBadgeComponent } from '../signature-status-badge/signatu
   styleUrls: ['./signature-list.component.scss']
 })
 export class SignatureListComponent implements OnInit {
+  // Expose Math for template
+  Math = Math;
+
   @Input() organizationId!: number;
   @Input() caseId?: number;
   @Input() clientId?: number;
   @Input() showActions: boolean = true;
   @Input() compact: boolean = false;
   @Input() maxItems?: number;
+  @Input() dataSource: 'local' | 'boldsign' = 'boldsign';
 
   @Output() requestSelected = new EventEmitter<SignatureRequest>();
+  @Output() documentSelected = new EventEmitter<BoldSignDocument>();
   @Output() createRequest = new EventEmitter<void>();
   @Output() viewAuditLog = new EventEmitter<SignatureRequest>();
 
+  // Local database requests
   requests: SignatureRequest[] = [];
   filteredRequests: SignatureRequest[] = [];
+
+  // BoldSign documents (live from API)
+  boldsignDocuments: BoldSignDocument[] = [];
+
   loading = false;
   error: string | null = null;
 
@@ -39,6 +49,19 @@ export class SignatureListComponent implements OnInit {
   searchQuery = '';
   statusFilter: SignatureStatus | 'ALL' = 'ALL';
 
+  // BoldSign filter tabs
+  boldsignStatusFilter = 'All';
+  boldsignStatusTabs = [
+    { value: 'All', label: 'All' },
+    { value: 'WaitingForMe', label: 'Waiting for me' },
+    { value: 'WaitingForOthers', label: 'Waiting for others' },
+    { value: 'NeedsAttention', label: 'Needs attention' },
+    { value: 'Completed', label: 'Completed' },
+    { value: 'Declined', label: 'Declined' },
+    { value: 'Expired', label: 'Expired' },
+    { value: 'Revoked', label: 'Revoked' }
+  ];
+
   constructor(
     private signatureService: SignatureService,
     private cdr: ChangeDetectorRef
@@ -49,6 +72,48 @@ export class SignatureListComponent implements OnInit {
   }
 
   loadRequests(): void {
+    if (this.dataSource === 'boldsign') {
+      this.loadBoldSignDocuments();
+    } else {
+      this.loadLocalRequests();
+    }
+  }
+
+  /**
+   * Load documents directly from BoldSign API
+   */
+  loadBoldSignDocuments(): void {
+    this.loading = true;
+    this.error = null;
+
+    // BoldSign uses 1-based page numbers
+    const page = this.currentPage + 1;
+
+    this.signatureService.listBoldSignDocuments(
+      this.boldsignStatusFilter,
+      page,
+      this.pageSize
+    ).subscribe({
+      next: (response) => {
+        this.boldsignDocuments = response.data?.documents || [];
+        this.totalElements = response.data?.totalCount || 0;
+        this.totalPages = Math.ceil(this.totalElements / this.pageSize);
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading BoldSign documents:', err);
+        this.error = 'Failed to load documents from BoldSign';
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Load documents from local database
+   */
+  loadLocalRequests(): void {
     this.loading = true;
     this.error = null;
 
@@ -84,6 +149,22 @@ export class SignatureListComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  /**
+   * Handle BoldSign status tab change
+   */
+  onBoldsignStatusChange(status: string): void {
+    this.boldsignStatusFilter = status;
+    this.currentPage = 0;
+    this.loadBoldSignDocuments();
+  }
+
+  /**
+   * Select a BoldSign document
+   */
+  selectDocument(doc: BoldSignDocument): void {
+    this.documentSelected.emit(doc);
   }
 
   applyFilters(): void {
@@ -281,5 +362,206 @@ export class SignatureListComponent implements OnInit {
       icon: 'success',
       title: message
     });
+  }
+
+  // ==================== BoldSign Document Helpers ====================
+
+  /**
+   * Get status message for BoldSign document (e.g., "Needs to be signed by Jane Smith")
+   */
+  getBoldsignStatusMessage(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+    const signerName = doc.signerName || 'recipient';
+
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') {
+      return `Needs to be signed by ${signerName}`;
+    } else if (status === 'completed') {
+      return 'Signed by all parties';
+    } else if (status === 'declined') {
+      return `Declined by ${signerName}`;
+    } else if (status === 'expired') {
+      return 'Document has expired';
+    } else if (status === 'revoked' || status === 'voided') {
+      return 'By You';
+    }
+    return '';
+  }
+
+  /**
+   * Get display status text for BoldSign document
+   */
+  getBoldsignStatusDisplay(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status.includes('waitingforme')) return 'Waiting for me';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'Waiting for others';
+    if (status === 'completed') return 'Completed';
+    if (status === 'declined') return 'Declined';
+    if (status === 'expired') return 'Expired';
+    if (status === 'revoked' || status === 'voided') return 'Revoked';
+    if (status === 'needsattention') return 'Needs attention';
+    return doc.status || 'Unknown';
+  }
+
+  /**
+   * Get status badge class for BoldSign document
+   */
+  getBoldsignStatusClass(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status === 'completed') return 'badge bg-success-subtle text-success';
+    if (status.includes('waitingforme')) return 'badge bg-primary-subtle text-primary';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'badge bg-info-subtle text-info';
+    if (status === 'needsattention') return 'badge bg-warning-subtle text-warning';
+    if (status === 'declined' || status === 'expired' || status === 'revoked' || status === 'voided') return 'badge bg-danger-subtle text-danger';
+    return 'badge bg-secondary-subtle text-secondary';
+  }
+
+  /**
+   * Get status icon for BoldSign document
+   */
+  getBoldsignStatusIcon(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status === 'completed') return 'ri-check-double-line';
+    if (status.includes('waitingforme')) return 'ri-time-line';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'ri-send-plane-line';
+    if (status === 'needsattention') return 'ri-error-warning-line';
+    if (status === 'declined') return 'ri-close-circle-line';
+    if (status === 'expired') return 'ri-calendar-close-line';
+    if (status === 'revoked' || status === 'voided') return 'ri-forbid-line';
+    return 'ri-file-line';
+  }
+
+  /**
+   * Format last activity for BoldSign document
+   */
+  formatBoldsignLastActivity(doc: BoldSignDocument): string {
+    if (!doc.lastActivityBy && !doc.lastActivityAction) {
+      return '';
+    }
+    const actor = doc.lastActivityBy || 'Someone';
+    const action = doc.lastActivityAction?.toLowerCase() || 'updated';
+
+    // Format the action nicely
+    if (action.includes('sent')) return `${actor} has sent the document`;
+    if (action.includes('viewed')) return `${actor} has viewed the document`;
+    if (action.includes('signed')) return `${actor} has signed the document`;
+    if (action.includes('completed')) return `${actor} has completed the document`;
+    if (action.includes('declined')) return `${actor} has declined the document`;
+    if (action.includes('revoked')) return `${actor} has revoked the document`;
+    if (action.includes('created')) return `${actor} has created the document`;
+
+    return `${actor} ${action}`;
+  }
+
+  /**
+   * Format date for BoldSign document display
+   */
+  formatBoldsignDate(dateString: string | undefined): string {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      }) + ' ' + date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return dateString;
+    }
+  }
+
+  // ==================== Card-based Design Helpers ====================
+
+  /**
+   * Get CSS class for document item (left border indicator)
+   */
+  getDocumentStatusClass(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status.includes('waitingforme')) return 'status-waiting-me';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'status-waiting-others';
+    if (status === 'completed') return 'status-completed';
+    if (status === 'needsattention') return 'status-attention';
+    if (status === 'declined') return 'status-declined';
+    if (status === 'expired') return 'status-expired';
+    if (status === 'revoked' || status === 'voided') return 'status-voided';
+    return '';
+  }
+
+  /**
+   * Get background class for document icon
+   */
+  getDocumentIconBgClass(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status.includes('waitingforme')) return 'bg-primary-subtle';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'bg-info-subtle';
+    if (status === 'completed') return 'bg-success-subtle';
+    if (status === 'needsattention') return 'bg-warning-subtle';
+    if (status === 'declined' || status === 'expired' || status === 'revoked' || status === 'voided') return 'bg-danger-subtle';
+    return 'bg-secondary-subtle';
+  }
+
+  /**
+   * Get icon class for document
+   */
+  getDocumentIcon(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status === 'completed') return 'ri-checkbox-circle-line text-success';
+    if (status.includes('waitingforme')) return 'ri-time-line text-primary';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'ri-send-plane-line text-info';
+    if (status === 'needsattention') return 'ri-error-warning-line text-warning';
+    if (status === 'declined') return 'ri-close-circle-line text-danger';
+    if (status === 'expired') return 'ri-calendar-close-line text-danger';
+    if (status === 'revoked' || status === 'voided') return 'ri-forbid-line text-danger';
+    return 'ri-file-text-line text-secondary';
+  }
+
+  /**
+   * Get status badge CSS class
+   */
+  getStatusBadgeClass(doc: BoldSignDocument): string {
+    const status = doc.status?.toLowerCase() || '';
+
+    if (status.includes('waitingforme')) return 'status-waiting-me';
+    if (status.includes('waitingforothers') || status === 'inprogress' || status === 'sent') return 'status-waiting-others';
+    if (status === 'completed') return 'status-completed';
+    if (status === 'needsattention') return 'status-attention';
+    if (status === 'declined') return 'status-declined';
+    if (status === 'expired') return 'status-expired';
+    if (status === 'revoked' || status === 'voided') return 'status-voided';
+    return 'status-draft';
+  }
+
+  /**
+   * Get CSS class for local request items (left border indicator)
+   */
+  getLocalStatusClass(request: SignatureRequest): string {
+    switch (request.status) {
+      case 'SENT':
+      case 'VIEWED':
+        return 'status-waiting-others';
+      case 'PARTIALLY_SIGNED':
+        return 'status-attention';
+      case 'COMPLETED':
+      case 'SIGNED':
+        return 'status-completed';
+      case 'DECLINED':
+        return 'status-declined';
+      case 'EXPIRED':
+        return 'status-expired';
+      case 'VOIDED':
+        return 'status-voided';
+      case 'DRAFT':
+      default:
+        return '';
+    }
   }
 }
