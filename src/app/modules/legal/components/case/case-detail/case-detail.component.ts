@@ -114,6 +114,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   aiDocumentsLoaded = false;
   aiDocumentsCount = 0;
 
+  // Description expand/collapse
+  isDescriptionExpanded = false;
+  private readonly DESCRIPTION_MAX_LENGTH = 500;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -1405,6 +1409,26 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getPriorityClass(priority: CasePriority): string {
     return `priority-${priority.toLowerCase()}`;
+  }
+
+  // Description formatting and expand/collapse methods
+  formatDescription(description: string | null | undefined): string {
+    if (!description) return '<span class="text-muted">No description provided</span>';
+
+    // Convert line breaks to <br> tags and preserve paragraph structure
+    return description
+      .split(/\n\n+/)  // Split by double line breaks (paragraphs)
+      .map(paragraph => `<p class="description-paragraph">${paragraph.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  }
+
+  isDescriptionLong(description: string | null | undefined): boolean {
+    if (!description) return false;
+    return description.length > this.DESCRIPTION_MAX_LENGTH;
+  }
+
+  toggleDescription(): void {
+    this.isDescriptionExpanded = !this.isDescriptionExpanded;
   }
 
   startEdit(): void {

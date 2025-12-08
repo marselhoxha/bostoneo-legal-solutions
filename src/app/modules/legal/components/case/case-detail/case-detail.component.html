@@ -91,21 +91,16 @@
         </div>
 
         <!-- Right: Action Buttons -->
-        <div class="col-lg-3">
-          <div class="header-actions">
-            <a [routerLink]="['/legal/ai-assistant/ai-workspace']"
-               [queryParams]="{caseId: case.id}"
-               class="btn btn-soft-info btn-modern w-100 mb-2">
-              <i class="ri-robot-line me-2"></i>
-              AI Workspace
-            </a>
-            <button class="btn btn-primary btn-modern w-100 mb-2" (click)="toggleEdit()">
-              <i class="ri-edit-line me-2"></i>
-              {{ isEditing ? 'Cancel' : 'Edit Case' }}
+        <div class="col-lg-3 d-flex justify-content-end align-items-start">
+          <div class="d-flex gap-2">
+            <button class="btn btn-soft-primary d-flex align-items-center gap-2 px-3" (click)="toggleEdit()">
+              <i [class]="isEditing ? 'ri-close-line' : 'ri-pencil-line'"></i>
+              <span>{{ isEditing ? 'Cancel' : 'Edit Case' }}</span>
             </button>
-            <button class="btn btn-outline-danger btn-modern w-100" (click)="deleteCase()">
-              <i class="ri-delete-bin-line me-2"></i>
-              Delete
+            <button class="btn btn-soft-danger d-flex align-items-center justify-content-center"
+                    style="width: 38px; height: 38px; padding: 0;"
+                    (click)="deleteCase()">
+              <i class="ri-delete-bin-line"></i>
             </button>
           </div>
         </div>
@@ -153,8 +148,8 @@
   </div>
 
   <!-- Tabs Card -->
-  <div class="card shadow-lg border-0">
-    <div class="card-header p-0 bg-white border-0" style="background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);">
+  <div class="card border-0">
+    <div class="card-header p-0 border-0">
       <!-- Mobile scroll hint -->
       <div class="d-md-none alert alert-info mb-0 py-2 px-3 border-0 rounded-0" style="font-size: 0.75rem;">
         <i class="ri-arrow-left-right-line me-1"></i>
@@ -230,205 +225,254 @@
 
         <!-- Case Details Tab (NEW - FIRST TAB) -->
         <div class="tab-pane fade show active" id="case-details-tab" role="tabpanel">
-          <div class="p-4">
+          <div class="case-details-view">
 
-            <!-- View Mode: Case Information Grid -->
-            <div *ngIf="!isEditing">
-            <div class="row g-4">
-              <div class="col-md-6">
-                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
-                  <div class="d-flex align-items-center mb-2">
-                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                      <i class="ri-hashtag text-primary fs-5"></i>
-                    </div>
-                    <label class="form-label fw-semibold text-white-dark mb-0">Case Number</label>
-                  </div>
-                  <p class="mb-0 fs-5 fw-normal font-monospace ps-4">{{ case.caseNumber }}</p>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
-                  <div class="d-flex align-items-center mb-2">
-                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                      <i class="ri-flag-line text-primary fs-5"></i>
-                    </div>
-                    <label class="form-label fw-semibold text-white-dark mb-0">Status</label>
-                  </div>
-                  <p class="mb-0 ps-4">
-                    <span class="badge text-uppercase fs-6 fw-normal"
-                      [ngClass]="{
-                        'bg-success-subtle text-success': case.status === 'OPEN',
-                        'bg-warning-subtle text-warning': case.status === 'IN_PROGRESS',
-                        'bg-info-subtle text-info': case.status === 'PENDING',
-                        'bg-danger-subtle text-danger': case.status === 'CLOSED',
-                        'bg-secondary-subtle text-secondary': case.status === 'ARCHIVED'
-                      }">
-                      {{ case.status }}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
-                  <div class="d-flex align-items-center mb-2">
-                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                      <i class="ri-file-text-line text-primary fs-5"></i>
-                    </div>
-                    <label class="form-label fw-semibold text-white-dark mb-0">Title</label>
-                  </div>
-                  <p class="mb-0 fs-5 fw-normal ps-4">{{ case.title }}</p>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
-                  <div class="d-flex align-items-center mb-2">
-                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                      <i class="ri-user-line text-primary fs-5"></i>
-                    </div>
-                    <label class="form-label fw-semibold text-white-dark mb-0">Client</label>
-                  </div>
-                  <p class="mb-0 fs-5 fw-normal ps-4">{{ case.clientName }}</p>
-                </div>
-              </div>
-              <div class="col-12">
-                <div class="p-3 border rounded bg-light-subtle position-relative overflow-hidden">
-                  <div class="d-flex align-items-center mb-2">
-                    <div class="avatar-xs rounded-circle bg-primary bg-opacity-10 p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                      <i class="ri-file-list-line text-primary fs-5"></i>
-                    </div>
-                    <label class="form-label fw-semibold text-white-dark mb-0">Description</label>
-                  </div>
-                  <p class="mb-0 fw-normal ps-4">{{ case.description }}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="row mt-4">
-              <div class="col-12">
-                <div class="card border shadow-none">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-building-2-line align-middle me-2 text-primary"></i>
-                      Court Information
-                    </h5>
-                  </div>
-                  <div class="card-body p-0">
-                    <div class="table-responsive">
-                      <table class="table table-borderless mb-0">
-                        <tbody>
-                          <tr class="border-bottom">
-                            <th scope="row" style="width: 200px;" class="ps-4 py-3 fw-semibold text-white-dark">Court Name</th>
-                            <td class="py-3 fw-normal">{{ case?.courtInfo?.courtName }}</td>
-                          </tr>
-                          <tr class="border-bottom" *ngIf="!isClient">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Judge Name</th>
-                            <td class="py-3 fw-normal">{{ case?.courtInfo?.judgeName }}</td>
-                          </tr>
-                          <tr *ngIf="!isClient">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Courtroom</th>
-                            <td class="py-3 fw-normal">{{ case?.courtInfo?.courtroom }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <!-- View Mode: Premium Case Information Layout -->
+            <div *ngIf="!isEditing" class="case-details-content">
 
-            <!-- Client Information Section -->
-            <div class="row mt-4">
-              <div class="col-lg-6">
-                <div class="card border shadow-none h-100">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-user-line align-middle me-2 text-primary"></i>
-                      Client Information
-                    </h5>
+              <!-- Case Overview Section -->
+              <div class="details-section">
+                
+
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-icon-sm">
+                      <i class="ri-hashtag"></i>
+                    </div>
+                    <div class="info-details">
+                      <span class="info-label">Case Number</span>
+                      <span class="info-value font-monospace">{{ case.caseNumber }}</span>
+                    </div>
                   </div>
-                  <div class="card-body p-0">
-                    <div class="table-responsive">
-                      <table class="table table-borderless mb-0">
-                        <tbody>
-                          <tr class="border-bottom">
-                            <th scope="row" style="width: 140px;" class="ps-4 py-3 fw-semibold text-white-dark">Name</th>
-                            <td class="py-3 fw-semibold">{{ case.clientName }}</td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Email</th>
-                            <td class="py-3">
-                              <a href="mailto:{{ case.clientEmail }}" class="text-primary">
-                                <i class="ri-mail-line me-1"></i>{{ case.clientEmail || 'N/A' }}
-                              </a>
-                            </td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Phone</th>
-                            <td class="py-3">
-                              <a href="tel:{{ case.clientPhone }}" class="text-primary">
-                                <i class="ri-phone-line me-1"></i>{{ case.clientPhone || 'N/A' }}
-                              </a>
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Address</th>
-                            <td class="py-3">{{ case.clientAddress || 'N/A' }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+
+                  <div class="info-item">
+                    <div class="info-icon-sm">
+                      <i class="ri-folder-line"></i>
+                    </div>
+                    <div class="info-details">
+                      <span class="info-label">Case Type</span>
+                      <span class="info-value">{{ case.type || 'General' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-icon-sm">
+                      <i class="ri-calendar-check-line"></i>
+                    </div>
+                    <div class="info-details">
+                      <span class="info-label">Filed On</span>
+                      <span class="info-value">{{ case.filingDate | date:'longDate' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="info-item info-item-full description-item">
+                    <div class="info-icon-sm">
+                      <i class="ri-article-line"></i>
+                    </div>
+                    <div class="info-details">
+                      <span class="info-label">Description</span>
+                      <div class="description-wrapper" [class.expanded]="isDescriptionExpanded">
+                        <span class="info-value description-text" [innerHTML]="formatDescription(case.description)"></span>
+                        <div class="description-fade" *ngIf="!isDescriptionExpanded && isDescriptionLong(case.description)"></div>
+                      </div>
+                      <button class="show-more-btn"
+                              *ngIf="isDescriptionLong(case.description)"
+                              (click)="toggleDescription()">
+                        <span *ngIf="!isDescriptionExpanded">
+                          <i class="ri-arrow-down-s-line me-1"></i>Show more
+                        </span>
+                        <span *ngIf="isDescriptionExpanded">
+                          <i class="ri-arrow-up-s-line me-1"></i>Show less
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Client & Court Information - Combined Card -->
+              <div class="details-section mt-4">
+                <div class="row g-0">
+                  <!-- Left Column: Client Information -->
+                  <div class="col-lg-6 combined-section-col">
+                    <div class="combined-section-inner">
+                      <div class="section-header-inline">
+                        <div class="section-icon section-icon-sm bg-success-subtle">
+                          <i class="ri-user-3-line text-success"></i>
+                        </div>
+                        <div class="section-title">
+                          <h6>Client Information</h6>
+                          <span class="section-subtitle">Contact details</span>
+                        </div>
+                      </div>
+
+                      <div class="client-profile">
+                        <div class="client-avatar">
+                          <span class="avatar-initials">{{ case.clientName?.charAt(0) || 'C' }}</span>
+                        </div>
+                        <div class="client-info">
+                          <h5 class="client-name">{{ case.clientName }}</h5>
+                          <span class="client-label">Primary Client</span>
+                        </div>
+                      </div>
+
+                      <div class="contact-list">
+                        <a href="mailto:{{ case.clientEmail }}" class="contact-item" *ngIf="case.clientEmail">
+                          <div class="contact-icon bg-primary-subtle">
+                            <i class="ri-mail-line text-primary"></i>
+                          </div>
+                          <div class="contact-details">
+                            <span class="contact-label">Email</span>
+                            <span class="contact-value">{{ case.clientEmail }}</span>
+                          </div>
+                          <i class="ri-arrow-right-s-line contact-arrow"></i>
+                        </a>
+
+                        <a href="tel:{{ case.clientPhone }}" class="contact-item" *ngIf="case.clientPhone">
+                          <div class="contact-icon bg-success-subtle">
+                            <i class="ri-phone-line text-success"></i>
+                          </div>
+                          <div class="contact-details">
+                            <span class="contact-label">Phone</span>
+                            <span class="contact-value">{{ case.clientPhone }}</span>
+                          </div>
+                          <i class="ri-arrow-right-s-line contact-arrow"></i>
+                        </a>
+
+                        <div class="contact-item empty-state" *ngIf="!case.clientEmail && !case.clientPhone">
+                          <i class="ri-information-line text-muted"></i>
+                          <span class="text-muted">No contact information available</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right Column: Court Information -->
+                  <div class="col-lg-6 combined-section-col">
+                    <div class="combined-section-inner">
+                      <div class="section-header-inline">
+                        <div class="section-icon section-icon-sm bg-warning-subtle">
+                          <i class="ri-building-2-line text-warning"></i>
+                        </div>
+                        <div class="section-title">
+                          <h6>Court Information</h6>
+                          <span class="section-subtitle">Venue details</span>
+                        </div>
+                      </div>
+
+                      <div class="court-details">
+                        <div class="court-main" *ngIf="case?.courtInfo?.courtName">
+                          <div class="court-icon">
+                            <i class="ri-scales-3-line"></i>
+                          </div>
+                          <div class="court-info">
+                            <span class="court-label">Court</span>
+                            <h5 class="court-name">{{ case.courtInfo.courtName }}</h5>
+                          </div>
+                        </div>
+
+                        <div class="court-meta">
+                          <div class="meta-item-detail" *ngIf="case?.courtInfo?.judgeName && !isClient">
+                            <i class="ri-user-star-line"></i>
+                            <div>
+                              <span class="meta-label">Presiding Judge</span>
+                              <span class="meta-value">{{ case.courtInfo.judgeName || 'N/A' }}</span>
+                            </div>
+                          </div>
+
+                          <div class="meta-item-detail">
+                            <i class="ri-door-open-line"></i>
+                            <div>
+                              <span class="meta-label">Courtroom</span>
+                              <span class="meta-value">{{ case?.courtInfo?.courtroom || 'N/A' }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="empty-court" *ngIf="!case?.courtInfo?.courtName && !case?.courtInfo?.judgeName && !case?.courtInfo?.courtroom">
+                          <div class="empty-court-icon">
+                            <i class="ri-building-2-line"></i>
+                          </div>
+                          <span>No court assigned</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <!-- Important Dates Section -->
-              <div class="col-lg-6">
-                <div class="card border shadow-none h-100">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
-                      Important Dates
-                    </h5>
+              <div class="details-section mt-4">
+                <div class="section-header">
+                  <div class="section-icon bg-danger-subtle">
+                    <i class="ri-calendar-event-line text-danger"></i>
                   </div>
-                  <div class="card-body p-0">
-                    <div class="table-responsive">
-                      <table class="table table-borderless mb-0">
-                        <tbody>
-                          <tr class="border-bottom">
-                            <th scope="row" style="width: 140px;" class="ps-4 py-3 fw-semibold text-white-dark">Filing Date</th>
-                            <td class="py-3">
-                              <span class="badge bg-info-subtle text-info fw-semibold px-3 py-2">
-                                <i class="ri-calendar-check-line me-1"></i>
-                                {{ case.filingDate | date:'mediumDate' || 'Not set' }}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr class="border-bottom">
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Next Hearing</th>
-                            <td class="py-3">
-                              <span class="badge bg-warning-subtle text-warning fw-semibold px-3 py-2">
-                                <i class="ri-calendar-2-line me-1"></i>
-                                {{ case.nextHearing | date:'mediumDate' || 'Not scheduled' }}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row" class="ps-4 py-3 fw-semibold text-white-dark">Trial Date</th>
-                            <td class="py-3">
-                              <span class="badge bg-danger-subtle text-danger fw-semibold px-3 py-2">
-                                <i class="ri-calendar-event-fill me-1"></i>
-                                {{ case.trialDate | date:'mediumDate' || 'Not scheduled' }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <div class="section-title">
+                    <h6>Important Dates</h6>
+                    <span class="section-subtitle">Key deadlines and hearings</span>
+                  </div>
+                </div>
+
+                <div class="dates-timeline">
+                  <div class="date-card date-filed">
+                    <div class="date-indicator">
+                      <div class="indicator-dot bg-info"></div>
+                      <div class="indicator-line"></div>
+                    </div>
+                    <div class="date-content">
+                      <div class="date-icon bg-info-subtle">
+                        <i class="ri-calendar-check-line text-info"></i>
+                      </div>
+                      <div class="date-info">
+                        <span class="date-label">Case Filed</span>
+                        <span class="date-value" *ngIf="case.filingDate">{{ case.filingDate | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value text-muted" *ngIf="!case.filingDate">Not set</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="date-card date-hearing">
+                    <div class="date-indicator">
+                      <div class="indicator-dot bg-warning"></div>
+                      <div class="indicator-line"></div>
+                    </div>
+                    <div class="date-content">
+                      <div class="date-icon bg-warning-subtle">
+                        <i class="ri-calendar-2-line text-warning"></i>
+                      </div>
+                      <div class="date-info">
+                        <span class="date-label">Next Hearing</span>
+                        <span class="date-value" *ngIf="case.nextHearing">{{ case.nextHearing | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value text-muted" *ngIf="!case.nextHearing">Not scheduled</span>
+                      </div>
+                      <span class="date-badge bg-warning-subtle text-warning" *ngIf="case.nextHearing">
+                        <i class="ri-time-line me-1"></i>Upcoming
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="date-card date-trial">
+                    <div class="date-indicator">
+                      <div class="indicator-dot bg-danger"></div>
+                    </div>
+                    <div class="date-content">
+                      <div class="date-icon bg-danger-subtle">
+                        <i class="ri-hammer-line text-danger"></i>
+                      </div>
+                      <div class="date-info">
+                        <span class="date-label">Trial Date</span>
+                        <span class="date-value" *ngIf="case.trialDate">{{ case.trialDate | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value text-muted" *ngIf="!case.trialDate">Not scheduled</span>
+                      </div>
+                      <span class="date-badge bg-danger-subtle text-danger" *ngIf="case.trialDate">
+                        <i class="ri-alert-line me-1"></i>Critical
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
+
             </div>
-          </div>
 
           <!-- Edit Mode -->
           <form [formGroup]="editForm" (ngSubmit)="saveCase()" *ngIf="isEditing" class="case-details-edit">
