@@ -72,6 +72,9 @@
                 <span>{{ doc.timestamp | date:'MMM d' }}</span>
               </div>
             </div>
+            <button class="item-delete-btn" (click)="deleteDocument(doc); $event.stopPropagation()" title="Delete document">
+              <i class="ri-delete-bin-line"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -227,6 +230,9 @@
                 <span><i class="ri-chat-1-line"></i> {{ conv.messageCount || conv.messages?.length || 0 }}</span>
               </div>
             </div>
+            <button class="item-delete-btn" (click)="deleteConversation(conv.id); $event.stopPropagation()" title="Delete conversation">
+              <i class="ri-delete-bin-line"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -268,6 +274,9 @@
                 <span><i class="ri-chat-1-line"></i> {{ conv.messageCount || conv.messages?.length || 0 }}</span>
               </div>
             </div>
+            <button class="item-delete-btn" (click)="deleteConversation(conv.id); $event.stopPropagation()" title="Delete draft">
+              <i class="ri-delete-bin-line"></i>
+            </button>
           </div>
         </div>
       </div>

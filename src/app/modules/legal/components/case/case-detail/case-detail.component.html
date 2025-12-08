@@ -445,8 +445,8 @@
                         <span class="date-value" *ngIf="case.nextHearing">{{ case.nextHearing | date:'EEEE, MMMM d, y' }}</span>
                         <span class="date-value text-muted" *ngIf="!case.nextHearing">Not scheduled</span>
                       </div>
-                      <span class="date-badge bg-warning-subtle text-warning" *ngIf="case.nextHearing">
-                        <i class="ri-time-line me-1"></i>Upcoming
+                      <span class="date-badge" [ngClass]="getHearingStatus(case.nextHearing).class" *ngIf="case.nextHearing">
+                        <i [class]="getHearingStatus(case.nextHearing).icon + ' me-1'"></i>{{ getHearingStatus(case.nextHearing).label }}
                       </span>
                     </div>
                   </div>
@@ -464,8 +464,8 @@
                         <span class="date-value" *ngIf="case.trialDate">{{ case.trialDate | date:'EEEE, MMMM d, y' }}</span>
                         <span class="date-value text-muted" *ngIf="!case.trialDate">Not scheduled</span>
                       </div>
-                      <span class="date-badge bg-danger-subtle text-danger" *ngIf="case.trialDate">
-                        <i class="ri-alert-line me-1"></i>Critical
+                      <span class="date-badge" [ngClass]="getTrialStatus(case.trialDate).class" *ngIf="case.trialDate">
+                        <i [class]="getTrialStatus(case.trialDate).icon + ' me-1'"></i>{{ getTrialStatus(case.trialDate).label }}
                       </span>
                     </div>
                   </div>

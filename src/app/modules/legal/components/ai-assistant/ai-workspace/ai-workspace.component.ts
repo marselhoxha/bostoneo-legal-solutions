@@ -2554,6 +2554,30 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.loadConversation(conversationId);
   }
 
+  // Delete an analyzed document
+  deleteDocument(doc: any): void {
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Delete Document?',
+        text: `Are you sure you want to delete "${doc.fileName || 'this document'}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f06548',
+        cancelButtonColor: '#878a99',
+        confirmButtonText: 'Yes, delete it'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Remove from analyzed documents in state
+          this.stateService.removeAnalyzedDocument(doc.id);
+          this.stateService.setActiveDocumentId(null);
+
+          this.notificationService.success('Deleted!', 'Document has been removed.');
+          this.cdr.detectChanges();
+        }
+      });
+    });
+  }
+
   // Start a new conversation - resets the view
   startNewConversation(): void {
     // Clear active conversation

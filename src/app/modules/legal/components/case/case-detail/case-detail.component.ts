@@ -1431,6 +1431,54 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isDescriptionExpanded = !this.isDescriptionExpanded;
   }
 
+  // Get hearing date status (Overdue, Upcoming, etc.)
+  getHearingStatus(hearingDate: string | Date | null | undefined): { label: string; class: string; icon: string } {
+    if (!hearingDate) {
+      return { label: '', class: '', icon: '' };
+    }
+
+    const date = new Date(hearingDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { label: 'Overdue', class: 'bg-danger-subtle text-danger', icon: 'ri-error-warning-line' };
+    } else if (diffDays === 0) {
+      return { label: 'Today', class: 'bg-danger text-white', icon: 'ri-alarm-warning-line' };
+    } else if (diffDays === 1) {
+      return { label: 'Tomorrow', class: 'bg-warning text-dark', icon: 'ri-time-line' };
+    } else if (diffDays <= 7) {
+      return { label: 'Upcoming', class: 'bg-warning-subtle text-warning', icon: 'ri-time-line' };
+    } else {
+      return { label: 'Scheduled', class: 'bg-info-subtle text-info', icon: 'ri-calendar-check-line' };
+    }
+  }
+
+  // Get trial date status (Critical if within 30 days, Overdue if past)
+  getTrialStatus(trialDate: string | Date | null | undefined): { label: string; class: string; icon: string } {
+    if (!trialDate) {
+      return { label: '', class: '', icon: '' };
+    }
+
+    const date = new Date(trialDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { label: 'Overdue', class: 'bg-danger text-white', icon: 'ri-error-warning-line' };
+    } else if (diffDays === 0) {
+      return { label: 'Today', class: 'bg-danger text-white', icon: 'ri-alarm-warning-line' };
+    } else if (diffDays <= 7) {
+      return { label: 'Critical', class: 'bg-danger-subtle text-danger', icon: 'ri-alert-line' };
+    } else if (diffDays <= 30) {
+      return { label: 'Approaching', class: 'bg-warning-subtle text-warning', icon: 'ri-time-line' };
+    } else {
+      return { label: 'Scheduled', class: 'bg-info-subtle text-info', icon: 'ri-calendar-check-line' };
+    }
+  }
+
   startEdit(): void {
     this.isEditing = true;
   }

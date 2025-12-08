@@ -136,16 +136,19 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.875rem 1.5rem;
+  padding: 0.875rem 1rem 0.875rem 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  min-height: 60px;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.05);
+    background: rgba(var(--vz-primary-rgb), 0.08);
 
     .btn-delete {
       opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
     }
   }
 
@@ -157,6 +160,12 @@
     .conversation-title {
       font-weight: 600;
       color: var(--vz-primary);
+    }
+
+    .btn-delete {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
     }
   }
 }
@@ -229,21 +238,32 @@
 
 .btn-delete {
   opacity: 0;
-  background: none;
+  visibility: hidden;
+  pointer-events: none;
+  background: transparent;
   border: none;
   color: var(--vz-secondary);
-  padding: 0.25rem;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.375rem;
+  flex-shrink: 0;
 
   i {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   &:hover {
+    background: rgba(var(--vz-danger-rgb), 0.1);
     color: var(--vz-danger);
+  }
+
+  &:active {
+    background: rgba(var(--vz-danger-rgb), 0.2);
   }
 }

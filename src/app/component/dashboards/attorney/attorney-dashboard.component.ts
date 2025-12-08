@@ -210,21 +210,48 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       next: (events: any[]) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const todayTimestamp = today.getTime();
         const nextWeek = new Date(today);
         nextWeek.setDate(nextWeek.getDate() + 7);
+        const nextWeekTimestamp = nextWeek.getTime();
+
+        console.log('[UrgentItems] Today:', today.toISOString(), 'NextWeek:', nextWeek.toISOString());
 
         // Filter for deadlines and upcoming important events
         const urgentEvents = events
           .filter(event => {
-            const eventDate = new Date(event.start || event.startTime);
+            const dateStr = event.start || event.startTime;
+            if (!dateStr) return false;
+
+            const eventDate = new Date(dateStr);
+            const eventTimestamp = eventDate.getTime();
+
+            // Validate the date is actually in the future (within next 7 days)
+            const isValidFutureDate = eventTimestamp >= todayTimestamp && eventTimestamp <= nextWeekTimestamp;
+
+            // Debug logging for events that might have issues
+            if (!isValidFutureDate && (event.eventType === 'DEADLINE' || event.eventType === 'HEARING')) {
+              console.log('[UrgentItems] Filtered out past/invalid event:', {
+                title: event.title,
+                dateStr: dateStr,
+                parsedDate: eventDate.toISOString(),
+                eventType: event.eventType
+              });
+            }
+
+            // Exclude completed or cancelled events
+            const isActiveEvent = event.status !== 'COMPLETED' && event.status !== 'CANCELLED';
+
             // Include events in the next 7 days that are deadlines or hearings
-            return eventDate >= today && eventDate <= nextWeek &&
+            return isValidFutureDate && isActiveEvent &&
               (event.eventType === 'DEADLINE' || event.eventType === 'HEARING' ||
                event.eventType === 'COURT' || event.eventType === 'FILING' ||
                event.highPriority);
           })
           .sort((a, b) => new Date(a.start || a.startTime).getTime() - new Date(b.start || b.startTime).getTime())
           .slice(0, 10);
+
+        console.log('[UrgentItems] Filtered events:', urgentEvents.map(e => ({ title: e.title, date: e.start || e.startTime })));
 
         // Map to UrgentItem format
         this.urgentItems = urgentEvents.map((event, index) => ({
@@ -270,11 +297,22 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   private formatDueLabel(dateStr: string): string {
     if (!dateStr) return 'No date';
+
     const date = new Date(dateStr);
+
+    // Validate parsed date
+    if (isNaN(date.getTime())) {
+      console.warn('[UrgentItems] Invalid date string:', dateStr);
+      return 'Invalid date';
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffMs = date.getTime() - today.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    // Log for debugging
+    console.log('[UrgentItems] formatDueLabel:', { dateStr, parsedDate: date.toISOString(), diffDays });
 
     if (diffDays < 0) return 'Overdue';
     if (diffDays === 0) return 'Today';

@@ -242,7 +242,7 @@ $main-content-flex: 1;
 // List Items with Mode-Specific Icons
 .sidebar-list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 12px;
   border-radius: 10px;
@@ -250,13 +250,14 @@ $main-content-flex: 1;
   transition: all 0.2s ease;
   text-decoration: none;
   color: inherit;
+  position: relative;
 
   &:hover {
-    background: var(--sidebar-hover);
+    background: var(--sidebar-hover, rgba(64, 81, 137, 0.08));
   }
 
   &.active {
-    background: var(--sidebar-active);
+    background: var(--sidebar-active, rgba(64, 81, 137, 0.12));
   }
 
   .item-icon {
@@ -345,6 +346,38 @@ $main-content-flex: 1;
   &:hover .item-actions {
     opacity: 1;
   }
+
+  // Delete button - shows on hover
+  .item-delete-btn {
+    opacity: 0;
+    background: transparent;
+    border: none;
+    color: #878a99;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    flex-shrink: 0;
+
+    i {
+      font-size: 14px;
+    }
+
+    &:hover {
+      background: rgba(240, 101, 72, 0.12);
+      color: #f06548;
+    }
+  }
+
+  &:hover .item-delete-btn {
+    opacity: 1;
+  }
 }
 
 // Dark mode icon adjustments - using :host-context for Angular encapsulation
@@ -410,14 +443,19 @@ button.btn-icon-action {
 
 // Badges
 .sidebar-badge {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  line-height: 1.4;
 
   &.badge-primary {
     background: rgba(64, 81, 137, 0.15);
