@@ -12,6 +12,8 @@ import com.bostoneo.bostoneosolutions.model.FileItem;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.Message;
+import com.bostoneo.bostoneosolutions.model.MessageThread;
 import com.bostoneo.bostoneosolutions.repository.AppointmentRequestRepository;
 import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
@@ -21,11 +23,14 @@ import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.repository.MessageThreadRepository;
+import com.bostoneo.bostoneosolutions.repository.MessageRepository;
 import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import com.bostoneo.bostoneosolutions.service.ClientPortalService;
 import com.bostoneo.bostoneosolutions.service.FileManagerService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -63,6 +68,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     private final AppointmentRequestRepository appointmentRequestRepository;
     private final UserRepository<User> userRepository;
     private final AttorneyRepository attorneyRepository;
+    private final MessageThreadRepository messageThreadRepository;
+    private final MessageRepository messageRepository;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
 
     // =====================================================
     // CLIENT PROFILE
@@ -762,20 +770,66 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
     @Override
     public List<ClientPortalMessageThreadDTO> getMessageThreads(Long userId) {
-        // TODO: Implement message threads
-        return new ArrayList<>();
+        Client client = getClientByUserId(userId);
+        List<MessageThread> threads = messageThreadRepository.findByClientIdOrderByLastMessageAtDesc(client.getId());
+
+        return threads.stream().map(thread -> mapToThreadDTO(thread, client.getName())).collect(Collectors.toList());
     }
 
     @Override
     public List<ClientPortalMessageDTO> getThreadMessages(Long userId, Long threadId) {
-        // TODO: Implement thread messages
-        return new ArrayList<>();
+        Client client = getClientByUserId(userId);
+
+        MessageThread thread = messageThreadRepository.findById(threadId)
+                .orElseThrow(() -> new ApiException("Thread not found"));
+
+        if (!thread.getClientId().equals(client.getId())) {
+            throw new ApiException("You do not have access to this thread");
+        }
+
+        // Mark messages from attorney as read
+        messageRepository.markAsRead(threadId, Message.SenderType.ATTORNEY, LocalDateTime.now());
+        thread.setUnreadByClient(0);
+        messageThreadRepository.save(thread);
+
+        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+        return messages.stream().map(this::mapToMessageDTO).collect(Collectors.toList());
     }
 
     @Override
     public ClientPortalMessageDTO sendMessage(Long userId, Long threadId, String content) {
-        // TODO: Implement send message
-        throw new ApiException("Messaging not yet implemented");
+        Client client = getClientByUserId(userId);
+
+        MessageThread thread = messageThreadRepository.findById(threadId)
+                .orElseThrow(() -> new ApiException("Thread not found"));
+
+        if (!thread.getClientId().equals(client.getId())) {
+            throw new ApiException("You do not have access to this thread");
+        }
+
+        Message message = Message.builder()
+                .threadId(threadId)
+                .senderId(userId)
+                .senderType(Message.SenderType.CLIENT)
+                .content(content)
+                .isRead(false)
+                .build();
+        message = messageRepository.save(message);
+
+        // Update thread
+        thread.setLastMessageAt(message.getCreatedAt());
+        thread.setLastMessageBy("CLIENT");
+        thread.setUnreadByAttorney(thread.getUnreadByAttorney() + 1);
+        messageThreadRepository.save(thread);
+
+        // Notify attorney
+        notifyAttorneyOfNewMessage(thread, client, content);
+
+        // Send WebSocket notification for real-time update
+        sendWebSocketNotification(thread, message, "ATTORNEY");
+
+        log.info("Client {} sent message in thread {}", client.getName(), threadId);
+        return mapToMessageDTO(message);
     }
 
     @Override
@@ -784,8 +838,133 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             throw new ApiException("You do not have access to this case");
         }
 
-        // TODO: Implement new thread
-        throw new ApiException("Messaging not yet implemented");
+        Client client = getClientByUserId(userId);
+        LegalCase legalCase = legalCaseRepository.findById(caseId)
+                .orElseThrow(() -> new ApiException("Case not found"));
+
+        // Find lead attorney for this case
+        Long attorneyId = null;
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+        for (CaseAssignment assignment : assignments) {
+            if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
+                attorneyId = assignment.getAssignedTo().getId();
+                break;
+            }
+        }
+        if (attorneyId == null && !assignments.isEmpty()) {
+            attorneyId = assignments.get(0).getAssignedTo().getId();
+        }
+
+        // Create thread
+        MessageThread thread = MessageThread.builder()
+                .caseId(caseId)
+                .clientId(client.getId())
+                .attorneyId(attorneyId)
+                .subject(subject)
+                .status(MessageThread.ThreadStatus.OPEN)
+                .lastMessageBy("CLIENT")
+                .unreadByClient(0)
+                .unreadByAttorney(1)
+                .build();
+        thread = messageThreadRepository.save(thread);
+
+        // Create initial message
+        Message message = Message.builder()
+                .threadId(thread.getId())
+                .senderId(userId)
+                .senderType(Message.SenderType.CLIENT)
+                .content(initialMessage)
+                .isRead(false)
+                .build();
+        message = messageRepository.save(message);
+
+        // Update thread with message time
+        thread.setLastMessageAt(message.getCreatedAt());
+        messageThreadRepository.save(thread);
+
+        // Notify attorney
+        notifyAttorneyOfNewMessage(thread, client, initialMessage);
+
+        // Send WebSocket notification for real-time update
+        sendWebSocketNotification(thread, message, "ATTORNEY");
+
+        log.info("Client {} started new message thread for case {}", client.getName(), caseId);
+        return mapToThreadDTO(thread, client.getName());
+    }
+
+    private ClientPortalMessageThreadDTO mapToThreadDTO(MessageThread thread, String clientName) {
+        String caseNumber = null;
+        if (thread.getCaseId() != null) {
+            LegalCase legalCase = legalCaseRepository.findById(thread.getCaseId()).orElse(null);
+            if (legalCase != null) {
+                caseNumber = legalCase.getCaseNumber();
+            }
+        }
+
+        // Get last message for preview
+        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
+        String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
+        String lastSenderName = messages.isEmpty() ? "" :
+                (messages.get(0).getSenderType() == Message.SenderType.CLIENT ? clientName : "Attorney");
+
+        return ClientPortalMessageThreadDTO.builder()
+                .id(thread.getId())
+                .caseId(thread.getCaseId())
+                .caseNumber(caseNumber)
+                .subject(thread.getSubject())
+                .lastMessage(lastMessage.length() > 100 ? lastMessage.substring(0, 100) + "..." : lastMessage)
+                .lastSenderName(lastSenderName)
+                .lastMessageAt(thread.getLastMessageAt())
+                .unreadCount(thread.getUnreadByClient())
+                .totalMessages(messages.size())
+                .status(thread.getStatus().name())
+                .build();
+    }
+
+    private ClientPortalMessageDTO mapToMessageDTO(Message message) {
+        String senderName = "Unknown";
+        if (message.getSenderType() == Message.SenderType.CLIENT) {
+            Client client = clientRepository.findByUserId(message.getSenderId());
+            if (client != null) senderName = client.getName();
+        } else {
+            User user = userRepository.get(message.getSenderId());
+            if (user != null) senderName = user.getFirstName() + " " + user.getLastName();
+        }
+
+        return ClientPortalMessageDTO.builder()
+                .id(message.getId())
+                .threadId(message.getThreadId())
+                .senderName(senderName)
+                .senderType(message.getSenderType().name())
+                .content(message.getContent())
+                .sentAt(message.getCreatedAt())
+                .isRead(message.getIsRead())
+                .hasAttachment(Boolean.TRUE.equals(message.getHasAttachment()))
+                .build();
+    }
+
+    private void notifyAttorneyOfNewMessage(MessageThread thread, Client client, String messagePreview) {
+        if (thread.getAttorneyId() == null) return;
+
+        try {
+            String preview = messagePreview.length() > 50 ? messagePreview.substring(0, 50) + "..." : messagePreview;
+
+            Map<String, Object> notificationData = new HashMap<>();
+            notificationData.put("userId", thread.getAttorneyId());
+            notificationData.put("title", "New Message from " + client.getName());
+            notificationData.put("message", preview);
+            notificationData.put("type", "CLIENT_MESSAGE");
+            notificationData.put("priority", "NORMAL");
+            notificationData.put("triggeredByUserId", client.getUserId());
+            notificationData.put("triggeredByName", client.getName());
+            notificationData.put("entityId", thread.getId());
+            notificationData.put("entityType", "MESSAGE_THREAD");
+            notificationData.put("url", "/messages?threadId=" + thread.getId());
+
+            notificationService.createUserNotification(notificationData);
+        } catch (Exception e) {
+            log.error("Failed to send message notification: {}", e.getMessage());
+        }
     }
 
     // =====================================================
@@ -999,5 +1178,32 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .documentCount(documentCount)
                 .upcomingAppointments(0) // TODO: Get from calendar events
                 .build();
+    }
+
+    private void sendWebSocketNotification(MessageThread thread, Message message, String recipientType) {
+        try {
+            Long recipientUserId = null;
+            if ("ATTORNEY".equals(recipientType)) {
+                recipientUserId = thread.getAttorneyId();
+            } else {
+                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+                if (client != null) recipientUserId = client.getUserId();
+            }
+
+            if (recipientUserId == null) return;
+
+            Map<String, Object> wsMessage = new HashMap<>();
+            wsMessage.put("type", "NEW_MESSAGE");
+            wsMessage.put("threadId", thread.getId());
+            wsMessage.put("messageId", message.getId());
+            wsMessage.put("content", message.getContent());
+            wsMessage.put("senderType", message.getSenderType().name());
+            wsMessage.put("sentAt", message.getCreatedAt().toString());
+
+            webSocketHandler.sendNotificationToUser(recipientUserId.toString(), wsMessage);
+            log.debug("WebSocket notification sent to user {}", recipientUserId);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification: {}", e.getMessage());
+        }
     }
 }

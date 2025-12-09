@@ -23,6 +23,10 @@ import { NotificationManagerService } from 'src/app/core/services/notification-m
 import { CaseAssignmentService } from 'src/app/service/case-assignment.service';
 import { CaseTaskService } from 'src/app/service/case-task.service';
 import { CaseAssignment } from 'src/app/interface/case-assignment';
+import { MessagingService, MessageThread } from 'src/app/service/messaging.service';
+import { WebSocketService } from 'src/app/service/websocket.service';
+import { Key } from 'src/app/enum/key.enum';
+import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client-portal/services/client-portal.service';
 
 @Component({
   selector: 'app-topbar',
@@ -71,12 +75,22 @@ export class TopbarComponent implements OnInit, OnDestroy {
   teamWorkloadPercentage = 0;
   recentAssignments: any[] = [];
 
+  // Messages
+  unreadMessageCount = 0;
+  messageThreads: MessageThread[] = [];
+  clientMessageThreads: ClientMessageThread[] = [];
+  loadingMessages = false;
+  isClientUser = false;
+  @ViewChild('messageDropdown') messageDropdown!: NgbDropdown;
+
   constructor(@Inject(DOCUMENT) private document: any,   private modalService: NgbModal,
     public _cookiesService: CookieService, private userService: UserService, private notificationService: NotificationService,
     private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
     private notificationManagerService: NotificationManagerService,
-    private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService) {
-      
+    private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService,
+    private messagingService: MessagingService, private webSocketService: WebSocketService,
+    private clientPortalService: ClientPortalService) {
+
      }
 
   ngOnInit(): void {
@@ -138,6 +152,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.loadCaseManagementData();
     }, 1000);
+
+    // Detect user role and load messages accordingly
+    this.detectUserRoleAndLoadMessages();
   }
   
   /**
@@ -449,18 +466,26 @@ export class TopbarComponent implements OnInit, OnDestroy {
    * Add a notification to the list
    */
   private addNotification(notification: any): void {
+    // Filter out message-related notifications - they are shown in the separate messages icon
+    const notificationType = notification.data?.type?.toUpperCase() || '';
+    const messageTypes = ['NEW_MESSAGE', 'CLIENT_MESSAGE', 'ATTORNEY_MESSAGE', 'MESSAGE'];
+    if (messageTypes.includes(notificationType)) {
+      console.log('📧 Skipping message notification (shown in messages icon):', notificationType);
+      return;
+    }
+
     // Handle timestamp - use backend timestamp if available, otherwise current time
     let timestamp = new Date();
     if (notification.data?.createdAt) {
       timestamp = new Date(notification.data.createdAt);
     }
-    
+
     // Create a unique ID - use backend ID if available
     let notificationId = Date.now().toString();
     if (notification.data?.backendId) {
       notificationId = `backend_${notification.data.backendId}`;
     }
-    
+
     // Check for duplicates based on ID
     const existingNotification = this.pushNotifications.find(n => n.id === notificationId);
     if (existingNotification) {
@@ -1099,6 +1124,229 @@ export class TopbarComponent implements OnInit, OnDestroy {
   closeNotificationDropdown(): void {
     if (this.notificationDropdown) {
       this.notificationDropdown.close();
+    }
+  }
+
+  /**
+   * Detect user role and load messages accordingly
+   */
+  private detectUserRoleAndLoadMessages(): void {
+    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      if (user) {
+        // Check if user has ROLE_CLIENT
+        this.isClientUser = user.roleName === 'ROLE_CLIENT' ||
+                            user.roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
+
+        // Load messages based on user type
+        this.loadUnreadMessageCount();
+        this.loadMessageThreads();
+        this.initMessageWebSocket();
+
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Load unread message count from appropriate service
+   */
+  private loadUnreadMessageCount(): void {
+    if (this.isClientUser) {
+      // For clients, get unread count from dashboard or calculate from threads
+      this.clientPortalService.getMessageThreads()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (threads) => {
+            this.unreadMessageCount = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error loading client unread message count:', err);
+          }
+        });
+    } else {
+      // For attorneys
+      this.messagingService.getUnreadCount()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (count) => {
+            this.unreadMessageCount = count;
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error loading unread message count:', err);
+          }
+        });
+    }
+  }
+
+  /**
+   * Load message threads for dropdown
+   */
+  private loadMessageThreads(): void {
+    this.loadingMessages = true;
+
+    if (this.isClientUser) {
+      // For clients
+      this.clientPortalService.getMessageThreads()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (threads) => {
+            this.clientMessageThreads = threads
+              .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
+              .slice(0, 5);
+            this.loadingMessages = false;
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error loading client message threads:', err);
+            this.loadingMessages = false;
+            this.cdr.detectChanges();
+          }
+        });
+    } else {
+      // For attorneys
+      this.messagingService.getThreads()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (threads) => {
+            this.messageThreads = threads
+              .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
+              .slice(0, 5);
+            this.loadingMessages = false;
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error loading message threads:', err);
+            this.loadingMessages = false;
+            this.cdr.detectChanges();
+          }
+        });
+    }
+  }
+
+  /**
+   * Initialize WebSocket for real-time message notifications
+   */
+  private initMessageWebSocket(): void {
+    const token = localStorage.getItem(Key.TOKEN);
+    if (token) {
+      this.webSocketService.connect(token);
+
+      this.webSocketService.getMessages()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(msg => {
+          if (msg.type === 'notification' && msg.data?.type === 'NEW_MESSAGE') {
+            // Increment unread count when new message arrives
+            this.unreadMessageCount++;
+            // Refresh threads to show the new message
+            this.loadMessageThreads();
+            this.cdr.detectChanges();
+          }
+        });
+    }
+  }
+
+  /**
+   * Handle message dropdown toggle
+   */
+  onMessageDropdownToggle(isOpen: boolean): void {
+    if (isOpen) {
+      // Refresh threads when dropdown opens
+      this.loadMessageThreads();
+    }
+  }
+
+  /**
+   * Navigate to specific message thread (for attorneys)
+   */
+  navigateToThread(thread: MessageThread): void {
+    if (this.messageDropdown) {
+      this.messageDropdown.close();
+    }
+    this.router.navigate(['/messages'], { queryParams: { threadId: thread.id } });
+  }
+
+  /**
+   * Navigate to specific client message thread (for clients)
+   */
+  navigateToClientThread(thread: ClientMessageThread): void {
+    if (this.messageDropdown) {
+      this.messageDropdown.close();
+    }
+    this.router.navigate(['/client/messages'], { queryParams: { threadId: thread.id } });
+  }
+
+  /**
+   * Navigate to messages page
+   */
+  navigateToMessages(): void {
+    if (this.messageDropdown) {
+      this.messageDropdown.close();
+    }
+    // Navigate to appropriate messages page based on user role
+    if (this.isClientUser) {
+      this.router.navigate(['/client/messages']);
+    } else {
+      this.router.navigate(['/messages']);
+    }
+  }
+
+  /**
+   * Format relative time for message dropdown
+   */
+  formatMessageTime(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  /**
+   * Get initials from name
+   */
+  getInitials(name: string): string {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  /**
+   * Get display threads based on user type
+   */
+  getDisplayThreads(): any[] {
+    return this.isClientUser ? this.clientMessageThreads : this.messageThreads;
+  }
+
+  /**
+   * Handle thread click based on user type
+   */
+  onThreadClick(thread: any): void {
+    if (this.isClientUser) {
+      this.navigateToClientThread(thread as ClientMessageThread);
+    } else {
+      this.navigateToThread(thread as MessageThread);
+    }
+  }
+
+  /**
+   * Get thread sender name for display
+   */
+  getThreadDisplayName(thread: any): string {
+    if (this.isClientUser) {
+      // For clients, show "Attorney" or the attorney name
+      return thread.lastSenderName || 'Attorney';
+    } else {
+      // For attorneys, show client name
+      return thread.clientName || 'Client';
     }
   }
 }

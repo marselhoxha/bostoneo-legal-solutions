@@ -1,19 +1,22 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef, NgZone, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, interval } from 'rxjs';
+import { takeUntil, switchMap, filter } from 'rxjs/operators';
 import { ClientPortalService, ClientMessageThread, ClientMessage, ClientCase } from '../../services/client-portal.service';
+import { WebSocketService } from '../../../../service/websocket.service';
+import { Key } from '../../../../enum/key.enum';
 
 @Component({
   selector: 'app-client-messages',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './client-messages.component.html',
-  styleUrls: ['./client-messages.component.scss']
+  styleUrls: ['./client-messages.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
-export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class ClientMessagesComponent implements OnInit, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
 
   threads: ClientMessageThread[] = [];
@@ -29,61 +32,210 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
   // New message
   newMessageContent = '';
 
+  // Search
+  searchTerm = '';
+
   // New thread modal
   showNewThreadModal = false;
   newThreadCaseId: number = 0;
   newThreadSubject = '';
   newThreadMessage = '';
 
+  // Polling
+  private readonly POLL_INTERVAL = 5000; // 5 seconds
+  private wsConnected = false;
+
   private destroy$ = new Subject<void>();
-  private shouldScrollToBottom = false;
 
   constructor(
     private clientPortalService: ClientPortalService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
+    private webSocketService: WebSocketService
   ) {}
 
   ngOnInit(): void {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['caseId']) {
         this.newThreadCaseId = parseInt(params['caseId']);
-        // Optionally open new thread modal if coming from case page
+      }
+      if (params['threadId']) {
+        this.loadThreads().then(() => {
+          const thread = this.threads.find(t => t.id === parseInt(params['threadId']));
+          if (thread) this.selectThread(thread);
+        });
+      } else {
+        this.loadThreads();
       }
     });
 
-    this.loadThreads();
     this.loadCases();
+    this.startPolling();
+    this.initWebSocket();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.webSocketService.disconnect();
   }
 
-  ngAfterViewChecked(): void {
-    if (this.shouldScrollToBottom) {
-      this.scrollToBottom();
-      this.shouldScrollToBottom = false;
+  // Initialize WebSocket for real-time messages
+  private initWebSocket(): void {
+    const token = localStorage.getItem(Key.TOKEN);
+    if (token) {
+      this.webSocketService.connect(token);
+
+      // Track connection status
+      this.webSocketService.isConnected()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(connected => {
+          this.wsConnected = connected;
+        });
+
+      this.webSocketService.getMessages()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(msg => {
+          if (msg.type === 'notification' && msg.data?.type === 'NEW_MESSAGE') {
+            const notification = msg.data;
+            this.ngZone.run(() => {
+              // Find the thread in the list
+              const thread = this.threads.find(t => t.id === notification.threadId);
+
+              // If message is for current thread, add it directly to UI
+              if (this.selectedThread && notification.threadId === this.selectedThread.id) {
+                // Only add if not already in the list
+                if (!this.currentMessages.find(m => m.id === notification.messageId)) {
+                  const newMessage: ClientMessage = {
+                    id: notification.messageId,
+                    threadId: notification.threadId,
+                    senderName: notification.senderType === 'ATTORNEY' ? 'Attorney' : 'You',
+                    senderType: notification.senderType,
+                    content: notification.content,
+                    sentAt: notification.sentAt,
+                    isRead: false,
+                    hasAttachment: false,
+                    attachmentName: ''
+                  };
+                  this.currentMessages = [...this.currentMessages, newMessage];
+                  setTimeout(() => this.scrollToBottom(), 50);
+                }
+              } else if (thread) {
+                // Message is for a different thread - increment unread count
+                thread.unreadCount = (thread.unreadCount || 0) + 1;
+                thread.lastMessage = notification.content;
+                thread.lastMessageAt = notification.sentAt;
+                thread.lastSenderName = notification.senderType === 'ATTORNEY' ? 'Attorney' : 'You';
+              }
+
+              // Move thread to top of list
+              if (thread) {
+                this.threads = [thread, ...this.threads.filter(t => t.id !== thread.id)];
+              }
+
+              this.cdr.detectChanges();
+            });
+          }
+        });
     }
   }
 
-  loadThreads(): void {
-    this.loading = true;
-    this.error = null;
-
+  // Load threads without showing loading spinner
+  private loadThreadsSilent(): void {
     this.clientPortalService.getMessageThreads()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (threads) => {
-          this.threads = threads || [];
-          this.loading = false;
-        },
-        error: (err) => {
-          console.error('Error loading threads:', err);
-          this.error = 'Failed to load messages. Please try again.';
-          this.loading = false;
+          this.ngZone.run(() => {
+            const selectedId = this.selectedThread?.id;
+            this.threads = threads || [];
+            if (selectedId) {
+              this.selectedThread = this.threads.find(t => t.id === selectedId) || null;
+            }
+            this.cdr.detectChanges();
+          });
         }
       });
+  }
+
+  // Start polling for new messages (fallback when WebSocket is disconnected)
+  private startPolling(): void {
+    // Poll for thread updates (only when WebSocket disconnected)
+    interval(this.POLL_INTERVAL)
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(() => !this.loading && !this.wsConnected),
+        switchMap(() => this.clientPortalService.getMessageThreads())
+      )
+      .subscribe({
+        next: (threads) => {
+          this.ngZone.run(() => {
+            // Update threads while preserving selection
+            const selectedId = this.selectedThread?.id;
+            this.threads = threads || [];
+            if (selectedId) {
+              this.selectedThread = this.threads.find(t => t.id === selectedId) || null;
+            }
+            this.cdr.detectChanges();
+          });
+        }
+      });
+
+    // Poll for messages in selected thread (only when WebSocket disconnected)
+    interval(this.POLL_INTERVAL)
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(() => !!this.selectedThread && !this.loadingMessages && !this.wsConnected),
+        switchMap(() => this.clientPortalService.getThreadMessages(this.selectedThread!.id))
+      )
+      .subscribe({
+        next: (messages) => {
+          this.ngZone.run(() => {
+            const prevCount = this.currentMessages.length;
+            this.currentMessages = messages || [];
+            // Auto-scroll if new messages arrived
+            if (this.currentMessages.length > prevCount) {
+              setTimeout(() => this.scrollToBottom(), 50);
+            }
+            // Update unread count
+            if (this.selectedThread) {
+              this.selectedThread.unreadCount = 0;
+            }
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  async loadThreads(): Promise<void> {
+    this.loading = true;
+    this.error = null;
+    this.cdr.detectChanges();
+
+    return new Promise((resolve) => {
+      this.clientPortalService.getMessageThreads()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (threads) => {
+            this.ngZone.run(() => {
+              this.threads = threads || [];
+              this.loading = false;
+              this.cdr.detectChanges();
+              resolve();
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              console.error('Error loading threads:', err);
+              this.error = 'Failed to load messages. Please try again.';
+              this.loading = false;
+              this.cdr.detectChanges();
+              resolve();
+            });
+          }
+        });
+    });
   }
 
   loadCases(): void {
@@ -101,24 +253,36 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
 
   selectThread(thread: ClientMessageThread): void {
     this.selectedThread = thread;
+    this.cdr.detectChanges();
     this.loadMessages(thread.id);
   }
 
   loadMessages(threadId: number): void {
     this.loadingMessages = true;
     this.currentMessages = [];
+    this.cdr.detectChanges();
 
     this.clientPortalService.getThreadMessages(threadId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (messages) => {
-          this.currentMessages = messages || [];
-          this.loadingMessages = false;
-          this.shouldScrollToBottom = true;
+          this.ngZone.run(() => {
+            this.currentMessages = messages || [];
+            this.loadingMessages = false;
+            // Clear unread
+            if (this.selectedThread) {
+              this.selectedThread.unreadCount = 0;
+            }
+            this.cdr.detectChanges();
+            setTimeout(() => this.scrollToBottom(), 50);
+          });
         },
         error: (err) => {
-          console.error('Error loading messages:', err);
-          this.loadingMessages = false;
+          this.ngZone.run(() => {
+            console.error('Error loading messages:', err);
+            this.loadingMessages = false;
+            this.cdr.detectChanges();
+          });
         }
       });
   }
@@ -129,25 +293,34 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
     }
 
     this.sending = true;
+    this.cdr.detectChanges();
 
-    this.clientPortalService.sendMessage(this.selectedThread.id, this.newMessageContent)
+    const content = this.newMessageContent;
+    this.clientPortalService.sendMessage(this.selectedThread.id, content)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (message) => {
-          this.currentMessages.push(message);
-          this.newMessageContent = '';
-          this.sending = false;
-          this.shouldScrollToBottom = true;
-          // Update thread's last message
-          if (this.selectedThread) {
-            this.selectedThread.lastMessage = message.content;
-            this.selectedThread.lastMessageAt = message.sentAt;
-          }
+          this.ngZone.run(() => {
+            this.currentMessages = [...this.currentMessages, message];
+            this.newMessageContent = '';
+            this.sending = false;
+            this.cdr.detectChanges();
+            setTimeout(() => this.scrollToBottom(), 50);
+            // Update thread's last message
+            if (this.selectedThread) {
+              this.selectedThread.lastMessage = message.content;
+              this.selectedThread.lastMessageAt = message.sentAt;
+              this.selectedThread.lastSenderName = 'You';
+            }
+          });
         },
         error: (err) => {
-          console.error('Error sending message:', err);
-          this.error = 'Failed to send message. Please try again.';
-          this.sending = false;
+          this.ngZone.run(() => {
+            console.error('Error sending message:', err);
+            this.error = 'Failed to send message. Please try again.';
+            this.sending = false;
+            this.cdr.detectChanges();
+          });
         }
       });
   }
@@ -157,6 +330,7 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
     this.showNewThreadModal = true;
     this.newThreadSubject = '';
     this.newThreadMessage = '';
+    this.cdr.detectChanges();
   }
 
   closeNewThreadModal(): void {
@@ -164,6 +338,7 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
     this.newThreadCaseId = 0;
     this.newThreadSubject = '';
     this.newThreadMessage = '';
+    this.cdr.detectChanges();
   }
 
   startNewThread(): void {
@@ -172,20 +347,27 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
     }
 
     this.sending = true;
+    this.cdr.detectChanges();
 
     this.clientPortalService.startNewThread(this.newThreadCaseId, this.newThreadSubject, this.newThreadMessage)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (thread) => {
-          this.threads.unshift(thread);
-          this.selectThread(thread);
-          this.closeNewThreadModal();
-          this.sending = false;
+          this.ngZone.run(() => {
+            this.threads = [thread, ...this.threads];
+            this.selectThread(thread);
+            this.closeNewThreadModal();
+            this.sending = false;
+            this.cdr.detectChanges();
+          });
         },
         error: (err) => {
-          console.error('Error starting thread:', err);
-          this.error = 'Failed to start new conversation. Please try again.';
-          this.sending = false;
+          this.ngZone.run(() => {
+            console.error('Error starting thread:', err);
+            this.error = 'Failed to start new conversation. Please try again.';
+            this.sending = false;
+            this.cdr.detectChanges();
+          });
         }
       });
   }
@@ -254,6 +436,24 @@ export class ClientMessagesComponent implements OnInit, OnDestroy, AfterViewChec
   truncateText(text: string, maxLength: number = 50): string {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  }
+
+  get filteredThreads(): ClientMessageThread[] {
+    if (!this.searchTerm) return this.threads;
+    const term = this.searchTerm.toLowerCase();
+    return this.threads.filter(thread =>
+      thread.subject?.toLowerCase().includes(term) ||
+      thread.caseNumber?.toLowerCase().includes(term) ||
+      thread.lastMessage?.toLowerCase().includes(term)
+    );
+  }
+
+  trackByThreadId(index: number, thread: ClientMessageThread): number {
+    return thread.id;
+  }
+
+  trackByMessageId(index: number, message: ClientMessage): number {
+    return message.id;
   }
 
   private scrollToBottom(): void {

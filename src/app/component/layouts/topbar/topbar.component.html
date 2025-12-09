@@ -267,13 +267,112 @@
                     </button>
                   </div>
                   
+                <!-- Messages Dropdown -->
+                <div class="dropdown ms-1 header-item" ngbDropdown #messageDropdown="ngbDropdown" [placement]="'bottom-right'" (openChange)="onMessageDropdownToggle($event)">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
+                            ngbDropdownToggle
+                            id="page-header-messages-dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            title="Messages">
+                        <i class="bx bx-message-square-dots fs-22"></i>
+                        <span *ngIf="unreadMessageCount > 0" class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger">
+                            {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0 overflow-hidden message-dropdown" ngbDropdownMenu aria-labelledby="page-header-messages-dropdown">
+                        <!-- Header -->
+                        <div class="dropdown-head bg-primary bg-pattern rounded-top">
+                            <div class="p-3">
+                                <div class="row align-items-center">
+                                    <div class="col">
+                                        <h6 class="m-0 fs-16 fw-semibold text-white">
+                                            <i class="bx bx-message-square-dots me-2"></i>Messages
+                                        </h6>
+                                    </div>
+                                    <div class="col-auto">
+                                        <span class="badge bg-light-subtle text-dark fs-13" *ngIf="unreadMessageCount > 0">
+                                            {{ unreadMessageCount }} unread
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Message List -->
+                        <div class="message-list-scroll" style="max-height: 300px; overflow-y: auto;" data-simplebar>
+                            <!-- Loading state -->
+                            <div *ngIf="loadingMessages" class="text-center p-4">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mb-0 mt-2">Loading messages...</p>
+                            </div>
+
+                            <!-- Empty state -->
+                            <div *ngIf="!loadingMessages && getDisplayThreads().length === 0" class="text-center p-4">
+                                <div class="avatar-md mx-auto mb-3">
+                                    <div class="avatar-title bg-light-subtle text-primary rounded-circle fs-24">
+                                        <i class="bx bx-message-x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="mb-1 fs-16">No Messages</h5>
+                                <p class="text-muted mb-0">You have no message conversations yet.</p>
+                            </div>
+
+                            <!-- Message items -->
+                            <div *ngFor="let thread of getDisplayThreads()"
+                                 class="text-reset message-item d-block p-3 border-bottom cursor-pointer"
+                                 [ngClass]="{'bg-light-subtle': thread.unreadCount > 0}"
+                                 (click)="onThreadClick(thread)">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="avatar-sm rounded-circle bg-primary-subtle">
+                                            <span class="avatar-title rounded-circle bg-primary-subtle text-primary fs-14 fw-medium">
+                                                {{ getInitials(getThreadDisplayName(thread)) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fs-14 text-truncate" [ngClass]="{'fw-semibold': thread.unreadCount > 0}">
+                                                {{ getThreadDisplayName(thread) }}
+                                            </h6>
+                                            <span class="text-muted fs-11 flex-shrink-0 ms-2">
+                                                {{ formatMessageTime(thread.lastMessageAt) }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-1 fs-13 text-truncate" [ngClass]="{'text-body fw-medium': thread.unreadCount > 0, 'text-muted': thread.unreadCount === 0}">
+                                            {{ thread.subject }}
+                                        </p>
+                                        <p class="mb-0 fs-12 text-muted text-truncate">
+                                            <span *ngIf="thread.lastSenderName">{{ thread.lastSenderName }}: </span>{{ thread.lastMessage }}
+                                        </p>
+                                        <div class="d-flex align-items-center mt-1" *ngIf="thread.unreadCount > 0">
+                                            <span class="badge bg-danger rounded-pill fs-10">{{ thread.unreadCount }} new</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="p-2 border-top text-center">
+                            <button type="button" class="btn btn-sm btn-soft-primary w-100" (click)="navigateToMessages()">
+                                View All Messages <i class="ri-arrow-right-line ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Notification Dropdown -->
-                <div class="dropdown ms-sm-3 header-item" ngbDropdown #notificationDropdown="ngbDropdown" display="dynamic" [placement]="'bottom-end'" (openChange)="onNotificationDropdownToggle($event)">
-                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative notification-bell" 
-                            ngbDropdownToggle 
-                            id="page-header-notifications-dropdown" 
-                            [ngClass]="{'has-new-notifications': hasNewNotifications}" 
-                            aria-haspopup="true" 
+                <div class="dropdown ms-1 header-item" ngbDropdown #notificationDropdown="ngbDropdown" display="dynamic" [placement]="'bottom-end'" (openChange)="onNotificationDropdownToggle($event)">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative notification-bell"
+                            ngbDropdownToggle
+                            id="page-header-notifications-dropdown"
+                            [ngClass]="{'has-new-notifications': hasNewNotifications}"
+                            aria-haspopup="true"
                             aria-expanded="false"
                             (click)="$event.stopPropagation()">
                         <i class="bx bx-bell fs-22"></i>

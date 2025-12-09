@@ -22,4 +22,5 @@ public class ClientPortalMessageThreadDTO {
     private int unreadCount;
     private int totalMessages;
     private String status; // OPEN, CLOSED
+    private String clientName; // For attorney view
 }

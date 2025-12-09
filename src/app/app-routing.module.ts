@@ -85,6 +85,13 @@ const routes: Routes = [
         loadComponent: () => import('./component/signatures/signatures.component').then(m => m.SignaturesComponent),
         canActivate: [AuthenticationGuard]
       },
+
+      // Client Messages (Attorney view)
+      {
+        path: 'messages',
+        loadComponent: () => import('./component/messages/messages.component').then(m => m.MessagesComponent),
+        canActivate: [AuthenticationGuard]
+      },
       
       // Debug Permissions
       {
