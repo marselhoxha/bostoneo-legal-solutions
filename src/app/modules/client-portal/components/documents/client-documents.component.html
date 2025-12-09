@@ -1,24 +1,32 @@
 <div class="container-fluid" style="margin-top: 100px;">
-  <!-- Page Header -->
-  <div class="row">
+  <!-- Page Header with Premium Design -->
+  <div class="row mb-4">
     <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">My Documents</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/client/dashboard">Portal</a></li>
-            <li class="breadcrumb-item active">My Documents</li>
-          </ol>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <h4 class="mb-1 fw-semibold">My Documents</h4>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a routerLink="/client/dashboard" class="text-muted">Portal</a></li>
+              <li class="breadcrumb-item active">Documents</li>
+            </ol>
+          </nav>
         </div>
+        <button class="btn btn-primary" (click)="openUploadModal()" [disabled]="cases.length === 0">
+          <i class="ri-upload-cloud-2-line me-1"></i> Upload Document
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Success Message -->
-  <div *ngIf="successMessage" class="row">
+  <div *ngIf="successMessage" class="row mb-3">
     <div class="col-12">
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="ri-check-double-line me-2"></i> {{ successMessage }}
+      <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <div class="d-flex align-items-center">
+          <i class="ri-check-double-line fs-18 me-2"></i>
+          <span>{{ successMessage }}</span>
+        </div>
         <button type="button" class="btn-close" (click)="successMessage = null"></button>
       </div>
     </div>
@@ -27,12 +35,12 @@
   <!-- Loading State -->
   <div *ngIf="loading" class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5">
-          <div class="spinner-border text-primary" role="status">
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
             <span class="visually-hidden">Loading...</span>
           </div>
-          <p class="mt-3 text-muted">Loading your documents...</p>
+          <p class="text-muted mb-0">Loading your documents...</p>
         </div>
       </div>
     </div>
@@ -41,11 +49,15 @@
   <!-- Error State -->
   <div *ngIf="error && !loading" class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5">
-          <i class="ri-error-warning-line fs-1 text-danger"></i>
-          <h5 class="mt-3">{{ error }}</h5>
-          <button class="btn btn-primary mt-3" (click)="loadDocuments()">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title rounded-circle bg-danger-subtle text-danger fs-24">
+              <i class="ri-error-warning-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-2">{{ error }}</h5>
+          <button class="btn btn-primary" (click)="loadDocuments()">
             <i class="ri-refresh-line me-1"></i> Try Again
           </button>
         </div>
@@ -55,55 +67,63 @@
 
   <!-- Documents Content -->
   <ng-container *ngIf="!loading && !error">
-    <!-- Filters Card -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card">
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3 col-6">
+        <div class="card stats-card border-0 shadow-sm">
           <div class="card-body">
-            <div class="row g-3 align-items-center">
-              <!-- Search -->
-              <div class="col-md-3">
-                <div class="search-box">
-                  <input type="text" class="form-control search"
-                         [(ngModel)]="searchTerm"
-                         (input)="onSearchChange()"
-                         placeholder="Search documents...">
-                  <i class="ri-search-line search-icon"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-primary-subtle text-primary">
+                <i class="ri-folder-3-line"></i>
               </div>
-
-              <!-- Category Filter -->
-              <div class="col-md-2">
-                <select class="form-select" [(ngModel)]="categoryFilter" (change)="onFilterChange()">
-                  <option value="">All Categories</option>
-                  <option *ngFor="let cat of categories" [value]="cat">
-                    {{ formatCategory(cat) }}
-                  </option>
-                </select>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ totalDocCount }}</h3>
+                <span class="text-muted fs-13">Total Documents</span>
               </div>
-
-              <!-- Case Filter -->
-              <div class="col-md-3">
-                <select class="form-select" [(ngModel)]="caseFilter" (change)="onFilterChange()">
-                  <option value="">All Cases</option>
-                  <option *ngFor="let c of cases" [value]="c.id">
-                    {{ c.caseNumber }} - {{ c.title }}
-                  </option>
-                </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-danger-subtle text-danger">
+                <i class="ri-file-pdf-line"></i>
               </div>
-
-              <!-- Clear Filters -->
-              <div class="col-md-2">
-                <button class="btn btn-soft-secondary w-100" (click)="clearFilters()">
-                  <i class="ri-filter-off-line me-1"></i> Clear
-                </button>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ pdfCount }}</h3>
+                <span class="text-muted fs-13">PDF Files</span>
               </div>
-
-              <!-- Upload Button -->
-              <div class="col-md-2">
-                <button class="btn btn-primary w-100" (click)="openUploadModal()" [disabled]="cases.length === 0">
-                  <i class="ri-upload-2-line me-1"></i> Upload
-                </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-info-subtle text-info">
+                <i class="ri-image-line"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ imageCount }}</h3>
+                <span class="text-muted fs-13">Images</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-secondary-subtle text-secondary">
+                <i class="ri-file-list-3-line"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ otherCount }}</h3>
+                <span class="text-muted fs-13">Other Files</span>
               </div>
             </div>
           </div>
@@ -111,77 +131,162 @@
       </div>
     </div>
 
-    <!-- Documents Summary -->
-    <div class="row mb-3">
-      <div class="col-12">
-        <div class="d-flex align-items-center justify-content-between">
-          <p class="text-muted mb-0">
-            Showing {{ filteredDocuments.length }} of {{ totalElements }} documents
-          </p>
-        </div>
-      </div>
-    </div>
+    <!-- Filters & View Toggle Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+          <!-- Search -->
+          <div class="col-lg-4 col-md-6">
+            <div class="search-box">
+              <input type="text" class="form-control search bg-light border-0"
+                     [(ngModel)]="searchTerm"
+                     (input)="onSearchChange()"
+                     placeholder="Search documents...">
+              <i class="ri-search-line search-icon"></i>
+            </div>
+          </div>
 
-    <!-- Empty State -->
-    <div *ngIf="filteredDocuments.length === 0" class="row">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body text-center py-5">
-            <i class="ri-file-list-line fs-1 text-muted"></i>
-            <h5 class="mt-3">No Documents Found</h5>
-            <p class="text-muted" *ngIf="searchTerm || categoryFilter || caseFilter">
-              Try adjusting your search or filter criteria.
-            </p>
-            <p class="text-muted" *ngIf="!searchTerm && !categoryFilter && !caseFilter">
-              You don't have any documents yet. You can upload documents to your cases.
-            </p>
-            <button class="btn btn-primary mt-3" (click)="openUploadModal()" [disabled]="cases.length === 0">
-              <i class="ri-upload-2-line me-1"></i> Upload Document
+          <!-- Category Filter -->
+          <div class="col-lg-2 col-md-3 col-6">
+            <select class="form-select bg-light border-0" [(ngModel)]="categoryFilter" (change)="onFilterChange()">
+              <option value="">All Categories</option>
+              <option *ngFor="let cat of categories" [value]="cat">
+                {{ formatCategory(cat) }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Case Filter -->
+          <div class="col-lg-3 col-md-3 col-6">
+            <select class="form-select bg-light border-0" [(ngModel)]="caseFilter" (change)="onFilterChange()">
+              <option value="">All Cases</option>
+              <option *ngFor="let c of cases" [value]="c.id">
+                {{ c.caseNumber }} - {{ c.title | slice:0:20 }}{{ c.title.length > 20 ? '...' : '' }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Clear Filters -->
+          <div class="col-lg-3 d-flex align-items-center justify-content-end gap-2">
+            <button class="btn btn-soft-secondary btn-sm" (click)="clearFilters()"
+                    *ngIf="searchTerm || categoryFilter || caseFilter">
+              <i class="ri-filter-off-line me-1"></i> Clear
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Documents Grid -->
-    <div class="row" *ngIf="filteredDocuments.length > 0">
-      <div class="col-xxl-3 col-lg-4 col-sm-6" *ngFor="let doc of filteredDocuments">
-        <div class="card document-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar-sm flex-shrink-0 me-3">
-                <div class="avatar-title bg-soft-secondary rounded-circle fs-2">
-                  <i [class]="getFileIcon(doc.fileType)"></i>
+    <!-- Results Count -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <p class="text-muted mb-0 fs-13">
+        Showing <span class="fw-medium text-body">{{ filteredDocuments.length }}</span> of
+        <span class="fw-medium text-body">{{ totalElements }}</span> documents
+      </p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="filteredDocuments.length === 0" class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="empty-state-icon mb-4">
+          <i class="ri-folder-open-line"></i>
+        </div>
+        <h5 class="mb-2">No Documents Found</h5>
+        <p class="text-muted mb-4" *ngIf="searchTerm || categoryFilter || caseFilter">
+          Try adjusting your search or filter criteria.
+        </p>
+        <p class="text-muted mb-4" *ngIf="!searchTerm && !categoryFilter && !caseFilter">
+          You don't have any documents yet. Upload documents to your cases to get started.
+        </p>
+        <button class="btn btn-primary" (click)="openUploadModal()" [disabled]="cases.length === 0">
+          <i class="ri-upload-2-line me-1"></i> Upload Document
+        </button>
+      </div>
+    </div>
+
+    <!-- Documents List -->
+    <div class="card border-0 shadow-sm" *ngIf="filteredDocuments.length > 0">
+      <!-- Desktop Table -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col" style="width: 40%;">Document</th>
+              <th scope="col">Case</th>
+              <th scope="col">Category</th>
+              <th scope="col">Size</th>
+              <th scope="col">Date</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of filteredDocuments" class="document-row">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="doc-icon-sm me-3" [ngClass]="'bg-' + getFileIconColor(doc.fileType) + '-subtle'">
+                    <i [class]="getFileIcon(doc.fileType)"></i>
+                  </div>
+                  <div class="overflow-hidden">
+                    <h6 class="mb-0 text-truncate fw-medium" style="max-width: 280px;" [title]="doc.title">
+                      {{ doc.title }}
+                    </h6>
+                    <small class="text-muted text-truncate d-block" style="max-width: 280px;">
+                      {{ doc.fileName }}
+                    </small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="text-truncate d-inline-block" style="max-width: 150px;">
+                  {{ doc.caseName || doc.caseNumber }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-light text-body">{{ formatCategory(doc.category) }}</span>
+              </td>
+              <td class="text-muted">{{ formatFileSize(doc.fileSize) }}</td>
+              <td class="text-muted">{{ formatDate(doc.uploadedAt) }}</td>
+              <td class="text-end">
+                <button class="btn btn-icon btn-sm btn-soft-primary me-1" (click)="previewDocument(doc)" title="Preview">
+                  <i class="ri-eye-line"></i>
+                </button>
+                <button class="btn btn-icon btn-sm btn-soft-success" (click)="downloadDocument(doc)" title="Download">
+                  <i class="ri-download-2-line"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card List -->
+      <div class="d-md-none p-3">
+        <div *ngFor="let doc of filteredDocuments" class="mobile-doc-card mb-3">
+          <div class="d-flex align-items-start gap-3">
+            <div class="doc-icon-wrapper flex-shrink-0" [ngClass]="'bg-' + getFileIconColor(doc.fileType) + '-subtle'">
+              <i [class]="getFileIcon(doc.fileType)" class="fs-20"></i>
+            </div>
+            <div class="flex-grow-1 overflow-hidden">
+              <h6 class="mb-1 fw-semibold text-truncate">{{ doc.title }}</h6>
+              <p class="text-muted mb-2 fs-12 text-truncate">{{ doc.fileName }}</p>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-light text-body fs-11">
+                  <i class="ri-briefcase-4-line me-1"></i>{{ doc.caseName || doc.caseNumber }}
+                </span>
+                <span class="badge bg-light text-body fs-11">{{ formatDate(doc.uploadedAt) }}</span>
+                <span class="badge bg-light text-body fs-11">{{ formatFileSize(doc.fileSize) }}</span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="badge bg-primary-subtle text-primary fs-11">{{ formatCategory(doc.category) }}</span>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-icon btn-sm btn-soft-primary" (click)="previewDocument(doc)" title="Preview">
+                    <i class="ri-eye-line"></i>
+                  </button>
+                  <button class="btn btn-icon btn-sm btn-soft-success" (click)="downloadDocument(doc)" title="Download">
+                    <i class="ri-download-2-line"></i>
+                  </button>
                 </div>
               </div>
-              <div class="flex-grow-1 overflow-hidden">
-                <h6 class="mb-1 text-truncate" [title]="doc.title">{{ doc.title }}</h6>
-                <p class="text-muted mb-0 fs-12 text-truncate">{{ doc.fileName }}</p>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <div class="d-flex align-items-center text-muted fs-12 mb-1">
-                <i class="ri-briefcase-4-line me-1"></i>
-                <span class="text-truncate">{{ doc.caseName || doc.caseNumber }}</span>
-              </div>
-              <div class="d-flex align-items-center text-muted fs-12 mb-1">
-                <i class="ri-calendar-line me-1"></i>
-                <span>{{ formatDate(doc.uploadedAt) }}</span>
-              </div>
-              <div class="d-flex align-items-center text-muted fs-12">
-                <i class="ri-file-info-line me-1"></i>
-                <span>{{ formatFileSize(doc.fileSize) }}</span>
-              </div>
-            </div>
-
-            <div class="d-flex gap-2">
-              <span class="badge bg-soft-info text-info flex-grow-1">
-                {{ formatCategory(doc.category) }}
-              </span>
-              <button class="btn btn-sm btn-soft-primary" [disabled]="!doc.canDownload" title="Download">
-                <i class="ri-download-2-line"></i>
-              </button>
             </div>
           </div>
         </div>
@@ -189,10 +294,10 @@
     </div>
 
     <!-- Pagination -->
-    <div *ngIf="totalPages > 1" class="row">
-      <div class="col-12 d-flex justify-content-end">
+    <div *ngIf="totalPages > 1" class="row mt-4">
+      <div class="col-12 d-flex justify-content-center">
         <nav aria-label="Document pagination">
-          <ul class="pagination mb-0">
+          <ul class="pagination pagination-rounded mb-0">
             <li class="page-item" [class.disabled]="currentPage === 0">
               <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage - 1)">
                 <i class="ri-arrow-left-s-line"></i>
@@ -219,22 +324,22 @@
 <div class="modal fade" [class.show]="showUploadModal" [style.display]="showUploadModal ? 'block' : 'none'"
      tabindex="-1" aria-labelledby="uploadModalLabel" [attr.aria-hidden]="!showUploadModal">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0">
-      <div class="modal-header bg-primary-subtle">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white border-0">
         <div class="d-flex align-items-center">
           <div class="avatar-sm me-3">
-            <span class="avatar-title bg-primary rounded-circle">
-              <i class="ri-upload-cloud-2-line fs-18"></i>
+            <span class="avatar-title bg-white bg-opacity-25 rounded-circle">
+              <i class="ri-upload-cloud-2-line fs-18 text-white"></i>
             </span>
           </div>
           <div>
-            <h5 class="modal-title mb-0" id="uploadModalLabel">Upload Document</h5>
-            <small class="text-muted">Share documents with your attorney</small>
+            <h5 class="modal-title mb-0 text-white" id="uploadModalLabel">Upload Document</h5>
+            <small class="text-white-50">Share documents securely with your attorney</small>
           </div>
         </div>
-        <button type="button" class="btn-close" (click)="closeUploadModal()"></button>
+        <button type="button" class="btn-close btn-close-white" (click)="closeUploadModal()"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body p-4">
         <form>
           <!-- Case Selection -->
           <div class="mb-4">
@@ -243,7 +348,7 @@
               Select Case <span class="text-danger">*</span>
             </label>
             <select class="form-select form-select-lg" id="uploadCase" [(ngModel)]="uploadCaseId" name="uploadCaseId" required>
-              <option [ngValue]="null">Choose a case to upload to...</option>
+              <option [ngValue]="null">Choose a case...</option>
               <option *ngFor="let c of cases" [ngValue]="c.id">
                 {{ c.caseNumber }} - {{ c.title }}
               </option>
@@ -256,64 +361,57 @@
               <i class="ri-file-text-line me-1 text-primary"></i>
               Document Title <span class="text-danger">*</span>
             </label>
-            <input type="text" class="form-control" id="uploadTitle" [(ngModel)]="uploadTitle" name="uploadTitle"
-                   placeholder="e.g., Employment Contract, Medical Records, etc." required>
+            <input type="text" class="form-control form-control-lg" id="uploadTitle" [(ngModel)]="uploadTitle" name="uploadTitle"
+                   placeholder="e.g., Employment Contract, Medical Records" required>
           </div>
 
           <!-- Description -->
           <div class="mb-4">
             <label for="uploadDescription" class="form-label fw-medium">
               <i class="ri-file-info-line me-1 text-primary"></i>
-              Description <span class="text-muted">(optional)</span>
+              Description <span class="text-muted fw-normal">(optional)</span>
             </label>
             <textarea class="form-control" id="uploadDescription" [(ngModel)]="uploadDescription" name="uploadDescription"
-                      rows="2" placeholder="Brief description of what this document contains"></textarea>
+                      rows="2" placeholder="Brief description of the document"></textarea>
           </div>
 
           <!-- File Upload Area -->
-          <div class="mb-3">
+          <div class="mb-4">
             <label class="form-label fw-medium">
               <i class="ri-attachment-line me-1 text-primary"></i>
               Select File <span class="text-danger">*</span>
             </label>
 
-            <!-- Drop Zone -->
-            <div class="upload-dropzone p-4 rounded-3 text-center cursor-pointer"
-                 [class.border-primary]="selectedFile"
-                 [class.bg-primary-subtle]="selectedFile"
+            <div class="upload-dropzone"
+                 [class.has-file]="selectedFile"
                  (click)="fileInput.click()">
               <input type="file" class="d-none" id="fileInput" #fileInput (change)="onFileSelected($event)"
                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
 
-              <div *ngIf="!selectedFile">
-                <div class="avatar-lg mx-auto mb-3">
-                  <span class="avatar-title bg-light text-primary rounded-circle fs-24">
-                    <i class="ri-upload-cloud-2-line"></i>
-                  </span>
+              <div *ngIf="!selectedFile" class="dropzone-content">
+                <div class="dropzone-icon">
+                  <i class="ri-upload-cloud-2-line"></i>
                 </div>
                 <h5 class="mb-2">Click to select a file</h5>
-                <p class="text-muted mb-0">or drag and drop your file here</p>
-                <div class="mt-3">
-                  <span class="badge bg-soft-primary text-primary me-1">PDF</span>
-                  <span class="badge bg-soft-primary text-primary me-1">DOC</span>
-                  <span class="badge bg-soft-primary text-primary me-1">DOCX</span>
-                  <span class="badge bg-soft-primary text-primary me-1">XLS</span>
-                  <span class="badge bg-soft-primary text-primary me-1">XLSX</span>
-                  <span class="badge bg-soft-primary text-primary me-1">JPG</span>
-                  <span class="badge bg-soft-primary text-primary">PNG</span>
+                <p class="text-muted mb-3">or drag and drop your file here</p>
+                <div class="file-types">
+                  <span class="badge bg-primary-subtle text-primary">PDF</span>
+                  <span class="badge bg-primary-subtle text-primary">DOC</span>
+                  <span class="badge bg-primary-subtle text-primary">DOCX</span>
+                  <span class="badge bg-primary-subtle text-primary">XLS</span>
+                  <span class="badge bg-primary-subtle text-primary">XLSX</span>
+                  <span class="badge bg-primary-subtle text-primary">JPG</span>
+                  <span class="badge bg-primary-subtle text-primary">PNG</span>
                 </div>
                 <small class="text-muted d-block mt-2">Maximum file size: 10MB</small>
               </div>
 
-              <!-- Selected File Preview -->
-              <div *ngIf="selectedFile" class="selected-file">
+              <div *ngIf="selectedFile" class="selected-file-preview">
                 <div class="d-flex align-items-center justify-content-center">
-                  <div class="avatar-md me-3">
-                    <span class="avatar-title bg-white rounded-circle fs-24">
-                      <i [class]="getFileIcon(selectedFile.type)" class="fs-24"></i>
-                    </span>
+                  <div class="file-icon-lg me-3">
+                    <i [class]="getFileIcon(selectedFile.type)" class="fs-32"></i>
                   </div>
-                  <div class="text-start">
+                  <div class="text-start flex-grow-1">
                     <h6 class="mb-1 text-truncate" style="max-width: 300px;">{{ selectedFile.name }}</h6>
                     <p class="text-muted mb-0 fs-13">{{ formatFileSize(selectedFile.size) }}</p>
                   </div>
@@ -326,18 +424,18 @@
           </div>
 
           <!-- Info Alert -->
-          <div class="alert alert-info border-0 bg-info-subtle mb-0">
+          <div class="alert alert-primary border-0 bg-primary-subtle mb-0">
             <div class="d-flex">
-              <i class="ri-information-line fs-18 me-2"></i>
+              <i class="ri-information-line fs-18 me-2 text-primary"></i>
               <div>
-                <strong>Your document will be shared with your attorney</strong>
-                <p class="mb-0 mt-1 fs-13">They will be notified and can review it immediately.</p>
+                <strong class="text-primary">Secure Upload</strong>
+                <p class="mb-0 mt-1 fs-13 text-body">Your document will be encrypted and shared securely with your attorney.</p>
               </div>
             </div>
           </div>
         </form>
       </div>
-      <div class="modal-footer bg-light">
+      <div class="modal-footer border-0 bg-light">
         <button type="button" class="btn btn-light" (click)="closeUploadModal()" [disabled]="uploading">
           Cancel
         </button>
@@ -348,7 +446,7 @@
             Uploading...
           </span>
           <span *ngIf="!uploading">
-            <i class="ri-upload-2-line me-1"></i> Upload Document
+            <i class="ri-upload-2-line me-1"></i> Upload
           </span>
         </button>
       </div>

@@ -1,14 +1,16 @@
-<div class="container-fluid">
+<div class="container-fluid" style="margin-top: 100px;">
   <!-- Page Header -->
-  <div class="row">
+  <div class="row mb-4">
     <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">My Cases</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/client/dashboard">Portal</a></li>
-            <li class="breadcrumb-item active">My Cases</li>
-          </ol>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <h4 class="mb-1 fw-semibold">My Cases</h4>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a routerLink="/client/dashboard" class="text-muted">Portal</a></li>
+              <li class="breadcrumb-item active">My Cases</li>
+            </ol>
+          </nav>
         </div>
       </div>
     </div>
@@ -17,12 +19,12 @@
   <!-- Loading State -->
   <div *ngIf="loading" class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5">
-          <div class="spinner-border text-primary" role="status">
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
             <span class="visually-hidden">Loading...</span>
           </div>
-          <p class="mt-3 text-muted">Loading your cases...</p>
+          <p class="text-muted mb-0">Loading your cases...</p>
         </div>
       </div>
     </div>
@@ -31,11 +33,15 @@
   <!-- Error State -->
   <div *ngIf="error && !loading" class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5">
-          <i class="ri-error-warning-line fs-1 text-danger"></i>
-          <h5 class="mt-3">{{ error }}</h5>
-          <button class="btn btn-primary mt-3" (click)="loadCases()">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title rounded-circle bg-danger-subtle text-danger fs-24">
+              <i class="ri-error-warning-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-2">{{ error }}</h5>
+          <button class="btn btn-primary" (click)="loadCases()">
             <i class="ri-refresh-line me-1"></i> Try Again
           </button>
         </div>
@@ -45,48 +51,63 @@
 
   <!-- Cases Content -->
   <ng-container *ngIf="!loading && !error">
-    <!-- Filters Card -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card">
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="card stats-card border-0 shadow-sm">
           <div class="card-body">
-            <div class="row g-3">
-              <!-- Search -->
-              <div class="col-md-4">
-                <div class="search-box">
-                  <input type="text" class="form-control search"
-                         [(ngModel)]="searchTerm"
-                         (input)="onSearchChange()"
-                         placeholder="Search cases...">
-                  <i class="ri-search-line search-icon"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-primary-subtle text-primary">
+                <i class="ri-briefcase-4-line"></i>
               </div>
-
-              <!-- Status Filter -->
-              <div class="col-md-3">
-                <select class="form-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-                  <option value="">All Statuses</option>
-                  <option *ngFor="let status of caseStatuses" [value]="status">
-                    {{ formatStatus(status) }}
-                  </option>
-                </select>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ totalElements }}</h3>
+                <span class="text-muted fs-13">Total Cases</span>
               </div>
-
-              <!-- Type Filter -->
-              <div class="col-md-3">
-                <select class="form-select" [(ngModel)]="typeFilter" (change)="onFilterChange()">
-                  <option value="">All Types</option>
-                  <option *ngFor="let type of caseTypes" [value]="type">
-                    {{ formatStatus(type) }}
-                  </option>
-                </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-success-subtle text-success">
+                <i class="ri-play-circle-line"></i>
               </div>
-
-              <!-- Clear Filters -->
-              <div class="col-md-2">
-                <button class="btn btn-soft-secondary w-100" (click)="clearFilters()">
-                  <i class="ri-filter-off-line me-1"></i> Clear
-                </button>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ activeCases }}</h3>
+                <span class="text-muted fs-13">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-warning-subtle text-warning">
+                <i class="ri-time-line"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ pendingCases }}</h3>
+                <span class="text-muted fs-13">Pending</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="card stats-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-secondary-subtle text-secondary">
+                <i class="ri-check-double-line"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ closedCases }}</h3>
+                <span class="text-muted fs-13">Closed</span>
               </div>
             </div>
           </div>
@@ -94,154 +115,183 @@
       </div>
     </div>
 
-    <!-- Cases Summary -->
-    <div class="row mb-3">
-      <div class="col-12">
-        <div class="d-flex align-items-center justify-content-between">
-          <p class="text-muted mb-0">
-            Showing {{ filteredCases.length }} of {{ totalElements }} cases
-          </p>
+    <!-- Filters Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+          <!-- Search -->
+          <div class="col-lg-4 col-md-6">
+            <div class="search-box">
+              <input type="text" class="form-control search bg-light border-0"
+                     [(ngModel)]="searchTerm"
+                     (input)="onSearchChange()"
+                     placeholder="Search cases...">
+              <i class="ri-search-line search-icon"></i>
+            </div>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="col-lg-2 col-md-3 col-6">
+            <select class="form-select bg-light border-0" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+              <option value="">All Status</option>
+              <option *ngFor="let status of caseStatuses" [value]="status">
+                {{ formatStatus(status) }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Type Filter -->
+          <div class="col-lg-2 col-md-3 col-6">
+            <select class="form-select bg-light border-0" [(ngModel)]="typeFilter" (change)="onFilterChange()">
+              <option value="">All Types</option>
+              <option *ngFor="let type of caseTypes" [value]="type">
+                {{ formatStatus(type) }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Clear Filters -->
+          <div class="col-lg-4 d-flex align-items-center justify-content-end gap-2">
+            <button class="btn btn-soft-secondary btn-sm" (click)="clearFilters()"
+                    *ngIf="searchTerm || statusFilter || typeFilter">
+              <i class="ri-filter-off-line me-1"></i> Clear
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Results Count -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <p class="text-muted mb-0 fs-13">
+        Showing <span class="fw-medium text-body">{{ filteredCases.length }}</span> of
+        <span class="fw-medium text-body">{{ totalElements }}</span> cases
+      </p>
+    </div>
+
     <!-- Empty State -->
-    <div *ngIf="filteredCases.length === 0" class="row">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body text-center py-5">
-            <i class="ri-briefcase-line fs-1 text-muted"></i>
-            <h5 class="mt-3">No Cases Found</h5>
-            <p class="text-muted" *ngIf="searchTerm || statusFilter || typeFilter">
-              Try adjusting your search or filter criteria.
-            </p>
-            <p class="text-muted" *ngIf="!searchTerm && !statusFilter && !typeFilter">
-              You don't have any cases yet. Your attorney will add cases when you start working together.
-            </p>
-          </div>
+    <div *ngIf="filteredCases.length === 0" class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="empty-state-icon mb-4">
+          <i class="ri-briefcase-line"></i>
         </div>
+        <h5 class="mb-2">No Cases Found</h5>
+        <p class="text-muted mb-4" *ngIf="searchTerm || statusFilter || typeFilter">
+          Try adjusting your search or filter criteria.
+        </p>
+        <p class="text-muted mb-4" *ngIf="!searchTerm && !statusFilter && !typeFilter">
+          You don't have any cases yet. Your attorney will add cases when you start working together.
+        </p>
       </div>
     </div>
 
     <!-- Cases List -->
-    <div class="row" *ngIf="filteredCases.length > 0">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th scope="col" style="width: 50px;">#</th>
-                    <th scope="col">Case Details</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Attorney</th>
-                    <th scope="col">Opened</th>
-                    <th scope="col">Last Updated</th>
-                    <th scope="col" style="width: 100px;">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let caseItem of filteredCases; let i = index" class="case-row">
-                    <td>
-                      <span class="text-muted">{{ i + 1 + (currentPage * pageSize) }}</span>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="avatar-sm flex-shrink-0 me-3">
-                          <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-4">
-                            <i [class]="getTypeIcon(caseItem.type)"></i>
-                          </div>
-                        </div>
-                        <div class="flex-grow-1">
-                          <h6 class="mb-1">
-                            <a [routerLink]="['/client/cases', caseItem.id]" class="text-reset">
-                              {{ caseItem.title }}
-                            </a>
-                          </h6>
-                          <p class="text-muted mb-0 fs-12">
-                            <span class="fw-medium">{{ caseItem.caseNumber }}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="text-muted">{{ formatStatus(caseItem.type) }}</span>
-                    </td>
-                    <td>
-                      <span class="badge" [ngClass]="getStatusBadgeClass(caseItem.status)">
-                        {{ formatStatus(caseItem.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="text-muted">{{ caseItem.attorneyName || '-' }}</span>
-                    </td>
-                    <td>
-                      <span class="text-muted">{{ formatDate(caseItem.openDate) }}</span>
-                    </td>
-                    <td>
-                      <span class="text-muted">{{ formatDate(caseItem.lastUpdated) }}</span>
-                    </td>
-                    <td>
-                      <div class="dropdown">
-                        <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          <i class="ri-more-fill"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                          <li>
-                            <a class="dropdown-item" [routerLink]="['/client/cases', caseItem.id]">
-                              <i class="ri-eye-line me-2"></i> View Details
-                            </a>
-                          </li>
-                          <li>
-                            <a class="dropdown-item" [routerLink]="['/client/documents']" [queryParams]="{caseId: caseItem.id}">
-                              <i class="ri-file-list-line me-2"></i> View Documents ({{ caseItem.documentCount || 0 }})
-                            </a>
-                          </li>
-                          <li>
-                            <a class="dropdown-item" [routerLink]="['/client/messages']" [queryParams]="{caseId: caseItem.id}">
-                              <i class="ri-message-2-line me-2"></i> Send Message
-                            </a>
-                          </li>
-                          <li><hr class="dropdown-divider"></li>
-                          <li>
-                            <a class="dropdown-item" [routerLink]="['/client/appointments']" [queryParams]="{caseId: caseItem.id}">
-                              <i class="ri-calendar-check-line me-2"></i> Schedule Appointment
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+    <div class="card border-0 shadow-sm" *ngIf="filteredCases.length > 0">
+      <!-- Desktop Table -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Case</th>
+              <th scope="col">Type</th>
+              <th scope="col">Status</th>
+              <th scope="col">Attorney</th>
+              <th scope="col">Opened</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let caseItem of filteredCases" class="case-row">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="case-icon-sm me-3" [ngClass]="'bg-' + getTypeColor(caseItem.type) + '-subtle text-' + getTypeColor(caseItem.type)">
+                    <i [class]="getTypeIcon(caseItem.type)"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fw-medium">
+                      <a [routerLink]="['/client/cases', caseItem.id]" class="text-reset">
+                        {{ caseItem.title }}
+                      </a>
+                    </h6>
+                    <small class="text-muted">{{ caseItem.caseNumber }}</small>
+                  </div>
+                </div>
+              </td>
+              <td class="text-muted">{{ formatStatus(caseItem.type) }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(caseItem.status)">
+                  {{ formatStatus(caseItem.status) }}
+                </span>
+              </td>
+              <td class="text-muted">{{ caseItem.attorneyName || '-' }}</td>
+              <td class="text-muted">{{ formatDate(caseItem.openDate) }}</td>
+              <td class="text-end">
+                <a [routerLink]="['/client/cases', caseItem.id]" class="btn btn-sm btn-soft-primary">
+                  <i class="ri-eye-line me-1"></i> View
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-            <!-- Pagination -->
-            <div *ngIf="totalPages > 1" class="d-flex justify-content-end p-3">
-              <nav aria-label="Case pagination">
-                <ul class="pagination mb-0">
-                  <li class="page-item" [class.disabled]="currentPage === 0">
-                    <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage - 1)">
-                      <i class="ri-arrow-left-s-line"></i>
-                    </a>
-                  </li>
-                  <li class="page-item" *ngFor="let page of pages" [class.active]="page === currentPage">
-                    <a class="page-link" href="javascript:void(0)" (click)="goToPage(page)">
-                      {{ page + 1 }}
-                    </a>
-                  </li>
-                  <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                    <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage + 1)">
-                      <i class="ri-arrow-right-s-line"></i>
-                    </a>
-                  </li>
-                </ul>
-              </nav>
+      <!-- Mobile Card List -->
+      <div class="d-md-none p-3">
+        <div *ngFor="let caseItem of filteredCases" class="mobile-case-card mb-3">
+          <div class="d-flex align-items-start gap-3">
+            <div class="case-icon-sm flex-shrink-0" [ngClass]="'bg-' + getTypeColor(caseItem.type) + '-subtle text-' + getTypeColor(caseItem.type)">
+              <i [class]="getTypeIcon(caseItem.type)"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="badge" [ngClass]="getStatusBadgeClass(caseItem.status)">
+                  {{ formatStatus(caseItem.status) }}
+                </span>
+                <small class="text-muted">{{ caseItem.caseNumber }}</small>
+              </div>
+              <h6 class="mb-1 fw-semibold">
+                <a [routerLink]="['/client/cases', caseItem.id]" class="text-reset">{{ caseItem.title }}</a>
+              </h6>
+              <p class="text-muted fs-12 mb-2">{{ formatStatus(caseItem.type) }}</p>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-light text-body fs-11">
+                  <i class="ri-user-line me-1"></i>{{ caseItem.attorneyName || 'Unassigned' }}
+                </span>
+                <span class="badge bg-light text-body fs-11">
+                  <i class="ri-calendar-line me-1"></i>{{ formatDate(caseItem.openDate) }}
+                </span>
+              </div>
+              <a [routerLink]="['/client/cases', caseItem.id]" class="btn btn-sm btn-soft-primary w-100">
+                <i class="ri-eye-line me-1"></i> View Details
+              </a>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalPages > 1" class="row mt-4">
+      <div class="col-12 d-flex justify-content-center">
+        <nav aria-label="Case pagination">
+          <ul class="pagination pagination-rounded mb-0">
+            <li class="page-item" [class.disabled]="currentPage === 0">
+              <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage - 1)">
+                <i class="ri-arrow-left-s-line"></i>
+              </a>
+            </li>
+            <li class="page-item" *ngFor="let page of pages" [class.active]="page === currentPage">
+              <a class="page-link" href="javascript:void(0)" (click)="goToPage(page)">
+                {{ page + 1 }}
+              </a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+              <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage + 1)">
+                <i class="ri-arrow-right-s-line"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
   </ng-container>

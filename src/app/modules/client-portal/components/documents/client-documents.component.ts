@@ -2,9 +2,13 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef 
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ClientPortalService, ClientDocument, ClientCase, PagedResponse } from '../../services/client-portal.service';
+import { ClientDocumentPreviewModalComponent } from '../document-preview-modal/client-document-preview-modal.component';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-client-documents',
@@ -26,7 +30,7 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 0;
-  pageSize = 10;
+  pageSize = 12;
   totalPages = 0;
   totalElements = 0;
 
@@ -44,12 +48,21 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
 
   categories: string[] = [];
 
+  // Stats
+  totalDocCount = 0;
+  pdfCount = 0;
+  imageCount = 0;
+  otherCount = 0;
+
   private destroy$ = new Subject<void>();
+  private apiUrl = environment.apiUrl;
 
   constructor(
     private clientPortalService: ClientPortalService,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private modalService: NgbModal,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -81,6 +94,7 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
           this.totalPages = response.totalPages;
           this.totalElements = response.totalElements;
           this.extractCategories();
+          this.calculateStats();
           this.applyFilters();
           this.loading = false;
           this.cdr.detectChanges();
@@ -111,6 +125,13 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
 
   extractCategories(): void {
     this.categories = [...new Set(this.documents.map(d => d.category).filter(c => c))];
+  }
+
+  calculateStats(): void {
+    this.totalDocCount = this.documents.length;
+    this.pdfCount = this.documents.filter(d => this.isPdf(d)).length;
+    this.imageCount = this.documents.filter(d => this.isImage(d)).length;
+    this.otherCount = this.totalDocCount - this.pdfCount - this.imageCount;
   }
 
   applyFilters(): void {
@@ -147,6 +168,41 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
       this.currentPage = page;
       this.loadDocuments();
     }
+  }
+
+  // Preview Document
+  previewDocument(doc: ClientDocument): void {
+    const modalRef = this.modalService.open(ClientDocumentPreviewModalComponent, {
+      size: 'xl',
+      centered: true,
+      backdrop: 'static',
+      keyboard: true
+    });
+    modalRef.componentInstance.document = doc;
+  }
+
+  // Download Document
+  downloadDocument(doc: ClientDocument): void {
+    if (!doc.id) return;
+    const downloadUrl = `${this.apiUrl}/api/file-manager/files/${doc.id}/download`;
+
+    this.http.get(downloadUrl, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName || doc.title || 'document';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error downloading document:', err);
+        this.error = 'Unable to download document.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   // Upload methods
@@ -217,6 +273,23 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
       });
   }
 
+  // Helper methods
+  isPdf(doc: ClientDocument): boolean {
+    const type = (doc.fileType || '').toLowerCase();
+    const name = (doc.fileName || '').toLowerCase();
+    return type.includes('pdf') || name.endsWith('.pdf');
+  }
+
+  isImage(doc: ClientDocument): boolean {
+    const type = (doc.fileType || '').toLowerCase();
+    const name = (doc.fileName || '').toLowerCase();
+    return type.startsWith('image/') ||
+           name.endsWith('.jpg') ||
+           name.endsWith('.jpeg') ||
+           name.endsWith('.png') ||
+           name.endsWith('.gif');
+  }
+
   getFileIcon(fileType: string): string {
     const iconMap: { [key: string]: string } = {
       'application/pdf': 'ri-file-pdf-line text-danger',
@@ -230,6 +303,14 @@ export class ClientDocumentsComponent implements OnInit, OnDestroy {
       'text/plain': 'ri-file-text-line text-secondary'
     };
     return iconMap[fileType] || 'ri-file-line text-secondary';
+  }
+
+  getFileIconColor(fileType: string): string {
+    if (fileType?.includes('pdf')) return 'danger';
+    if (fileType?.includes('word') || fileType?.includes('doc')) return 'primary';
+    if (fileType?.includes('excel') || fileType?.includes('xls')) return 'success';
+    if (fileType?.includes('image')) return 'info';
+    return 'secondary';
   }
 
   formatFileSize(bytes: number): string {

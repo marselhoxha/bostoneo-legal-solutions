@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 import { ClientPortalService, ClientProfile } from '../../services/client-portal.service';
 
 @Component({
@@ -11,7 +11,8 @@ import { ClientPortalService, ClientProfile } from '../../services/client-portal
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './client-profile.component.html',
-  styleUrls: ['./client-profile.component.scss']
+  styleUrls: ['./client-profile.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientProfileComponent implements OnInit, OnDestroy {
   profile: ClientProfile | null = null;
@@ -26,7 +27,10 @@ export class ClientProfileComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private clientPortalService: ClientPortalService) {}
+  constructor(
+    private clientPortalService: ClientPortalService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadProfile();
@@ -40,18 +44,25 @@ export class ClientProfileComponent implements OnInit, OnDestroy {
   loadProfile(): void {
     this.loading = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     this.clientPortalService.getProfile()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: (profile) => {
           this.profile = profile;
-          this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           console.error('Error loading profile:', err);
           this.error = 'Failed to load profile. Please try again.';
-          this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -60,12 +71,24 @@ export class ClientProfileComponent implements OnInit, OnDestroy {
     if (this.profile) {
       this.editForm = { ...this.profile };
       this.isEditing = true;
+      this.cdr.markForCheck();
     }
   }
 
   cancelEditing(): void {
     this.isEditing = false;
     this.editForm = {};
+    this.cdr.markForCheck();
+  }
+
+  dismissError(): void {
+    this.error = null;
+    this.cdr.markForCheck();
+  }
+
+  dismissSuccess(): void {
+    this.successMessage = null;
+    this.cdr.markForCheck();
   }
 
   saveProfile(): void {
@@ -73,22 +96,32 @@ export class ClientProfileComponent implements OnInit, OnDestroy {
 
     this.saving = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     this.clientPortalService.updateProfile(this.editForm)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.saving = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: (profile) => {
           this.profile = profile;
           this.isEditing = false;
           this.editForm = {};
-          this.saving = false;
           this.successMessage = 'Profile updated successfully!';
-          setTimeout(() => this.successMessage = null, 3000);
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.successMessage = null;
+            this.cdr.markForCheck();
+          }, 3000);
         },
         error: (err) => {
           console.error('Error saving profile:', err);
           this.error = 'Failed to save profile. Please try again.';
-          this.saving = false;
+          this.cdr.markForCheck();
         }
       });
   }

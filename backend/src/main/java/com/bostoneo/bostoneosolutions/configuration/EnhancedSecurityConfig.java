@@ -77,6 +77,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
             .ignoringRequestMatchers("/api/time-entries/**", "/api/**")
             .ignoringRequestMatchers("/user/delete/**")  // Ignore CSRF for user deletion
+            .ignoringRequestMatchers("/client/delete/**")  // Ignore CSRF for client deletion
             .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
             .ignoringRequestMatchers("/api/ai/**")  // Ignore CSRF for AI endpoints
         );

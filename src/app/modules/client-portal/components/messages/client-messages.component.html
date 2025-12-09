@@ -196,22 +196,6 @@
                     <!-- Message -->
                     <li class="chat-list" [class.left]="!isSentByClient(message)" [class.right]="isSentByClient(message)">
                       <div class="conversation-list">
-                        <!-- Avatar for received messages (from attorney) -->
-                        <div class="chat-avatar" *ngIf="!isSentByClient(message)">
-                          <div class="avatar-xs">
-                            <span class="avatar-title rounded-circle bg-primary text-white">
-                              {{ message.senderName?.charAt(0)?.toUpperCase() || 'A' }}
-                            </span>
-                          </div>
-                        </div>
-                        <!-- Avatar for sent messages (from client - you) -->
-                        <div class="chat-avatar" *ngIf="isSentByClient(message)">
-                          <div class="avatar-xs">
-                            <span class="avatar-title rounded-circle bg-success text-white">
-                              {{ message.senderName?.charAt(0)?.toUpperCase() || 'Y' }}
-                            </span>
-                          </div>
-                        </div>
                         <div class="user-chat-content">
                           <div class="ctext-wrap">
                             <div class="ctext-wrap-content">

@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 import { ClientPortalService, ClientCase, PagedResponse } from '../../services/client-portal.service';
 
 @Component({
@@ -11,7 +11,8 @@ import { ClientPortalService, ClientCase, PagedResponse } from '../../services/c
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './client-cases.component.html',
-  styleUrls: ['./client-cases.component.scss']
+  styleUrls: ['./client-cases.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientCasesComponent implements OnInit, OnDestroy {
   cases: ClientCase[] = [];
@@ -34,9 +35,17 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
   caseStatuses: string[] = [];
   caseTypes: string[] = [];
 
+  // Stats
+  activeCases = 0;
+  pendingCases = 0;
+  closedCases = 0;
+
   private destroy$ = new Subject<void>();
 
-  constructor(private clientPortalService: ClientPortalService) {}
+  constructor(
+    private clientPortalService: ClientPortalService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadCases();
@@ -50,22 +59,30 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
   loadCases(): void {
     this.loading = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     this.clientPortalService.getCases(this.currentPage, this.pageSize)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: (response: PagedResponse<ClientCase>) => {
           this.cases = response.content || [];
           this.totalPages = response.totalPages;
           this.totalElements = response.totalElements;
           this.extractFilterOptions();
+          this.calculateStats();
           this.applyFilters();
-          this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           console.error('Error loading cases:', err);
           this.error = 'Failed to load your cases. Please try again.';
-          this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -73,6 +90,18 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
   extractFilterOptions(): void {
     this.caseStatuses = [...new Set(this.cases.map(c => c.status).filter(s => s))];
     this.caseTypes = [...new Set(this.cases.map(c => c.type).filter(t => t))];
+  }
+
+  calculateStats(): void {
+    this.activeCases = this.cases.filter(c =>
+      ['OPEN', 'ACTIVE', 'IN_PROGRESS', 'DISCOVERY'].includes(c.status || '')
+    ).length;
+    this.pendingCases = this.cases.filter(c =>
+      ['PENDING', 'REVIEW'].includes(c.status || '')
+    ).length;
+    this.closedCases = this.cases.filter(c =>
+      ['CLOSED', 'SETTLED', 'WON', 'LOST'].includes(c.status || '')
+    ).length;
   }
 
   applyFilters(): void {
@@ -87,6 +116,7 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
 
       return matchesSearch && matchesStatus && matchesType;
     });
+    this.cdr.markForCheck();
   }
 
   onSearchChange(): void {
@@ -113,6 +143,22 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
 
   getStatusBadgeClass(status: string): string {
     const statusMap: { [key: string]: string } = {
+      'OPEN': 'bg-primary-subtle text-primary',
+      'ACTIVE': 'bg-primary-subtle text-primary',
+      'IN_PROGRESS': 'bg-info-subtle text-info',
+      'DISCOVERY': 'bg-info-subtle text-info',
+      'PENDING': 'bg-warning-subtle text-warning',
+      'REVIEW': 'bg-warning-subtle text-warning',
+      'CLOSED': 'bg-secondary-subtle text-secondary',
+      'SETTLED': 'bg-success-subtle text-success',
+      'WON': 'bg-success-subtle text-success',
+      'LOST': 'bg-danger-subtle text-danger'
+    };
+    return statusMap[status] || 'bg-secondary-subtle text-secondary';
+  }
+
+  getStatusDotClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
       'OPEN': 'bg-primary',
       'ACTIVE': 'bg-primary',
       'IN_PROGRESS': 'bg-info',
@@ -130,7 +176,7 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
   getTypeIcon(type: string): string {
     const iconMap: { [key: string]: string } = {
       'CIVIL': 'ri-scales-3-line',
-      'CRIMINAL': 'ri-criminal-line',
+      'CRIMINAL': 'ri-shield-line',
       'FAMILY': 'ri-parent-line',
       'IMMIGRATION': 'ri-passport-line',
       'CORPORATE': 'ri-building-line',
@@ -141,6 +187,22 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
       'EMPLOYMENT': 'ri-user-settings-line'
     };
     return iconMap[type] || 'ri-briefcase-4-line';
+  }
+
+  getTypeColor(type: string): string {
+    const colorMap: { [key: string]: string } = {
+      'CIVIL': 'primary',
+      'CRIMINAL': 'danger',
+      'FAMILY': 'info',
+      'IMMIGRATION': 'warning',
+      'CORPORATE': 'success',
+      'REAL_ESTATE': 'info',
+      'PERSONAL_INJURY': 'danger',
+      'BANKRUPTCY': 'warning',
+      'INTELLECTUAL_PROPERTY': 'primary',
+      'EMPLOYMENT': 'secondary'
+    };
+    return colorMap[type] || 'primary';
   }
 
   formatDate(dateString: string): string {
@@ -156,6 +218,14 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
   formatStatus(status: string): string {
     if (!status) return '-';
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  getDaysOpen(openDate: string): number {
+    if (!openDate) return 0;
+    const opened = new Date(openDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - opened.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
   get pages(): number[] {

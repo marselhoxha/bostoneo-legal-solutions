@@ -1,9 +1,12 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ClientPortalService, ClientCase, ClientDocument, ClientAppointment, ClientActivity } from '../../services/client-portal.service';
+import { ClientDocumentPreviewModalComponent } from '../document-preview-modal/client-document-preview-modal.component';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -30,7 +33,9 @@ export class ClientCaseDetailComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private clientPortalService: ClientPortalService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private modalService: NgbModal,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -217,21 +222,35 @@ export class ClientCaseDetailComponent implements OnInit, OnDestroy {
   downloadDocument(doc: ClientDocument): void {
     if (!doc.id) return;
 
-    const downloadUrl = `${this.apiUrl}/file-manager/download/${doc.id}`;
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = doc.fileName || doc.title || 'document';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const downloadUrl = `${this.apiUrl}/api/file-manager/files/${doc.id}/download`;
+
+    this.http.get(downloadUrl, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName || doc.title || 'document';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error downloading document:', err);
+      }
+    });
   }
 
   previewDocument(doc: ClientDocument): void {
     if (!doc.id) return;
 
-    const previewUrl = `${this.apiUrl}/file-manager/preview/${doc.id}`;
-    window.open(previewUrl, '_blank');
+    const modalRef = this.modalService.open(ClientDocumentPreviewModalComponent, {
+      size: 'xl',
+      centered: true,
+      backdrop: 'static',
+      keyboard: true
+    });
+    modalRef.componentInstance.document = doc;
   }
 
   refreshData(): void {

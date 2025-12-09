@@ -1,0 +1,147 @@
+<div class="modal-header border-0 pb-0">
+  <div class="d-flex align-items-center gap-3 flex-grow-1">
+    <div class="file-icon-wrapper">
+      <i [class]="getFileIcon()" class="fs-24"></i>
+    </div>
+    <div class="flex-grow-1 overflow-hidden">
+      <h5 class="modal-title text-truncate mb-1">{{ document.title || document.fileName }}</h5>
+      <div class="file-meta d-flex align-items-center gap-2 text-muted fs-13">
+        <span class="badge bg-light text-body">{{ getFileExtension() }}</span>
+        <span>{{ formatFileSize(document.fileSize) }}</span>
+        <span *ngIf="document.caseName" class="d-flex align-items-center">
+          <i class="ri-briefcase-line me-1"></i>
+          {{ document.caseName }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2">
+    <!-- Zoom Controls for images -->
+    <div class="btn-group" *ngIf="previewType === 'image' && !isLoading && !error">
+      <button type="button" class="btn btn-sm btn-soft-secondary" (click)="zoomOut()" [disabled]="zoomLevel <= minZoom">
+        <i class="ri-subtract-line"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-soft-secondary" (click)="resetZoom()">
+        {{ zoomLevel }}%
+      </button>
+      <button type="button" class="btn btn-sm btn-soft-secondary" (click)="zoomIn()" [disabled]="zoomLevel >= maxZoom">
+        <i class="ri-add-line"></i>
+      </button>
+    </div>
+
+    <!-- Open in new tab -->
+    <button type="button" class="btn btn-sm btn-soft-primary" (click)="openInNewTab()"
+            *ngIf="previewType === 'pdf' || previewType === 'image'" title="Open in new tab">
+      <i class="ri-external-link-line"></i>
+    </button>
+
+    <!-- Download -->
+    <button type="button" class="btn btn-sm btn-success" (click)="downloadFile()" title="Download">
+      <i class="ri-download-2-line me-1"></i>Download
+    </button>
+
+    <!-- Close -->
+    <button type="button" class="btn-close" (click)="close()"></button>
+  </div>
+</div>
+
+<div class="modal-body p-0">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="preview-loading">
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary mb-3"></div>
+      <p class="text-muted mb-0">Loading preview...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="preview-error">
+    <div class="text-center py-5">
+      <div class="avatar-lg bg-danger-subtle rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center">
+        <i class="ri-error-warning-line text-danger fs-24"></i>
+      </div>
+      <h5 class="mb-3">Preview Not Available</h5>
+      <p class="text-muted mb-4">{{ error }}</p>
+      <button class="btn btn-primary" (click)="downloadFile()">
+        <i class="ri-download-2-line me-2"></i>Download File
+      </button>
+    </div>
+  </div>
+
+  <!-- PDF Preview -->
+  <div *ngIf="previewType === 'pdf' && previewUrl && !isLoading && !error" class="pdf-preview">
+    <iframe
+      [src]="previewUrl"
+      class="w-100"
+      style="height: 70vh; border: none;">
+    </iframe>
+  </div>
+
+  <!-- Image Preview -->
+  <div *ngIf="previewType === 'image' && imageUrl && !isLoading && !error" class="image-preview">
+    <div class="image-container">
+      <img
+        [src]="imageUrl"
+        [alt]="document.title || document.fileName"
+        class="preview-image"
+        [style.transform]="'scale(' + (zoomLevel / 100) + ')'">
+    </div>
+  </div>
+
+  <!-- Office Document Preview -->
+  <div *ngIf="previewType === 'office' && !isLoading && !error" class="office-preview">
+    <div class="office-preview-container text-center py-5">
+      <div class="office-icon-container mb-4">
+        <i class="ri-file-word-2-fill text-primary display-1" *ngIf="getFileExtension() === 'DOC' || getFileExtension() === 'DOCX'"></i>
+        <i class="ri-file-excel-2-fill text-success display-1" *ngIf="getFileExtension() === 'XLS' || getFileExtension() === 'XLSX'"></i>
+        <i class="ri-file-ppt-2-fill text-warning display-1" *ngIf="getFileExtension() === 'PPT' || getFileExtension() === 'PPTX'"></i>
+      </div>
+
+      <h4 class="mb-3">{{ document.title || document.fileName }}</h4>
+
+      <div class="file-details mb-4">
+        <div class="row g-3 justify-content-center">
+          <div class="col-auto">
+            <span class="text-muted">Type:</span>
+            <span class="ms-1 fw-medium">
+              <span *ngIf="getFileExtension() === 'DOC' || getFileExtension() === 'DOCX'">Microsoft Word</span>
+              <span *ngIf="getFileExtension() === 'XLS' || getFileExtension() === 'XLSX'">Microsoft Excel</span>
+              <span *ngIf="getFileExtension() === 'PPT' || getFileExtension() === 'PPTX'">Microsoft PowerPoint</span>
+            </span>
+          </div>
+          <div class="col-auto">
+            <span class="text-muted">Size:</span>
+            <span class="ms-1 fw-medium">{{ formatFileSize(document.fileSize) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-lg" (click)="downloadFile()">
+        <i class="ri-download-2-line me-2"></i>
+        Download {{ getFileExtension() }} File
+      </button>
+
+      <p class="text-muted small mt-3 mb-0">
+        <i class="ri-information-line me-1"></i>
+        Office documents require Microsoft Office or compatible software to view.
+      </p>
+    </div>
+  </div>
+
+  <!-- Unsupported File Type -->
+  <div *ngIf="previewType === 'unsupported' && !isLoading" class="preview-unsupported">
+    <div class="text-center py-5">
+      <div class="avatar-lg bg-secondary-subtle rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center">
+        <i [class]="getFileIcon()" class="fs-24"></i>
+      </div>
+      <h5 class="mb-3">Preview Not Supported</h5>
+      <p class="text-muted mb-4">
+        This file type ({{ getFileExtension() || 'Unknown' }}) cannot be previewed in the browser.
+      </p>
+      <button class="btn btn-primary" (click)="downloadFile()">
+        <i class="ri-download-2-line me-2"></i>Download to View
+      </button>
+    </div>
+  </div>
+</div>

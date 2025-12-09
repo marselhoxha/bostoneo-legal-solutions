@@ -1,270 +1,358 @@
-<div class="container-fluid">
-  <!-- Page Header -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">My Profile</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/client/dashboard">Portal</a></li>
-            <li class="breadcrumb-item active">My Profile</li>
-          </ol>
-        </div>
-      </div>
+<div class="container-fluid" style="margin-top: 100px !important;">
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3 shadow-sm" role="alert">
+    <div class="d-flex align-items-center">
+      <i class="ri-checkbox-circle-fill fs-18 me-2"></i>
+      <span>{{ successMessage }}</span>
     </div>
+    <button type="button" class="btn-close" (click)="dismissSuccess()"></button>
   </div>
 
-  <!-- Success Message -->
-  <div *ngIf="successMessage" class="row">
-    <div class="col-12">
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="ri-check-double-line me-2"></i> {{ successMessage }}
-        <button type="button" class="btn-close" (click)="successMessage = null"></button>
-      </div>
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show mb-3 shadow-sm" role="alert">
+    <div class="d-flex align-items-center">
+      <i class="ri-error-warning-fill fs-18 me-2"></i>
+      <span>{{ error }}</span>
     </div>
-  </div>
-
-  <!-- Error Message -->
-  <div *ngIf="error" class="row">
-    <div class="col-12">
-      <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="ri-error-warning-line me-2"></i> {{ error }}
-        <button type="button" class="btn-close" (click)="error = null"></button>
-      </div>
-    </div>
+    <button type="button" class="btn-close" (click)="dismissError()"></button>
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-3 text-muted">Loading your profile...</p>
-        </div>
+  <div *ngIf="loading" class="profile-loading">
+    <div class="profile-loading-content">
+      <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <p class="text-muted mt-4 mb-0">Loading your profile...</p>
     </div>
   </div>
 
   <!-- Profile Content -->
   <ng-container *ngIf="!loading && profile">
-    <div class="row">
-      <!-- Profile Card -->
-      <div class="col-lg-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <div class="profile-avatar mx-auto mb-4">
-              <img *ngIf="profile.imageUrl" [src]="profile.imageUrl" alt="Profile"
-                   class="rounded-circle avatar-xl">
-              <div *ngIf="!profile.imageUrl"
-                   class="avatar-xl rounded-circle bg-soft-primary text-primary d-flex align-items-center justify-content-center mx-auto">
-                <span class="fs-1">{{ getInitials(profile.name) }}</span>
-              </div>
-            </div>
-
-            <h5 class="mb-1">{{ profile.name }}</h5>
-            <p class="text-muted mb-3">{{ profile.email }}</p>
-
-            <div class="d-flex justify-content-center gap-2 mb-4">
-              <span class="badge" [ngClass]="getStatusBadgeClass(profile.status)">
-                {{ formatStatus(profile.status) }}
-              </span>
-              <span class="badge bg-soft-info text-info">
-                {{ formatStatus(profile.type) }}
-              </span>
-            </div>
-
-            <div class="border-top pt-4">
-              <div class="row text-center">
-                <div class="col-6 border-end">
-                  <h6 class="text-muted mb-1">Client ID</h6>
-                  <p class="fw-medium mb-0">#{{ profile.id }}</p>
+    <!-- Profile Hero Section -->
+    <div class="card profile-hero">
+      <div class="profile-hero-content">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <div class="profile-hero-info">
+              <!-- Avatar -->
+              <div class="profile-avatar-container">
+                <img *ngIf="profile.imageUrl" [src]="profile.imageUrl" alt="Profile" class="profile-avatar-img">
+                <div *ngIf="!profile.imageUrl" class="profile-avatar-initials">
+                  {{ getInitials(profile.name) }}
                 </div>
-                <div class="col-6">
-                  <h6 class="text-muted mb-1">User ID</h6>
-                  <p class="fw-medium mb-0">#{{ profile.userId }}</p>
+                <span class="profile-avatar-status" [class.active]="profile.status === 'ACTIVE'"></span>
+              </div>
+              <!-- Info -->
+              <div class="profile-hero-text">
+                <h1 class="profile-name">{{ profile.name }}</h1>
+                <p class="profile-email">{{ profile.email }}</p>
+                <div class="profile-badges">
+                  <span class="badge" [ngClass]="getStatusBadgeClass(profile.status)">
+                    {{ formatStatus(profile.status) }}
+                  </span>
+                  <span class="badge bg-light text-body">
+                    {{ formatStatus(profile.type) }}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Quick Links -->
-        <div class="card">
-          <div class="card-header">
-            <h6 class="card-title mb-0">Quick Links</h6>
-          </div>
-          <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-              <a routerLink="/client/cases" class="list-group-item list-group-item-action d-flex align-items-center">
-                <i class="ri-briefcase-4-line me-2 text-primary"></i>
-                My Cases
-                <i class="ri-arrow-right-s-line ms-auto"></i>
-              </a>
-              <a routerLink="/client/documents" class="list-group-item list-group-item-action d-flex align-items-center">
-                <i class="ri-file-list-line me-2 text-info"></i>
-                My Documents
-                <i class="ri-arrow-right-s-line ms-auto"></i>
-              </a>
-              <a routerLink="/client/appointments" class="list-group-item list-group-item-action d-flex align-items-center">
-                <i class="ri-calendar-check-line me-2 text-success"></i>
-                Appointments
-                <i class="ri-arrow-right-s-line ms-auto"></i>
-              </a>
-              <a routerLink="/client/messages" class="list-group-item list-group-item-action d-flex align-items-center">
-                <i class="ri-message-2-line me-2 text-warning"></i>
-                Messages
-                <i class="ri-arrow-right-s-line ms-auto"></i>
-              </a>
-              <a routerLink="/client/invoices" class="list-group-item list-group-item-action d-flex align-items-center">
-                <i class="ri-file-text-line me-2 text-danger"></i>
-                My Invoices
-                <i class="ri-arrow-right-s-line ms-auto"></i>
+          <div class="col-lg-4">
+            <div class="profile-hero-actions">
+              <button *ngIf="!isEditing" class="btn btn-soft-primary" (click)="startEditing()">
+                <i class="ri-edit-line me-1"></i>Edit Profile
+              </button>
+              <a routerLink="/client/messages" class="btn btn-primary">
+                <i class="ri-message-2-line me-1"></i>Contact
               </a>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Profile Details -->
+    <div class="row">
+      <!-- Left Column -->
+      <div class="col-lg-4">
+        <!-- Account Summary Card -->
+        <div class="card profile-card border-0 shadow-sm">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-account-circle-line me-2 text-primary"></i>Account Summary
+            </h6>
+          </div>
+          <div class="card-body">
+            <ul class="profile-summary-list">
+              <li>
+                <span class="summary-label">Client ID</span>
+                <span class="summary-value">#{{ profile.id }}</span>
+              </li>
+              <li>
+                <span class="summary-label">User ID</span>
+                <span class="summary-value">#{{ profile.userId }}</span>
+              </li>
+              <li>
+                <span class="summary-label">Account Type</span>
+                <span class="summary-value">{{ formatStatus(profile.type) }}</span>
+              </li>
+              <li>
+                <span class="summary-label">Status</span>
+                <span class="summary-value">
+                  <span class="status-indicator" [class.active]="profile.status === 'ACTIVE'"></span>
+                  {{ formatStatus(profile.status) }}
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="card profile-card border-0 shadow-sm">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-compass-3-line me-2 text-primary"></i>Quick Navigation
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <nav class="profile-nav">
+              <a routerLink="/client/dashboard" class="profile-nav-item">
+                <div class="nav-icon bg-primary-subtle text-primary">
+                  <i class="ri-dashboard-line"></i>
+                </div>
+                <span class="nav-text">Dashboard</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+              <a routerLink="/client/cases" class="profile-nav-item">
+                <div class="nav-icon bg-success-subtle text-success">
+                  <i class="ri-briefcase-4-line"></i>
+                </div>
+                <span class="nav-text">My Cases</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+              <a routerLink="/client/documents" class="profile-nav-item">
+                <div class="nav-icon bg-info-subtle text-info">
+                  <i class="ri-file-list-3-line"></i>
+                </div>
+                <span class="nav-text">Documents</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+              <a routerLink="/client/appointments" class="profile-nav-item">
+                <div class="nav-icon bg-warning-subtle text-warning">
+                  <i class="ri-calendar-check-line"></i>
+                </div>
+                <span class="nav-text">Appointments</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+              <a routerLink="/client/messages" class="profile-nav-item">
+                <div class="nav-icon bg-danger-subtle text-danger">
+                  <i class="ri-message-2-line"></i>
+                </div>
+                <span class="nav-text">Messages</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+              <a routerLink="/client/invoices" class="profile-nav-item">
+                <div class="nav-icon bg-secondary-subtle text-secondary">
+                  <i class="ri-file-text-line"></i>
+                </div>
+                <span class="nav-text">Invoices</span>
+                <i class="ri-arrow-right-s-line nav-arrow"></i>
+              </a>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
       <div class="col-lg-8">
-        <div class="card">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <h5 class="card-title mb-0">Profile Information</h5>
-            <button *ngIf="!isEditing" class="btn btn-sm btn-primary" (click)="startEditing()">
-              <i class="ri-edit-line me-1"></i> Edit
-            </button>
-            <div *ngIf="isEditing" class="btn-group">
-              <button class="btn btn-sm btn-secondary" (click)="cancelEditing()" [disabled]="saving">
+        <!-- Personal Information Card -->
+        <div class="card profile-card border-0 shadow-sm">
+          <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+            <h6 class="card-title mb-0">
+              <i class="ri-user-settings-line me-2 text-primary"></i>Personal Information
+            </h6>
+            <div *ngIf="!isEditing">
+              <button class="btn btn-sm btn-soft-primary" (click)="startEditing()">
+                <i class="ri-edit-line me-1"></i>Edit
+              </button>
+            </div>
+            <div *ngIf="isEditing" class="d-flex gap-2">
+              <button class="btn btn-sm btn-light" (click)="cancelEditing()" [disabled]="saving">
                 Cancel
               </button>
               <button class="btn btn-sm btn-primary" (click)="saveProfile()" [disabled]="saving">
-                <span *ngIf="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                {{ saving ? 'Saving...' : 'Save' }}
+                <span *ngIf="saving" class="spinner-border spinner-border-sm me-1"></span>
+                {{ saving ? 'Saving...' : 'Save Changes' }}
               </button>
             </div>
           </div>
           <div class="card-body">
             <!-- View Mode -->
-            <div *ngIf="!isEditing">
-              <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label text-muted">Full Name</label>
-                  <p class="fw-medium mb-0">{{ profile.name || '-' }}</p>
+            <div *ngIf="!isEditing" class="profile-info-grid">
+              <div class="profile-info-item">
+                <div class="info-icon">
+                  <i class="ri-user-line"></i>
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label text-muted">Email Address</label>
-                  <p class="fw-medium mb-0">{{ profile.email || '-' }}</p>
-                </div>
-              </div>
-
-              <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label text-muted">Phone Number</label>
-                  <p class="fw-medium mb-0">{{ profile.phone || '-' }}</p>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label text-muted">Client Type</label>
-                  <p class="fw-medium mb-0">{{ formatStatus(profile.type) || '-' }}</p>
+                <div class="info-content">
+                  <label>Full Name</label>
+                  <p>{{ profile.name || '-' }}</p>
                 </div>
               </div>
-
-              <div class="row">
-                <div class="col-12">
-                  <label class="form-label text-muted">Address</label>
-                  <p class="fw-medium mb-0">{{ profile.address || '-' }}</p>
+              <div class="profile-info-item">
+                <div class="info-icon">
+                  <i class="ri-mail-line"></i>
+                </div>
+                <div class="info-content">
+                  <label>Email Address</label>
+                  <p>{{ profile.email || '-' }}</p>
+                </div>
+              </div>
+              <div class="profile-info-item">
+                <div class="info-icon">
+                  <i class="ri-phone-line"></i>
+                </div>
+                <div class="info-content">
+                  <label>Phone Number</label>
+                  <p>{{ profile.phone || '-' }}</p>
+                </div>
+              </div>
+              <div class="profile-info-item">
+                <div class="info-icon">
+                  <i class="ri-user-star-line"></i>
+                </div>
+                <div class="info-content">
+                  <label>Client Type</label>
+                  <p>{{ formatStatus(profile.type) || '-' }}</p>
+                </div>
+              </div>
+              <div class="profile-info-item full-width">
+                <div class="info-icon">
+                  <i class="ri-map-pin-line"></i>
+                </div>
+                <div class="info-content">
+                  <label>Address</label>
+                  <p>{{ profile.address || '-' }}</p>
                 </div>
               </div>
             </div>
 
             <!-- Edit Mode -->
-            <form *ngIf="isEditing">
-              <div class="row mb-3">
-                <div class="col-md-6 mb-3">
-                  <label for="editName" class="form-label">Full Name <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="editName"
-                         [(ngModel)]="editForm.name" name="name" required>
+            <form *ngIf="isEditing" class="profile-edit-form">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <input type="text" class="form-control" id="editName"
+                           [(ngModel)]="editForm.name" name="name" required
+                           placeholder="Full Name">
+                    <label for="editName">Full Name <span class="text-danger">*</span></label>
+                  </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label for="editEmail" class="form-label">Email Address</label>
-                  <input type="email" class="form-control" id="editEmail"
-                         [(ngModel)]="editForm.email" name="email" disabled>
-                  <small class="text-muted">Email cannot be changed. Contact support if needed.</small>
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <input type="email" class="form-control bg-light" id="editEmail"
+                           [(ngModel)]="editForm.email" name="email" disabled
+                           placeholder="Email">
+                    <label for="editEmail">Email Address</label>
+                  </div>
+                  <small class="text-muted fs-11 mt-1 d-block">Email cannot be changed</small>
                 </div>
-              </div>
-
-              <div class="row mb-3">
-                <div class="col-md-6 mb-3">
-                  <label for="editPhone" class="form-label">Phone Number</label>
-                  <input type="tel" class="form-control" id="editPhone"
-                         [(ngModel)]="editForm.phone" name="phone"
-                         placeholder="Enter phone number">
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <input type="tel" class="form-control" id="editPhone"
+                           [(ngModel)]="editForm.phone" name="phone"
+                           placeholder="Phone Number">
+                    <label for="editPhone">Phone Number</label>
+                  </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Client Type</label>
-                  <input type="text" class="form-control" [value]="formatStatus(editForm.type || '')" disabled>
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <input type="text" class="form-control bg-light"
+                           [value]="formatStatus(editForm.type || '')" disabled
+                           placeholder="Client Type">
+                    <label>Client Type</label>
+                  </div>
                 </div>
-              </div>
-
-              <div class="row mb-3">
                 <div class="col-12">
-                  <label for="editAddress" class="form-label">Address</label>
-                  <textarea class="form-control" id="editAddress" rows="3"
-                            [(ngModel)]="editForm.address" name="address"
-                            placeholder="Enter your address"></textarea>
+                  <div class="form-floating">
+                    <textarea class="form-control" id="editAddress" style="height: 100px"
+                              [(ngModel)]="editForm.address" name="address"
+                              placeholder="Address"></textarea>
+                    <label for="editAddress">Address</label>
+                  </div>
                 </div>
               </div>
             </form>
           </div>
         </div>
 
-        <!-- Security Section -->
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">Security</h5>
+        <!-- Security & Privacy Card -->
+        <div class="card profile-card border-0 shadow-sm">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-shield-check-line me-2 text-primary"></i>Security & Privacy
+            </h6>
           </div>
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-              <div>
-                <h6 class="mb-1">Password</h6>
-                <p class="text-muted mb-0 fs-13">Last changed: Unknown</p>
+          <div class="card-body p-0">
+            <div class="security-list">
+              <!-- Password -->
+              <div class="security-item">
+                <div class="security-icon bg-primary-subtle text-primary">
+                  <i class="ri-lock-password-line"></i>
+                </div>
+                <div class="security-info">
+                  <h6>Password</h6>
+                  <p>Manage your account password</p>
+                </div>
+                <div class="security-action">
+                  <button class="btn btn-sm btn-soft-primary" disabled>
+                    Change Password
+                  </button>
+                </div>
               </div>
-              <button class="btn btn-sm btn-soft-primary" disabled>
-                Change Password
-              </button>
-            </div>
 
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <h6 class="mb-1">Two-Factor Authentication</h6>
-                <p class="text-muted mb-0 fs-13">Add an extra layer of security to your account</p>
+              <!-- Two-Factor -->
+              <div class="security-item">
+                <div class="security-icon bg-warning-subtle text-warning">
+                  <i class="ri-shield-keyhole-line"></i>
+                </div>
+                <div class="security-info">
+                  <h6>Two-Factor Authentication</h6>
+                  <p>Add extra security to your account</p>
+                </div>
+                <div class="security-action">
+                  <span class="badge bg-secondary-subtle text-secondary px-3 py-2">Coming Soon</span>
+                </div>
               </div>
-              <span class="badge bg-soft-secondary text-secondary">Coming Soon</span>
+
+              <!-- Login Activity -->
+              <div class="security-item">
+                <div class="security-icon bg-info-subtle text-info">
+                  <i class="ri-history-line"></i>
+                </div>
+                <div class="security-info">
+                  <h6>Login Activity</h6>
+                  <p>Monitor your account access</p>
+                </div>
+                <div class="security-action">
+                  <span class="badge bg-secondary-subtle text-secondary px-3 py-2">Coming Soon</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Contact Attorney -->
-        <div class="card bg-soft-primary">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm flex-shrink-0 me-3">
-                <span class="avatar-title bg-primary text-white rounded-circle">
-                  <i class="ri-customer-service-2-line fs-4"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Need Help?</h6>
-                <p class="text-muted mb-0 fs-13">
-                  Contact your attorney or send a message through the portal.
-                </p>
-              </div>
-              <a routerLink="/client/messages" class="btn btn-primary">
-                <i class="ri-message-2-line me-1"></i> Contact
-              </a>
+        <!-- Need Help Banner -->
+        <div class="help-banner">
+          <div class="help-banner-content">
+            <div class="help-banner-icon">
+              <i class="ri-customer-service-2-line"></i>
             </div>
+            <div class="help-banner-text">
+              <h5>Need Assistance?</h5>
+              <p>Our legal team is here to help. Send us a message anytime.</p>
+            </div>
+            <a routerLink="/client/messages" class="btn btn-light help-banner-btn">
+              <i class="ri-message-2-line me-2"></i>Get in Touch
+            </a>
           </div>
         </div>
       </div>
