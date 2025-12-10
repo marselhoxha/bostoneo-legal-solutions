@@ -18,13 +18,24 @@ import java.util.Optional;
 public interface CaseAssignmentRepository extends JpaRepository<CaseAssignment, Long> {
     
     /**
-     * Find active assignment for a specific case and user
+     * Find active assignment for a specific case and user (returns first match)
+     */
+    @Query("SELECT ca FROM CaseAssignment ca WHERE ca.legalCase.id = :caseId " +
+           "AND ca.assignedTo.id = :userId AND ca.active = :active ORDER BY ca.createdAt DESC")
+    Optional<CaseAssignment> findFirstByCaseIdAndUserIdAndActive(
+        @Param("caseId") Long caseId,
+        @Param("userId") Long userId,
+        @Param("active") boolean active
+    );
+
+    /**
+     * Find all assignments for a specific case and user (handles duplicates)
      */
     @Query("SELECT ca FROM CaseAssignment ca WHERE ca.legalCase.id = :caseId " +
            "AND ca.assignedTo.id = :userId AND ca.active = :active")
-    Optional<CaseAssignment> findByCaseIdAndUserIdAndActive(
-        @Param("caseId") Long caseId, 
-        @Param("userId") Long userId, 
+    List<CaseAssignment> findAllByCaseIdAndUserIdAndActive(
+        @Param("caseId") Long caseId,
+        @Param("userId") Long userId,
         @Param("active") boolean active
     );
     
@@ -65,9 +76,16 @@ public interface CaseAssignmentRepository extends JpaRepository<CaseAssignment, 
     @Query("SELECT ca FROM CaseAssignment ca WHERE ca.assignedTo.id = :userId " +
            "AND ca.active = true ORDER BY ca.createdAt DESC")
     Page<CaseAssignment> findByUserIdWithPagination(
-        @Param("userId") Long userId, 
+        @Param("userId") Long userId,
         Pageable pageable
     );
+
+    /**
+     * Find all active assignments with pagination
+     */
+    @Query("SELECT ca FROM CaseAssignment ca WHERE ca.active = true " +
+           "ORDER BY ca.createdAt DESC")
+    Page<CaseAssignment> findByActiveTrue(Pageable pageable);
     
     /**
      * Count active cases for a user

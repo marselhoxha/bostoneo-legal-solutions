@@ -3,6 +3,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { UserService } from '../../../service/user.service';
+import { JwtHelperService } from '@auth0/angular-jwt';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -172,8 +174,9 @@ export class LegalResearchService {
   public searchStatus$ = this.searchStatusSubject.asObservable();
 
   private currentSessionId = this.generateSessionId();
+  private jwtHelper = new JwtHelperService();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private userService: UserService) {}
 
   performSearch(searchRequest: LegalSearchRequest): Observable<LegalSearchResponse> {
     this.searchStatusSubject.next('searching');
@@ -792,12 +795,38 @@ export class LegalResearchService {
   }
 
   /**
-   * Get user ID from local storage or authentication service
-   * TODO: Implement proper user ID retrieval from auth service
+   * Get user ID from UserService or JWT token
+   * Uses multiple fallback sources to ensure we get the correct user ID
    */
   private getUserId(): number {
-    // Temporary implementation - replace with proper auth service
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.id || 1; // Default to 1 for testing
+    // 1. First try UserService (most reliable)
+    const userId = this.userService.getCurrentUserId();
+    if (userId) {
+      return userId;
+    }
+
+    // 2. Try to get from JWT token (key is '[KEY] TOKEN')
+    try {
+      const token = localStorage.getItem('[KEY] TOKEN');
+      if (token && !this.jwtHelper.isTokenExpired(token)) {
+        const decodedToken = this.jwtHelper.decodeToken(token);
+        if (decodedToken && decodedToken.id) {
+          return decodedToken.id;
+        }
+        if (decodedToken && decodedToken.sub) {
+          // Some JWT implementations use 'sub' for user ID
+          const subId = parseInt(decodedToken.sub, 10);
+          if (!isNaN(subId)) {
+            return subId;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to extract user ID from JWT token:', error);
+    }
+
+    // 3. Final fallback - log warning since this shouldn't happen in production
+    console.warn('Could not determine user ID - user may see incorrect data');
+    return 0; // Return 0 to indicate no valid user (backend should reject this)
   }
 }

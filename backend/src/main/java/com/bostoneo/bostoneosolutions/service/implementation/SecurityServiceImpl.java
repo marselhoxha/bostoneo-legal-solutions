@@ -55,11 +55,11 @@ public class SecurityServiceImpl implements SecurityService {
         
         if (auth.getPrincipal() instanceof UserDTO) {
             UserDTO currentUser = (UserDTO) auth.getPrincipal();
-            
+
             // Check if user is assigned to the case
-            return caseAssignmentRepository
-                .findByCaseIdAndUserIdAndActive(caseId, currentUser.getId(), true)
-                .isPresent();
+            return !caseAssignmentRepository
+                .findAllByCaseIdAndUserIdAndActive(caseId, currentUser.getId(), true)
+                .isEmpty();
         }
         
         return false;

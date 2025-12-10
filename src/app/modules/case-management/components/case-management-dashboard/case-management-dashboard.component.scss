@@ -1,148 +1,388 @@
-.case-management-dashboard {
-  .card-animate {
-    transition: all 0.3s ease;
-    
+// Case Management Dashboard - Clean Design
+
+// ========================================
+// Loading State
+// ========================================
+.dashboard-loading {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ========================================
+// Statistics Cards
+// ========================================
+.stat-card {
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  margin-bottom: 1.5rem;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.stat-footer {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+
+  a {
+    font-size: 0.85rem;
+    text-decoration: none;
+
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      text-decoration: underline;
+    }
+  }
+}
+
+// ========================================
+// Cards
+// ========================================
+.card {
+  border-radius: 12px;
+
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      color: #495057;
+    }
+  }
+}
+
+// ========================================
+// Search Box
+// ========================================
+.search-box {
+  position: relative;
+
+  .form-control {
+    padding-left: 2.25rem;
+    border-radius: 8px;
+
+    &:focus {
+      box-shadow: none;
+      background-color: #fff !important;
+      border: 1px solid #405189;
     }
   }
 
-  .counter-value {
-    display: inline-block;
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+}
+
+// ========================================
+// Tables
+// ========================================
+.table {
+  thead {
+    th {
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+      border-bottom: none;
+      padding: 0.875rem 0.75rem;
+    }
   }
 
-  .avatar-sm {
-    height: 3rem;
-    width: 3rem;
-  }
-
-  .avatar-title {
-    align-items: center;
-    display: flex;
-    height: 100%;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .avatar-xxs {
-    height: 1.5rem;
-    width: 1.5rem;
-  }
-
-  .avatar-xs {
-    height: 2rem;
-    width: 2rem;
-  }
-
-  .avatar-group {
-    display: flex;
-    flex-wrap: wrap;
-    padding-left: 12px;
-
-    .avatar-group-item {
-      margin-left: -12px;
-      transition: all 0.2s;
+  tbody {
+    tr {
+      transition: background-color 0.15s ease;
 
       &:hover {
-        z-index: 5;
-        transform: translateY(-2px);
+        background-color: rgba(64, 81, 137, 0.04);
+      }
+
+      td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       }
     }
   }
+}
 
-  .table-card {
-    .table {
-      margin-bottom: 0;
+// ========================================
+// Badges
+// ========================================
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
 
-      thead th {
-        background-color: #f3f3f9;
-        font-weight: 600;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+// ========================================
+// Team List
+// ========================================
+.team-list {
+  .team-item {
+    display: block;
+    padding: 1rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
 
-      tbody tr {
-        &:hover {
-          background-color: #f8f9fa;
-        }
-      }
+    &:last-child {
+      border-bottom: none;
     }
-  }
 
-  .badge-soft-info {
-    color: #299cdb;
-    background-color: rgba(41, 156, 219, 0.1);
-  }
+    &:hover {
+      background-color: rgba(64, 81, 137, 0.04);
+    }
 
-  .badge-soft-warning {
-    color: #f1b44c;
-    background-color: rgba(241, 180, 76, 0.1);
-  }
-
-  .badge-soft-success {
-    color: #50a5f1;
-    background-color: rgba(80, 165, 241, 0.1);
-  }
-
-  .badge-soft-danger {
-    color: #f46a6a;
-    background-color: rgba(244, 106, 106, 0.1);
-  }
-
-  .badge-soft-secondary {
-    color: #74788d;
-    background-color: rgba(116, 120, 141, 0.1);
-  }
-
-  .badge-soft-dark {
-    color: #343a40;
-    background-color: rgba(52, 58, 64, 0.1);
-  }
-
-  .cursor-pointer {
-    cursor: pointer;
-  }
-
-  .list-group-item-action {
     &.active {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
-      color: #fff;
-
-      .text-muted {
-        color: rgba(255, 255, 255, 0.8) !important;
-      }
-
-      .badge {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #fff;
-      }
+      background-color: rgba(64, 81, 137, 0.08);
     }
   }
+}
 
-  // Chart container styling
+.team-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #405189 0%, #0ab39c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .avatar-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+}
+
+// ========================================
+// Chart Container
+// ========================================
+.chart-container {
+  position: relative;
+
   canvas {
     max-width: 100%;
-    height: auto !important;
+  }
+}
+
+// ========================================
+// Avatar Styles
+// ========================================
+.avatar-lg {
+  width: 4rem;
+  height: 4rem;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ========================================
+// Button Soft Variants
+// ========================================
+.btn-soft-primary {
+  color: #405189;
+  background-color: rgba(64, 81, 137, 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: #405189;
+    border-color: #405189;
+  }
+}
+
+.btn-soft-info {
+  color: #299cdb;
+  background-color: rgba(41, 156, 219, 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: #299cdb;
+    border-color: #299cdb;
+  }
+}
+
+.btn-soft-success {
+  color: #0ab39c;
+  background-color: rgba(10, 179, 156, 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: #0ab39c;
+    border-color: #0ab39c;
+  }
+}
+
+.btn-soft-warning {
+  color: #f7b84b;
+  background-color: rgba(247, 184, 75, 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: #f7b84b;
+    border-color: #f7b84b;
+  }
+}
+
+// ========================================
+// Background Subtle Colors
+// ========================================
+.bg-primary-subtle {
+  background-color: rgba(64, 81, 137, 0.1) !important;
+}
+
+.bg-success-subtle {
+  background-color: rgba(10, 179, 156, 0.1) !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(41, 156, 219, 0.1) !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(247, 184, 75, 0.1) !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(240, 101, 72, 0.1) !important;
+}
+
+.bg-secondary-subtle {
+  background-color: rgba(108, 117, 125, 0.1) !important;
+}
+
+.bg-dark-subtle {
+  background-color: rgba(33, 37, 41, 0.1) !important;
+}
+
+// ========================================
+// Dropdown
+// ========================================
+.dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+
+    &.active {
+      background-color: rgba(64, 81, 137, 0.1);
+      color: #405189;
+    }
+
+    &:hover {
+      background-color: rgba(64, 81, 137, 0.05);
+    }
+  }
+}
+
+// ========================================
+// Utility
+// ========================================
+.fs-12 {
+  font-size: 12px !important;
+}
+
+.fs-14 {
+  font-size: 14px !important;
+}
+
+.fs-24 {
+  font-size: 24px !important;
+}
+
+// ========================================
+// Responsive
+// ========================================
+@media (max-width: 991.98px) {
+  .stat-card {
+    margin-bottom: 1rem;
   }
 
-  // Responsive adjustments
-  @media (max-width: 768px) {
-    .card-header {
-      .card-title {
-        font-size: 16px;
-      }
-    }
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.25rem;
+  }
 
-    .table-responsive {
-      font-size: 13px;
+  .stat-value {
+    font-size: 1.25rem;
+  }
+}
 
-      .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 12px;
-      }
+@media (max-width: 767.98px) {
+  .card-header {
+    flex-direction: column;
+    gap: 0.75rem;
+
+    .d-flex.gap-2 {
+      width: 100%;
+      flex-wrap: wrap;
     }
+  }
+
+  .search-box {
+    .form-control {
+      width: 100% !important;
+    }
+  }
+
+  .table-responsive {
+    font-size: 0.85rem;
   }
 }

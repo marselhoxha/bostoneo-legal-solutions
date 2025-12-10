@@ -28,12 +28,50 @@ import static org.springframework.http.HttpStatus.*;
 @RequiredArgsConstructor
 @Slf4j
 public class CaseAssignmentController {
-    
+
     private final CaseAssignmentService caseAssignmentService;
     private final SecurityService securityService;
-    
+
+    // ==================== Get All Assignments ====================
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY')")
+    public ResponseEntity<HttpResponse> getAllAssignments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        log.info("Getting all assignments with pagination: page={}, size={}", page, size);
+
+        try {
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+            Page<CaseAssignmentDTO> assignments = caseAssignmentService.getAllAssignments(pageable);
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .data(of("assignments", assignments))
+                    .message("All assignments retrieved successfully")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error getting all assignments: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Failed to retrieve assignments: " + e.getMessage())
+                    .status(BAD_REQUEST)
+                    .statusCode(BAD_REQUEST.value())
+                    .build()
+            );
+        }
+    }
+
     // ==================== Assignment Operations ====================
-    
+
     @PostMapping("/assign")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE')")
     public ResponseEntity<HttpResponse> assignCase(@Valid @RequestBody CaseAssignmentRequest request) {

@@ -1,293 +1,468 @@
-.case-assignment-dashboard {
-  padding: 20px;
-}
+/* Case Assignment Dashboard - Premium Design */
 
-.dashboard-header {
+/* ========================================
+   Loading State
+   ======================================== */
+.dashboard-loading {
+  min-height: 60vh;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  justify-content: center;
 }
 
-.dashboard-header h2 {
-  margin: 0;
-  color: #333;
+/* ========================================
+   Cards
+   ======================================== */
+.card {
+  border-radius: 12px;
 }
 
-.metric-box {
-  padding: 15px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-  margin-bottom: 10px;
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.metric-box h3 {
-  margin: 0;
-  color: #007bff;
-  font-size: 2rem;
+.card-header .card-title {
+  font-size: 0.95rem;
   font-weight: 600;
-}
-
-.metric-box small {
-  color: #6c757d;
-  font-size: 0.875rem;
-}
-
-.workload-metric {
-  margin-bottom: 20px;
-}
-
-.workload-metric label {
-  font-weight: 600;
+  display: flex;
+  align-items: center;
   color: #495057;
-  margin-bottom: 5px;
+  margin-bottom: 0;
 }
 
+.card-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   Case Icon
+   ======================================== */
+.case-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(64, 81, 137, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #405189;
+}
+
+/* ========================================
+   Search Box
+   ======================================== */
+.search-box {
+  position: relative;
+}
+
+.search-box .form-control {
+  padding-left: 2.25rem;
+  border-radius: 8px;
+}
+
+.search-box .form-control:focus {
+  box-shadow: none;
+  background-color: #fff !important;
+  border: 1px solid #405189;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* ========================================
+   Nav Tabs
+   ======================================== */
+
+.nav-tabs-custom .nav-link {
+  color: #6c757d;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs-custom .nav-link:hover {
+  color: #405189;
+  background: transparent;
+}
+
+.nav-tabs-custom .nav-link.active {
+  color: #405189;
+  background: transparent;
+}
+
+.nav-tabs-custom .nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #405189;
+}
+
+.nav-tabs-custom .nav-link i {
+  font-size: 1rem;
+}
+
+/* ========================================
+   Case List
+   ======================================== */
+.case-list .case-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.case-list .case-item:last-child {
+  border-bottom: none;
+}
+
+.case-list .case-item:hover {
+  background-color: rgba(64, 81, 137, 0.04);
+}
+
+.case-list .case-item.selected {
+  background-color: rgba(64, 81, 137, 0.08);
+  border-left: 3px solid #405189;
+}
+
+/* ========================================
+   Attorney List
+   ======================================== */
+.attorney-list .attorney-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attorney-list .attorney-item:last-child {
+  border-bottom: none;
+}
+
+.attorney-list .attorney-item:hover {
+  background-color: rgba(10, 179, 156, 0.04);
+}
+
+.attorney-list .attorney-item.selected {
+  background-color: rgba(10, 179, 156, 0.08);
+  border-left: 3px solid #0ab39c;
+}
+
+.attorney-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ab39c 0%, #405189 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.attorney-avatar .avatar-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ========================================
+   Case Type List
+   ======================================== */
+.case-type-list .case-type-item:last-child {
+  border-bottom: none !important;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+.table thead th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  border-bottom: none;
+  padding: 0.875rem 0.75rem;
+}
+
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(64, 81, 137, 0.04);
+}
+
+.table tbody td {
+  padding: 1rem 0.75rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   Avatar Styles
+   ======================================== */
+.avatar-xs {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.avatar-sm {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.avatar-md {
+  width: 3rem;
+  height: 3rem;
+}
+
+.avatar-lg {
+  width: 4rem;
+  height: 4rem;
+}
+
+.avatar-title {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* ========================================
+   Badges
+   ======================================== */
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+/* ========================================
+   Button Soft Variants
+   ======================================== */
+.btn-soft-primary {
+  color: #405189;
+  background-color: rgba(64, 81, 137, 0.1);
+  border-color: transparent;
+}
+
+.btn-soft-primary:hover {
+  color: #fff;
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.btn-soft-success {
+  color: #0ab39c;
+  background-color: rgba(10, 179, 156, 0.1);
+  border-color: transparent;
+}
+
+.btn-soft-success:hover {
+  color: #fff;
+  background-color: #0ab39c;
+  border-color: #0ab39c;
+}
+
+.btn-soft-danger {
+  color: #f06548;
+  background-color: rgba(240, 101, 72, 0.1);
+  border-color: transparent;
+}
+
+.btn-soft-danger:hover {
+  color: #fff;
+  background-color: #f06548;
+  border-color: #f06548;
+}
+
+.btn-soft-info {
+  color: #299cdb;
+  background-color: rgba(41, 156, 219, 0.1);
+  border-color: transparent;
+}
+
+.btn-soft-info:hover {
+  color: #fff;
+  background-color: #299cdb;
+  border-color: #299cdb;
+}
+
+.btn-soft-warning {
+  color: #f7b84b;
+  background-color: rgba(247, 184, 75, 0.1);
+  border-color: transparent;
+}
+
+.btn-soft-warning:hover {
+  color: #fff;
+  background-color: #f7b84b;
+  border-color: #f7b84b;
+}
+
+/* ========================================
+   Background Subtle Colors
+   ======================================== */
+.bg-primary-subtle {
+  background-color: rgba(64, 81, 137, 0.1) !important;
+}
+
+.bg-success-subtle {
+  background-color: rgba(10, 179, 156, 0.1) !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(41, 156, 219, 0.1) !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(247, 184, 75, 0.1) !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(240, 101, 72, 0.1) !important;
+}
+
+.bg-secondary-subtle {
+  background-color: rgba(108, 117, 125, 0.1) !important;
+}
+
+.bg-soft-info {
+  background-color: rgba(41, 156, 219, 0.1) !important;
+}
+
+.bg-soft-success {
+  background-color: rgba(10, 179, 156, 0.1) !important;
+}
+
+.bg-soft-warning {
+  background-color: rgba(247, 184, 75, 0.1) !important;
+}
+
+.bg-soft-danger {
+  background-color: rgba(240, 101, 72, 0.1) !important;
+}
+
+/* ========================================
+   Progress Bar
+   ======================================== */
 .progress {
-  height: 25px;
-  border-radius: 5px;
+  height: 8px;
+  border-radius: 4px;
   background-color: #e9ecef;
 }
 
 .progress-bar {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: width 0.6s ease;
-}
-
-.stat-card {
-  background-color: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  height: 100%;
-  transition: box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.stat-card h6 {
-  color: #6c757d;
-  font-size: 0.875rem;
-  margin-bottom: 10px;
-  font-weight: 500;
-}
-
-.stat-card h3 {
-  color: #333;
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 600;
-}
-
-.stat-card small {
-  color: #868e96;
-  font-size: 0.75rem;
-}
-
-.card {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-
-.card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-  padding: 15px 20px;
-}
-
-.card-header h5 {
-  margin: 0;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.table {
-  margin-bottom: 0;
-}
-
-.table thead th {
-  border-top: none;
-  border-bottom: 2px solid #dee2e6;
-  color: #495057;
-  font-weight: 600;
-  padding: 12px;
-}
-
-.table td {
-  padding: 12px;
-  vertical-align: middle;
-}
-
-.badge {
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-weight: 500;
   border-radius: 4px;
+  transition: width 0.4s ease;
 }
 
-.badge-success {
-  background-color: #28a745;
-  color: white;
+/* ========================================
+   Utility Classes
+   ======================================== */
+.fs-12 {
+  font-size: 12px !important;
 }
 
-.badge-primary {
-  background-color: #007bff;
-  color: white;
+.fs-13 {
+  font-size: 13px !important;
 }
 
-.badge-warning {
-  background-color: #ffc107;
-  color: #212529;
+.fs-14 {
+  font-size: 14px !important;
 }
 
-.badge-danger {
-  background-color: #dc3545;
-  color: white;
+.fs-20 {
+  font-size: 20px !important;
 }
 
-.badge-info {
-  background-color: #17a2b8;
-  color: white;
+.fs-24 {
+  font-size: 24px !important;
 }
 
-.badge-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.text-success {
-  color: #28a745 !important;
-}
-
-.text-primary {
-  color: #007bff !important;
-}
-
-.text-warning {
-  color: #ffc107 !important;
-}
-
-.text-danger {
-  color: #dc3545 !important;
-}
-
-.btn {
-  border-radius: 4px;
-  font-weight: 500;
-  padding: 6px 12px;
-  transition: all 0.3s ease;
-}
-
-.btn-sm {
-  padding: 4px 8px;
+/* ========================================
+   Form Controls
+   ======================================== */
+.form-select-sm,
+.form-control-sm {
+  border-radius: 6px;
   font-size: 0.875rem;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.form-select-sm:focus,
+.form-control-sm:focus {
+  border-color: #405189;
+  box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.1);
 }
 
-.spinner-border {
-  width: 3rem;
-  height: 3rem;
-  margin: 20px auto;
-}
-
-.nav-tabs {
-  border-bottom: 2px solid #dee2e6;
-}
-
-.nav-tabs .nav-link {
-  color: #495057;
-  border: none;
-  border-bottom: 3px solid transparent;
-  padding: 10px 20px;
+.form-label {
   font-weight: 500;
-  transition: all 0.3s ease;
+  color: #495057;
 }
 
-.nav-tabs .nav-link:hover {
-  color: #007bff;
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.nav-tabs .nav-link.active {
-  color: #007bff;
-  background-color: transparent;
-  border-color: #007bff;
-}
-
-.tab-content {
-  animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 991.98px) {
+  .case-list,
+  .attorney-list {
+    max-height: 300px !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .col-lg-5,
+  .col-lg-7 {
+    margin-bottom: 1.5rem;
   }
 }
 
-.table-responsive {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.pagination {
-  margin-top: 20px;
-}
-
-.page-link {
-  color: #007bff;
-  border-radius: 4px;
-  margin: 0 2px;
-}
-
-.page-item.active .page-link {
-  background-color: #007bff;
-  border-color: #007bff;
-}
-
-.page-item.disabled .page-link {
-  color: #6c757d;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .dashboard-header {
+@media (max-width: 767.98px) {
+  .card-header {
     flex-direction: column;
-    align-items: flex-start;
+    gap: 0.75rem;
+    align-items: flex-start !important;
   }
-  
-  .dashboard-header h2 {
-    margin-bottom: 10px;
+
+  .card-header .d-flex {
+    width: 100%;
   }
-  
-  .stat-card {
-    margin-bottom: 15px;
-  }
-  
-  .table {
+
+  .nav-tabs-custom .nav-link {
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
   }
-  
-  .btn-sm {
-    padding: 2px 6px;
-    font-size: 0.75rem;
+
+  .nav-tabs-custom .nav-link i {
+    display: none;
+  }
+
+  .table-responsive {
+    font-size: 0.85rem;
+  }
+
+  .card-footer .row {
+    flex-direction: column;
+  }
+
+  .card-footer .col-md-4 {
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-footer .col-md-4:last-child {
+    margin-bottom: 0;
   }
 }

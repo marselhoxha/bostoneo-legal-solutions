@@ -5,7 +5,6 @@ import { RbacGuard } from '../../guard/rbac.guard';
 
 // Components
 import { CaseAssignmentDashboardComponent } from '../../component/case-assignment/case-assignment-dashboard/case-assignment-dashboard.component';
-import { CaseAssignmentManagementComponent } from '../../component/case-assignment/case-assignment-dashboard/case-assignment-management.component';
 import { TaskManagementComponent } from '../../component/case-task/task-management/task-management.component';
 import { CaseManagementDashboardComponent } from './components/case-management-dashboard/case-management-dashboard.component';
 
@@ -17,7 +16,7 @@ const routes: Routes = [
         path: 'dashboard',
         component: CaseManagementDashboardComponent,
         canActivate: [AuthenticationGuard],
-        data: { 
+        data: {
           title: 'Case Management Dashboard',
           breadcrumb: 'Dashboard'
         }
@@ -26,34 +25,16 @@ const routes: Routes = [
         path: 'assignments',
         component: CaseAssignmentDashboardComponent,
         canActivate: [AuthenticationGuard],
-        data: { 
+        data: {
           title: 'Case Assignments',
-          breadcrumb: 'Case Assignments'
-        }
-      },
-      {
-        path: 'assignments/management',
-        component: CaseAssignmentManagementComponent,
-        canActivate: [AuthenticationGuard],
-        data: { 
-          title: 'Assignment Management',
-          breadcrumb: 'Management'
-        }
-      },
-      {
-        path: 'assignments/dashboard',
-        component: CaseAssignmentDashboardComponent,
-        canActivate: [AuthenticationGuard],
-        data: { 
-          title: 'Assignment Dashboard',
-          breadcrumb: 'Dashboard'
+          breadcrumb: 'Assignments'
         }
       },
       {
         path: 'tasks',
         component: TaskManagementComponent,
         canActivate: [AuthenticationGuard],
-        data: { 
+        data: {
           title: 'All Tasks',
           breadcrumb: 'Tasks'
         }
@@ -62,7 +43,7 @@ const routes: Routes = [
         path: 'tasks/:caseId',
         component: TaskManagementComponent,
         canActivate: [AuthenticationGuard],
-        data: { 
+        data: {
           title: 'Task Management',
           breadcrumb: 'Tasks'
         }

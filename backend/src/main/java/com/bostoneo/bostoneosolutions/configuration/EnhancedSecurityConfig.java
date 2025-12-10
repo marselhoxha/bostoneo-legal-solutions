@@ -80,6 +80,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers("/client/delete/**")  // Ignore CSRF for client deletion
             .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
             .ignoringRequestMatchers("/api/ai/**")  // Ignore CSRF for AI endpoints
+            .ignoringRequestMatchers("/user/update/**")  // Ignore CSRF for user profile updates including image upload
         );
         
         // CORS Configuration

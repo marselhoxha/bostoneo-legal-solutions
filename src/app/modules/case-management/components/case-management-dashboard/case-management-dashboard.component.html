@@ -1,12 +1,12 @@
-<div class="case-management-dashboard">
-  <!-- Breadcrumb -->
+<div class="container-fluid" style="margin-top: 100px !important;">
+  <!-- Page Header -->
   <div class="row">
     <div class="col-12">
       <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Case Management Dashboard</h4>
+        <h4 class="mb-sm-0">Case Management</h4>
         <div class="page-title-right">
           <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);">Home</a></li>
+            <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
             <li class="breadcrumb-item active">Case Management</li>
           </ol>
         </div>
@@ -14,391 +14,378 @@
     </div>
   </div>
 
-  <!-- Statistics Cards -->
-  <div class="row">
-    <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1 overflow-hidden">
-              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Active Cases</p>
-            </div>
-            <div class="flex-shrink-0">
-              <h5 class="text-success fs-14 mb-0">
-                <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +12.5%
-              </h5>
-            </div>
-          </div>
-          <div class="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                <span class="counter-value" [attr.data-target]="stats.totalCases">{{ stats.totalCases }}</span>
-              </h4>
-              <a [routerLink]="['/legal/cases']" class="text-decoration-underline">View all cases</a>
-            </div>
-            <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-primary rounded fs-3">
-                <i class="bx bx-briefcase-alt-2 text-primary"></i>
-              </span>
-            </div>
-          </div>
-        </div>
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="dashboard-loading">
+    <div class="text-center">
+      <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
       </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1 overflow-hidden">
-              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">My Cases</p>
-            </div>
-            <div class="flex-shrink-0">
-              <h5 class="text-info fs-14 mb-0">
-                <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +8.2%
-              </h5>
-            </div>
-          </div>
-          <div class="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                <span class="counter-value" [attr.data-target]="stats.myCases">{{ stats.myCases }}</span>
-              </h4>
-              <a [routerLink]="['/case-management/assignments']" class="text-decoration-underline">My assignments</a>
-            </div>
-            <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-info rounded fs-3">
-                <i class="bx bx-user-check text-info"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1 overflow-hidden">
-              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Active Tasks</p>
-            </div>
-            <div class="flex-shrink-0">
-              <h5 class="text-warning fs-14 mb-0" *ngIf="stats.overdueTasks > 0">
-                <i class="ri-error-warning-line fs-13 align-middle"></i> {{ stats.overdueTasks }} overdue
-              </h5>
-            </div>
-          </div>
-          <div class="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                <span class="counter-value" [attr.data-target]="stats.activeTasks">{{ stats.activeTasks }}</span>
-              </h4>
-              <a [routerLink]="['/case-management/tasks']" class="text-decoration-underline">View all tasks</a>
-            </div>
-            <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-warning rounded fs-3">
-                <i class="bx bx-task text-warning"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1 overflow-hidden">
-              <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Team Utilization</p>
-            </div>
-            <div class="flex-shrink-0">
-              <h5 class="fs-14 mb-0" [ngClass]="getWorkloadStatusClass(stats.averageWorkload)">
-                <i class="ri-team-line fs-13 align-middle"></i> {{ stats.averageWorkload }}%
-              </h5>
-            </div>
-          </div>
-          <div class="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                <span class="counter-value" [attr.data-target]="stats.teamUtilization">{{ stats.teamUtilization }}</span>%
-              </h4>
-              <span class="text-muted">Team capacity</span>
-            </div>
-            <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-success rounded fs-3">
-                <i class="bx bx-group text-success"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <p class="text-muted mt-3 mb-0">Loading...</p>
     </div>
   </div>
 
-  <!-- Main Dashboard Content -->
-  <div class="row">
-    <!-- Left Column - Case List -->
-    <div class="col-xl-8">
-      <div class="card">
-        <div class="card-header align-items-center d-flex">
-          <h4 class="card-title mb-0 flex-grow-1">Active Cases</h4>
-          <div class="flex-shrink-0">
-            <div class="dropdown card-header-dropdown">
-              <button class="btn btn-soft-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="ri-filter-3-line align-middle me-1"></i> Filter
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'all'">All Cases</a>
-                <a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'open'">Open</a>
-                <a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'in_progress'">In Progress</a>
-                <a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'pending'">Pending</a>
+  <!-- Dashboard Content -->
+  <ng-container *ngIf="!isLoading">
+    <!-- Statistics Cards -->
+    <div class="row">
+      <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-primary-subtle">
+                <i class="ri-briefcase-4-line text-primary"></i>
               </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="stat-label mb-1">Active Cases</p>
+                <h3 class="stat-value mb-0">{{ stats.totalCases }}</h3>
+              </div>
+            </div>
+            <div class="stat-footer mt-3 pt-3">
+              <a routerLink="/legal/cases" class="text-primary fw-medium">
+                View all cases <i class="ri-arrow-right-line ms-1"></i>
+              </a>
             </div>
           </div>
         </div>
-        <div class="card-body">
-          <!-- Search Bar -->
-          <div class="mb-3">
-            <div class="input-group">
-              <span class="input-group-text"><i class="ri-search-line"></i></span>
-              <input type="text" class="form-control" placeholder="Search cases..." [(ngModel)]="searchQuery">
-              <button class="btn btn-primary" type="button" (click)="refreshDashboard()">
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-info-subtle">
+                <i class="ri-user-follow-line text-info"></i>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="stat-label mb-1">My Cases</p>
+                <h3 class="stat-value mb-0">{{ stats.myCases }}</h3>
+              </div>
+            </div>
+            <div class="stat-footer mt-3 pt-3">
+              <a routerLink="/case-management/assignments" class="text-info fw-medium">
+                My assignments <i class="ri-arrow-right-line ms-1"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-warning-subtle">
+                <i class="ri-task-line text-warning"></i>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="stat-label mb-1">Active Tasks</p>
+                <h3 class="stat-value mb-0">{{ stats.activeTasks }}</h3>
+                <span *ngIf="stats.overdueTasks > 0" class="badge bg-danger-subtle text-danger mt-1">
+                  {{ stats.overdueTasks }} overdue
+                </span>
+              </div>
+            </div>
+            <div class="stat-footer mt-3 pt-3">
+              <a routerLink="/case-management/tasks" class="text-warning fw-medium">
+                View all tasks <i class="ri-arrow-right-line ms-1"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-success-subtle">
+                <i class="ri-team-line text-success"></i>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="stat-label mb-1">Team Utilization</p>
+                <h3 class="stat-value mb-0">{{ stats.teamUtilization }}%</h3>
+                <span class="text-muted fs-12">Avg workload: {{ stats.averageWorkload }}%</span>
+              </div>
+            </div>
+            <div class="stat-footer mt-3 pt-3">
+              <span class="text-muted">Team capacity overview</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+      <!-- Left Column -->
+      <div class="col-xl-8">
+        <!-- Active Cases Table -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+            <h6 class="card-title mb-0">
+              <i class="ri-briefcase-4-line me-2 text-primary"></i>Active Cases
+            </h6>
+            <div class="d-flex gap-2">
+              <div class="search-box">
+                <input type="text" class="form-control form-control-sm bg-light border-0"
+                       placeholder="Search cases..."
+                       [(ngModel)]="searchQuery"
+                       style="width: 200px;">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <i class="ri-filter-3-line me-1"></i>Filter
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'all'" [class.active]="selectedFilter === 'all'">All Cases</a></li>
+                  <li><a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'open'" [class.active]="selectedFilter === 'open'">Open</a></li>
+                  <li><a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'in_progress'" [class.active]="selectedFilter === 'in_progress'">In Progress</a></li>
+                  <li><a class="dropdown-item" href="javascript:void(0);" (click)="selectedFilter = 'pending'" [class.active]="selectedFilter === 'pending'">Pending</a></li>
+                </ul>
+              </div>
+              <button class="btn btn-sm btn-primary" (click)="refreshDashboard()">
                 <i class="ri-refresh-line"></i>
               </button>
             </div>
           </div>
-
-          <!-- Case List -->
-          <div class="table-responsive table-card" style="max-height: 400px; overflow-y: auto;">
-            <table class="table table-hover align-middle table-nowrap mb-0">
-              <thead class="table-light sticky-top">
-                <tr>
-                  <th>Case Number</th>
-                  <th>Title</th>
-                  <th>Client</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let case of filterCases()" class="cursor-pointer">
-                  <td class="fw-medium">{{ case.caseNumber }}</td>
-                  <td>
-                    <div class="d-flex align-items-center">
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Case</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th class="text-end pe-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let case of filterCases()">
+                    <td class="ps-4">
                       <div>
-                        <h6 class="mb-0">{{ case.title }}</h6>
-                        <small class="text-muted">{{ case.type }}</small>
+                        <span class="text-muted fs-12">{{ case.caseNumber }}</span>
+                        <h6 class="mb-0 fs-14">{{ case.title }}</h6>
+                        <span class="text-muted fs-12">{{ case.type }}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td>{{ case.clientName }}</td>
-                  <td>
-                    <span class="badge" [ngClass]="'badge-soft-' + getCaseStatusClass(case.status)">
-                      {{ case.status }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="avatar-group" *ngIf="getAssignedMembers(case.id).length > 0">
-                      <div class="avatar-group-item" *ngFor="let member of getAssignedMembers(case.id).slice(0, 3)">
-                        <a href="javascript: void(0);" class="d-inline-block">
-                          <img [src]="'assets/images/users/avatar-' + ((member.userId % 8) + 1) + '.jpg'" 
-                               [alt]="member.userName" 
-                               class="rounded-circle avatar-xxs">
+                    </td>
+                    <td>
+                      <span class="fw-medium">{{ case.clientName }}</span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="{
+                        'bg-info-subtle text-info': case.status === 'OPEN',
+                        'bg-primary-subtle text-primary': case.status === 'IN_PROGRESS',
+                        'bg-warning-subtle text-warning': case.status === 'PENDING',
+                        'bg-success-subtle text-success': case.status === 'CLOSED',
+                        'bg-secondary-subtle text-secondary': case.status === 'ARCHIVED'
+                      }">
+                        {{ formatCaseStatus(case.status) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getPriorityBadgeClass(case.priority)">
+                        {{ case.priority }}
+                      </span>
+                    </td>
+                    <td class="text-end pe-4">
+                      <div class="d-flex gap-1 justify-content-end">
+                        <a [routerLink]="['/legal/cases', case.id]" class="btn btn-sm btn-soft-primary" title="View Case">
+                          <i class="ri-eye-line"></i>
                         </a>
+                        <button class="btn btn-sm btn-soft-info" (click)="assignCase(case)" title="Assign">
+                          <i class="ri-user-add-line"></i>
+                        </button>
                       </div>
-                      <div class="avatar-group-item" *ngIf="getAssignedMembers(case.id).length > 3">
-                        <a href="javascript: void(0);" class="d-inline-block">
-                          <div class="avatar-xxs">
-                            <div class="avatar-title rounded-circle bg-light text-primary">
-                              +{{ getAssignedMembers(case.id).length - 3 }}
-                            </div>
-                          </div>
-                        </a>
-                      </div>
-                    </div>
-                    <span class="text-muted" *ngIf="getAssignedMembers(case.id).length === 0">Unassigned</span>
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2">
-                      <a [routerLink]="['/legal/cases', case.id]" class="btn btn-sm btn-soft-primary">
-                        <i class="ri-eye-line"></i>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="filterCases().length === 0" class="text-center py-5">
+              <div class="avatar-lg mx-auto mb-3">
+                <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                  <i class="ri-briefcase-line"></i>
+                </div>
+              </div>
+              <h6 class="text-muted">No cases found</h6>
+              <a routerLink="/legal/cases/create" class="btn btn-sm btn-primary mt-2">
+                <i class="ri-add-line me-1"></i>Create New Case
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Tasks -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+            <h6 class="card-title mb-0">
+              <i class="ri-task-line me-2 text-warning"></i>Recent Tasks
+            </h6>
+            <a routerLink="/case-management/tasks" class="btn btn-sm btn-soft-primary">
+              View All <i class="ri-arrow-right-line ms-1"></i>
+            </a>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Task</th>
+                    <th>Case</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let task of recentTasks.slice(0, 5)">
+                    <td class="ps-4">
+                      <h6 class="mb-0 fs-14">{{ task.title }}</h6>
+                      <span class="text-muted fs-12">{{ task.taskType }}</span>
+                    </td>
+                    <td>
+                      <a [routerLink]="['/legal/cases', task.caseId]" class="text-primary fw-medium">
+                        #{{ task.caseId }}
                       </a>
-                      <button class="btn btn-sm btn-soft-info" (click)="assignCase(case)">
-                        <i class="ri-user-add-line"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="text-center py-4" *ngIf="filterCases().length === 0">
-              <div class="avatar-md mx-auto mb-3">
-                <div class="avatar-title bg-light text-primary rounded-circle">
-                  <i class="ri-briefcase-line fs-24"></i>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getPriorityBadgeClass(task.priority)">
+                        {{ task.priority }}
+                      </span>
+                    </td>
+                    <td>
+                      <span [class.text-danger]="isOverdue(task.dueDate)" [class.fw-medium]="isOverdue(task.dueDate)">
+                        {{ task.dueDate | date:'mediumDate' }}
+                        <i *ngIf="isOverdue(task.dueDate)" class="ri-error-warning-line ms-1"></i>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getTaskStatusBadgeClass(task.status)">
+                        {{ formatCaseStatus(task.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="recentTasks.length === 0" class="text-center py-5">
+              <div class="avatar-lg mx-auto mb-3">
+                <div class="avatar-title bg-light text-warning rounded-circle fs-24">
+                  <i class="ri-task-line"></i>
                 </div>
               </div>
-              <p class="text-muted mb-0">No cases found</p>
+              <h6 class="text-muted">No active tasks</h6>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Recent Tasks -->
-      <div class="card">
-        <div class="card-header align-items-center d-flex">
-          <h4 class="card-title mb-0 flex-grow-1">Recent Tasks</h4>
-          <div class="flex-shrink-0">
-            <a [routerLink]="['/case-management/tasks']" class="btn btn-soft-primary btn-sm">
-              View All <i class="ri-arrow-right-line align-middle ms-1"></i>
-            </a>
+      <!-- Right Column -->
+      <div class="col-xl-4">
+        <!-- Case Distribution Chart -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-pie-chart-line me-2 text-primary"></i>Case Distribution
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height: 220px;">
+              <canvas id="caseDistributionChart"></canvas>
+            </div>
           </div>
         </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover align-middle table-nowrap mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Task</th>
-                  <th>Case</th>
-                  <th>Priority</th>
-                  <th>Due Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let task of recentTasks.slice(0, 5)">
-                  <td>
-                    <h6 class="mb-0">{{ task.title }}</h6>
-                    <small class="text-muted">{{ task.taskType }}</small>
-                  </td>
-                  <td>
-                    <a [routerLink]="['/legal/cases', task.caseId]" class="text-primary">
-                      Case #{{ task.caseId }}
-                    </a>
-                  </td>
-                  <td>
-                    <span [ngClass]="getTaskPriorityClass(task.priority)">
-                      {{ task.priority }}
+
+        <!-- Team Workload Chart (Manager Only) -->
+        <div class="card border-0 shadow-sm mb-4" *ngIf="isManager">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-bar-chart-line me-2 text-success"></i>Team Workload
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height: 250px;">
+              <canvas id="workloadChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Members (Manager Only) -->
+        <div class="card border-0 shadow-sm mb-4" *ngIf="isManager && teamMembers.length > 0">
+          <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+            <h6 class="card-title mb-0">
+              <i class="ri-team-line me-2 text-info"></i>Team Members
+            </h6>
+            <button class="btn btn-sm btn-light" (click)="selectedTeamMember = null" *ngIf="selectedTeamMember">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div class="team-list">
+              <a href="javascript:void(0);"
+                 class="team-item"
+                 *ngFor="let member of teamMembers.slice(0, 5)"
+                 (click)="selectedTeamMember = member.userId"
+                 [class.active]="selectedTeamMember === member.userId">
+                <div class="d-flex align-items-center">
+                  <div class="team-avatar">
+                    <span class="avatar-title">{{ (member.userName || 'U').charAt(0) }}</span>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0 fs-14">{{ member.userName }}</h6>
+                    <span class="text-muted fs-12">{{ member.activeCases || 0 }} active cases</span>
+                  </div>
+                  <div class="flex-shrink-0">
+                    <span class="badge" [ngClass]="{
+                      'bg-danger-subtle text-danger': (member.workloadPercentage || 0) >= 90,
+                      'bg-warning-subtle text-warning': (member.workloadPercentage || 0) >= 70 && (member.workloadPercentage || 0) < 90,
+                      'bg-success-subtle text-success': (member.workloadPercentage || 0) < 70
+                    }">
+                      {{ member.workloadPercentage || 0 }}%
                     </span>
-                  </td>
-                  <td>
-                    <span [ngClass]="{'text-danger': isOverdue(task.dueDate)}">
-                      {{ task.dueDate | date:'shortDate' }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge badge-soft-warning">{{ task.status }}</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="text-center py-4" *ngIf="recentTasks.length === 0">
-              <div class="avatar-md mx-auto mb-3">
-                <div class="avatar-title bg-light text-warning rounded-circle">
-                  <i class="ri-task-line fs-24"></i>
+                  </div>
                 </div>
-              </div>
-              <p class="text-muted mb-0">No active tasks</p>
+              </a>
+            </div>
+            <div class="p-3 text-center" *ngIf="teamMembers.length > 5">
+              <a routerLink="/case-management/assignments" class="btn btn-sm btn-soft-primary">
+                View All Team Members
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent">
+            <h6 class="card-title mb-0">
+              <i class="ri-flashlight-line me-2 text-warning"></i>Quick Actions
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a routerLink="/legal/cases/create" class="btn btn-primary">
+                <i class="ri-add-line me-2"></i>Create New Case
+              </a>
+              <a routerLink="/case-management/tasks/new" class="btn btn-outline-success">
+                <i class="ri-task-line me-2"></i>Create New Task
+              </a>
+              <a routerLink="/case-management/assignments" class="btn btn-outline-info">
+                <i class="ri-user-add-line me-2"></i>Manage Assignments
+              </a>
+              <a routerLink="/time-tracking/invoice-generation" class="btn btn-outline-warning">
+                <i class="ri-file-text-line me-2"></i>Generate Invoice
+              </a>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Right Column - Team & Charts -->
-    <div class="col-xl-4">
-      <!-- Team Workload Chart -->
-      <div class="card" *ngIf="isManager">
-        <div class="card-header">
-          <h4 class="card-title mb-0">Team Workload</h4>
-        </div>
-        <div class="card-body">
-          <div style="height: 300px;">
-            <canvas id="workloadChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Case Distribution Chart -->
-      <div class="card">
-        <div class="card-header">
-          <h4 class="card-title mb-0">Case Distribution</h4>
-        </div>
-        <div class="card-body">
-          <div style="height: 250px;">
-            <canvas id="caseDistributionChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Team Members -->
-      <div class="card" *ngIf="isManager">
-        <div class="card-header align-items-center d-flex">
-          <h4 class="card-title mb-0 flex-grow-1">Team Members</h4>
-          <div class="flex-shrink-0">
-            <button class="btn btn-soft-info btn-sm" (click)="selectedTeamMember = null">
-              <i class="ri-refresh-line"></i>
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="list-group list-group-flush">
-            <a href="javascript:void(0);" 
-               class="list-group-item list-group-item-action" 
-               *ngFor="let member of teamMembers.slice(0, 5)"
-               (click)="selectedTeamMember = member.userId"
-               [ngClass]="{'active': selectedTeamMember === member.userId}">
-              <div class="d-flex align-items-center">
-                <div class="flex-shrink-0">
-                  <img class="rounded-circle avatar-xs" 
-                       [src]="'assets/images/users/avatar-' + ((member.userId % 8) + 1) + '.jpg'" 
-                       [alt]="member.userName">
-                </div>
-                <div class="flex-grow-1 ms-2">
-                  <h6 class="mb-0">{{ member.userName }}</h6>
-                  <small class="text-muted">{{ member.activeCases || 0 }} active cases</small>
-                </div>
-                <div class="flex-shrink-0">
-                  <span class="badge" [ngClass]="getWorkloadBadgeClass(member.workloadPercentage)">
-                    {{ member.workloadPercentage || 0 }}%
-                  </span>
-                </div>
-              </div>
-            </a>
-          </div>
-          <div class="text-center mt-3" *ngIf="teamMembers.length > 5">
-            <a [routerLink]="['/case-management/assignments']" class="btn btn-soft-primary btn-sm">
-              View All Team Members
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="card">
-        <div class="card-header">
-          <h4 class="card-title mb-0">Quick Actions</h4>
-        </div>
-        <div class="card-body">
-          <div class="d-grid gap-2">
-            <a [routerLink]="['/legal/cases/create']" class="btn btn-primary">
-              <i class="ri-add-line align-middle me-1"></i> Create New Case
-            </a>
-            <a [routerLink]="['/case-management/tasks/new']" class="btn btn-success">
-              <i class="ri-task-line align-middle me-1"></i> Create New Task
-            </a>
-            <button class="btn btn-info" (click)="openAssignmentModal()">
-              <i class="ri-user-add-line align-middle me-1"></i> Assign Team Member
-            </button>
-            <a [routerLink]="['/time-tracking/invoice-generation']" class="btn btn-warning">
-              <i class="ri-file-text-line align-middle me-1"></i> Generate Invoice
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </ng-container>
 </div>

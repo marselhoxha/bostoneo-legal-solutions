@@ -1,4 +1,12 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+/**
+ * @deprecated This component has been deprecated as of December 2025.
+ * All functionality has been consolidated into CaseAssignmentDashboardComponent
+ * which is accessible at /case-management/assignments
+ *
+ * This file is preserved for reference only and will be removed in a future release.
+ * DO NOT add any new features or routes to this component.
+ */
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject, takeUntil, forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
@@ -66,7 +74,8 @@ interface AttorneyExpertise {
 @Component({
   selector: 'app-case-assignment-management',
   templateUrl: './case-assignment-management.component.html',
-  styleUrls: ['./case-assignment-management.component.css']
+  styleUrls: ['./case-assignment-management.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -152,6 +161,7 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
       caseId: [null, Validators.required],
       userId: [null, Validators.required],
       roleType: [CaseRoleType.LEAD_ATTORNEY, Validators.required],
+      assignmentType: [AssignmentType.MANUAL, Validators.required],
       workloadWeight: [50, [Validators.required, Validators.min(1), Validators.max(100)]],
       effectiveFrom: [new Date(), Validators.required],
       effectiveTo: [null],

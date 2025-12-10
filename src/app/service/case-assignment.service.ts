@@ -65,14 +65,23 @@ export class CaseAssignmentService {
     );
   }
 
+  /**
+   * Get all assignments with pagination
+   */
   getAllAssignments(page: number = 0, size: number = 100): Observable<ApiResponse<CaseAssignment[]>> {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    
-    return this.http.get<ApiResponse<CaseAssignment[]>>(
-      `${this.apiUrl}/case-assignments`, 
+
+    return this.http.get<ApiResponse<any>>(
+      `${this.apiUrl}/case-assignments`,
       { params }
+    ).pipe(
+      map(response => ({
+        ...response,
+        // Backend returns { data: { assignments: Page } } where Page has content array
+        data: response.data?.assignments?.content || response.data?.assignments || response.data?.content || []
+      }))
     );
   }
 
@@ -171,23 +180,41 @@ export class CaseAssignmentService {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    
-    return this.http.get<ApiResponse<CaseTransferRequestDTO[]>>(
-      `${this.apiUrl}/case-assignments/transfers/pending`,
+
+    return this.http.get<ApiResponse<any>>(
+      `${this.apiUrl}/case-assignments/transfer-requests`,
       { params }
+    ).pipe(
+      map(response => {
+        // Backend returns { data: { requests: Page<CaseTransferRequestDTO> } }
+        let transfers: any[] = [];
+        if (response.data?.requests?.content) {
+          transfers = response.data.requests.content;
+        } else if (Array.isArray(response.data?.requests)) {
+          transfers = response.data.requests;
+        } else if (response.data?.content) {
+          transfers = response.data.content;
+        } else if (Array.isArray(response.data)) {
+          transfers = response.data;
+        }
+        return {
+          ...response,
+          data: transfers
+        };
+      })
     );
   }
 
   approveTransfer(requestId: number, notes: string): Observable<ApiResponse<CaseTransferRequestDTO>> {
     return this.http.post<ApiResponse<CaseTransferRequestDTO>>(
-      `${this.apiUrl}/case-assignments/transfers/${requestId}/approve`,
+      `${this.apiUrl}/case-assignments/transfer-requests/${requestId}/approve`,
       { notes }
     );
   }
 
   rejectTransfer(requestId: number, notes: string): Observable<ApiResponse<CaseTransferRequestDTO>> {
     return this.http.post<ApiResponse<CaseTransferRequestDTO>>(
-      `${this.apiUrl}/case-assignments/transfers/${requestId}/reject`,
+      `${this.apiUrl}/case-assignments/transfer-requests/${requestId}/reject`,
       { notes }
     );
   }

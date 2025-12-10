@@ -9,10 +9,13 @@ import com.bostoneo.bostoneosolutions.repository.AIAnalysisMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.bostoneo.bostoneosolutions.service.AIDocumentAnalysisService;
 import com.bostoneo.bostoneosolutions.util.CloudStorageUrlConverter;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -108,14 +111,27 @@ public class AIDocumentAnalyzerController {
 
     @GetMapping("/analysis-history")
     public ResponseEntity<Map<String, Object>> getAnalysisHistory(
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "userId", required = false) Long userId,
+            Authentication authentication) {
 
-        // Use default user ID if not provided (for testing)
-        Long effectiveUserId = userId != null ? userId : 1L;
+        // Get user ID from authentication, fall back to request param
+        Long effectiveUserId = extractUserId(authentication);
+        if (effectiveUserId == null) {
+            effectiveUserId = userId;
+        }
+        if (effectiveUserId == null) {
+            log.warn("Could not determine user ID for analysis history - returning empty list");
+            Map<String, Object> response = new HashMap<>();
+            response.put("analyses", List.of());
+            response.put("total", 0);
+            return ResponseEntity.ok(response);
+        }
 
+        log.info("Fetching analysis history for user: {}", effectiveUserId);
         Map<String, Object> response = new HashMap<>();
-        response.put("analyses", documentAnalysisService.getAnalysisHistory(effectiveUserId));
-        response.put("total", documentAnalysisService.getAnalysisHistory(effectiveUserId).size());
+        var analyses = documentAnalysisService.getAnalysisHistory(effectiveUserId);
+        response.put("analyses", analyses);
+        response.put("total", analyses.size());
 
         return ResponseEntity.ok(response);
     }
@@ -484,6 +500,25 @@ public class AIDocumentAnalyzerController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to delete analysis: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Extract user ID from authentication principal
+     */
+    private Long extractUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDTO) {
+            return ((UserDTO) principal).getId();
+        } else if (principal instanceof UserPrincipal) {
+            return ((UserPrincipal) principal).getUser().getId();
+        }
+
+        log.warn("Unknown principal type: {}", principal.getClass().getName());
+        return null;
     }
 
     /**

@@ -274,7 +274,6 @@ export const ATTORNEY_MENU: MenuItem[] = [
     subItems: [
       { id: 'att-case-dashboard', label: 'Dashboard', link: '/case-management/dashboard', parentId: 'att-case-mgmt' },
       { id: 'att-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'att-case-mgmt' },
-      { id: 'att-case-assign-mgmt', label: 'Assignment Mgmt', link: '/case-management/assignments/management', parentId: 'att-case-mgmt' },
       { id: 'att-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'att-case-mgmt' }
     ]
   },
@@ -387,7 +386,6 @@ export const ADMIN_MENU: MenuItem[] = [
     subItems: [
       { id: 'admin-case-dashboard', label: 'Dashboard', link: '/case-management/dashboard', parentId: 'admin-case-mgmt' },
       { id: 'admin-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-assign-mgmt', label: 'Assignment Mgmt', link: '/case-management/assignments/management', parentId: 'admin-case-mgmt' },
       { id: 'admin-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'admin-case-mgmt' }
     ]
   },

@@ -16,6 +16,7 @@ public interface CaseAssignmentService {
     
     // Query Operations
     List<CaseAssignmentDTO> getAllAssignments();
+    Page<CaseAssignmentDTO> getAllAssignments(Pageable pageable);
     List<CaseAssignmentDTO> getCaseAssignments(Long caseId);
     Page<CaseAssignmentDTO> getUserAssignments(Long userId, Pageable pageable);
     CaseAssignmentDTO getPrimaryAssignment(Long caseId);

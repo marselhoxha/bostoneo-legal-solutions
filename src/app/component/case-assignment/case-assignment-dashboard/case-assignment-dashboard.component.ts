@@ -1,12 +1,15 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, NgZone, ApplicationRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil, forkJoin, of } from 'rxjs';
-import { catchError, finalize, filter } from 'rxjs/operators';
+import { catchError, finalize, filter, take } from 'rxjs/operators';
+import { JwtHelperService } from '@auth0/angular-jwt';
+import { Key } from '../../../enum/key.enum';
 import { CaseAssignmentService } from '../../../service/case-assignment.service';
 import { UserService } from '../../../service/user.service';
 import { CaseClientService } from '../../../service/case-client.service';
 import { NotificationService } from '../../../service/notification.service';
+import { LegalCaseService } from '../../../modules/legal/services/legal-case.service';
 import { CaseContextService } from '../../../core/services/case-context.service';
 import { NavigationContextService } from '../../../core/services/navigation-context.service';
 import { CasePermissionsService } from '../../../core/services/case-permissions.service';
@@ -65,7 +68,8 @@ interface AttorneyExpertise {
 @Component({
   selector: 'app-case-assignment-dashboard',
   templateUrl: './case-assignment-dashboard.component.html',
-  styleUrls: ['./case-assignment-dashboard.component.css']
+  styleUrls: ['./case-assignment-dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -75,11 +79,13 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   filteredCases: LegalCase[] = [];
   attorneys: User[] = [];
   assignments: CaseAssignment[] = [];
+  myAssignments: CaseAssignment[] = [];
   workloadData: UserWorkload[] = [];
   analytics: WorkloadAnalytics | null = null;
   pendingTransfers: CaseTransferRequestDTO[] = [];
   assignmentHistory: AssignmentHistory[] = [];
   assignmentRules: AssignmentRule[] = [];
+  currentUserId: number = 0;
   
   // Context integration properties
   caseMode: boolean = false;
@@ -103,7 +109,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   // UI State
   searchTerm = '';
   attorneySearchTerm = '';
-  selectedTab = 'assignments';
+  selectedTab = 'my-assignments';
   selectedCaseType = '';
   selectedPriority = '';
   selectedWorkloadFilter = '';
@@ -147,6 +153,8 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     history: { page: 0, size: 10, total: 0 }
   };
 
+  private jwtHelper = new JwtHelperService();
+
   constructor(
     private caseAssignmentService: CaseAssignmentService,
     private userService: UserService,
@@ -163,23 +171,30 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     private performanceDashboard: PerformanceDashboardService,
     private assignmentSyncService: AssignmentSyncService,
     private auditLogService: AuditLogService,
-    private webSocketService: WebSocketService
+    private webSocketService: WebSocketService,
+    private legalCaseService: LegalCaseService,
+    private ngZone: NgZone,
+    private appRef: ApplicationRef
   ) {
     this.initializeForms();
   }
 
   ngOnInit(): void {
     console.log('🎬 CaseAssignmentDashboardComponent - ngOnInit started');
-    
+
     // Initialize breadcrumbs
     this.breadCrumbItems = [
       { label: 'Case Management' },
       { label: 'Assignments', active: true }
     ];
-    
+
+    // Get current user ID - try multiple methods
+    this.currentUserId = this.resolveCurrentUserId();
+    console.log('👤 Current User ID resolved:', this.currentUserId);
+
     // Determine context mode from route
     const caseId = this.route.snapshot.params['caseId'] || this.route.snapshot.queryParams['caseId'];
-    
+
     if (caseId) {
       // Case-specific mode
       this.caseMode = true;
@@ -190,15 +205,49 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       // All assignments mode
       this.caseMode = false;
       console.log('📂 All assignments mode');
-      this.initializeAllAssignmentsMode();
+
+      // If we have user ID, load data immediately
+      if (this.currentUserId) {
+        this.initializeAllAssignmentsMode();
+      } else {
+        // Wait for user data before loading
+        console.log('⏳ Waiting for user data before loading...');
+        this.userService.userData$.pipe(
+          takeUntil(this.destroy$),
+          filter(user => user !== null),
+          take(1)
+        ).subscribe(user => {
+          if (user) {
+            this.currentUserId = user.id;
+            console.log('👤 User ID from subscription:', this.currentUserId);
+            this.initializeAllAssignmentsMode();
+          }
+        });
+      }
     }
-    
+
+    // Subscribe to user data changes for future updates
+    this.userService.userData$.pipe(
+      takeUntil(this.destroy$),
+      filter(user => user !== null)
+    ).subscribe(user => {
+      if (user && user.id && user.id !== this.currentUserId) {
+        const previousUserId = this.currentUserId;
+        this.currentUserId = user.id;
+        console.log('👤 User ID updated:', this.currentUserId);
+        // Reload my assignments if user changes (and we had a previous ID)
+        if (previousUserId) {
+          this.loadMyAssignments();
+        }
+      }
+    });
+
     // Subscribe to context updates
     this.subscribeToContextUpdates();
-    
+
     // Subscribe to WebSocket updates for real-time assignment changes
     this.subscribeToWebSocketUpdates();
-    
+
     console.log('🎬 CaseAssignmentDashboardComponent - ngOnInit completed');
   }
 
@@ -444,12 +493,14 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     this.loading.cases = true;
     this.loading.attorneys = true;
     this.loading.assignments = true;
-    
+
+    console.log('📊 Loading initial data with currentUserId:', this.currentUserId);
+
     forkJoin({
-      cases: this.caseClientService.getUserCases(1, 0, 1000).pipe(
+      cases: this.legalCaseService.getAllCases(0, 1000).pipe(
         catchError(error => {
           console.error('Error loading cases:', error);
-          return of({ data: { content: [] } });
+          return of({ data: { cases: { content: [] } } });
         })
       ),
       attorneys: this.userService.getUsers().pipe(
@@ -458,12 +509,21 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
           return of({ data: [] });
         })
       ),
-      assignments: of({ data: [] }).pipe(
+      // Get ALL assignments for the "All Assignments" tab (managers)
+      allAssignments: this.caseAssignmentService.getAllAssignments(0, 1000).pipe(
         catchError(error => {
-          console.error('Error loading assignments:', error);
+          console.error('Error loading all assignments:', error);
           return of({ data: [] });
         })
       ),
+      // Get current user's assignments for "My Assignments" tab
+      myAssignments: this.currentUserId ?
+        this.caseAssignmentService.getUserAssignments(this.currentUserId, 0, 100).pipe(
+          catchError(error => {
+            console.error('Error loading my assignments:', error);
+            return of({ data: [] });
+          })
+        ) : of({ data: [] }),
       workload: this.caseAssignmentService.getWorkloadAnalytics().pipe(
         catchError(error => {
           console.error('Error loading workload:', error);
@@ -482,49 +542,157 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.processCasesData(response.cases);
         this.processAttorneysData(response.attorneys);
-        this.processAssignmentsData(response.assignments);
+        this.processAllAssignmentsData(response.allAssignments);
+        this.processMyAssignmentsData(response.myAssignments);
+
+        // Fallback: If myAssignments is empty but we have a userId, filter from allAssignments
+        if (this.myAssignments.length === 0 && this.currentUserId && this.assignments.length > 0) {
+          console.log('📋 Filtering myAssignments from allAssignments for userId:', this.currentUserId);
+          this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
+          console.log('📋 Filtered myAssignments:', this.myAssignments.length);
+        }
+
         this.processWorkloadData(response.workload);
         this.calculateStatistics();
         this.loadAdditionalData();
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error in loadInitialData:', error);
         this.notificationService.onError('Failed to load initial data');
-        this.generateSampleData();
       }
     });
   }
 
   private processCasesData(response: any): void {
-    if (response?.data?.content) {
-      this.cases = response.data.content.map((caseItem: any) => ({
-        ...caseItem,
-        caseType: caseItem.caseType || this.inferCaseType(caseItem.title),
-        priority: caseItem.priority || 'MEDIUM',
-        estimatedWorkload: caseItem.estimatedWorkload || this.calculateEstimatedWorkload(caseItem)
-      }));
-    } else {
-      this.cases = [];
+    // Handle multiple possible response formats from legalCaseService.getAllCases()
+    let casesArray: any[] = [];
+
+    if (response?.data?.cases?.content) {
+      // Format: { data: { cases: { content: [...] } } }
+      casesArray = response.data.cases.content;
+    } else if (response?.data?.content) {
+      // Format: { data: { content: [...] } }
+      casesArray = response.data.content;
+    } else if (response?.data?.cases && Array.isArray(response.data.cases)) {
+      // Format: { data: { cases: [...] } }
+      casesArray = response.data.cases;
+    } else if (Array.isArray(response?.data)) {
+      // Format: { data: [...] }
+      casesArray = response.data;
+    } else if (Array.isArray(response)) {
+      // Format: [...] (direct array)
+      casesArray = response;
     }
+
+    this.cases = casesArray.map((caseItem: any) => ({
+      ...caseItem,
+      caseType: caseItem.caseType || this.inferCaseType(caseItem.title),
+      priority: caseItem.priority || 'MEDIUM',
+      estimatedWorkload: caseItem.estimatedWorkload || this.calculateEstimatedWorkload(caseItem)
+    }));
+
     this.filteredCases = [...this.cases];
     this.pagination.cases.total = this.cases.length;
+    console.log('📁 Loaded cases:', this.cases.length);
   }
 
   private processAttorneysData(response: any): void {
-    this.attorneys = Array.isArray(response.data) ? response.data.filter(user => 
-      user.roles?.some((role: string) => 
-        role.includes('ATTORNEY') || role.includes('LAWYER') || role.includes('LEGAL')
-      )
-    ) : [];
-    
-    if (this.attorneys.length === 0 && Array.isArray(response.data)) {
-      this.attorneys = response.data; // Include all users if no attorneys found
+    // Backend returns { data: { users: [...] } } from /user/list endpoint
+    let usersArray: any[] = [];
+
+    console.log('👥 Processing attorneys data, response structure:', Object.keys(response || {}));
+
+    if (response?.data?.users && Array.isArray(response.data.users)) {
+      usersArray = response.data.users;
+      console.log('👥 Found users in response.data.users');
+    } else if (Array.isArray(response?.data)) {
+      usersArray = response.data;
+      console.log('👥 Found users in response.data (array)');
+    } else if (response?.data?.content && Array.isArray(response.data.content)) {
+      usersArray = response.data.content;
+      console.log('👥 Found users in response.data.content');
+    } else {
+      console.warn('👥 Could not find users array in response:', response);
+    }
+
+    console.log('👥 Total users loaded:', usersArray.length);
+
+    // Filter for attorneys/lawyers
+    this.attorneys = usersArray.filter(user => {
+      const roleName = user.roleName?.toLowerCase() || '';
+      const roles = user.roles?.map((role: string) => role.toLowerCase()) || [];
+      return roleName.includes('attorney') ||
+             roleName.includes('lawyer') ||
+             roleName.includes('legal') ||
+             roleName.includes('admin') ||
+             roles.some((role: string) =>
+               role.includes('attorney') ||
+               role.includes('lawyer') ||
+               role.includes('legal') ||
+               role.includes('admin')
+             );
+    });
+
+    // If no attorneys found after filtering, include all users
+    if (this.attorneys.length === 0 && usersArray.length > 0) {
+      console.log('⚠️ No attorneys found by role filter, using all users');
+      this.attorneys = usersArray;
+    }
+
+    console.log('👥 Attorneys loaded:', this.attorneys.length);
+    if (this.attorneys.length > 0) {
+      console.log('👥 First attorney:', this.attorneys[0]?.firstName, this.attorneys[0]?.lastName, '- Role:', this.attorneys[0]?.roleName);
     }
   }
 
-  private processAssignmentsData(response: any): void {
-    this.assignments = response?.data || [];
+  private processAllAssignmentsData(response: any): void {
+    // Handle multiple possible response formats from getAllAssignments
+    let assignmentsArray: any[] = [];
+
+    if (response?.data?.content) {
+      // Paginated format: { data: { content: [...] } }
+      assignmentsArray = response.data.content;
+    } else if (response?.data?.assignments?.content) {
+      // Nested paginated: { data: { assignments: { content: [...] } } }
+      assignmentsArray = response.data.assignments.content;
+    } else if (response?.data?.assignments && Array.isArray(response.data.assignments)) {
+      // Nested array: { data: { assignments: [...] } }
+      assignmentsArray = response.data.assignments;
+    } else if (Array.isArray(response?.data)) {
+      // Direct array format: { data: [...] }
+      assignmentsArray = response.data;
+    }
+
+    this.assignments = assignmentsArray;
     this.pagination.assignments.total = this.assignments.length;
+    console.log('📋 Loaded all assignments:', this.assignments.length);
+    // Debug: Log first few assignments to verify data structure
+    if (this.assignments.length > 0) {
+      console.log('📋 First assignment sample:', JSON.stringify(this.assignments[0], null, 2));
+    }
+  }
+
+  private processMyAssignmentsData(response: any): void {
+    // Handle multiple possible response formats from getUserAssignments
+    let assignmentsArray: any[] = [];
+
+    if (response?.data?.content) {
+      // Paginated format: { data: { content: [...] } }
+      assignmentsArray = response.data.content;
+    } else if (response?.data?.assignments?.content) {
+      // Nested paginated: { data: { assignments: { content: [...] } } }
+      assignmentsArray = response.data.assignments.content;
+    } else if (response?.data?.assignments && Array.isArray(response.data.assignments)) {
+      // Nested array: { data: { assignments: [...] } }
+      assignmentsArray = response.data.assignments;
+    } else if (Array.isArray(response?.data)) {
+      // Direct array format: { data: [...] }
+      assignmentsArray = response.data;
+    }
+
+    this.myAssignments = assignmentsArray;
+    console.log('📋 Loaded my assignments:', this.myAssignments.length);
   }
 
   private processWorkloadData(response: any): void {
@@ -533,15 +701,28 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadAdditionalData(): void {
+    // Note: My assignments are already loaded in loadInitialData
     this.loadPendingTransfers();
     this.loadAssignmentHistory();
     this.loadAssignmentRules();
+    // Load workload data for Team and Workload tabs
+    this.loadWorkloadData();
   }
 
   private loadWorkloadData(): void {
+    console.log('📊 Loading workload data. Attorneys:', this.attorneys.length);
+
+    if (this.attorneys.length === 0) {
+      console.warn('⚠️ No attorneys available for workload calculation');
+      this.workloadData = [];
+      this.loading.workload = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.loading.workload = true;
-    
-    const workloadRequests = this.attorneys.map(attorney => 
+
+    const workloadRequests = this.attorneys.map(attorney =>
       this.caseAssignmentService.calculateUserWorkload(attorney.id).pipe(
         catchError(() => of({ data: this.generateSampleWorkload(attorney) }))
       )
@@ -556,10 +737,13 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (responses) => {
         this.workloadData = responses.map(response => response.data);
+        console.log('📊 Workload data loaded:', this.workloadData.length);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading workload data:', error);
         this.workloadData = this.attorneys.map(attorney => this.generateSampleWorkload(attorney));
+        this.cdr.markForCheck();
       }
     });
   }
@@ -570,11 +754,16 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       catchError(() => of({ data: [] }))
     ).subscribe({
       next: (response) => {
-        this.pendingTransfers = response.data || [];
+        // Ensure pendingTransfers is always an array
+        const data = response.data;
+        this.pendingTransfers = Array.isArray(data) ? data : [];
+        console.log('📋 Pending transfers loaded:', this.pendingTransfers.length);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading pending transfers:', error);
         this.pendingTransfers = [];
+        this.cdr.markForCheck();
       }
     });
   }
@@ -616,39 +805,48 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
   // Case Selection and Filtering
   selectCase(caseItem: LegalCase): void {
+    console.log('📁 selectCase called:', caseItem?.id, caseItem?.title);
     this.selectedCase = caseItem;
     this.assignmentForm.patchValue({ caseId: caseItem.id });
     this.loadCaseAssignments(caseItem.id);
     this.getAssignmentRecommendations(caseItem.id);
+    // Force change detection for OnPush
+    this.cdr.detectChanges();
+    console.log('📁 selectedCase set:', this.selectedCase?.id, 'selectedAttorney:', this.selectedAttorney?.id);
   }
 
   selectAttorney(attorney: User): void {
+    console.log('👤 selectAttorney called:', attorney?.id, attorney?.firstName);
     this.selectedAttorney = attorney;
     this.assignmentForm.patchValue({ userId: attorney.id });
+    // Force change detection for OnPush
+    this.cdr.detectChanges();
+    console.log('👤 selectedAttorney set:', this.selectedAttorney?.id, 'selectedCase:', this.selectedCase?.id);
   }
 
   filterCases(): void {
     let filtered = [...this.cases];
-    
+
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(caseItem => 
+      filtered = filtered.filter(caseItem =>
         caseItem.title.toLowerCase().includes(term) ||
         caseItem.caseNumber.toLowerCase().includes(term) ||
         caseItem.clientName?.toLowerCase().includes(term)
       );
     }
-    
+
     if (this.selectedCaseType) {
       filtered = filtered.filter(caseItem => caseItem.caseType === this.selectedCaseType);
     }
-    
+
     if (this.selectedPriority) {
       filtered = filtered.filter(caseItem => caseItem.priority === this.selectedPriority);
     }
-    
+
     this.filteredCases = filtered;
     this.pagination.cases.total = filtered.length;
+    this.cdr.markForCheck();
   }
 
   filterAttorneys(): User[] {
@@ -749,6 +947,83 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  approveTransfer(transfer: CaseTransferRequestDTO): void {
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Approve Transfer',
+        text: `Approve transfer of case "${transfer.caseTitle}" from ${transfer.fromUserName} to ${transfer.toUserName}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Approve',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#28a745',
+        input: 'textarea',
+        inputPlaceholder: 'Add notes (optional)',
+        inputAttributes: {
+          'aria-label': 'Notes'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.caseAssignmentService.approveTransfer(transfer.id, result.value || '').pipe(
+            takeUntil(this.destroy$)
+          ).subscribe({
+            next: () => {
+              this.notificationService.onSuccess('Transfer approved successfully');
+              this.pendingTransfers = this.pendingTransfers.filter(t => t.id !== transfer.id);
+              this.loadInitialData(); // Refresh assignments
+              this.cdr.markForCheck();
+            },
+            error: (error) => {
+              console.error('Error approving transfer:', error);
+              this.notificationService.onError('Failed to approve transfer');
+            }
+          });
+        }
+      });
+    });
+  }
+
+  rejectTransfer(transfer: CaseTransferRequestDTO): void {
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Reject Transfer',
+        text: `Reject transfer request for case "${transfer.caseTitle}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reject',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+        input: 'textarea',
+        inputPlaceholder: 'Reason for rejection',
+        inputAttributes: {
+          'aria-label': 'Reason'
+        },
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Please provide a reason for rejection';
+          }
+          return null;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.caseAssignmentService.rejectTransfer(transfer.id, result.value).pipe(
+            takeUntil(this.destroy$)
+          ).subscribe({
+            next: () => {
+              this.notificationService.onSuccess('Transfer rejected');
+              this.pendingTransfers = this.pendingTransfers.filter(t => t.id !== transfer.id);
+              this.cdr.markForCheck();
+            },
+            error: (error) => {
+              console.error('Error rejecting transfer:', error);
+              this.notificationService.onError('Failed to reject transfer');
+            }
+          });
+        }
+      });
+    });
+  }
+
   transferCase(): void {
     if (this.transferForm.invalid) {
       this.notificationService.onError('Please fill in all required fields');
@@ -827,6 +1102,12 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   removeAssignment(assignment: CaseAssignment): void {
+    console.log('🗑️ Removing assignment:', assignment);
+    console.log('   - Assignment ID:', assignment.id);
+    console.log('   - Case ID:', assignment.caseId);
+    console.log('   - User ID:', assignment.userId);
+    console.log('   - User Name:', assignment.userName);
+
     if (!confirm('Are you sure you want to remove this assignment?')) {
       return;
     }
@@ -843,6 +1124,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         if (syncResult.success) {
           this.notificationService.onSuccess('Assignment removed successfully');
           this.assignments = this.assignments.filter(a => a.id !== assignment.id);
+          this.cdr.markForCheck();
           
           // Log removal in audit
           const caseName = assignment.caseTitle || `Case ${assignment.caseId}`;
@@ -881,9 +1163,10 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (this.selectedCase) {
-          this.selectedCase.assignedAttorneys = response.data.map((assignment: CaseAssignment) => 
+          this.selectedCase.assignedAttorneys = response.data.map((assignment: CaseAssignment) =>
             this.attorneys.find(attorney => attorney.id === assignment.userId)
           ).filter(Boolean);
+          this.cdr.markForCheck();
         }
       },
       error: (error) => {
@@ -924,10 +1207,18 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private calculateAttorneyExpertise(): void {
+    console.log('📊 Calculating attorney expertise. Attorneys:', this.attorneys.length, 'Assignments:', this.assignments.length);
+
+    if (this.attorneys.length === 0) {
+      console.warn('⚠️ No attorneys available for expertise calculation');
+      this.attorneyExpertise = [];
+      return;
+    }
+
     this.attorneyExpertise = this.attorneys.map(attorney => {
       const attorneyAssignments = this.assignments.filter(a => a.userId === attorney.id);
       const caseTypeExp: { [key: string]: number } = {};
-      
+
       attorneyAssignments.forEach(assignment => {
         const caseItem = this.cases.find(c => c.id === assignment.caseId);
         if (caseItem) {
@@ -937,13 +1228,16 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
       return {
         userId: attorney.id,
-        userName: `${attorney.firstName} ${attorney.lastName}`,
-        specializations: Object.keys(caseTypeExp).filter(type => caseTypeExp[type] >= 3),
+        userName: `${attorney.firstName || ''} ${attorney.lastName || ''}`.trim() || attorney.email || 'Unknown',
+        specializations: Object.keys(caseTypeExp).filter(type => caseTypeExp[type] >= 1), // Lowered threshold from 3 to 1
         caseTypeExperience: caseTypeExp,
-        successRate: Math.random() * 20 + 80,
-        avgCaseCompletionTime: Math.random() * 30 + 30
+        successRate: Math.round(Math.random() * 20 + 80), // 80-100%
+        avgCaseCompletionTime: Math.round(Math.random() * 30 + 30) // 30-60 days
       };
     });
+
+    console.log('📊 Attorney expertise calculated:', this.attorneyExpertise.length);
+    this.cdr.markForCheck();
   }
 
   private inferCaseType(title: string): string {
@@ -983,20 +1277,24 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private generateSampleWorkload(attorney: User): UserWorkload {
-    const activeCases = Math.floor(Math.random() * 8) + 2;
-    const workloadPoints = Math.floor(Math.random() * 60) + 40;
-    const capacity = Math.floor(workloadPoints / 100 * 100);
-    
+    // Get actual case count for this attorney from assignments
+    const attorneyAssignments = this.assignments.filter(a => a.userId === attorney.id && a.active);
+    const activeCases = attorneyAssignments.length;
+
+    // Calculate workload: 10 points per case, max capacity 100 points (10 cases = 100%)
+    const workloadPoints = activeCases * 10;
+    const capacity = Math.min(workloadPoints, 150); // Cap at 150% for display
+
     let status: WorkloadStatus;
-    if (capacity < 60) status = WorkloadStatus.UNDER_CAPACITY;
-    else if (capacity < 80) status = WorkloadStatus.OPTIMAL;
-    else if (capacity < 95) status = WorkloadStatus.NEAR_CAPACITY;
+    if (capacity < 50) status = WorkloadStatus.UNDER_CAPACITY;
+    else if (capacity < 70) status = WorkloadStatus.OPTIMAL;
+    else if (capacity < 90) status = WorkloadStatus.NEAR_CAPACITY;
     else if (capacity < 100) status = WorkloadStatus.AT_CAPACITY;
     else status = WorkloadStatus.OVER_CAPACITY;
 
     return {
       userId: attorney.id,
-      userName: `${attorney.firstName} ${attorney.lastName}`,
+      userName: `${attorney.firstName || ''} ${attorney.lastName || ''}`.trim() || attorney.email,
       userEmail: attorney.email,
       calculationDate: new Date(),
       activeCasesCount: activeCases,
@@ -1004,10 +1302,10 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       capacityPercentage: capacity,
       maxCapacityPoints: 100,
       workloadStatus: status,
-      overdueTasksCount: Math.floor(Math.random() * 3),
-      upcomingDeadlinesCount: Math.floor(Math.random() * 5) + 1,
-      billableHoursWeek: Math.floor(Math.random() * 20) + 30,
-      nonBillableHoursWeek: Math.floor(Math.random() * 10) + 5,
+      overdueTasksCount: 0,
+      upcomingDeadlinesCount: 0,
+      billableHoursWeek: 0,
+      nonBillableHoursWeek: 0,
       averageResponseTimeHours: Math.floor(Math.random() * 12) + 2,
       lastCalculatedAt: new Date()
     };
@@ -1053,6 +1351,11 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
   getAttorneyAssignments(attorneyId: number): CaseAssignment[] {
     return this.assignments.filter(a => a.userId === attorneyId);
+  }
+
+  getAttorneyEmail(attorneyId: number): string {
+    const attorney = this.attorneys.find(a => a.id === attorneyId);
+    return attorney?.email || '';
   }
 
   getWorkloadStatusClass(status: WorkloadStatus): string {
@@ -1106,10 +1409,19 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   onTabChange(tab: string): void {
-    this.selectedTab = tab;
-    if (tab === 'analytics' && !this.analytics) {
-      this.loadWorkloadData();
-    }
+    this.ngZone.run(() => {
+      this.selectedTab = tab;
+      // Reset selections when switching to all-assignments tab for clean state
+      if (tab === 'all-assignments') {
+        // Keep selections but ensure UI updates
+        console.log('📂 Switching to all-assignments tab');
+      }
+      if (tab === 'analytics' && !this.analytics) {
+        this.loadWorkloadData();
+      }
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
   }
 
   onCaseTypeChange(): void {
@@ -1125,7 +1437,9 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshData(): void {
+    console.log('🔄 Refreshing data...');
     this.loadInitialData();
+    this.cdr.markForCheck();
   }
 
   // Permission and Role Methods
@@ -1303,8 +1617,147 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    * Get current user ID for notifications filtering
    */
   private getCurrentUserId(): number {
-    // This would typically come from a user service or auth service
-    // For now, return 0 as placeholder
+    return this.currentUserId;
+  }
+
+  /**
+   * Resolve current user ID from multiple sources
+   */
+  private resolveCurrentUserId(): number {
+    // 1. Try from user service (cached user data)
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser?.id) {
+      console.log('👤 Got user ID from getCurrentUser():', currentUser.id);
+      return currentUser.id;
+    }
+
+    // 2. Try from user service's getCurrentUserId
+    const storedUserId = this.userService.getCurrentUserId();
+    if (storedUserId) {
+      console.log('👤 Got user ID from getCurrentUserId():', storedUserId);
+      return storedUserId;
+    }
+
+    // 3. Try to decode JWT token
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (token) {
+        const decodedToken = this.jwtHelper.decodeToken(token);
+        // The user ID might be stored in different claims
+        const userId = decodedToken?.userId || decodedToken?.id || decodedToken?.sub;
+        if (userId && typeof userId === 'number') {
+          console.log('👤 Got user ID from JWT token:', userId);
+          return userId;
+        }
+        // If sub is email, we can't get ID directly
+        console.log('🔍 JWT token decoded but no numeric userId found:', decodedToken);
+      }
+    } catch (error) {
+      console.error('Error decoding JWT token:', error);
+    }
+
+    console.warn('⚠️ Could not resolve user ID from any source');
     return 0;
+  }
+
+  // ========================================
+  // My Assignments Helper Methods
+  // ========================================
+
+  /**
+   * Get assignments where user is Lead Attorney
+   */
+  getMyLeadAssignments(): CaseAssignment[] {
+    return this.myAssignments.filter(a => a.roleType === CaseRoleType.LEAD_ATTORNEY);
+  }
+
+  /**
+   * Get assignments where user is supporting (not lead)
+   */
+  getMySupportingAssignments(): CaseAssignment[] {
+    return this.myAssignments.filter(a => a.roleType !== CaseRoleType.LEAD_ATTORNEY);
+  }
+
+  /**
+   * Calculate total workload percentage for current user
+   */
+  getMyTotalWorkload(): number {
+    return this.myAssignments.reduce((total, a) => total + (a.workloadWeight || 0), 0);
+  }
+
+  /**
+   * Get client name for a case
+   */
+  getClientNameForCase(caseId: number): string {
+    const caseItem = this.cases.find(c => c.id === caseId);
+    return caseItem?.clientName || '';
+  }
+
+  /**
+   * Get priority for a case
+   */
+  getCasePriority(caseId: number): string {
+    const caseItem = this.cases.find(c => c.id === caseId);
+    return caseItem?.priority || 'MEDIUM';
+  }
+
+  /**
+   * Load current user's assignments
+   */
+  private loadMyAssignments(): void {
+    if (!this.currentUserId) {
+      console.warn('⚠️ Cannot load my assignments - no user ID');
+      // Try filtering from all assignments as fallback
+      this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    console.log('👤 Loading assignments for user:', this.currentUserId);
+
+    this.caseAssignmentService.getUserAssignments(this.currentUserId, 0, 100).pipe(
+      takeUntil(this.destroy$),
+      catchError(error => {
+        console.error('Error loading my assignments from API:', error);
+        // Fallback: filter from all assignments
+        this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
+        console.log('📋 My assignments (from filter fallback):', this.myAssignments.length);
+        this.cdr.markForCheck();
+        return of(null);
+      })
+    ).subscribe({
+      next: (response: any) => {
+        if (!response) return; // Error was handled
+
+        // Handle multiple possible response formats
+        let assignmentsArray: any[] = [];
+
+        if (response?.data?.content) {
+          // Paginated format: { data: { content: [...] } }
+          assignmentsArray = response.data.content;
+        } else if (response?.data?.assignments?.content) {
+          // Nested paginated: { data: { assignments: { content: [...] } } }
+          assignmentsArray = response.data.assignments.content;
+        } else if (response?.data?.assignments && Array.isArray(response.data.assignments)) {
+          // Nested array: { data: { assignments: [...] } }
+          assignmentsArray = response.data.assignments;
+        } else if (Array.isArray(response?.data)) {
+          // Direct array: { data: [...] }
+          assignmentsArray = response.data;
+        }
+
+        this.myAssignments = assignmentsArray;
+        console.log('📋 My assignments loaded from API:', this.myAssignments.length);
+
+        // If API returned empty but we have all assignments, try filtering
+        if (this.myAssignments.length === 0 && this.assignments.length > 0) {
+          console.log('🔄 API returned empty, trying to filter from all assignments for user:', this.currentUserId);
+          this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
+          console.log('📋 My assignments (from filter):', this.myAssignments.length);
+        }
+
+        this.cdr.markForCheck();
+      }
+    });
   }
 }

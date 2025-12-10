@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Subject, takeUntil, forkJoin, map, of, catchError } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil, forkJoin, map, of, catchError, finalize } from 'rxjs';
 
 // Services
 import { CaseAssignmentService } from '../../../../service/case-assignment.service';
@@ -14,7 +14,7 @@ import { RbacService } from '../../../../core/services/rbac.service';
 
 // Interfaces
 import { User } from '../../../../interface/user';
-import { CaseAssignment, UserWorkload, CaseRoleType, AssignmentType } from '../../../../interface/case-assignment';
+import { CaseAssignment, CaseRoleType, AssignmentType } from '../../../../interface/case-assignment';
 import { CaseTask } from '../../../../interface/case-task';
 import { LegalCase, CaseStatus, CasePriority } from '../../../legal/interfaces/case.interface';
 
@@ -26,22 +26,23 @@ import { Chart, registerables } from 'chart.js';
   templateUrl: './case-management-dashboard.component.html',
   styleUrls: ['./case-management-dashboard.component.scss'],
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule]
+  imports: [CommonModule, RouterModule, FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  
+
   // User data
   currentUser: User | null = null;
   isManager = false;
   isAttorney = false;
-  
+
   // Dashboard data
   activeCases: LegalCase[] = [];
   myAssignments: CaseAssignment[] = [];
   teamMembers: any[] = [];
   recentTasks: CaseTask[] = [];
-  
+
   // Statistics
   stats = {
     totalCases: 0,
@@ -51,12 +52,12 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     teamUtilization: 0,
     averageWorkload: 0
   };
-  
+
   // Filters
   selectedFilter = 'all';
   searchQuery = '';
   selectedTeamMember: string | null = null;
-  
+
   // Loading states
   loading = {
     cases: false,
@@ -64,10 +65,13 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     tasks: false,
     team: false
   };
-  
+
   // Charts
   workloadChart: Chart<'bar', number[], string> | null = null;
   caseDistributionChart: Chart<'doughnut', number[], string> | null = null;
+
+  // Global loading state
+  isLoading = true;
 
   constructor(
     private caseAssignmentService: CaseAssignmentService,
@@ -75,7 +79,8 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     private legalCaseService: LegalCaseService,
     private userService: UserService,
     private notificationService: NotificationService,
-    private rbacService: RbacService
+    private rbacService: RbacService,
+    private cdr: ChangeDetectorRef
   ) {
     Chart.register(...registerables);
   }
@@ -108,11 +113,14 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             this.currentUser = response.data.user;
+            this.cdr.markForCheck();
             this.loadDashboardData();
           },
           error: (error) => {
             this.notificationService.onError('Failed to load user information');
             console.error('Error loading user:', error);
+            this.isLoading = false;
+            this.cdr.markForCheck();
           }
         });
     }
@@ -125,7 +133,10 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
 
   private loadDashboardData(): void {
     if (!this.currentUser) return;
-    
+
+    this.isLoading = true;
+    this.cdr.markForCheck();
+
     // Load all data in parallel
     forkJoin({
       cases: this.loadCases().pipe(
@@ -152,19 +163,26 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
           return of([]);
         })
       ) : of([])
-    }).subscribe({
+    }).pipe(
+      finalize(() => {
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      })
+    ).subscribe({
       next: (results) => {
         this.calculateStatistics();
         this.initializeCharts();
-        
+
         // Add sample data for development if no real data
         if (this.activeCases.length === 0) {
           this.addSampleData();
         }
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading dashboard data:', error);
         this.notificationService.onError('Failed to load dashboard data');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -189,6 +207,7 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
           this.activeCases = [];
         }
         this.loading.cases = false;
+        this.cdr.markForCheck();
         return this.activeCases;
       })
     );
@@ -201,6 +220,7 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       map((response: any) => {
         this.myAssignments = response.data?.content || response.data || [];
         this.loading.assignments = false;
+        this.cdr.markForCheck();
         return this.myAssignments;
       })
     );
@@ -211,7 +231,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     return this.caseTaskService.getUserTasks(this.currentUser!.id, { page: 0, size: 20 }).pipe(
       takeUntil(this.destroy$),
       map((response: any) => {
-        console.log('Task response:', response);
         let tasks = [];
         if (response.data) {
           if (response.data.tasks && response.data.tasks.content) {
@@ -222,15 +241,16 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
             tasks = response.data;
           }
         }
-        
+
         if (Array.isArray(tasks)) {
-          this.recentTasks = tasks.filter((task: CaseTask) => 
+          this.recentTasks = tasks.filter((task: CaseTask) =>
             task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
           );
         } else {
           this.recentTasks = [];
         }
         this.loading.tasks = false;
+        this.cdr.markForCheck();
         return this.recentTasks;
       })
     );
@@ -243,6 +263,7 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       map((response: any) => {
         this.teamMembers = response.data || [];
         this.loading.team = false;
+        this.cdr.markForCheck();
         return this.teamMembers;
       })
     );
@@ -539,5 +560,33 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     
     this.calculateStatistics();
     this.initializeCharts();
+    this.cdr.markForCheck();
+  }
+
+  // Helper methods
+  getPriorityBadgeClass(priority: string): string {
+    const classes: Record<string, string> = {
+      'LOW': 'bg-info-subtle text-info',
+      'MEDIUM': 'bg-warning-subtle text-warning',
+      'HIGH': 'bg-danger-subtle text-danger',
+      'URGENT': 'bg-danger text-white'
+    };
+    return classes[priority] || 'bg-secondary-subtle text-secondary';
+  }
+
+  getTaskStatusBadgeClass(status: string): string {
+    const classes: Record<string, string> = {
+      'TODO': 'bg-secondary-subtle text-secondary',
+      'IN_PROGRESS': 'bg-primary-subtle text-primary',
+      'REVIEW': 'bg-info-subtle text-info',
+      'COMPLETED': 'bg-success-subtle text-success',
+      'CANCELLED': 'bg-dark-subtle text-dark'
+    };
+    return classes[status] || 'bg-secondary-subtle text-secondary';
+  }
+
+  formatCaseStatus(status: string): string {
+    if (!status) return '-';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 }

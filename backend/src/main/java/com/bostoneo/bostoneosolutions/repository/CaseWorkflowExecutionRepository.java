@@ -33,4 +33,7 @@ public interface CaseWorkflowExecutionRepository extends JpaRepository<CaseWorkf
 
     @Query("SELECT e FROM CaseWorkflowExecution e LEFT JOIN FETCH e.template LEFT JOIN FETCH e.legalCase ORDER BY e.createdAt DESC")
     List<CaseWorkflowExecution> findAllWithTemplateAndCase();
+
+    @Query("SELECT e FROM CaseWorkflowExecution e LEFT JOIN FETCH e.template LEFT JOIN FETCH e.legalCase WHERE e.createdBy.id = :userId ORDER BY e.createdAt DESC")
+    List<CaseWorkflowExecution> findByUserIdWithTemplateAndCase(@Param("userId") Long userId);
 }

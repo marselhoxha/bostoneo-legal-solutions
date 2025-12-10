@@ -78,9 +78,17 @@ public class CaseWorkflowController {
 
     @GetMapping("/executions")
     public ResponseEntity<HttpResponse> getUserExecutions(Authentication authentication) {
-        // TODO: Get user ID from authentication and filter by user
-        log.info("Fetching user workflow executions");
-        List<CaseWorkflowExecution> executions = executionRepository.findAllWithTemplateAndCase();
+        // Get user ID from authentication and filter by user
+        Long userId = extractUserId(authentication);
+        log.info("Fetching workflow executions for user: {}", userId);
+
+        List<CaseWorkflowExecution> executions;
+        if (userId != null) {
+            executions = executionRepository.findByUserIdWithTemplateAndCase(userId);
+        } else {
+            log.warn("Could not determine user ID from authentication - returning empty list");
+            executions = List.of();
+        }
 
         return ResponseEntity.ok(
             HttpResponse.builder()
@@ -249,5 +257,24 @@ public class CaseWorkflowController {
             return Long.parseLong((String) value);
         }
         throw new IllegalArgumentException("Cannot parse Long from: " + value.getClass());
+    }
+
+    /**
+     * Extract user ID from authentication principal
+     */
+    private Long extractUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDTO) {
+            return ((UserDTO) principal).getId();
+        } else if (principal instanceof UserPrincipal) {
+            return ((UserPrincipal) principal).getUser().getId();
+        }
+
+        log.warn("Unknown principal type: {}", principal.getClass().getName());
+        return null;
     }
 }

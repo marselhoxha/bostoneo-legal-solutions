@@ -53,10 +53,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         validateAssignmentRequest(request);
         
         // Check if user already assigned
-        Optional<CaseAssignment> existing = assignmentRepository
-            .findByCaseIdAndUserIdAndActive(request.getCaseId(), request.getUserId(), true);
-        
-        if (existing.isPresent()) {
+        List<CaseAssignment> existing = assignmentRepository
+            .findAllByCaseIdAndUserIdAndActive(request.getCaseId(), request.getUserId(), true);
+
+        if (!existing.isEmpty()) {
             throw new ApiException("User already assigned to this case");
         }
         
@@ -217,23 +217,44 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     @Override
     public void unassignCase(Long caseId, Long userId, String reason) {
         log.info("Unassigning user {} from case {}", userId, caseId);
-        
-        CaseAssignment assignment = assignmentRepository
-            .findByCaseIdAndUserIdAndActive(caseId, userId, true)
-            .orElseThrow(() -> new ApiException("Assignment not found"));
-        
+
+        // Debug: Check all assignments for this case
+        List<CaseAssignment> allCaseAssignments = assignmentRepository.findActiveByCaseId(caseId);
+        log.info("All active assignments for case {}: {}", caseId, allCaseAssignments.size());
+        for (CaseAssignment ca : allCaseAssignments) {
+            log.info("  - Assignment ID: {}, User ID: {}, Active: {}", ca.getId(), ca.getAssignedTo().getId(), ca.isActive());
+        }
+
+        // Find all active assignments for this user/case (handles duplicates)
+        List<CaseAssignment> assignments = assignmentRepository
+            .findAllByCaseIdAndUserIdAndActive(caseId, userId, true);
+
+        log.info("Found {} assignments for caseId={}, userId={}, active=true", assignments.size(), caseId, userId);
+
+        if (assignments.isEmpty()) {
+            // Try to find any assignment (including inactive) for debugging
+            List<CaseAssignment> anyAssignments = assignmentRepository
+                .findAllByCaseIdAndUserIdAndActive(caseId, userId, false);
+            log.warn("No active assignments found. Inactive assignments for same user/case: {}", anyAssignments.size());
+            throw new ApiException("Assignment not found");
+        }
+
         User currentUser = getSystemUser(); // Temporarily use system user for testing
-        
-        // Deactivate assignment
-        assignment.setActive(false);
-        assignment.setEffectiveTo(LocalDate.now());
-        assignmentRepository.save(assignment);
-        
-        // Update workload
+
+        // Deactivate all matching assignments (handles duplicates)
+        for (CaseAssignment assignment : assignments) {
+            assignment.setActive(false);
+            assignment.setEffectiveTo(LocalDate.now());
+            assignmentRepository.save(assignment);
+
+            // Record history for each
+            recordAssignmentHistory(assignment, AssignmentAction.DEACTIVATED, reason, currentUser);
+        }
+
+        log.info("Deactivated {} assignment(s) for user {} from case {}", assignments.size(), userId, caseId);
+
+        // Update workload once
         updateUserWorkload(userId);
-        
-        // Record history
-        recordAssignmentHistory(assignment, AssignmentAction.DEACTIVATED, reason, currentUser);
     }
     
     @Override
@@ -247,6 +268,18 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         } catch (Exception e) {
             log.error("Error fetching all assignments: {}", e.getMessage(), e);
             return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public Page<CaseAssignmentDTO> getAllAssignments(Pageable pageable) {
+        try {
+            log.debug("Getting all case assignments with pagination: {}", pageable);
+            Page<CaseAssignment> assignmentsPage = assignmentRepository.findByActiveTrue(pageable);
+            return assignmentsPage.map(this::mapToDTO);
+        } catch (Exception e) {
+            log.error("Error fetching all assignments with pagination: {}", e.getMessage(), e);
+            return Page.empty(pageable);
         }
     }
 
@@ -316,7 +349,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                 .activeCasesCount(0)
                 .totalWorkloadPoints(BigDecimal.ZERO)
                 .capacityPercentage(BigDecimal.ZERO)
-                .maxCapacityPoints(new BigDecimal("40.00"))
+                .maxCapacityPoints(new BigDecimal("100.00"))
                 .overdueTasksCount(0)
                 .upcomingDeadlinesCount(0)
                 .billableHoursWeek(BigDecimal.ZERO)
@@ -357,12 +390,13 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Get or create workload record
+        // Default maxCapacity of 100 means: 10 cases at weight 1.0 = 100% capacity
         UserWorkload workload = workloadRepository
             .findByUserIdAndCalculationDate(userId, LocalDate.now())
             .orElse(UserWorkload.builder()
                 .user(user)
                 .calculationDate(LocalDate.now())
-                .maxCapacityPoints(new BigDecimal("40.00")) // Default capacity
+                .maxCapacityPoints(new BigDecimal("100.00")) // Default capacity: 10 cases = 100%
                 .build());
 
         // Update workload metrics (use only valid assignments count)
@@ -574,8 +608,20 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     }
     
     private BigDecimal calculateAssignmentPoints(CaseAssignment assignment) {
+        // Base points per case - designed so that 10 cases = 100% capacity with default maxCapacity of 100
         BigDecimal basePoints = new BigDecimal("10");
-        return basePoints.multiply(assignment.getWorkloadWeight());
+        BigDecimal weight = assignment.getWorkloadWeight();
+
+        // Normalize weight - if it's > 10, it's likely a percentage (old format), convert to multiplier
+        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0) {
+            weight = BigDecimal.ONE;
+        } else if (weight.compareTo(new BigDecimal("10")) > 0) {
+            // Convert percentage-like values (e.g., 35, 50) to reasonable multiplier (e.g., 1.0-2.0)
+            // Treat as percentage and normalize: 50 -> 1.0, 100 -> 2.0
+            weight = weight.divide(new BigDecimal("50"), 2, RoundingMode.HALF_UP);
+        }
+
+        return basePoints.multiply(weight);
     }
     
     private boolean hasTransferAuthority(User user) {
@@ -587,52 +633,73 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     }
     
     private CaseAssignmentDTO processTransfer(com.bostoneo.bostoneosolutions.model.CaseTransferRequest request, User approver, String notes) {
-        // Find current assignment
-        CaseAssignment currentAssignment = assignmentRepository
-            .findByCaseIdAndUserIdAndActive(
-                request.getLegalCase().getId(), 
-                request.getFromUser().getId(), 
-                true)
-            .orElseThrow(() -> new ApiException("Current assignment not found"));
-        
-        // Deactivate current assignment
-        currentAssignment.setActive(false);
-        currentAssignment.setEffectiveTo(LocalDate.now());
-        assignmentRepository.save(currentAssignment);
-        
-        // Create new assignment
+        log.info("Processing transfer for case {} from user {} to user {}",
+            request.getLegalCase().getId(), request.getFromUser().getId(), request.getToUser().getId());
+
+        // Find current assignment(s) from the fromUser
+        List<CaseAssignment> currentAssignments = assignmentRepository
+            .findAllByCaseIdAndUserIdAndActive(
+                request.getLegalCase().getId(),
+                request.getFromUser().getId(),
+                true);
+
+        CaseRoleType roleType = CaseRoleType.LEAD_ATTORNEY; // Default role
+        BigDecimal workloadWeight = BigDecimal.ONE;
+
+        // Deactivate current assignment if exists
+        if (!currentAssignments.isEmpty()) {
+            CaseAssignment currentAssignment = currentAssignments.get(0);
+            roleType = currentAssignment.getRoleType();
+            workloadWeight = currentAssignment.getWorkloadWeight();
+
+            // Deactivate all matching assignments
+            for (CaseAssignment ca : currentAssignments) {
+                ca.setActive(false);
+                ca.setEffectiveTo(LocalDate.now());
+                assignmentRepository.save(ca);
+            }
+            log.info("Deactivated {} existing assignment(s)", currentAssignments.size());
+        } else {
+            log.warn("No active assignment found for fromUser {}, creating new assignment for toUser anyway",
+                request.getFromUser().getId());
+        }
+
+        // Create new assignment for toUser
         CaseAssignment newAssignment = CaseAssignment.builder()
             .legalCase(request.getLegalCase())
             .assignedTo(request.getToUser())
-            .roleType(currentAssignment.getRoleType())
+            .roleType(roleType)
             .assignmentType(AssignmentType.TRANSFERRED)
             .assignedBy(approver)
             .assignedAt(LocalDateTime.now())
             .effectiveFrom(LocalDate.now())
-            .workloadWeight(currentAssignment.getWorkloadWeight())
+            .workloadWeight(workloadWeight)
             .notes("Transferred: " + request.getReason())
             .active(true)
             .build();
-        
+
         newAssignment = assignmentRepository.save(newAssignment);
-        
+        log.info("Created new assignment {} for user {}", newAssignment.getId(), request.getToUser().getId());
+
         // Update transfer request
         request.setStatus(TransferStatus.APPROVED);
         request.setApprovedBy(approver);
         request.setApprovalNotes(notes);
         request.setProcessedAt(LocalDateTime.now());
         transferRequestRepository.save(request);
-        
+
         // Update workloads
         updateUserWorkload(request.getFromUser().getId());
         updateUserWorkload(request.getToUser().getId());
-        
+
         // Record history
-        recordAssignmentHistory(newAssignment, AssignmentAction.TRANSFERRED, 
-            String.format("Transferred from %s. Reason: %s", 
-                getFullName(currentAssignment.getAssignedTo()), request.getReason()), 
-            approver);
-        
+        String historyNote = currentAssignments.isEmpty()
+            ? String.format("Assigned via transfer request. Reason: %s", request.getReason())
+            : String.format("Transferred from %s. Reason: %s",
+                getFullName(currentAssignments.get(0).getAssignedTo()), request.getReason());
+
+        recordAssignmentHistory(newAssignment, AssignmentAction.TRANSFERRED, historyNote, approver);
+
         return mapToDTO(newAssignment);
     }
     

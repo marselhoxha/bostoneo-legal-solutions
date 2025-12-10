@@ -54,8 +54,7 @@ export class NavigationContextService {
     { path: 'case-management/dashboard', breadcrumbLabel: 'Dashboard', icon: 'ri-dashboard-line', parentRoute: 'case-management' },
     { path: 'case-management/tasks', breadcrumbLabel: 'All Tasks', icon: 'ri-task-line', parentRoute: 'case-management', preserveContext: true },
     { path: 'case-management/tasks/:caseId', breadcrumbLabel: 'Case Tasks', icon: 'ri-task-line', parentRoute: 'case-management', preserveContext: true },
-    { path: 'case-management/assignments', breadcrumbLabel: 'Assignments', icon: 'ri-user-add-line', parentRoute: 'case-management', preserveContext: true },
-    { path: 'case-management/assignments/management', breadcrumbLabel: 'Assignment Management', icon: 'ri-settings-line', parentRoute: 'case-management/assignments' }
+    { path: 'case-management/assignments', breadcrumbLabel: 'Assignments', icon: 'ri-user-add-line', parentRoute: 'case-management', preserveContext: true }
   ];
 
   constructor(private router: Router) {
