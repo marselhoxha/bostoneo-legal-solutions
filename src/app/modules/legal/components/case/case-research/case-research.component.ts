@@ -13,6 +13,7 @@ import { ResearchActionService, ResearchActionItem } from '../../../services/res
 import { CaseTaskService } from '../../../../../service/case-task.service';
 import { TaskType, TaskPriority } from '../../../../../interface/case-task';
 import { CalendarService } from '../../../services/calendar.service';
+import { UserService } from '../../../../../service/user.service';
 
 // Conversation interface for multi-conversation support
 interface Conversation {
@@ -43,8 +44,10 @@ import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 })
 export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() caseId!: string;
-  @Input() userId: number = 1; // TODO: Get from auth service
   @Output() taskCreated = new EventEmitter<void>();
+
+  // Current user from UserService
+  currentUser: any = null;
 
   private destroy$ = new Subject<void>();
 
@@ -106,15 +109,39 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     private researchActionService: ResearchActionService,
     private caseTaskService: CaseTaskService,
     private calendarService: CalendarService,
+    private userService: UserService,
     private cdr: ChangeDetectorRef,
     private elementRef: ElementRef
   ) {}
 
+  // Helper to get userId - returns current user ID or 0 if not authenticated
+  get userId(): number {
+    return this.currentUser?.id || 0;
+  }
+
   ngOnInit(): void {
-   
-    // Load conversations for this case
-    // Note: createNewConversation is called inside loadConversations if needed
-    this.loadConversations();
+    // Get current user from UserService
+    this.currentUser = this.userService.getCurrentUser();
+    console.log('🔐 Current user on init:', this.currentUser);
+
+    // Subscribe to user changes
+    this.userService.userData$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user && user.id) {
+          this.currentUser = user;
+          console.log('🔐 User updated:', user.id);
+          // Load conversations when user is available
+          if (!this.conversations.length) {
+            this.loadConversations();
+          }
+        }
+      });
+
+    // If we already have a user, load conversations immediately
+    if (this.currentUser?.id) {
+      this.loadConversations();
+    }
 
     // Don't load pending actions on init to avoid duplicates
     // Actions will be generated fresh from each search
@@ -230,8 +257,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   loadConversations(): void {
     if (!this.caseId) return;
+    if (!this.userId) {
+      console.warn('⚠️ Cannot load conversations - no user ID available');
+      return;
+    }
 
-    console.log('💬 Loading conversations from backend for case:', this.caseId);
+    console.log('💬 Loading conversations from backend for case:', this.caseId, 'userId:', this.userId);
 
     this.legalResearchService.getConversationsForCase(parseInt(this.caseId), this.userId)
       .pipe(takeUntil(this.destroy$))
@@ -454,8 +485,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   createNewConversation(): void {
     if (!this.caseId) return;
+    if (!this.userId) {
+      console.warn('⚠️ Cannot create conversation - no user ID available');
+      return;
+    }
 
-    console.log('🆕 Creating new conversation on backend...');
+    console.log('🆕 Creating new conversation on backend for userId:', this.userId);
 
     // Create new session on backend
     this.legalResearchService.getOrCreateConversationSession(

@@ -366,6 +366,22 @@ public class TimeEntryResource {
         );
     }
 
+    // Comprehensive case time summary
+    @GetMapping("/analytics/case/{caseId}/summary")
+    @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
+    public ResponseEntity<HttpResponse> getCaseTimeSummary(@PathVariable Long caseId) {
+        Map<String, Object> summary = timeTrackingService.getCaseTimeSummary(caseId);
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(summary)
+                .message("Case time summary retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
     @GetMapping("/analytics/case/{caseId}/amount")
     @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")
     public ResponseEntity<HttpResponse> getTotalAmountByCase(@PathVariable Long caseId) {

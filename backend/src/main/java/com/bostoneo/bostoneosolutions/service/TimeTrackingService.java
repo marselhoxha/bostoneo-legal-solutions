@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface TimeTrackingService {
     
@@ -73,6 +74,9 @@ public interface TimeTrackingService {
     
     // Rate Management
     BigDecimal getEffectiveRateForUser(Long userId, Long legalCaseId, LocalDate date);
+
+    // Comprehensive Case Summary
+    Map<String, Object> getCaseTimeSummary(Long legalCaseId);
 } 
  
  

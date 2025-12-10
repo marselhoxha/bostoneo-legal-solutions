@@ -405,7 +405,7 @@ export class TimeTrackingService {
     );
   }
 
-  // Get case time summary
+  // Get case time summary (basic - hours only)
   getCaseTimeSummary(caseId: number): Observable<any> {
     // Using the hours endpoint to get time summary
     return this.http.get<any>(`${this.baseUrl}/analytics/case/${caseId}/hours`).pipe(
@@ -413,6 +413,26 @@ export class TimeTrackingService {
       catchError(error => {
         console.error('Error fetching case time summary:', error);
         return of({});
+      })
+    );
+  }
+
+  // Get comprehensive case time summary (all metrics)
+  getCaseTimeComprehensiveSummary(caseId: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/analytics/case/${caseId}/summary`).pipe(
+      map(response => response.data || {}),
+      catchError(error => {
+        console.error('Error fetching comprehensive case time summary:', error);
+        return of({
+          totalHours: 0,
+          billableHours: 0,
+          nonBillableHours: 0,
+          totalAmount: 0,
+          entryCount: 0,
+          pendingCount: 0,
+          draftCount: 0,
+          approvedCount: 0
+        });
       })
     );
   }

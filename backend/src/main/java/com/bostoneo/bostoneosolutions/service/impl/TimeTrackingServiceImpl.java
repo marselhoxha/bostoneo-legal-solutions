@@ -4,8 +4,10 @@ import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
 import com.bostoneo.bostoneosolutions.dto.TimeEntryFilterRequest;
 import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
 import com.bostoneo.bostoneosolutions.model.TimeEntry;
+import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.ValidationResult;
 import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.TimeTrackingService;
 import com.bostoneo.bostoneosolutions.service.TimeEntryValidationService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +35,7 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
 
     private final TimeEntryRepository timeEntryRepository;
     private final TimeEntryValidationService timeEntryValidationService;
+    private final UserRepository<User> userRepository;
 
     @Override
     public TimeEntryDTO createTimeEntry(TimeEntryDTO timeEntryDTO) {
@@ -531,8 +536,65 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
         return updatedEntries;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getCaseTimeSummary(Long legalCaseId) {
+        log.info("Getting comprehensive time summary for case: {}", legalCaseId);
+
+        Map<String, Object> summary = new HashMap<>();
+
+        // Total hours (all entries)
+        BigDecimal totalHours = timeEntryRepository.getTotalAllHoursByCase(legalCaseId);
+        summary.put("totalHours", totalHours != null ? totalHours : BigDecimal.ZERO);
+
+        // Billable hours
+        BigDecimal billableHours = timeEntryRepository.getTotalBillableHoursByCase(legalCaseId);
+        summary.put("billableHours", billableHours != null ? billableHours : BigDecimal.ZERO);
+
+        // Non-billable hours
+        BigDecimal nonBillableHours = timeEntryRepository.getTotalNonBillableHoursByCase(legalCaseId);
+        summary.put("nonBillableHours", nonBillableHours != null ? nonBillableHours : BigDecimal.ZERO);
+
+        // Total billable amount
+        BigDecimal totalAmount = timeEntryRepository.getTotalBillableAmountByCase(legalCaseId);
+        summary.put("totalAmount", totalAmount != null ? totalAmount : BigDecimal.ZERO);
+
+        // Entry count
+        Long entryCount = timeEntryRepository.countByLegalCaseId(legalCaseId);
+        summary.put("entryCount", entryCount != null ? entryCount : 0L);
+
+        // Pending entries (SUBMITTED status waiting for approval)
+        Long pendingCount = timeEntryRepository.countByLegalCaseIdAndStatus(legalCaseId, TimeEntryStatus.SUBMITTED);
+        summary.put("pendingCount", pendingCount != null ? pendingCount : 0L);
+
+        // Draft entries
+        Long draftCount = timeEntryRepository.countByLegalCaseIdAndStatus(legalCaseId, TimeEntryStatus.DRAFT);
+        summary.put("draftCount", draftCount != null ? draftCount : 0L);
+
+        // Approved entries
+        Long approvedCount = timeEntryRepository.countByLegalCaseIdAndStatus(legalCaseId, TimeEntryStatus.BILLING_APPROVED);
+        summary.put("approvedCount", approvedCount != null ? approvedCount : 0L);
+
+        return summary;
+    }
+
     // Helper method to map entity to DTO
     private TimeEntryDTO mapToDTO(TimeEntry timeEntry) {
+        // Fetch user information
+        String userName = null;
+        String userEmail = null;
+        if (timeEntry.getUserId() != null) {
+            try {
+                User user = userRepository.get(timeEntry.getUserId());
+                if (user != null) {
+                    userName = user.getFirstName() + " " + user.getLastName();
+                    userEmail = user.getEmail();
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch user info for userId {}: {}", timeEntry.getUserId(), e.getMessage());
+            }
+        }
+
         return TimeEntryDTO.builder()
                 .id(timeEntry.getId())
                 .legalCaseId(timeEntry.getLegalCaseId())
@@ -550,8 +612,8 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
                 .totalAmount(timeEntry.getTotalAmount())
                 .caseName(timeEntry.getCaseName())
                 .caseNumber(timeEntry.getCaseNumber())
-                .userName(timeEntry.getUserName())
-                .userEmail(timeEntry.getUserEmail())
+                .userName(userName)
+                .userEmail(userEmail)
                 .createdAt(timeEntry.getCreatedAt())
                 .updatedAt(timeEntry.getUpdatedAt())
                 .build();

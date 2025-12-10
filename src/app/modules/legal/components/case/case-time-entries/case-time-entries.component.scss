@@ -1,38 +1,725 @@
 .case-time-entries {
+  // Stat Cards - Modern design with colored left border
+  .stat-card {
+    background: var(--vz-card-bg);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+    }
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    &-primary {
+      &::before { background: linear-gradient(180deg, #6366f1, #4f46e5); }
+      .stat-icon { background: rgba(99, 102, 241, 0.12); color: #6366f1; }
+    }
+
+    &-success {
+      &::before { background: linear-gradient(180deg, #10b981, #059669); }
+      .stat-icon { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+    }
+
+    &-info {
+      &::before { background: linear-gradient(180deg, #06b6d4, #0891b2); }
+      .stat-icon { background: rgba(6, 182, 212, 0.12); color: #06b6d4; }
+    }
+
+    &-warning {
+      &::before { background: linear-gradient(180deg, #f59e0b, #d97706); }
+      .stat-icon { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    }
+  }
+
+  // Ensure icons are always visible
+  .stat-icon i {
+    position: relative;
+    z-index: 1;
+  }
+
+  .stat-card-body {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+
+  .stat-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--vz-secondary-color);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--vz-body-color);
+    line-height: 1.2;
+  }
+
+  .stat-footer {
+    padding: 0.6rem 1.25rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid var(--vz-border-color);
+
+    span {
+      font-size: 0.75rem;
+      color: var(--vz-secondary-color);
+      font-weight: 500;
+    }
+  }
+
+  // Filter Card
+  .filter-card {
+    background: var(--vz-card-bg);
+    border: 1px solid var(--vz-border-color);
+    border-radius: 8px;
+  }
+
+  // Status Badges - Theme-aware colors
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
   .status-draft {
-    background-color: #e3e3e3;
-    color: #666;
+    background-color: rgba(var(--vz-secondary-rgb), 0.15);
+    color: var(--vz-secondary);
   }
-  
+
   .status-submitted {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: rgba(var(--vz-warning-rgb), 0.15);
+    color: var(--vz-warning);
   }
-  
+
   .status-approved {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
   }
-  
+
   .status-rejected {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: rgba(var(--vz-danger-rgb), 0.15);
+    color: var(--vz-danger);
   }
-  
+
   .status-invoiced {
-    background-color: #d1ecf1;
-    color: #0c5460;
+    background-color: rgba(var(--vz-info-rgb), 0.15);
+    color: var(--vz-info);
   }
-  
-  .mat-mdc-chip {
+
+  // Billable Badge
+  .billable-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+
+    i {
+      font-size: 12px;
+    }
+  }
+
+  .billable-yes {
+    background-color: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
+  }
+
+  .billable-no {
+    background-color: rgba(var(--vz-secondary-rgb), 0.1);
+    color: var(--vz-secondary-color);
+  }
+
+  // Hours Badge
+  .hours-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background-color: rgba(var(--vz-primary-rgb), 0.12);
+    color: var(--vz-primary);
+    border-radius: 8px;
+    font-weight: 600;
     font-size: 12px;
-    height: 24px;
-    line-height: 24px;
   }
-  
+
+  // Table Container Card
+  .card {
+    background: var(--vz-card-bg);
+    border: 1px solid var(--vz-border-color);
+    border-radius: 8px;
+    box-shadow: var(--vz-card-box-shadow, none);
+  }
+
+  // Table
+  .time-entries-table {
+    background: var(--vz-card-bg);
+
+    .mat-mdc-header-row {
+      background-color: var(--vz-light);
+    }
+
+    .mat-mdc-header-cell {
+      color: var(--vz-body-color);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--vz-border-color);
+    }
+
+    .mat-mdc-row {
+      background: var(--vz-card-bg);
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background-color: var(--vz-light);
+      }
+
+      &.editing-row {
+        background-color: rgba(var(--vz-warning-rgb), 0.1);
+      }
+
+      &.non-billable-row {
+        background-color: rgba(var(--vz-secondary-rgb), 0.03);
+
+        td {
+          color: var(--vz-secondary-color);
+        }
+      }
+    }
+
+    .mat-mdc-cell {
+      color: var(--vz-body-color);
+      border-bottom: 1px solid var(--vz-border-color);
+      padding: 12px 16px;
+      font-size: 13px;
+    }
+  }
+
+  // Description Cell
+  .description-cell {
+    max-width: 280px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // User Name
+  .user-name {
+    font-weight: 500;
+    color: var(--vz-body-color);
+  }
+
+  // Table Responsive
   .table-responsive {
     .mat-mdc-table {
-      min-width: 800px;
+      min-width: 950px;
     }
+  }
+
+  // Empty State Icon
+  .empty-icon {
+    font-size: 4rem;
+    color: var(--vz-secondary-color);
+    opacity: 0.5;
+  }
+
+  // Form Controls - Theme-aware
+  .form-control, .form-select {
+    background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
+    border-color: var(--vz-input-border-custom, var(--vz-border-color));
+    color: var(--vz-body-color);
+
+    &:focus {
+      background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
+      border-color: var(--vz-primary);
+      color: var(--vz-body-color);
+      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+    }
+
+    &::placeholder {
+      color: var(--vz-secondary-color);
+    }
+  }
+
+  .form-control-sm, .form-select-sm {
+    font-size: 0.8125rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  // Input Group
+  .input-group-text {
+    background-color: var(--vz-light);
+    border-color: var(--vz-border-color);
+    color: var(--vz-secondary-color);
+  }
+
+  // Form Labels
+  .form-label {
+    color: var(--vz-body-color);
+    font-weight: 500;
+    font-size: 12px;
+    margin-bottom: 0.35rem;
+  }
+
+  // Form Check
+  .form-check-input {
+    background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
+    border-color: var(--vz-border-color);
+
+    &:checked {
+      background-color: var(--vz-primary);
+      border-color: var(--vz-primary);
+    }
+  }
+
+  // Buttons
+  .btn {
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-sm {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+
+    i {
+      font-size: 13px;
+    }
+  }
+
+  .btn-outline-primary {
+    color: var(--vz-primary);
+    border-color: var(--vz-primary);
+
+    &:hover {
+      background-color: var(--vz-primary);
+      color: #fff;
+    }
+  }
+
+  .btn-outline-secondary {
+    color: var(--vz-secondary-color);
+    border-color: var(--vz-border-color);
+
+    &:hover {
+      background-color: var(--vz-secondary);
+      border-color: var(--vz-secondary);
+      color: #fff;
+    }
+  }
+
+  .btn-outline-success {
+    color: var(--vz-success);
+    border-color: var(--vz-success);
+
+    &:hover {
+      background-color: var(--vz-success);
+      color: #fff;
+    }
+  }
+
+  .btn-outline-info {
+    color: var(--vz-info);
+    border-color: var(--vz-info);
+
+    &:hover {
+      background-color: var(--vz-info);
+      color: #fff;
+    }
+  }
+
+  .btn-outline-danger {
+    color: var(--vz-danger);
+    border-color: var(--vz-danger);
+
+    &:hover {
+      background-color: var(--vz-danger);
+      color: #fff;
+    }
+  }
+
+  // Button Group for Date Presets
+  .btn-group {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    overflow: hidden;
+
+    .btn {
+      border-radius: 0;
+      border-color: var(--vz-border-color);
+
+      &:first-child {
+        border-radius: 6px 0 0 6px;
+      }
+
+      &:last-child {
+        border-radius: 0 6px 6px 0;
+      }
+    }
+
+    .btn-outline-primary {
+      background: var(--vz-card-bg);
+    }
+  }
+
+  // Quick Add Form Card
+  .card.border-primary {
+    border-color: var(--vz-primary) !important;
+
+    .card-header {
+      background-color: rgba(var(--vz-primary-rgb), 0.08);
+      border-bottom: 1px solid rgba(var(--vz-primary-rgb), 0.2);
+      color: var(--vz-body-color);
+
+      h6 {
+        color: var(--vz-primary);
+      }
+    }
+
+    .card-body {
+      background: var(--vz-card-bg);
+    }
+  }
+
+  // Paginator
+  ::ng-deep .mat-mdc-paginator {
+    background-color: var(--vz-light);
+    color: var(--vz-body-color);
+    border-top: 1px solid var(--vz-border-color);
+
+    .mat-mdc-paginator-page-size-label,
+    .mat-mdc-paginator-range-label {
+      color: var(--vz-secondary-color);
+    }
+
+    .mat-mdc-select-value {
+      color: var(--vz-body-color);
+    }
+
+    .mat-mdc-icon-button {
+      color: var(--vz-body-color);
+
+      &:disabled {
+        color: var(--vz-secondary-color);
+        opacity: 0.5;
+      }
+    }
+  }
+
+  // Mat Tooltip
+  ::ng-deep .mat-mdc-tooltip {
+    font-size: 11px;
+  }
+
+  // Spinner
+  ::ng-deep .mat-mdc-progress-spinner circle {
+    stroke: var(--vz-primary);
+  }
+
+  // Alert
+  .alert-danger {
+    background-color: rgba(var(--vz-danger-rgb), 0.1);
+    border-color: rgba(var(--vz-danger-rgb), 0.2);
+    color: var(--vz-danger);
+  }
+}
+
+// Dark Mode Overrides
+[data-layout-mode="dark"] {
+  .case-time-entries {
+    // Stat Cards - Dark mode enhancements
+    .stat-card {
+      background: var(--vz-card-bg);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      &-primary .stat-icon {
+        background: rgba(99, 102, 241, 0.2);
+        color: #818cf8;
+      }
+
+      &-success .stat-icon {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+
+      &-info .stat-icon {
+        background: rgba(6, 182, 212, 0.2);
+        color: #22d3ee;
+      }
+
+      &-warning .stat-icon {
+        background: rgba(245, 158, 11, 0.25);
+        color: #fcd34d;
+      }
+    }
+
+    .stat-footer {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-icon i {
+      color: inherit !important;
+    }
+
+    // Status badges - Brighter colors for dark mode
+    .status-draft {
+      background-color: rgba(135, 138, 153, 0.2);
+      color: #adb5bd;
+    }
+
+    .status-submitted {
+      background-color: rgba(247, 184, 75, 0.2);
+      color: #f7b84b;
+    }
+
+    .status-approved {
+      background-color: rgba(10, 179, 156, 0.2);
+      color: #0ab39c;
+    }
+
+    .status-rejected {
+      background-color: rgba(240, 101, 72, 0.2);
+      color: #f06548;
+    }
+
+    .status-invoiced {
+      background-color: rgba(41, 156, 219, 0.2);
+      color: #299cdb;
+    }
+
+    // Billable badges
+    .billable-yes {
+      background-color: rgba(10, 179, 156, 0.2);
+      color: #0ab39c;
+    }
+
+    .billable-no {
+      background-color: rgba(135, 138, 153, 0.15);
+      color: #878a99;
+    }
+
+    // Hours badge
+    .hours-badge {
+      background-color: rgba(64, 81, 137, 0.25);
+      color: #8091ce;
+    }
+
+    // Table
+    .time-entries-table {
+      .mat-mdc-header-row {
+        background-color: rgba(255, 255, 255, 0.03);
+      }
+
+      .mat-mdc-row {
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        &.editing-row {
+          background-color: rgba(247, 184, 75, 0.1);
+        }
+
+        &.non-billable-row {
+          background-color: rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+
+    // Empty state
+    .empty-icon {
+      color: #5f6270;
+    }
+
+    // Button group
+    .btn-group {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+      .btn-outline-primary {
+        background: rgba(255, 255, 255, 0.02);
+      }
+    }
+
+    // Quick add form
+    .card.border-primary {
+      .card-header {
+        background-color: rgba(64, 81, 137, 0.15);
+      }
+    }
+
+    // Paginator
+    ::ng-deep .mat-mdc-paginator {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+  }
+}
+
+// Dark theme using data-bs-theme attribute (Bootstrap 5.3+)
+[data-bs-theme="dark"] .case-time-entries,
+html[data-bs-theme="dark"] .case-time-entries {
+  // Stat Cards - Dark mode enhancements
+  .stat-card {
+    background: var(--vz-card-bg);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    &-primary .stat-icon {
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+    }
+
+    &-success .stat-icon {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    &-info .stat-icon {
+      background: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
+    }
+
+    &-warning .stat-icon {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fcd34d;
+    }
+  }
+
+  .stat-footer {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .stat-icon i {
+    color: inherit !important;
+  }
+
+  // Status badges - Brighter colors for dark mode
+  .status-draft {
+    background-color: rgba(135, 138, 153, 0.2);
+    color: #adb5bd;
+  }
+
+  .status-submitted {
+    background-color: rgba(247, 184, 75, 0.2);
+    color: #f7b84b;
+  }
+
+  .status-approved {
+    background-color: rgba(10, 179, 156, 0.2);
+    color: #0ab39c;
+  }
+
+  .status-rejected {
+    background-color: rgba(240, 101, 72, 0.2);
+    color: #f06548;
+  }
+
+  .status-invoiced {
+    background-color: rgba(41, 156, 219, 0.2);
+    color: #299cdb;
+  }
+
+  .billable-yes {
+    background-color: rgba(10, 179, 156, 0.2);
+    color: #0ab39c;
+  }
+
+  .billable-no {
+    background-color: rgba(135, 138, 153, 0.15);
+    color: #878a99;
+  }
+
+  .hours-badge {
+    background-color: rgba(64, 81, 137, 0.25);
+    color: #8091ce;
+  }
+
+  .time-entries-table {
+    .mat-mdc-header-row {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .mat-mdc-row {
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      &.editing-row {
+        background-color: rgba(247, 184, 75, 0.1);
+      }
+
+      &.non-billable-row {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  .empty-icon {
+    color: #5f6270;
+  }
+
+  .btn-group {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    .btn-outline-primary {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  .card.border-primary .card-header {
+    background-color: rgba(64, 81, 137, 0.15);
+  }
+
+  ::ng-deep .mat-mdc-paginator {
+    background-color: rgba(255, 255, 255, 0.02);
   }
 }

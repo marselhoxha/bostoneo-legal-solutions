@@ -89,6 +89,25 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
     // Check if an invoice exists in the invoices table
     @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM Invoice i WHERE i.id = :invoiceId")
     boolean existsInvoiceById(@Param("invoiceId") Long invoiceId);
+
+    // Case summary queries
+    @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId")
+    Long countByLegalCaseId(@Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.status = :status")
+    Long countByLegalCaseIdAndStatus(@Param("legalCaseId") Long legalCaseId, @Param("status") TimeEntryStatus status);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = true")
+    BigDecimal getTotalBillableHoursByCase(@Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = false")
+    BigDecimal getTotalNonBillableHoursByCase(@Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId")
+    BigDecimal getTotalAllHoursByCase(@Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours * te.rate), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = true")
+    BigDecimal getTotalBillableAmountByCase(@Param("legalCaseId") Long legalCaseId);
 } 
  
  
