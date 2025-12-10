@@ -268,9 +268,13 @@ public class CourtListenerService {
                 return result;
             }
 
-            // Strategy 3: Try Justia for Supreme Court cases
-            log.info("🔄 CourtListener failed, trying Justia fallback...");
-            return justiaService.tryVerifyCitation(citation);
+            // No more fallbacks - only use CourtListener
+            log.info("🔍 Citation not found in CourtListener");
+            return CitationVerificationResult.builder()
+                    .found(false)
+                    .citation(citation)
+                    .errorMessage("Not found in CourtListener database")
+                    .build();
 
         } catch (Exception e) {
             log.error("Error verifying citation: {}", citation, e);
@@ -564,14 +568,21 @@ public class CourtListenerService {
                     return parseClusterVerificationResult(matchingCluster, citation);
                 } else {
                     log.warn("🔍 NOT FOUND in CourtListener database for citation: '{}'", citationNumber);
-                    log.info("🔄 Trying Justia.com fallback...");
-                    return justiaService.tryVerifyCitation(citation);
+                    return CitationVerificationResult.builder()
+                            .found(false)
+                            .citation(citation)
+                            .errorMessage("Not found in CourtListener database")
+                            .build();
                 }
             }
 
-            // Not found in CourtListener, try Justia fallback
-            log.warn("🔍 NOT FOUND in CourtListener, trying Justia fallback...");
-            return justiaService.tryVerifyCitation(citation);
+            // Not found in CourtListener
+            log.warn("🔍 NOT FOUND in CourtListener database");
+            return CitationVerificationResult.builder()
+                    .found(false)
+                    .citation(citation)
+                    .errorMessage("Not found in CourtListener database")
+                    .build();
 
         } catch (Exception e) {
             log.error("Error searching by citation number: {}", citation, e);

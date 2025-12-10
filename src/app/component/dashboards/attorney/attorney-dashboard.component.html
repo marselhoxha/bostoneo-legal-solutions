@@ -248,19 +248,7 @@
                 </a>
               </div>
 
-              <!-- Empty State (when no events) -->
-              <div class="text-center py-4" *ngIf="scheduleEvents.length === 0">
-                <div class="avatar-md mx-auto mb-3">
-                  <span class="avatar-title bg-light text-muted rounded-circle fs-24">
-                    <i class="ri-calendar-check-line"></i>
-                  </span>
-                </div>
-                <h5 class="text-muted mb-2">No Events Scheduled</h5>
-                <p class="text-muted fs-13 mb-3">Your schedule is clear for today</p>
-                <button class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
-                  <i class="ri-add-line me-1"></i>Add Event
-                </button>
-              </div>
+              <!-- Empty State removed - Add Event card already shown -->
             </div>
           </div>
         </div>

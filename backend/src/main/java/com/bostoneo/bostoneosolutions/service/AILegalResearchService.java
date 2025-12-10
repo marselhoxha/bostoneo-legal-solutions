@@ -295,33 +295,9 @@ public class AILegalResearchService {
             // Search External APIs (parallel execution for better performance)
             List<CompletableFuture<List<Map<String, Object>>>> externalSearches = new ArrayList<>();
 
-            // Court Listener API - search opinions and dockets
-            if ("all".equalsIgnoreCase(searchType) || "cases".equalsIgnoreCase(searchType) || "opinions".equalsIgnoreCase(searchType)) {
-                externalSearches.add(CompletableFuture.supplyAsync(() -> {
-                    try {
-                        // For immigration queries, enhance the search and set appropriate jurisdiction
-                        String searchQuery = query;
-                        String searchJurisdiction = jurisdiction;
-                        if (isImmigrationQuery(query)) {
-                            // Immigration cases are federal - search federal courts
-                            searchJurisdiction = "federal";
-                            // Enhance the query for better immigration case results
-                            searchQuery = enhanceImmigrationQueryForCourtListener(query);
-                            log.info("Enhanced Court Listener immigration query from '{}' to '{}'", query, searchQuery);
-                        }
-
-                        List<Map<String, Object>> opinions = courtListenerService.searchOpinions(searchQuery, searchJurisdiction, null, null);
-                        List<Map<String, Object>> dockets = courtListenerService.searchDockets(searchQuery, searchJurisdiction);
-                        List<Map<String, Object>> combined = new ArrayList<>(opinions);
-                        combined.addAll(dockets);
-                        return combined;
-                    } catch (Exception e) {
-                        log.warn("Error searching Court Listener: ", e);
-                        return Collections.emptyList();
-                    }
-                }));
-            }
-
+            // NOTE: Court Listener API skipped in FAST mode for performance (it can timeout/take 60s+)
+            // Court Listener is only used in THOROUGH mode for verified case law citations
+            log.info("FAST mode - skipping Court Listener API (use THOROUGH mode for case law search)");
 
             // Federal Register API - only use for federal regulatory queries
             boolean useFederalRegister = shouldUseFederalRegister(query, searchType);
@@ -691,6 +667,25 @@ public class AILegalResearchService {
         system.append("   - Follow: Court rules, professional standards, proper formatting with numbered paragraphs and headings\n");
         system.append("   - Provide: Signature blocks and certificates of service when appropriate\n");
         system.append("   - For questions (non-drafting): Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
+
+        // MANDATORY FOLLOW-UP QUESTIONS SECTION
+        system.append("**MANDATORY - FOLLOW-UP QUESTIONS SECTION**:\n");
+        system.append("⚠️ CRITICAL: EVERY response MUST end with a '## Follow-up Questions' section.\n");
+        system.append("This section is REQUIRED for the user interface to work correctly.\n\n");
+        system.append("FORMAT (use EXACTLY this format):\n");
+        system.append("## Follow-up Questions\n");
+        system.append("- [First attorney-quality follow-up question - 40-80 characters]\n");
+        system.append("- [Second attorney-quality follow-up question - 40-80 characters]\n");
+        system.append("- [Third attorney-quality follow-up question - 40-80 characters]\n\n");
+        system.append("REQUIREMENTS:\n");
+        system.append("- Use '## Follow-up Questions' as the EXACT header (not ### or **)\n");
+        system.append("- Each question starts with '- ' (dash space)\n");
+        system.append("- Questions must be COMPLETE sentences (40-80 chars), not fragments\n");
+        system.append("- Questions should be attorney-focused research queries, not generic\n");
+        system.append("- Examples:\n");
+        system.append("  - \"Find Mass. SJC cases on good faith purchaser defense\"\n");
+        system.append("  - \"Does First Circuit apply heightened pleading to fraud claims?\"\n");
+        system.append("  - \"What are the filing deadlines for motions to compel in BLS?\"\n\n");
 
         return system.toString();
     }
@@ -3627,27 +3622,37 @@ public class AILegalResearchService {
             saveSearchHistory(userId, sessionId, query, "ALL",
                 0, System.currentTimeMillis() - startTime);
 
-            // Cache the result (TTL: 24 hours for case-specific, 7 days for general)
-            try {
-                int cacheDays = (caseId != null && !caseId.isEmpty()) ? 1 : 7;
-                AIResearchCache cache = AIResearchCache.builder()
-                    .queryHash(queryHash)
-                    .queryText(query)
-                    .queryType(QueryType.valueOf(searchType.toUpperCase()))
-                    .jurisdiction(jurisdiction)
-                    .researchMode("THOROUGH")
-                    .caseId(caseId)
-                    .aiResponse(aiResponse)
-                    .aiModelUsed("claude-sonnet-4.5")
-                    .confidenceScore(new BigDecimal("0.90")) // Higher confidence for THOROUGH mode
-                    .usageCount(1)
-                    .expiresAt(LocalDateTime.now().plusDays(cacheDays))
-                    .isValid(true)
-                    .build();
-                cacheRepository.save(cache);
-                log.info("✓ Cached THOROUGH result (TTL: {} days): {}", cacheDays, queryHash.substring(0, 16) + "...");
-            } catch (Exception e) {
-                log.warn("Failed to cache THOROUGH result: {}", e.getMessage());
+            // Cache the result ONLY if quality is acceptable (score >= 3/10)
+            // Don't cache garbage responses from max iterations or incomplete research
+            int scoreOutOf10 = (int) Math.round(qualityScore.overallScore * 10);
+            boolean shouldCache = scoreOutOf10 >= 3 &&
+                                  !aiResponse.contains("Research incomplete") &&
+                                  !aiResponse.contains("maximum tool call limit");
+
+            if (shouldCache) {
+                try {
+                    int cacheDays = (caseId != null && !caseId.isEmpty()) ? 1 : 7;
+                    AIResearchCache cache = AIResearchCache.builder()
+                        .queryHash(queryHash)
+                        .queryText(query)
+                        .queryType(QueryType.valueOf(searchType.toUpperCase()))
+                        .jurisdiction(jurisdiction)
+                        .researchMode("THOROUGH")
+                        .caseId(caseId)
+                        .aiResponse(aiResponse)
+                        .aiModelUsed("claude-sonnet-4.5")
+                        .confidenceScore(new BigDecimal("0.90")) // Higher confidence for THOROUGH mode
+                        .usageCount(1)
+                        .expiresAt(LocalDateTime.now().plusDays(cacheDays))
+                        .isValid(true)
+                        .build();
+                    cacheRepository.save(cache);
+                    log.info("✓ Cached THOROUGH result (TTL: {} days, quality: {}/10): {}", cacheDays, scoreOutOf10, queryHash.substring(0, 16) + "...");
+                } catch (Exception e) {
+                    log.warn("Failed to cache THOROUGH result: {}", e.getMessage());
+                }
+            } else {
+                log.warn("⚠️ NOT caching THOROUGH result - quality too low (score: {}/10) or incomplete", scoreOutOf10);
             }
 
             // Complete progress (100%)

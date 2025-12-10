@@ -53,13 +53,6 @@
                 <div class="btn-group btn-group-sm" role="group">
                   <button type="button"
                           class="btn"
-                          [class.btn-primary]="researchMode === 'auto'"
-                          [class.btn-outline-primary]="researchMode !== 'auto'"
-                          (click)="researchMode = 'auto'">
-                    <i class="ri-magic-line"></i> Auto
-                  </button>
-                  <button type="button"
-                          class="btn"
                           [class.btn-primary]="researchMode === 'fast'"
                           [class.btn-outline-primary]="researchMode !== 'fast'"
                           (click)="researchMode = 'fast'">
@@ -154,13 +147,6 @@
                   <div class="btn-group" role="group">
                     <button type="button"
                             class="btn btn-sm"
-                            [class.btn-primary]="researchMode === 'auto'"
-                            [class.btn-outline-primary]="researchMode !== 'auto'"
-                            (click)="researchMode = 'auto'">
-                      <i class="ri-magic-line me-1"></i> Auto
-                    </button>
-                    <button type="button"
-                            class="btn btn-sm"
                             [class.btn-primary]="researchMode === 'fast'"
                             [class.btn-outline-primary]="researchMode !== 'fast'"
                             (click)="researchMode = 'fast'">
@@ -175,7 +161,6 @@
                     </button>
                   </div>
                   <small class="text-muted ms-2 d-block mt-2">
-                    <span *ngIf="researchMode === 'auto'"><strong>Auto (Recommended):</strong> AI automatically selects the best research mode based on your query. Uses Fast mode for strategy questions and Thorough mode for case law searches.</span>
                     <span *ngIf="researchMode === 'fast'"><strong>Fast:</strong> Quick research using Claude's extensive legal training data. Best for strategy, procedural questions, and general legal analysis. ~15 seconds response time.</span>
                     <span *ngIf="researchMode === 'thorough'"><strong>Thorough:</strong> Deep research with live case law search, regulation lookup, and citation verification. Best for finding specific cases or verifying citations. ~2-3 minutes response time.</span>
                   </small>

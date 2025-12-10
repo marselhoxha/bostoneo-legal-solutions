@@ -50,7 +50,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   searchQuery = '';
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines' = 'all';
-  researchMode: 'fast' | 'auto' | 'thorough' = 'auto';  // NEW: Auto (Recommended), Fast (15s), or Thorough (2-3min)
+  researchMode: 'fast' | 'thorough' = 'fast';  // Fast (15s) or Thorough (2-3min with case law search)
   isSearching = false;
   searchError = '';
 
@@ -387,23 +387,44 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   saveConversations(): void {
-    // This method is now deprecated - messages are saved to backend as they're added
-    // Keeping this stub for compatibility with existing code
-    // Update title if needed
+    // Update title if needed - called after first user message is sent
     if (this.activeConversationId && this.caseId) {
       const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
-      if (activeConv && (!activeConv.title || activeConv.title === 'New Conversation')) {
+      console.log('🔍 saveConversations check:', {
+        activeConvId: this.activeConversationId,
+        activeConvTitle: activeConv?.title,
+        chatMessagesCount: this.chatMessages.length
+      });
+
+      // Check for both possible default titles: 'New Conversation' (when created) and 'Untitled Conversation' (when loaded from backend with null sessionName)
+      if (activeConv && (!activeConv.title || activeConv.title === 'New Conversation' || activeConv.title === 'Untitled Conversation')) {
         const firstUserMsg = this.chatMessages.find(m => m.role === 'user');
         if (firstUserMsg) {
           const newTitle = this.generateConversationTitle(firstUserMsg.content);
+          console.log('📝 Updating conversation title to:', newTitle);
+
           this.legalResearchService.updateConversationTitle(activeConv.sessionId, this.userId, newTitle)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: () => {
+                // Update local conversation object
                 activeConv.title = newTitle;
+
+                // Also update the conversations array to ensure dropdown reflects the change
+                const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
+                if (convIndex !== -1) {
+                  this.conversations[convIndex].title = newTitle;
+                }
+
                 console.log('✅ Updated conversation title:', newTitle);
+                this.cdr.detectChanges(); // Force UI refresh
               },
-              error: (error) => console.error('Error updating conversation title:', error)
+              error: (error) => {
+                console.error('❌ Error updating conversation title:', error);
+                // Even on error, update local state so user sees correct title
+                activeConv.title = newTitle;
+                this.cdr.detectChanges();
+              }
             });
         }
       }
@@ -738,27 +759,55 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   extractAndRemoveFollowUpQuestions(aiResponse: string): string {
     // Look for "Follow-up Questions" section in the markdown response
-    const followUpPattern = /##\s*Follow-up Questions\s*\n([\s\S]*?)(?=\n##|$)/i;
-    const match = aiResponse.match(followUpPattern);
+    // Support multiple header formats: ## Follow-up Questions, **Follow-up Questions**, ### Follow-up Questions
+    const followUpPatterns = [
+      /##\s*Follow-up Questions\s*\n([\s\S]*?)(?=\n##|$)/i,
+      /###\s*Follow-up Questions\s*\n([\s\S]*?)(?=\n##|###|$)/i,
+      /\*\*Follow-up Questions\*\*\s*:?\s*\n([\s\S]*?)(?=\n##|\n\*\*|$)/i,
+      /Follow-up Questions:?\s*\n([\s\S]*?)(?=\n##|$)/i
+    ];
+
+    let match = null;
+    let matchedPattern = null;
+
+    for (const pattern of followUpPatterns) {
+      match = aiResponse.match(pattern);
+      if (match) {
+        matchedPattern = pattern;
+        console.log('📋 Found follow-up questions section with pattern:', pattern.source.substring(0, 30));
+        break;
+      }
+    }
 
     if (match) {
       const questionsSection = match[1];
-      // Extract questions from list items (- or 1., 2., etc.)
-      const questionMatches = questionsSection.match(/[-•*]\s*(.+?)(?=\n[-•*]|\n\d+\.|\n|$)/g);
+      console.log('📋 Questions section content:', questionsSection.substring(0, 200));
+
+      // Extract questions from list items (- or 1., 2., etc. or • or *)
+      const questionMatches = questionsSection.match(/[-•*]\s*(.+?)(?=\n[-•*]|\n\d+\.|\n\n|$)/g)
+        || questionsSection.match(/\d+\.\s*(.+?)(?=\n\d+\.|\n\n|$)/g);
 
       if (questionMatches) {
         this.followUpQuestions = questionMatches
-          .map(q => q.replace(/^[-•*]\s*/, '').trim())
+          .map(q => q.replace(/^[-•*\d.]\s*/, '').trim())
           .map(q => q.replace(/\*\*/g, '')) // Remove all ** (bold markdown)
+          .map(q => q.replace(/^["']|["']$/g, '')) // Remove surrounding quotes
           .filter(q => q.length > 0)
           .filter(q => this.isValidFollowUpQuestion(q)) // Validate question quality
           .slice(0, 5); // Limit to 5 questions
+
+        console.log('✅ Extracted follow-up questions:', this.followUpQuestions);
+      } else {
+        console.log('⚠️ No question list items found in section');
+        this.followUpQuestions = [];
       }
 
       // Remove the entire "Follow-up Questions" section from the response
-      return aiResponse.replace(followUpPattern, '').trim();
+      return aiResponse.replace(matchedPattern!, '').trim();
     }
 
+    console.log('⚠️ No follow-up questions section found in response');
+    this.followUpQuestions = [];
     return aiResponse;
   }
 
