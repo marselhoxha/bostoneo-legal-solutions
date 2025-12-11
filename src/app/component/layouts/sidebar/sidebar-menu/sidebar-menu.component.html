@@ -36,10 +36,10 @@
         <a routerLink="/time-tracking/dashboard" routerLinkActive="active" class="nav-link" data-key="t-time-dashboard">Dashboard</a>
       </li>
       <li class="nav-item">
-        <a routerLink="/time-tracking/entry" routerLinkActive="active" class="nav-link" data-key="t-timesheet">Timesheet</a>
+        <a routerLink="/time-tracking/timesheet" routerLinkActive="active" class="nav-link" data-key="t-timesheet">Timesheet</a>
       </li>
       <li class="nav-item" *ngIf="hasPermission('TIME_TRACKING', 'CREATE')">
-        <a routerLink="/time-tracking/entry/new" routerLinkActive="active" class="nav-link" data-key="t-new-entry">New Entry</a>
+        <a routerLink="/time-tracking/entry" routerLinkActive="active" class="nav-link" data-key="t-new-entry">New Entry</a>
       </li>
       <li class="nav-item" *ngIf="hasPermission('TIME_TRACKING', 'APPROVE')">
         <a routerLink="/time-tracking/approval" routerLinkActive="active" class="nav-link" data-key="t-approval">Approval</a>

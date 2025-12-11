@@ -1,20 +1,13 @@
-<!-- Velzon Time Tracking - Timesheet View -->
-<div class="container-fluid" style="margin-top: 115px;">
-  
+<!-- Velzon Time Tracking - Unified Timesheet View -->
+<div class="container-fluid" style="margin-top: 100px !important;">
   <!-- Page Header -->
   <div class="row">
     <div class="col-12">
       <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <div class="page-title-left">
-          <h4 class="mb-sm-0 fw-semibold">
-            <i class="ri-file-list-3-line me-2 text-primary"></i>
-            {{ getPageTitle() }}
-          </h4>
-          <p class="text-muted mb-0 mt-1">{{ getPageDescription() }}</p>
-        </div>
+        <h4 class="mb-sm-0">Timesheet</h4>
         <div class="page-title-right">
           <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);">Time & Billing</a></li>
+            <li class="breadcrumb-item"><a href="javascript:void(0);">Time & Billing</a></li>
             <li class="breadcrumb-item active">Timesheet</li>
           </ol>
         </div>
@@ -22,164 +15,157 @@
     </div>
   </div>
 
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mt-3 mb-0">Loading timesheet...</p>
+  </div>
+
   <!-- Error Alert -->
-  <div class="row" *ngIf="error">
+  <div class="row" *ngIf="error && !loading">
     <div class="col-12">
       <div class="alert alert-danger border-0 shadow-sm mb-4">
         <div class="d-flex align-items-center">
           <i class="ri-error-warning-line me-2 fs-18"></i>
           <span>{{ error }}</span>
+          <button class="btn btn-sm btn-outline-danger ms-auto" (click)="refreshData()">
+            <i class="ri-refresh-line me-1"></i>Retry
+          </button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div class="row" *ngIf="loading">
-    <div class="col-12">
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <div class="mt-2 text-muted">Loading timesheet...</div>
       </div>
     </div>
   </div>
 
   <!-- Main Content -->
-  <div class="row" *ngIf="!loading">
-    <!-- Statistics Cards -->
-    <div class="col-12 mb-4">
-      <div class="row g-3">
-        <div class="col-lg-3 col-md-6">
-          <div class="card">
+  <ng-container *ngIf="!loading">
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs nav-tabs-custom nav-primary mb-4" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'my-timesheet'" (click)="switchTab('my-timesheet')">
+          <i class="ri-user-line me-1"></i>My Timesheet
+          <span class="badge bg-primary ms-1" *ngIf="getMyEntriesCount() > 0">{{ getMyEntriesCount() }}</span>
+        </a>
+      </li>
+      <li class="nav-item" *ngIf="permissions.canViewTeam">
+        <a class="nav-link" [class.active]="activeTab === 'team-timesheet'" (click)="switchTab('team-timesheet')">
+          <i class="ri-team-line me-1"></i>Team Timesheet
+          <span class="badge bg-secondary ms-1" *ngIf="getTeamEntriesCount() > 0">{{ getTeamEntriesCount() }}</span>
+        </a>
+      </li>
+      <li class="nav-item" *ngIf="permissions.canApprove">
+        <a class="nav-link" [class.active]="activeTab === 'pending-approval'" (click)="switchTab('pending-approval')">
+          <i class="ri-checkbox-circle-line me-1"></i>Pending Approval
+          <span class="badge bg-warning ms-1" *ngIf="getPendingCount() > 0">{{ getPendingCount() }}</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- My Timesheet Tab -->
+    <div *ngIf="activeTab === 'my-timesheet'">
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
             <div class="card-body">
               <div class="d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar-sm">
-                    <span class="avatar-title bg-primary text-white rounded">
-                      <i class="ri-time-line fs-18"></i>
-                    </span>
-                  </div>
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-18">
+                    <i class="ri-time-line"></i>
+                  </span>
                 </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1 fs-13">Total Hours</p>
-                  <h5 class="mb-0 text-primary">{{ formatHours(totalHours) }}</h5>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Total Hours</p>
+                  <h4 class="mb-0">{{ formatHours(getMyTotalHours()) }}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="col-lg-3 col-md-6">
-          <div class="card">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
             <div class="card-body">
               <div class="d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar-sm">
-                    <span class="avatar-title bg-info text-white rounded">
-                      <i class="ri-file-list-line fs-18"></i>
-                    </span>
-                  </div>
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-success-subtle text-success rounded-circle fs-18">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </span>
                 </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1 fs-13">Total Entries</p>
-                  <h5 class="mb-0 text-info">{{ totalEntries }}</h5>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Total Amount</p>
+                  <h4 class="mb-0">{{ formatCurrency(getMyTotalAmount()) }}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="col-lg-3 col-md-6">
-          <div class="card">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
             <div class="card-body">
               <div class="d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar-sm">
-                    <span class="avatar-title bg-success text-white rounded">
-                      <i class="ri-money-dollar-circle-line fs-18"></i>
-                    </span>
-                  </div>
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-info-subtle text-info rounded-circle fs-18">
+                    <i class="ri-file-list-3-line"></i>
+                  </span>
                 </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1 fs-13">Total Amount</p>
-                  <h5 class="mb-0 text-success">{{ formatCurrency(totalAmount) }}</h5>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Entries</p>
+                  <h4 class="mb-0">{{ getMyEntriesCount() }}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="col-lg-3 col-md-6" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
-          <div class="card">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
             <div class="card-body">
               <div class="d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar-sm">
-                    <span class="avatar-title bg-warning text-white rounded">
-                      <i class="ri-hourglass-line fs-18"></i>
-                    </span>
-                  </div>
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-18">
+                    <i class="ri-draft-line"></i>
+                  </span>
                 </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1 fs-13">Pending Review</p>
-                  <h5 class="mb-0 text-warning">{{ approvalStats.pendingReview }}</h5>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Drafts</p>
+                  <h4 class="mb-0">{{ getMyDraftCount() }}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Main Timesheet Card -->
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <div class="d-flex align-items-center justify-content-between">
-            <div>
-              <h5 class="card-title mb-0">Time Entries</h5>
-              <p class="text-muted mb-0 fs-13">Manage your time tracking records</p>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="d-flex gap-2">
-              <button class="btn btn-primary btn-sm" 
-                      *ngIf="permissions.canCreateNew" 
-                      routerLink="/time-tracking/entry/new">
-                <i class="ri-add-line me-1"></i>New Entry
-              </button>
-              <button class="btn btn-outline-secondary btn-sm" (click)="refreshData()">
-                <i class="ri-refresh-line me-1"></i>Refresh
-              </button>
-              <button class="btn btn-outline-info btn-sm" (click)="exportData()">
-                <i class="ri-download-line me-1"></i>Export
-              </button>
-            </div>
+      <!-- My Entries Table -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+          <h6 class="card-title mb-0">
+            <i class="ri-file-list-3-line me-2 text-primary"></i>My Time Entries
+          </h6>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" *ngIf="permissions.canCreateNew" routerLink="/time-tracking/entry">
+              <i class="ri-add-line me-1"></i>New Entry
+            </button>
+            <button class="btn btn-sm btn-soft-primary" (click)="refreshData()">
+              <i class="ri-refresh-line me-1"></i>Refresh
+            </button>
           </div>
         </div>
-        
-        <!-- Simplified Filters Section -->
-        <div class="card-body border-bottom">
+
+        <!-- Filters -->
+        <div class="card-body border-bottom py-3">
           <div class="row g-3">
-            <!-- Search -->
             <div class="col-md-4">
-              <label class="form-label">Search</label>
-              <div class="position-relative">
-                <input type="text" 
-                       class="form-control" 
+              <div class="search-box">
+                <input type="text" class="form-control form-control-sm bg-light border-0"
                        placeholder="Search entries..."
                        [(ngModel)]="searchQuery"
-                       (input)="onSearchChange()">
-                <i class="ri-search-line position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+                       (ngModelChange)="onSearchChange()">
+                <i class="ri-search-line search-icon"></i>
               </div>
             </div>
-            
-            <!-- Status Filter -->
             <div class="col-md-2">
-              <label class="form-label">Status</label>
-              <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus" (change)="applyFilters()">
                 <option value="">All Status</option>
                 <option value="DRAFT">Draft</option>
                 <option value="SUBMITTED">Submitted</option>
@@ -187,249 +173,527 @@
                 <option value="REJECTED">Rejected</option>
               </select>
             </div>
-            
-            <!-- Date Range -->
-            <div class="col-md-4">
-              <label class="form-label">Date Range</label>
-              <div class="d-flex gap-2">
-                <input type="date" class="form-control" [(ngModel)]="startDate" (change)="applyFilters()">
-                <input type="date" class="form-control" [(ngModel)]="endDate" (change)="applyFilters()">
-              </div>
+            <div class="col-md-3">
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="startDate" (change)="applyFilters()" placeholder="Start Date">
             </div>
-            
-            <!-- User Filter (for approval) -->
-            <div class="col-md-2" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
-              <label class="form-label">User</label>
-              <select class="form-select" [(ngModel)]="selectedUser" (change)="applyFilters()">
-                <option value="">All Users</option>
-                <option *ngFor="let member of teamMembers" [value]="member.id">
-                  {{ member.firstName }} {{ member.lastName }}
-                </option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Bulk Actions -->
-          <div class="mt-3" *ngIf="(viewMode === 'approval' || viewMode === 'admin') && selectedEntries.size > 0">
-            <div class="alert alert-info border-0">
-              <div class="d-flex align-items-center justify-content-between">
-                <span>
-                  <i class="ri-information-line me-2"></i>
-                  {{ selectedEntries.size }} entries selected
-                </span>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-success btn-sm" (click)="bulkApprove()" [disabled]="isProcessing">
-                    <i class="ri-check-line me-1"></i>Approve
-                  </button>
-                  <button class="btn btn-outline-danger btn-sm" (click)="bulkReject()" [disabled]="isProcessing">
-                    <i class="ri-close-line me-1"></i>Reject
-                  </button>
-                  <button class="btn btn-outline-secondary btn-sm" (click)="selectedEntries.clear(); updateSelectionState()">
-                    <i class="ri-close-line me-1"></i>Clear
-                  </button>
-                </div>
-              </div>
+            <div class="col-md-3">
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="endDate" (change)="applyFilters()" placeholder="End Date">
             </div>
           </div>
         </div>
 
-        <!-- Empty State -->
-        <div *ngIf="!loading && !error && getFilteredEntriesForActiveTab().length === 0" class="card-body text-center py-5">
-          <div class="mb-4">
-            <i [class]="getEmptyStateIcon()" class="display-4 text-muted"></i>
-          </div>
-          <h5 class="text-muted mb-2">{{ getEmptyStateTitle() }}</h5>
-          <p class="text-muted mb-4">{{ getEmptyStateMessage() }}</p>
-          <div class="d-flex gap-2 justify-content-center">
-            <button class="btn btn-primary" *ngIf="permissions.canCreateNew" routerLink="/time-tracking/entry/new">
-              <i class="ri-add-line me-1"></i>Create Entry
-            </button>
-            <button class="btn btn-outline-secondary" (click)="clearAllFilters()" *ngIf="hasActiveFilters()">
-              <i class="ri-filter-off-line me-1"></i>Clear Filters
-            </button>
-          </div>
-        </div>
-
-        <!-- Time Entries Table -->
-        <div *ngIf="!loading && !error && getFilteredEntriesForActiveTab().length > 0" class="card-body p-0">
+        <div class="card-body p-0">
           <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
-                  <th style="width: 40px;" *ngIf="viewMode === 'approval' || viewMode === 'admin'">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()" id="selectAll">
-                      <label class="form-check-label" for="selectAll"></label>
-                    </div>
-                  </th>
-                  <th>Date</th>
+                  <th class="ps-4">Date</th>
                   <th>Description</th>
                   <th>Case</th>
                   <th class="text-center">Hours</th>
+                  <th class="text-center">Rate</th>
                   <th class="text-center">Amount</th>
                   <th class="text-center">Status</th>
-                  <th class="text-end">Actions</th>
+                  <th class="text-end pe-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let entry of getFilteredEntriesForActiveTab(); trackBy: trackByEntryId">
-                  <!-- Checkbox Column -->
-                  <td *ngIf="viewMode === 'approval' || viewMode === 'admin'">
-                    <div class="form-check" *ngIf="canApproveEntry(entry)">
-                      <input class="form-check-input" type="checkbox" 
-                             [checked]="isEntrySelected(entry.id!)" 
-                             (change)="toggleEntrySelection(entry.id!)" 
-                             [id]="'entry-' + entry.id">
-                      <label class="form-check-label" [for]="'entry-' + entry.id"></label>
+                <tr *ngFor="let entry of getMyEntries()">
+                  <td class="ps-4">
+                    <span class="fw-medium">{{ entry.date | date:'MMM d, y' }}</span>
+                    <div class="text-muted fs-12">{{ entry.date | date:'EEEE' }}</div>
+                  </td>
+                  <td>
+                    <div class="text-truncate" style="max-width: 250px;" [title]="entry.description">
+                      {{ entry.description || '-' }}
                     </div>
                   </td>
-                  
-                  <!-- Date Column -->
                   <td>
-                    <div>{{ entry.date | date:'MMM d, y' }}</div>
-                    <small class="text-muted">{{ entry.date | date:'EEEE' }}</small>
+                    <span *ngIf="entry.caseName" class="badge bg-primary-subtle text-primary">{{ entry.caseName }}</span>
+                    <span *ngIf="!entry.caseName && entry.caseNumber" class="badge bg-secondary-subtle text-secondary">{{ entry.caseNumber }}</span>
+                    <span *ngIf="!entry.caseName && !entry.caseNumber" class="text-muted">-</span>
                   </td>
-
-                  <!-- Description Column -->
-                  <td>
-                    <div style="max-width: 300px;">{{ entry.description }}</div>
-                    <small class="text-muted" *ngIf="entry.userName && (viewMode === 'approval' || viewMode === 'admin')">
-                      <i class="ri-user-line me-1"></i>{{ entry.userName }}
-                    </small>
-                  </td>
-
-                  <!-- Case Column -->
-                  <td>
-                    <span *ngIf="entry.caseName" class="badge bg-primary-subtle text-primary">
-                      {{ entry.caseName }}
-                    </span>
-                    <span *ngIf="!entry.caseName" class="text-muted">-</span>
-                  </td>
-
-                  <!-- Hours Column -->
                   <td class="text-center">
-                    <span class="badge bg-info-subtle text-info">
-                      {{ formatHours(entry.hours) }}
-                    </span>
+                    <span class="fw-semibold">{{ formatHours(entry.hours) }}</span>
                   </td>
-
-                  <!-- Amount Column -->
                   <td class="text-center">
-                    <div class="text-success">
-                      {{ formatCurrency(entry.hours * entry.rate) }}
-                    </div>
-                    <small class="text-muted">${{ entry.rate }}/hr</small>
+                    <span class="text-muted">${{ entry.rate }}/hr</span>
                   </td>
-
-                  <!-- Status Column -->
                   <td class="text-center">
-                    <span class="badge" [ngClass]="getStatusClass(entry.status)">
-                      {{ getStatusText(entry.status) }}
-                    </span>
+                    <span class="fw-semibold text-success">{{ formatCurrency(entry.hours * entry.rate) }}</span>
                   </td>
-
-                  <!-- Actions Column -->
-                  <td class="text-end">
-                    <div class="d-flex gap-2 justify-content-end align-items-center">
-                      <!-- Approval Actions for pending entries -->
-                      <button *ngIf="canApproveEntry(entry)" 
-                              class="btn btn-success btn-sm" 
-                              (click)="approveEntry(entry.id!)" 
-                              [disabled]="isProcessing">
-                        <i class="ri-check-line"></i>
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="getStatusClass(entry.status)">{{ getStatusText(entry.status) }}</span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-soft-primary" (click)="viewEntry(entry)" title="View">
+                        <i class="ri-eye-line"></i>
                       </button>
-                      <button *ngIf="canApproveEntry(entry)" 
-                              class="btn btn-outline-danger btn-sm" 
-                              (click)="rejectEntry(entry.id!)" 
-                              [disabled]="isProcessing">
-                        <i class="ri-close-line"></i>
+                      <button *ngIf="canEditEntry(entry)" class="btn btn-sm btn-soft-warning" (click)="editEntry(entry)" title="Edit">
+                        <i class="ri-edit-line"></i>
                       </button>
-
-                      <!-- Standard Actions -->
-                      <div class="dropdown" *ngIf="!canApproveEntry(entry)">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                type="button" 
-                                data-bs-toggle="dropdown">
-                          Actions
-                        </button>
-                        <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" (click)="viewEntry(entry)">View Details</a></li>
-                          <li *ngIf="permissions.canEditEntry(entry)">
-                            <a class="dropdown-item" (click)="editEntry(entry)">Edit</a>
-                          </li>
-                          <li *ngIf="permissions.canDeleteEntry(entry)">
-                            <hr class="dropdown-divider">
-                          </li>
-                          <li *ngIf="permissions.canDeleteEntry(entry)">
-                            <a class="dropdown-item text-danger" (click)="deleteEntry(entry)">Delete</a>
-                          </li>
-                        </ul>
-                      </div>
+                      <button *ngIf="canDeleteEntry(entry)" class="btn btn-sm btn-soft-danger" (click)="deleteEntry(entry)" title="Delete">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
 
-        <!-- Pagination -->
-        <div class="card-footer" *ngIf="!loading && !error && totalEntries > 0">
-          <div class="row align-items-center">
-            <div class="col-sm-6">
-              <div class="text-muted">
-                Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalEntries) }} of {{ totalEntries }} entries
+          <!-- Empty State -->
+          <div *ngIf="getMyEntries().length === 0" class="text-center py-5">
+            <div class="avatar-lg mx-auto mb-3">
+              <div class="avatar-title bg-light text-muted rounded-circle fs-24">
+                <i class="ri-file-list-3-line"></i>
               </div>
             </div>
-            <div class="col-sm-6">
-              <nav>
-                <ngb-pagination
-                  [(page)]="currentPage"
-                  [pageSize]="pageSize"
-                  [collectionSize]="totalEntries"
-                  [maxSize]="5"
-                  [rotate]="true"
-                  [boundaryLinks]="true"
-                  (pageChange)="onPageChange($event)">
-                </ngb-pagination>
-              </nav>
-            </div>
+            <h6 class="text-muted">No time entries found</h6>
+            <p class="text-muted fs-13 mb-3">Start tracking your time by creating a new entry</p>
+            <button class="btn btn-primary btn-sm" *ngIf="permissions.canCreateNew" routerLink="/time-tracking/entry">
+              <i class="ri-add-line me-1"></i>Create Entry
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Team Timesheet Tab -->
+    <div *ngIf="activeTab === 'team-timesheet'">
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-18">
+                    <i class="ri-team-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Team Members</p>
+                  <h4 class="mb-0">{{ teamMembers.length }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-success-subtle text-success rounded-circle fs-18">
+                    <i class="ri-time-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Team Hours</p>
+                  <h4 class="mb-0">{{ formatHours(getTeamTotalHours()) }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-info-subtle text-info rounded-circle fs-18">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Team Amount</p>
+                  <h4 class="mb-0">{{ formatCurrency(getTeamTotalAmount()) }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-18">
+                    <i class="ri-file-list-3-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Total Entries</p>
+                  <h4 class="mb-0">{{ getTeamEntriesCount() }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Entries Table -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+          <h6 class="card-title mb-0">
+            <i class="ri-team-line me-2 text-primary"></i>Team Time Entries
+          </h6>
+          <button class="btn btn-sm btn-soft-primary" (click)="refreshData()">
+            <i class="ri-refresh-line me-1"></i>Refresh
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="card-body border-bottom py-3">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="search-box">
+                <input type="text" class="form-control form-control-sm bg-light border-0"
+                       placeholder="Search entries..."
+                       [(ngModel)]="searchQuery"
+                       (ngModelChange)="onSearchChange()">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedUser" (change)="applyFilters()">
+                <option value="">All Members</option>
+                <option *ngFor="let member of teamMembers" [value]="member.id">
+                  {{ member.firstName }} {{ member.lastName }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+                <option value="">All Status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="startDate" (change)="applyFilters()">
+            </div>
+            <div class="col-md-3">
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="endDate" (change)="applyFilters()">
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4">User</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Case</th>
+                  <th class="text-center">Hours</th>
+                  <th class="text-center">Amount</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of getTeamEntries()">
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                        <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-12">
+                          {{ entry.userName?.charAt(0) || 'U' }}
+                        </span>
+                      </div>
+                      <span class="fw-medium">{{ entry.userName || 'Unknown' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span>{{ entry.date | date:'MMM d, y' }}</span>
+                  </td>
+                  <td>
+                    <div class="text-truncate" style="max-width: 200px;" [title]="entry.description">
+                      {{ entry.description || '-' }}
+                    </div>
+                  </td>
+                  <td>
+                    <span *ngIf="entry.caseName" class="badge bg-primary-subtle text-primary">{{ entry.caseName }}</span>
+                    <span *ngIf="!entry.caseName" class="text-muted">-</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-semibold">{{ formatHours(entry.hours) }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-semibold text-success">{{ formatCurrency(entry.hours * entry.rate) }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="getStatusClass(entry.status)">{{ getStatusText(entry.status) }}</span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <button class="btn btn-sm btn-soft-primary" (click)="viewEntry(entry)" title="View">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="getTeamEntries().length === 0" class="text-center py-5">
+            <div class="avatar-lg mx-auto mb-3">
+              <div class="avatar-title bg-light text-muted rounded-circle fs-24">
+                <i class="ri-team-line"></i>
+              </div>
+            </div>
+            <h6 class="text-muted">No team entries found</h6>
+            <p class="text-muted fs-13 mb-0">Team time entries will appear here</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Approval Tab -->
+    <div *ngIf="activeTab === 'pending-approval'">
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-18">
+                    <i class="ri-hourglass-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Pending Review</p>
+                  <h4 class="mb-0">{{ getPendingCount() }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-success-subtle text-success rounded-circle fs-18">
+                    <i class="ri-check-double-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Approved Today</p>
+                  <h4 class="mb-0">{{ approvalStats.approvedToday }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm me-3">
+                  <span class="avatar-title bg-info-subtle text-info rounded-circle fs-18">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </span>
+                </div>
+                <div>
+                  <p class="text-muted mb-1 fs-12">Pending Amount</p>
+                  <h4 class="mb-0">{{ formatCurrency(getPendingAmount()) }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div class="alert alert-info border-0 shadow-sm mb-4" *ngIf="selectedEntries.size > 0">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>
+            <i class="ri-information-line me-2"></i>
+            <strong>{{ selectedEntries.size }}</strong> entries selected
+          </span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm" (click)="bulkApprove()" [disabled]="isProcessing">
+              <i class="ri-check-line me-1"></i>Approve All
+            </button>
+            <button class="btn btn-outline-danger btn-sm" (click)="bulkReject()" [disabled]="isProcessing">
+              <i class="ri-close-line me-1"></i>Reject All
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="clearSelection()">
+              <i class="ri-close-line me-1"></i>Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Entries Table -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+          <h6 class="card-title mb-0">
+            <i class="ri-checkbox-circle-line me-2 text-warning"></i>Entries Pending Approval
+          </h6>
+          <button class="btn btn-sm btn-soft-primary" (click)="refreshData()">
+            <i class="ri-refresh-line me-1"></i>Refresh
+          </button>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 40px;" class="ps-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()" id="selectAllPending">
+                    </div>
+                  </th>
+                  <th>User</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Case</th>
+                  <th class="text-center">Hours</th>
+                  <th class="text-center">Amount</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of getPendingEntries()">
+                  <td class="ps-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox"
+                             [checked]="isEntrySelected(entry.id!)"
+                             (change)="toggleEntrySelection(entry.id!)"
+                             [id]="'pending-' + entry.id">
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-xs me-2">
+                        <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-12">
+                          {{ entry.userName?.charAt(0) || 'U' }}
+                        </span>
+                      </div>
+                      <span class="fw-medium">{{ entry.userName || 'Unknown' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ entry.date | date:'MMM d, y' }}</td>
+                  <td>
+                    <div class="text-truncate" style="max-width: 200px;">{{ entry.description || '-' }}</div>
+                  </td>
+                  <td>
+                    <span *ngIf="entry.caseName" class="badge bg-primary-subtle text-primary">{{ entry.caseName }}</span>
+                    <span *ngIf="!entry.caseName" class="text-muted">-</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-semibold">{{ formatHours(entry.hours) }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-semibold text-success">{{ formatCurrency(entry.hours * entry.rate) }}</span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-success btn-sm" (click)="approveEntry(entry.id!)" [disabled]="isProcessing" title="Approve">
+                        <i class="ri-check-line"></i>
+                      </button>
+                      <button class="btn btn-outline-danger btn-sm" (click)="rejectEntry(entry.id!)" [disabled]="isProcessing" title="Reject">
+                        <i class="ri-close-line"></i>
+                      </button>
+                      <button class="btn btn-soft-primary btn-sm" (click)="viewEntry(entry)" title="View">
+                        <i class="ri-eye-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="getPendingEntries().length === 0" class="text-center py-5">
+            <div class="avatar-lg mx-auto mb-3">
+              <div class="avatar-title bg-success-subtle text-success rounded-circle fs-24">
+                <i class="ri-check-double-line"></i>
+              </div>
+            </div>
+            <h6 class="text-muted">All caught up!</h6>
+            <p class="text-muted fs-13 mb-0">No entries pending approval</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 </div>
 
 <!-- Edit Entry Modal -->
-<div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" 
-     id="editEntryModal" tabindex="-1" role="dialog" *ngIf="showEditModal">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header bg-primary bg-opacity-10 border-0">
-        <h5 class="modal-title text-primary fw-semibold">
-          <i class="ri-edit-line me-2"></i>Edit Time Entry
-        </h5>
+<div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'"
+     tabindex="-1" *ngIf="showEditModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title fw-semibold mb-1">
+            <i class="ri-edit-line me-2 text-primary"></i>Edit Time Entry
+          </h5>
+          <p class="text-muted mb-0 fs-13" *ngIf="editingEntry">Entry #{{ editingEntry.id }}</p>
+        </div>
         <button type="button" class="btn-close" (click)="cancelEditEntry()"></button>
       </div>
-      <div class="modal-body" *ngIf="editingEntry">
-        <!-- Modal content would go here -->
-        <p>Edit functionality for entry #{{ editingEntry.id }}</p>
+      <div class="modal-body pt-3" *ngIf="editingEntry">
+        <!-- Date -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Date</label>
+          <input type="date" class="form-control" [(ngModel)]="editFormData.date">
+        </div>
+
+        <!-- Hours -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Hours</label>
+          <input type="number" class="form-control" [(ngModel)]="editFormData.hours" step="0.25" min="0" max="24">
+        </div>
+
+        <!-- Rate -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Rate ($/hr)</label>
+          <input type="number" class="form-control" [(ngModel)]="editFormData.rate" step="1" min="0">
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Description</label>
+          <textarea class="form-control" [(ngModel)]="editFormData.description" rows="3" placeholder="Describe the work performed..."></textarea>
+        </div>
+
+        <!-- Billable -->
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="editFormData.billable" id="editBillable">
+            <label class="form-check-label fw-medium" for="editBillable">Billable</label>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="alert alert-light border mb-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">Total Amount:</span>
+            <span class="fw-bold text-success fs-16">{{ formatCurrency(editFormData.hours * editFormData.rate) }}</span>
+          </div>
+        </div>
       </div>
-      <div class="modal-footer border-0 bg-light">
-        <button type="button" class="btn btn-light" (click)="cancelEditEntry()" [disabled]="isProcessing">
-          Cancel
-        </button>
-        <button type="button" class="btn btn-primary" [disabled]="isProcessing">
-          <span *ngIf="!isProcessing">Save Changes</span>
-          <span *ngIf="isProcessing">
-            <span class="spinner-border spinner-border-sm me-2"></span>Saving...
-          </span>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" (click)="cancelEditEntry()" [disabled]="isProcessing">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="saveEditedEntry()" [disabled]="isProcessing">
+          <span *ngIf="!isProcessing"><i class="ri-save-line me-1"></i>Save Changes</span>
+          <span *ngIf="isProcessing"><span class="spinner-border spinner-border-sm me-2"></span>Saving...</span>
         </button>
       </div>
     </div>
   </div>
 </div>
-
-<div class="modal-backdrop fade" [class.show]="showEditModal" 
-     [style.display]="showEditModal ? 'block' : 'none'"></div> 
+<div class="modal-backdrop fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'"></div>

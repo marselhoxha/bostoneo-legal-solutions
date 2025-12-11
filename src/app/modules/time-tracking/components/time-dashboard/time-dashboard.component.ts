@@ -1449,7 +1449,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   addManualEntry(): void {
-    this.router.navigate(['/time-tracking/entry/new']);
+    this.router.navigate(['/time-tracking/entry']);
   }
 
   viewTimesheet(): void {
@@ -1792,8 +1792,13 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   openEditModal(entry: TimeEntry): void {
+    if (!entry || !entry.id) {
+      console.error('Invalid entry for edit modal');
+      return;
+    }
+
     this.editingEntry = entry;
-    
+
     // Populate the form with current entry data
     this.editFormData = {
       id: entry.id || 0,
@@ -1807,8 +1812,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       tags: '', // Not available in TimeEntry interface
       notes: '' // Not available in TimeEntry interface
     };
-    
-    this.showEditModal = true;
+
+    // Use setTimeout to ensure SweetAlert modal is fully closed before opening edit modal
+    setTimeout(() => {
+      this.showEditModal = true;
+      this.changeDetectorRef.detectChanges();
+    }, 100);
   }
 
   cancelEditEntry(): void {
@@ -1957,7 +1966,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           description: `Copy of: ${entry.description}`
         };
         
-        this.router.navigate(['/time-tracking/entry/new'], { 
+        this.router.navigate(['/time-tracking/entry'], { 
           state: { duplicatedEntry } 
         });
       }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -82,7 +82,8 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
     private timeTrackingService: TimeTrackingService,
     private timerService: TimerService,
     private userService: UserService,
-    private legalCaseService: LegalCaseService
+    private legalCaseService: LegalCaseService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -143,13 +144,15 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
           billable: entry.billable,
           status: entry.status
         });
-        
+
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
         console.error('Error loading time entry:', error);
         this.error = 'Failed to load time entry. Please try again.';
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       }
     });
   }
@@ -215,6 +218,7 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
           this.recentCases = [];
         }
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
         console.error('=== API Error ===');
@@ -224,11 +228,12 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
         if (error.error) {
           console.error('Error body:', error.error);
         }
-        
+
         this.error = `Failed to load cases: ${error.message || 'Unknown error'}`;
         this.legalCases = [];
         this.recentCases = [];
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       }
     });
   }
@@ -240,16 +245,16 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
     this.timerService.getActiveTimers(userId).subscribe({
       next: (timers) => {
         const activeTimer = timers.find(t => t.isActive);
-        
+
         if (activeTimer) {
           this.hasActiveTimer = true;
           this.currentTimer = activeTimer;
           this.activeTimer = activeTimer;
-          
+
           // Find case name
-          const caseName = this.legalCases.find(c => c.id === activeTimer.legalCaseId)?.title || 
+          const caseName = this.legalCases.find(c => c.id === activeTimer.legalCaseId)?.title ||
                           `Case #${activeTimer.legalCaseId}`;
-          
+
           this.timer = {
             id: activeTimer.id!,
             description: activeTimer.description || 'Working...',
@@ -258,15 +263,17 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
             caseId: activeTimer.legalCaseId || null,
             caseName: caseName
           };
-          
+
           this.startTimerUpdates();
         } else {
           this.resetTimer();
         }
+        this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
         console.warn('Timer sync failed:', error);
         this.resetTimer();
+        this.changeDetectorRef.detectChanges();
       }
     });
   }
@@ -386,6 +393,7 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error stopping timer:', error);
         this.error = 'Failed to stop timer. Please try again.';
+        this.changeDetectorRef.detectChanges();
       }
     });
   }
@@ -398,13 +406,15 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.error = null;
+    this.changeDetectorRef.detectChanges();
 
     const formData = this.timeEntryForm.value;
     const currentUserId = this.getCurrentUserId();
-    
+
     if (!currentUserId) {
       this.error = 'Please log in to save time entries';
       this.loading = false;
+      this.changeDetectorRef.detectChanges();
       return;
     }
 
@@ -419,24 +429,26 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
       // Update existing entry
       this.timeTrackingService.updateTimeEntry(this.entryId, timeEntry).subscribe({
         next: () => {
-          this.router.navigate(['/time-tracking/entry']);
+          this.router.navigate(['/time-tracking/timesheet']);
         },
         error: (error) => {
           console.error('Error updating time entry:', error);
           this.error = 'Failed to update time entry. Please try again.';
           this.loading = false;
+          this.changeDetectorRef.detectChanges();
         }
       });
     } else {
       // Create new entry
       this.timeTrackingService.createTimeEntry(timeEntry).subscribe({
         next: () => {
-          this.router.navigate(['/time-tracking/entry']);
+          this.router.navigate(['/time-tracking/timesheet']);
         },
         error: (error) => {
           console.error('Error creating time entry:', error);
           this.error = 'Failed to create time entry. Please try again.';
           this.loading = false;
+          this.changeDetectorRef.detectChanges();
         }
       });
     }

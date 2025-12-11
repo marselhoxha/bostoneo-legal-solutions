@@ -740,7 +740,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   }
 
   openNewTimeEntry(): void {
-    this.router.navigate(['/time-tracking/entry/new']);
+    this.router.navigate(['/time-tracking/entry']);
   }
 
   openAIWorkspace(): void {

@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TimeTrackingService, TimeEntry, TimeEntryFilter } from '../../services/time-tracking.service';
 import { UserService } from '../../../../service/user.service';
@@ -124,8 +124,12 @@ export class TimesheetViewComponent implements OnInit {
     pendingAmount: 0
   };
 
-  // Tab functionality for approval users
-  activeTab: 'pending' | 'approved' | 'all' = 'pending';
+  // Tab functionality - unified tabs
+  activeTab: 'my-timesheet' | 'team-timesheet' | 'pending-approval' = 'my-timesheet';
+
+  // Separate storage for my entries vs team entries
+  myEntries: TimeEntry[] = [];
+  teamEntries: TimeEntry[] = [];
 
   // Advanced search and filtering
   searchQuery: string = '';
@@ -138,6 +142,7 @@ export class TimesheetViewComponent implements OnInit {
     private userService: UserService,
     private rbacService: RbacService,
     private router: Router,
+    private route: ActivatedRoute,
     private changeDetectorRef: ChangeDetectorRef
   ) {}
 
@@ -191,17 +196,164 @@ export class TimesheetViewComponent implements OnInit {
   }
 
   private determineViewMode(): void {
-    if (this.permissions.canViewAll) {
-      this.viewMode = 'admin';
-      this.activeTab = 'pending'; // Start with pending for approval users
-    } else if (this.permissions.canApprove) {
-      this.viewMode = 'approval';
-      this.activeTab = 'pending'; // Start with pending for approval users
-    } else if (this.permissions.canViewTeam) {
+    // First check route data for explicit view mode
+    const routeViewMode = this.route.snapshot.data['viewMode'];
+
+    if (routeViewMode === 'team' && this.permissions.canViewTeam) {
+      // Route explicitly requests team view and user has permission
       this.viewMode = 'team';
+      this.activeTab = 'team-timesheet';
+    } else if (routeViewMode === 'all' && this.permissions.canViewAll) {
+      // Route explicitly requests all view and user has permission
+      this.viewMode = 'admin';
+      this.activeTab = 'pending-approval';
     } else {
+      // Default to personal timesheet
       this.viewMode = 'personal';
+      this.activeTab = 'my-timesheet';
     }
+  }
+
+  // Tab switching
+  switchTab(tab: 'my-timesheet' | 'team-timesheet' | 'pending-approval'): void {
+    this.activeTab = tab;
+    this.selectedEntries.clear();
+    this.allSelected = false;
+
+    // Load data for the selected tab if needed
+    if (tab === 'team-timesheet' && this.teamEntries.length === 0) {
+      this.loadTeamEntries();
+    }
+    this.changeDetectorRef.detectChanges();
+  }
+
+  // Get entries for My Timesheet tab
+  getMyEntries(): TimeEntry[] {
+    let entries = this.myEntries;
+
+    // Apply filters
+    if (this.searchQuery) {
+      const query = this.searchQuery.toLowerCase();
+      entries = entries.filter(e =>
+        e.description?.toLowerCase().includes(query) ||
+        e.caseName?.toLowerCase().includes(query)
+      );
+    }
+    if (this.selectedStatus) {
+      entries = entries.filter(e => e.status === this.selectedStatus);
+    }
+    if (this.startDate) {
+      entries = entries.filter(e => e.date >= this.startDate);
+    }
+    if (this.endDate) {
+      entries = entries.filter(e => e.date <= this.endDate);
+    }
+
+    return entries;
+  }
+
+  // Get entries for Team Timesheet tab
+  getTeamEntries(): TimeEntry[] {
+    let entries = this.teamEntries;
+
+    // Apply filters
+    if (this.searchQuery) {
+      const query = this.searchQuery.toLowerCase();
+      entries = entries.filter(e =>
+        e.description?.toLowerCase().includes(query) ||
+        e.caseName?.toLowerCase().includes(query) ||
+        e.userName?.toLowerCase().includes(query)
+      );
+    }
+    if (this.selectedUser) {
+      entries = entries.filter(e => e.userId === parseInt(this.selectedUser));
+    }
+    if (this.selectedStatus) {
+      entries = entries.filter(e => e.status === this.selectedStatus);
+    }
+    if (this.startDate) {
+      entries = entries.filter(e => e.date >= this.startDate);
+    }
+    if (this.endDate) {
+      entries = entries.filter(e => e.date <= this.endDate);
+    }
+
+    return entries;
+  }
+
+  // Get entries pending approval
+  getPendingEntries(): TimeEntry[] {
+    return this.teamEntries.filter(e => e.status === 'SUBMITTED');
+  }
+
+  // Stats helper methods
+  getMyEntriesCount(): number {
+    return this.myEntries.length;
+  }
+
+  getTeamEntriesCount(): number {
+    return this.teamEntries.length;
+  }
+
+  getPendingCount(): number {
+    return this.teamEntries.filter(e => e.status === 'SUBMITTED').length;
+  }
+
+  getMyTotalHours(): number {
+    return this.myEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
+  }
+
+  getMyTotalAmount(): number {
+    return this.myEntries.reduce((sum, e) => sum + ((e.hours || 0) * (e.rate || 0)), 0);
+  }
+
+  getMyDraftCount(): number {
+    return this.myEntries.filter(e => e.status === 'DRAFT').length;
+  }
+
+  getTeamTotalHours(): number {
+    return this.teamEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
+  }
+
+  getTeamTotalAmount(): number {
+    return this.teamEntries.reduce((sum, e) => sum + ((e.hours || 0) * (e.rate || 0)), 0);
+  }
+
+  getPendingAmount(): number {
+    return this.getPendingEntries().reduce((sum, e) => sum + ((e.hours || 0) * (e.rate || 0)), 0);
+  }
+
+  clearSelection(): void {
+    this.selectedEntries.clear();
+    this.allSelected = false;
+    this.changeDetectorRef.detectChanges();
+  }
+
+  // Load team entries
+  private loadTeamEntries(): void {
+    const filters: TimeEntryFilter = {
+      page: 0,
+      size: 100,
+      sortBy: 'date',
+      sortDirection: 'desc'
+    };
+
+    this.timeTrackingService.getTimeEntriesWithFilters(filters).pipe(
+      timeout(15000),
+      catchError(error => {
+        console.error('Error loading team entries:', error);
+        return of({ content: [] });
+      })
+    ).subscribe({
+      next: (response) => {
+        if (response && response.content) {
+          const currentUserId = this.getCurrentUserId();
+          // Team entries are all entries NOT from current user
+          this.teamEntries = response.content.filter((e: TimeEntry) => e.userId !== currentUserId);
+        }
+        this.changeDetectorRef.detectChanges();
+      }
+    });
   }
 
   private async loadInitialData(): Promise<void> {
@@ -244,7 +396,6 @@ export class TimesheetViewComponent implements OnInit {
 
   loadTimeEntries(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.loading = true;
       this.error = null;
       this.changeDetectorRef.detectChanges();
 
@@ -253,37 +404,20 @@ export class TimesheetViewComponent implements OnInit {
         this.error = 'Please log in to view your time entries';
         this.loading = false;
         this.changeDetectorRef.detectChanges();
-        reject(new Error('No user ID'));
+        resolve(); // Resolve instead of reject to prevent infinite loading
         return;
       }
 
-      // Build filters based on view mode and permissions
+      // Build filters - always load ALL entries so we can separate my vs team
       const filters: TimeEntryFilter = {
         page: 0,
-        size: 100,
+        size: 500, // Load more entries to support tabs
         sortBy: 'date',
         sortDirection: 'desc'
       };
 
-      // Apply user filtering based on view mode
-      switch (this.viewMode) {
-        case 'personal':
-          filters.userId = currentUserId;
-          break;
-        case 'team':
-          // Load team entries (implement team logic based on your structure)
-          // For now, don't filter by user to show team entries
-          break;
-        case 'approval':
-          // Load ALL entries for approval context - buttons will only show for SUBMITTED entries
-          // This gives approvers full context of the workflow
-          console.log('🔍 Approval mode: Loading all entries for context');
-          break;
-        case 'admin':
-          // Load all entries
-          console.log('👑 Admin mode: Loading all entries');
-          break;
-      }
+      // Note: We load all entries and filter client-side for my/team tabs
+      console.log('📊 Loading all entries for unified timesheet view');
 
       // Apply additional filters (user can still filter by status if needed)
       if (this.selectedStatus) {
@@ -299,12 +433,11 @@ export class TimesheetViewComponent implements OnInit {
         timeout(15000),
         catchError(error => {
           console.error('Error loading time entries:', error);
-          this.error = error.name === 'TimeoutError' ? 
-            'Request timed out. Please try again.' : 
+          this.error = error.name === 'TimeoutError' ?
+            'Request timed out. Please try again.' :
             'Failed to load time entries. Please try again later.';
           this.loading = false;
           this.changeDetectorRef.detectChanges();
-          reject(error);
           return of(null);
         }),
         finalize(() => {
@@ -314,14 +447,26 @@ export class TimesheetViewComponent implements OnInit {
       ).subscribe({
         next: (response) => {
           if (!response) {
-            reject(new Error('No response'));
+            // No response - just resolve with empty data
+            this.timeEntries = [];
+            this.filteredEntries = [];
+            this.totalElements = 0;
+            this.loading = false;
+            this.changeDetectorRef.detectChanges();
+            resolve();
             return;
           }
-          
+
           this.processTimeEntriesResponse(response);
+          this.loading = false;
+          this.changeDetectorRef.detectChanges();
           resolve();
         },
-        error: (error) => reject(error)
+        error: (error) => {
+          this.loading = false;
+          this.changeDetectorRef.detectChanges();
+          resolve(); // Resolve to prevent infinite loading
+        }
       });
     });
   }
@@ -367,13 +512,18 @@ export class TimesheetViewComponent implements OnInit {
     });
     
     this.timeEntries = allEntries;
-    
+
+    // Separate entries into my entries and team entries
+    const currentUserId = this.getCurrentUserId();
+    this.myEntries = allEntries.filter(e => e.userId === currentUserId);
+    this.teamEntries = allEntries.filter(e => e.userId !== currentUserId);
+
     if (Array.isArray(response)) {
       const startIndex = this.currentPage * this.pageSize;
       const endIndex = startIndex + this.pageSize;
       entries = allEntries.slice(startIndex, endIndex);
     }
-    
+
     this.filteredEntries = entries;
     this.calculateStats();
     this.calculateApprovalStats();
@@ -746,7 +896,7 @@ export class TimesheetViewComponent implements OnInit {
 
   openEditModal(entry: TimeEntry): void {
     this.editingEntry = entry;
-    
+
     // Populate the form with current entry data
     this.editFormData = {
       id: entry.id || 0,
@@ -760,8 +910,12 @@ export class TimesheetViewComponent implements OnInit {
       tags: '', // Not available in TimeEntry interface
       notes: '' // Not available in TimeEntry interface
     };
-    
-    this.showEditModal = true;
+
+    // Use setTimeout to ensure SweetAlert modal is fully closed before opening edit modal
+    setTimeout(() => {
+      this.showEditModal = true;
+      this.changeDetectorRef.detectChanges();
+    }, 100);
   }
 
   cancelEditEntry(): void {
@@ -880,66 +1034,135 @@ export class TimesheetViewComponent implements OnInit {
   }
 
   viewEntry(entry: TimeEntry): void {
-    const hours = this.getEntryDuration(entry);
+    // Detect dark mode
+    const isDarkMode = document.documentElement.getAttribute('data-layout-mode') === 'dark' ||
+                       document.documentElement.getAttribute('data-bs-theme') === 'dark' ||
+                       document.body.classList.contains('dark-mode') ||
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Theme colors
+    const t = {
+      bg: isDarkMode ? '#1a1d21' : '#ffffff',
+      cardBg: isDarkMode ? '#212529' : '#f8f9fa',
+      border: isDarkMode ? '#32383e' : '#e9ebec',
+      text: isDarkMode ? '#ced4da' : '#333333',
+      textMuted: isDarkMode ? '#878a99' : '#6c757d',
+      textLight: isDarkMode ? '#adb5bd' : '#495057',
+    };
+
+    const hours = parseFloat(this.getEntryDuration(entry));
     const amount = this.getEntryBillingAmount(entry);
-    const rate = this.formatRate(entry);
+    const rate = this.parseRate(entry);
+    const formattedDate = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Format duration
+    const hoursInt = Math.floor(hours);
+    const mins = Math.round((hours - hoursInt) * 60);
+    const duration = hoursInt > 0 ? `${hoursInt}h ${mins}m` : `${mins}m`;
+
+    // Status config
+    const statusMap: { [key: string]: { color: string; bg: string; bgDark: string; label: string } } = {
+      'DRAFT': { color: '#f1b44c', bg: '#fff8ec', bgDark: '#3d3526', label: 'Draft' },
+      'SUBMITTED': { color: '#299cdb', bg: '#e8f4fc', bgDark: '#1e3a4c', label: 'Submitted' },
+      'APPROVED': { color: '#0ab39c', bg: '#e6f7f5', bgDark: '#1a3d36', label: 'Approved' },
+      'BILLING_APPROVED': { color: '#0ab39c', bg: '#e6f7f5', bgDark: '#1a3d36', label: 'Approved' },
+      'BILLED': { color: '#878bfa', bg: '#eef0f7', bgDark: '#2d2f45', label: 'Billed' },
+      'INVOICED': { color: '#878bfa', bg: '#eef0f7', bgDark: '#2d2f45', label: 'Invoiced' },
+      'REJECTED': { color: '#f06548', bg: '#fde8e4', bgDark: '#3d2520', label: 'Rejected' }
+    };
+    const s = statusMap[entry.status] || { color: '#6c757d', bg: '#f5f5f5', bgDark: '#2a2f34', label: entry.status };
+    const isEditable = entry.status === 'DRAFT' || entry.status === 'REJECTED';
+
+    // Get case display
+    const caseDisplay = entry.caseName || (entry.caseNumber ? `Case ${entry.caseNumber}` : (entry.legalCaseId ? `Case #${entry.legalCaseId}` : 'No case assigned'));
 
     Swal.fire({
-      title: 'Time Entry Details',
+      title: '',
       html: `
-        <div class="text-start">
-          <div class="row g-3">
-            <div class="col-6">
-              <strong class="text-primary">Entry ID:</strong><br>
-              <span class="badge bg-secondary">#${entry.id}</span>
+        <div style="text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="font-size: 24px; font-weight: 700; color: ${t.text};">#${entry.id}</div>
+            <div style="background: ${isDarkMode ? s.bgDark : s.bg}; color: ${s.color}; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase;">${s.label}</div>
+          </div>
+
+          <!-- Main Info -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Date</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">${formattedDate}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Duration</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">${duration}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Rate</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">$${rate}/hr</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Amount</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${entry.billable ? '#0ab39c' : t.textMuted};">${this.formatCurrency(amount)}</div>
+              </div>
             </div>
-            <div class="col-6">
-              <strong class="text-primary">Status:</strong><br>
-              <span class="badge ${this.getStatusClass(entry.status).replace('bg-', 'bg-')}">${this.getStatusText(entry.status)}</span>
+          </div>
+
+          <!-- Case -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 36px; height: 36px; background: #405189; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="ri-briefcase-4-fill" style="color: white; font-size: 16px;"></i>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 2px;">Case</div>
+                <div style="font-size: 14px; font-weight: 600; color: ${t.text};">${caseDisplay}</div>
+                ${entry.caseNumber && entry.caseName ? `<div style="font-size: 12px; color: ${t.textMuted};">${entry.caseNumber}</div>` : ''}
+              </div>
             </div>
-            <div class="col-6">
-              <strong class="text-primary">Date:</strong><br>
-              <span>${new Date(entry.date).toLocaleDateString()}</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Duration:</strong><br>
-              <span class="fw-bold">${hours} hours</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Rate:</strong><br>
-              <span>${rate}/hr</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Total Amount:</strong><br>
-              <span class="fw-bold text-success">${this.formatCurrency(amount)}</span>
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Case:</strong><br>
-              <span>${entry.caseName || 'No case assigned'}</span>
-              ${entry.caseNumber ? `<br><small class="text-muted">Case #: ${entry.caseNumber}</small>` : ''}
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Description:</strong><br>
-              <span>${entry.description}</span>
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Billing Status:</strong><br>
-              <span class="badge ${entry.billable ? 'bg-success' : 'bg-secondary'}">
-                ${entry.billable ? 'Billable' : 'Non-billable'}
-              </span>
+          </div>
+
+          <!-- Description -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 8px;">Description</div>
+            <div style="font-size: 14px; color: ${t.textLight}; line-height: 1.6;">${entry.description || '<span style="font-style: italic; opacity: 0.6;">No description</span>'}</div>
+          </div>
+
+          <!-- User & Billing -->
+          <div style="display: flex; justify-content: space-between; align-items: center; color: ${t.textMuted}; font-size: 13px;">
+            ${entry.userName ? `
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="ri-user-line"></i>
+                <span>${entry.userName}</span>
+              </div>
+            ` : '<div></div>'}
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${entry.billable ? '#0ab39c' : '#6c757d'};"></span>
+              <span>${entry.billable ? 'Billable' : 'Non-billable'}</span>
             </div>
           </div>
         </div>
       `,
-      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: entry.status === 'DRAFT' || entry.status === 'REJECTED' ? 'Edit Entry' : 'Close',
+      showConfirmButton: isEditable,
+      confirmButtonText: '<i class="ri-edit-line me-1"></i> Edit',
       cancelButtonText: 'Close',
-      confirmButtonColor: '#0ab39c',
-      width: '600px'
+      confirmButtonColor: '#405189',
+      cancelButtonColor: isDarkMode ? '#3a4046' : '#878a99',
+      width: '420px',
+      padding: '24px',
+      background: t.bg,
+      color: t.text,
+      customClass: {
+        popup: 'swal-time-entry-popup',
+        confirmButton: 'swal-btn-primary',
+        cancelButton: 'swal-btn-secondary'
+      }
     }).then((result) => {
-      if (result.isConfirmed && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) {
-        this.editEntry(entry);
+      if (result.isConfirmed && isEditable) {
+        setTimeout(() => {
+          this.editEntry(entry);
+        }, 100);
       }
     });
   }
@@ -1140,8 +1363,8 @@ export class TimesheetViewComponent implements OnInit {
           description: `Copy of: ${entry.description}`
         };
         
-        this.router.navigate(['/time-tracking/entry/new'], { 
-          state: { duplicatedEntry } 
+        this.router.navigate(['/time-tracking/entry'], {
+          state: { duplicatedEntry }
         });
       }
     });
@@ -1235,76 +1458,22 @@ export class TimesheetViewComponent implements OnInit {
     });
   }
 
-  // New methods for tabbed interface
-  setActiveTab(tab: 'pending' | 'approved' | 'all'): void {
-    this.activeTab = tab;
-    this.currentPage = 0; // Reset pagination when switching tabs
-    this.selectedEntries.clear(); // Clear selections when switching tabs
-    this.updateSelectionState();
-  }
-
-  getFilteredEntriesForActiveTab(): TimeEntry[] {
-    if (this.viewMode === 'personal') {
-      return this.filteredEntries;
-    }
-
-    switch (this.activeTab) {
-      case 'pending':
-        return this.filteredEntries.filter(entry => entry.status === 'SUBMITTED');
-      case 'approved':
-        return this.filteredEntries.filter(entry => entry.status === 'APPROVED');
-      case 'all':
-      default:
-        return this.filteredEntries;
-    }
-  }
-
+  // Helper methods for backward compatibility
   getApprovedCount(): number {
     return this.filteredEntries.filter(entry => entry.status === 'APPROVED').length;
   }
 
-  getEmptyStateIcon(): string {
-    if (this.viewMode === 'personal') {
-      return 'ri-time-line';
-    }
-
+  // Get current tab entries
+  getCurrentTabEntries(): TimeEntry[] {
     switch (this.activeTab) {
-      case 'pending':
-        return 'ri-hourglass-line';
-      case 'approved':
-        return 'ri-check-double-line';
+      case 'my-timesheet':
+        return this.getMyEntries();
+      case 'team-timesheet':
+        return this.getTeamEntries();
+      case 'pending-approval':
+        return this.getPendingEntries();
       default:
-        return 'ri-file-list-line';
-    }
-  }
-
-  getEmptyStateTitle(): string {
-    if (this.viewMode === 'personal') {
-      return 'No time entries found';
-    }
-
-    switch (this.activeTab) {
-      case 'pending':
-        return 'No entries pending review';
-      case 'approved':
-        return 'No approved entries';
-      default:
-        return 'No time entries found';
-    }
-  }
-
-  getEmptyStateMessage(): string {
-    if (this.viewMode === 'personal') {
-      return 'Create your first time entry to get started tracking your work';
-    }
-
-    switch (this.activeTab) {
-      case 'pending':
-        return 'All submitted entries have been reviewed, or no entries are awaiting approval';
-      case 'approved':
-        return 'No entries have been approved yet in the current date range';
-      default:
-        return 'No time entries match your current filters or date range';
+        return this.filteredEntries;
     }
   }
 
@@ -1437,7 +1606,7 @@ export class TimesheetViewComponent implements OnInit {
   }
 
   getDisplayedCount(): number {
-    return this.getFilteredEntriesForActiveTab().length;
+    return this.getCurrentTabEntries().length;
   }
 
   getFilteredCount(): number {
@@ -1452,7 +1621,7 @@ export class TimesheetViewComponent implements OnInit {
   }
 
   exportData(): void {
-    const exportData = this.getFilteredEntriesForActiveTab().map(entry => ({
+    const exportData = this.getCurrentTabEntries().map(entry => ({
       Date: entry.date,
       Description: entry.description,
       Hours: entry.hours,
@@ -1577,7 +1746,7 @@ export class TimesheetViewComponent implements OnInit {
         case 'n':
           event.preventDefault();
           if (this.permissions.canCreateNew) {
-            this.router.navigate(['/time-tracking/entry/new']);
+            this.router.navigate(['/time-tracking/entry']);
           }
           break;
         case 'r':

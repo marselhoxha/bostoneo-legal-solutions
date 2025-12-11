@@ -30,16 +30,7 @@ const routes: Routes = [
       {
         path: 'entry',
         component: TimeEntryFormComponent,
-        data: { 
-          title: 'Log Time'
-        }
-      },
-
-      // New Time Entry - Specific route for /entry/new
-      {
-        path: 'entry/new',
-        component: TimeEntryFormComponent,
-        data: { 
+        data: {
           title: 'New Time Entry'
         }
       },

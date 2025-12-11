@@ -115,8 +115,34 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   // Helper to get userId - returns current user ID or 0 if not authenticated
+  // Now includes fallback to userService for more reliability after login/logout
   get userId(): number {
-    return this.currentUser?.id || 0;
+    // First try currentUser (cached in component)
+    if (this.currentUser?.id) {
+      return this.currentUser.id;
+    }
+
+    // Fallback: Try to get fresh from userService
+    const freshUser = this.userService.getCurrentUser();
+    if (freshUser?.id) {
+      // Update cached user
+      this.currentUser = freshUser;
+      return freshUser.id;
+    }
+
+    // Last resort: Try to get from userService's getCurrentUserId method
+    const serviceUserId = this.userService.getCurrentUserId();
+    if (serviceUserId && serviceUserId > 0) {
+      return serviceUserId;
+    }
+
+    console.warn('⚠️ No valid userId available from any source');
+    return 0;
+  }
+
+  // Check if user is properly authenticated
+  get isUserAuthenticated(): boolean {
+    return this.userId > 0;
   }
 
   ngOnInit(): void {
@@ -124,15 +150,19 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.currentUser = this.userService.getCurrentUser();
     console.log('🔐 Current user on init:', this.currentUser);
 
-    // Subscribe to user changes
+    // Subscribe to user changes - critical for handling login/logout scenarios
     this.userService.userData$
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         if (user && user.id) {
+          const previousUserId = this.currentUser?.id;
           this.currentUser = user;
-          console.log('🔐 User updated:', user.id);
+          console.log('🔐 User updated:', user.id, 'previous:', previousUserId);
+
           // Load conversations when user is available
-          if (!this.conversations.length) {
+          // Also reload if userId changed (logout/login scenario)
+          if (!this.conversations.length || (previousUserId && previousUserId !== user.id)) {
+            console.log('🔄 Loading conversations due to user change or empty list');
             this.loadConversations();
           }
         }
@@ -141,6 +171,19 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     // If we already have a user, load conversations immediately
     if (this.currentUser?.id) {
       this.loadConversations();
+    } else {
+      // If no user yet, retry after a short delay (handles fresh login scenario)
+      console.log('⏳ No user on init, will retry after userData$ emits or timeout');
+      setTimeout(() => {
+        if (!this.currentUser?.id) {
+          // Try to get user from service again
+          this.currentUser = this.userService.getCurrentUser();
+          if (this.currentUser?.id && !this.conversations.length) {
+            console.log('🔄 Got user after timeout, loading conversations');
+            this.loadConversations();
+          }
+        }
+      }, 500);
     }
 
     // Don't load pending actions on init to avoid duplicates
@@ -444,57 +487,64 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           const newTitle = this.generateConversationTitle(firstUserMsg.content);
           console.log('📝 Updating conversation title to:', newTitle, 'for sessionId:', activeConv.sessionId, 'userId:', currentUserId);
 
-          // Retry mechanism for title update
-          const retryTitleUpdate = (attempt: number) => {
-            console.log(`📝 Title update attempt ${attempt} - sessionId: ${activeConv.sessionId}, userId: ${currentUserId}, newTitle: ${newTitle}`);
+          // Store sessionId locally to avoid closure issues
+          const sessionIdToUpdate = activeConv.sessionId;
 
-            this.legalResearchService.updateConversationTitle(activeConv.sessionId, currentUserId, newTitle)
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (success) => {
-                  if (success) {
-                    console.log('✅ Title update succeeded on attempt', attempt);
+          // Retry mechanism for title update with increasing delay
+          const retryTitleUpdate = (attempt: number, delay: number) => {
+            console.log(`📝 Title update attempt ${attempt} - sessionId: ${sessionIdToUpdate}, userId: ${currentUserId}, newTitle: ${newTitle}`);
 
-                    // Update local conversation object
-                    activeConv.title = newTitle;
+            // Add delay before first attempt to ensure session is fully persisted
+            setTimeout(() => {
+              this.legalResearchService.updateConversationTitle(sessionIdToUpdate, currentUserId, newTitle)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (success) => {
+                    if (success) {
+                      console.log('✅ Title update succeeded on attempt', attempt);
 
-                    // Also update the conversations array to ensure dropdown reflects the change
-                    const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
-                    if (convIndex !== -1) {
-                      this.conversations[convIndex].title = newTitle;
-                    }
+                      // Update local conversation object
+                      activeConv.title = newTitle;
 
-                    console.log('✅ Updated conversation title:', newTitle);
-                    this.cdr.detectChanges(); // Force UI refresh
-                  } else {
-                    console.warn('⚠️ Title update returned false on attempt', attempt);
-                    if (attempt < 3) {
-                      // Retry after a short delay
-                      setTimeout(() => retryTitleUpdate(attempt + 1), 1000);
+                      // Also update the conversations array to ensure dropdown reflects the change
+                      const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
+                      if (convIndex !== -1) {
+                        this.conversations[convIndex].title = newTitle;
+                      }
+
+                      console.log('✅ Updated conversation title:', newTitle);
+                      this.cdr.detectChanges(); // Force UI refresh
                     } else {
-                      console.error('❌ Title update failed after 3 attempts');
-                      // Still update local state
+                      console.warn('⚠️ Title update returned false on attempt', attempt);
+                      if (attempt < 5) {
+                        // Retry with exponential backoff (500ms, 1000ms, 2000ms, 4000ms)
+                        retryTitleUpdate(attempt + 1, delay * 2);
+                      } else {
+                        console.error('❌ Title update failed after 5 attempts');
+                        // Still update local state
+                        activeConv.title = newTitle;
+                        this.cdr.detectChanges();
+                      }
+                    }
+                  },
+                  error: (error) => {
+                    console.error(`❌ Error on attempt ${attempt}:`, error);
+                    if (attempt < 5) {
+                      // Retry with exponential backoff
+                      retryTitleUpdate(attempt + 1, delay * 2);
+                    } else {
+                      console.error('❌ Title update failed after 5 attempts. Details - sessionId:', sessionIdToUpdate, 'userId:', currentUserId);
+                      // Update local state so user sees correct title
                       activeConv.title = newTitle;
                       this.cdr.detectChanges();
                     }
                   }
-                },
-                error: (error) => {
-                  console.error(`❌ Error on attempt ${attempt}:`, error);
-                  if (attempt < 3) {
-                    // Retry after a short delay
-                    setTimeout(() => retryTitleUpdate(attempt + 1), 1000);
-                  } else {
-                    console.error('❌ Title update failed after 3 attempts. Details - sessionId:', activeConv.sessionId, 'userId:', currentUserId);
-                    // Update local state so user sees correct title
-                    activeConv.title = newTitle;
-                    this.cdr.detectChanges();
-                  }
-                }
-              });
+                });
+            }, delay);
           };
 
-          retryTitleUpdate(1);
+          // Start with 500ms delay to ensure session is created
+          retryTitleUpdate(1, 500);
         }
       }
     }
@@ -502,6 +552,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Save a single message to the backend
+   * Also triggers title update for first user message
    */
   saveMessageToBackend(role: 'user' | 'assistant', content: string): void {
     if (!this.activeConversationId) return;
@@ -509,11 +560,50 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
     if (!activeConv) return;
 
-    this.legalResearchService.addMessageToSession(activeConv.sessionId, this.userId, role, content)
+    const currentUserId = this.userId;
+    const sessionId = activeConv.sessionId;
+
+    // CRITICAL: Don't save messages with invalid userId
+    if (!currentUserId || currentUserId === 0) {
+      console.error('❌ Cannot save message - no valid userId. Message will not be persisted.');
+      return;
+    }
+
+    this.legalResearchService.addMessageToSession(sessionId, currentUserId, role, content)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (message) => {
           console.log('✅ Saved message to backend:', message.id);
+
+          // CRITICAL FIX: Update title immediately after first user message is saved
+          // This ensures the title update happens AFTER the session is fully persisted
+          if (role === 'user' && activeConv &&
+              (!activeConv.title || activeConv.title === 'New Conversation' || activeConv.title === 'Untitled Conversation')) {
+            const newTitle = this.generateConversationTitle(content);
+            console.log('📝 Triggering title update after message save - sessionId:', sessionId, 'newTitle:', newTitle);
+
+            // Update title now that we know the message is saved
+            this.legalResearchService.updateConversationTitle(sessionId, currentUserId, newTitle)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (success) => {
+                  if (success) {
+                    console.log('✅ Title updated successfully after message save');
+                    activeConv.title = newTitle;
+                    const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
+                    if (convIndex !== -1) {
+                      this.conversations[convIndex].title = newTitle;
+                    }
+                    this.cdr.detectChanges();
+                  } else {
+                    console.warn('⚠️ Title update returned false after message save');
+                  }
+                },
+                error: (error) => {
+                  console.error('❌ Error updating title after message save:', error);
+                }
+              });
+          }
         },
         error: (error) => {
           console.error('❌ Error saving message to backend:', error);
@@ -678,6 +768,20 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   performSearch(): void {
     if (!this.searchQuery.trim()) {
+      return;
+    }
+
+    // CRITICAL: Ensure we have a valid userId before proceeding
+    // This prevents issues after logout/login where userId might be 0
+    if (!this.isUserAuthenticated) {
+      console.error('❌ Cannot perform search - user not authenticated (userId is 0)');
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please wait while we verify your session, or try refreshing the page.',
+        icon: 'warning',
+        timer: 3000,
+        showConfirmButton: false
+      });
       return;
     }
 

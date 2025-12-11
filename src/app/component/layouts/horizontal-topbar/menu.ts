@@ -142,7 +142,7 @@ export const PARALEGAL_MENU: MenuItem[] = [
     subItems: [
       { id: 'para-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'para-time' },
       { id: 'para-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'para-time' },
-      { id: 'para-time-timesheet', label: 'My Timesheet', link: '/time-tracking/timesheet', parentId: 'para-time' },
+      { id: 'para-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'para-time' },
       { id: 'para-time-reports', label: 'Reports', link: '/time-tracking/reports', parentId: 'para-time' }
     ]
   },
@@ -285,8 +285,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     subItems: [
       { id: 'att-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'att-time-billing' },
       { id: 'att-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'att-time-billing' },
-      { id: 'att-time-timesheet', label: 'My Timesheet', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
-      { id: 'att-time-team-sheet', label: 'Team Timesheet', link: '/time-tracking/timesheet/team', parentId: 'att-time-billing' },
+      { id: 'att-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
       { id: 'att-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'att-time-billing' },
       { id: 'att-time-reports', label: 'Reports', link: '/time-tracking/reports', parentId: 'att-time-billing' }
     ]
@@ -397,14 +396,10 @@ export const ADMIN_MENU: MenuItem[] = [
     subItems: [
       { id: 'admin-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'admin-time-billing' },
       { id: 'admin-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'admin-time-billing' },
-      { id: 'admin-time-timesheet', label: 'My Timesheet', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
-      { id: 'admin-time-team-sheet', label: 'Team Timesheet', link: '/time-tracking/timesheet/team', parentId: 'admin-time-billing' },
-      { id: 'admin-time-all-sheet', label: 'All Timesheets', link: '/time-tracking/timesheet/all', parentId: 'admin-time-billing' },
+      { id: 'admin-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
       { id: 'admin-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
       { id: 'admin-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
-      { id: 'admin-time-rate-mgmt', label: 'Rate Management', link: '/time-tracking/rate-management', parentId: 'admin-time-billing' },
       { id: 'admin-time-invoice-gen', label: 'Invoice Generation', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' },
-      { id: 'admin-time-cycles', label: 'Billing Cycles', link: '/time-tracking/billing/cycles', parentId: 'admin-time-billing' },
       { id: 'admin-time-reports', label: 'Reports', link: '/time-tracking/reports/all', parentId: 'admin-time-billing' },
       { id: 'admin-time-analytics', label: 'Analytics', link: '/time-tracking/billing/analytics', parentId: 'admin-time-billing' }
     ]
