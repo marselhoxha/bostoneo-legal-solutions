@@ -3,9 +3,11 @@ package com.bostoneo.bostoneosolutions.service.impl;
 import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
 import com.bostoneo.bostoneosolutions.dto.TimeEntryFilterRequest;
 import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.TimeEntry;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.ValidationResult;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.TimeTrackingService;
@@ -36,6 +38,7 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     private final TimeEntryRepository timeEntryRepository;
     private final TimeEntryValidationService timeEntryValidationService;
     private final UserRepository<User> userRepository;
+    private final LegalCaseRepository legalCaseRepository;
 
     @Override
     public TimeEntryDTO createTimeEntry(TimeEntryDTO timeEntryDTO) {
@@ -595,6 +598,21 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
             }
         }
 
+        // Fetch case information
+        String caseName = timeEntry.getCaseName();
+        String caseNumber = timeEntry.getCaseNumber();
+        if ((caseName == null || caseNumber == null) && timeEntry.getLegalCaseId() != null) {
+            try {
+                LegalCase legalCase = legalCaseRepository.findById(timeEntry.getLegalCaseId()).orElse(null);
+                if (legalCase != null) {
+                    caseName = legalCase.getTitle();
+                    caseNumber = legalCase.getCaseNumber();
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch case info for legalCaseId {}: {}", timeEntry.getLegalCaseId(), e.getMessage());
+            }
+        }
+
         return TimeEntryDTO.builder()
                 .id(timeEntry.getId())
                 .legalCaseId(timeEntry.getLegalCaseId())
@@ -610,8 +628,8 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
                 .invoiceId(timeEntry.getInvoiceId())
                 .billedAmount(timeEntry.getBilledAmount())
                 .totalAmount(timeEntry.getTotalAmount())
-                .caseName(timeEntry.getCaseName())
-                .caseNumber(timeEntry.getCaseNumber())
+                .caseName(caseName)
+                .caseNumber(caseNumber)
                 .userName(userName)
                 .userEmail(userEmail)
                 .createdAt(timeEntry.getCreatedAt())

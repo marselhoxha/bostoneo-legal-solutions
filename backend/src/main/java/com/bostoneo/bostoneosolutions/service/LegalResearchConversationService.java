@@ -38,9 +38,13 @@ public class LegalResearchConversationService {
      */
     @Transactional
     public AiConversationSession getOrCreateSession(Long sessionId, Long userId, Long caseId, String title) {
+        log.info("🆕 getOrCreateSession called - sessionId: {}, userId: {}, caseId: {}, title: '{}'",
+                sessionId, userId, caseId, title);
+
         if (sessionId != null) {
             Optional<AiConversationSession> existing = sessionRepository.findByIdAndUserId(sessionId, userId);
             if (existing.isPresent()) {
+                log.info("✅ Found existing session: {}", sessionId);
                 return existing.get();
             }
         }
@@ -58,7 +62,11 @@ public class LegalResearchConversationService {
                 .totalTokensUsed(0)
                 .build();
 
-        return sessionRepository.save(session);
+        AiConversationSession savedSession = sessionRepository.save(session);
+        log.info("✅ Created new session: id={}, userId={}, sessionName='{}'",
+                savedSession.getId(), savedSession.getUserId(), savedSession.getSessionName());
+
+        return savedSession;
     }
 
     /**
@@ -115,7 +123,13 @@ public class LegalResearchConversationService {
      */
     @Transactional(readOnly = true)
     public List<AiConversationSession> getConversationsForCase(Long caseId, Long userId) {
-        return sessionRepository.findByCaseIdAndUserIdAndSessionType(caseId, userId);
+        List<AiConversationSession> sessions = sessionRepository.findByCaseIdAndUserIdAndSessionType(caseId, userId);
+        log.info("📚 Loading conversations for caseId: {}, userId: {} - found {} sessions", caseId, userId, sessions.size());
+        for (AiConversationSession session : sessions) {
+            log.info("   📝 Session {}: sessionName='{}', userId={}, createdAt={}",
+                    session.getId(), session.getSessionName(), session.getUserId(), session.getCreatedAt());
+        }
+        return sessions;
     }
 
     /**
@@ -171,13 +185,28 @@ public class LegalResearchConversationService {
      */
     @Transactional
     public boolean updateSessionTitle(Long sessionId, Long userId, String title) {
+        log.info("📝 Attempting to update session title - sessionId: {}, userId: {}, newTitle: {}", sessionId, userId, title);
+
         Optional<AiConversationSession> session = sessionRepository.findByIdAndUserId(sessionId, userId);
         if (session.isPresent()) {
             AiConversationSession s = session.get();
+            String oldTitle = s.getSessionName();
             s.setSessionName(title);
             sessionRepository.save(s);
+            log.info("✅ Successfully updated session title from '{}' to '{}' for sessionId: {}", oldTitle, title, sessionId);
             return true;
         }
+
+        // Log why it failed - check if session exists at all
+        Optional<AiConversationSession> sessionWithoutUserCheck = sessionRepository.findById(sessionId);
+        if (sessionWithoutUserCheck.isPresent()) {
+            AiConversationSession existingSession = sessionWithoutUserCheck.get();
+            log.error("❌ Session {} exists but userId mismatch! Expected userId: {}, Actual userId in DB: {}",
+                    sessionId, userId, existingSession.getUserId());
+        } else {
+            log.error("❌ Session {} does not exist in database", sessionId);
+        }
+
         return false;
     }
 

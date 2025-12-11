@@ -421,42 +421,80 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     // Update title if needed - called after first user message is sent
     if (this.activeConversationId && this.caseId) {
       const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
+      const currentUserId = this.userId;
+
       console.log('🔍 saveConversations check:', {
         activeConvId: this.activeConversationId,
         activeConvTitle: activeConv?.title,
-        chatMessagesCount: this.chatMessages.length
+        chatMessagesCount: this.chatMessages.length,
+        userId: currentUserId,
+        sessionId: activeConv?.sessionId
       });
+
+      // CRITICAL: Ensure we have a valid userId before attempting to update
+      if (!currentUserId || currentUserId === 0) {
+        console.error('❌ Cannot update title - no valid userId available');
+        return;
+      }
 
       // Check for both possible default titles: 'New Conversation' (when created) and 'Untitled Conversation' (when loaded from backend with null sessionName)
       if (activeConv && (!activeConv.title || activeConv.title === 'New Conversation' || activeConv.title === 'Untitled Conversation')) {
         const firstUserMsg = this.chatMessages.find(m => m.role === 'user');
         if (firstUserMsg) {
           const newTitle = this.generateConversationTitle(firstUserMsg.content);
-          console.log('📝 Updating conversation title to:', newTitle);
+          console.log('📝 Updating conversation title to:', newTitle, 'for sessionId:', activeConv.sessionId, 'userId:', currentUserId);
 
-          this.legalResearchService.updateConversationTitle(activeConv.sessionId, this.userId, newTitle)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                // Update local conversation object
-                activeConv.title = newTitle;
+          // Retry mechanism for title update
+          const retryTitleUpdate = (attempt: number) => {
+            console.log(`📝 Title update attempt ${attempt} - sessionId: ${activeConv.sessionId}, userId: ${currentUserId}, newTitle: ${newTitle}`);
 
-                // Also update the conversations array to ensure dropdown reflects the change
-                const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
-                if (convIndex !== -1) {
-                  this.conversations[convIndex].title = newTitle;
+            this.legalResearchService.updateConversationTitle(activeConv.sessionId, currentUserId, newTitle)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (success) => {
+                  if (success) {
+                    console.log('✅ Title update succeeded on attempt', attempt);
+
+                    // Update local conversation object
+                    activeConv.title = newTitle;
+
+                    // Also update the conversations array to ensure dropdown reflects the change
+                    const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
+                    if (convIndex !== -1) {
+                      this.conversations[convIndex].title = newTitle;
+                    }
+
+                    console.log('✅ Updated conversation title:', newTitle);
+                    this.cdr.detectChanges(); // Force UI refresh
+                  } else {
+                    console.warn('⚠️ Title update returned false on attempt', attempt);
+                    if (attempt < 3) {
+                      // Retry after a short delay
+                      setTimeout(() => retryTitleUpdate(attempt + 1), 1000);
+                    } else {
+                      console.error('❌ Title update failed after 3 attempts');
+                      // Still update local state
+                      activeConv.title = newTitle;
+                      this.cdr.detectChanges();
+                    }
+                  }
+                },
+                error: (error) => {
+                  console.error(`❌ Error on attempt ${attempt}:`, error);
+                  if (attempt < 3) {
+                    // Retry after a short delay
+                    setTimeout(() => retryTitleUpdate(attempt + 1), 1000);
+                  } else {
+                    console.error('❌ Title update failed after 3 attempts. Details - sessionId:', activeConv.sessionId, 'userId:', currentUserId);
+                    // Update local state so user sees correct title
+                    activeConv.title = newTitle;
+                    this.cdr.detectChanges();
+                  }
                 }
+              });
+          };
 
-                console.log('✅ Updated conversation title:', newTitle);
-                this.cdr.detectChanges(); // Force UI refresh
-              },
-              error: (error) => {
-                console.error('❌ Error updating conversation title:', error);
-                // Even on error, update local state so user sees correct title
-                activeConv.title = newTitle;
-                this.cdr.detectChanges();
-              }
-            });
+          retryTitleUpdate(1);
         }
       }
     }

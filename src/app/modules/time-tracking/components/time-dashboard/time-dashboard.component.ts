@@ -1323,65 +1323,126 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const entry = this.recentEntries.find(e => e.id === entryId);
     if (!entry) return;
 
-    const hours = this.getEntryDuration(entry);
+    // Detect dark mode
+    const isDarkMode = document.documentElement.getAttribute('data-layout-mode') === 'dark' ||
+                       document.documentElement.getAttribute('data-bs-theme') === 'dark' ||
+                       document.body.classList.contains('dark-mode') ||
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Theme colors
+    const t = {
+      bg: isDarkMode ? '#1a1d21' : '#ffffff',
+      cardBg: isDarkMode ? '#212529' : '#f8f9fa',
+      border: isDarkMode ? '#32383e' : '#e9ebec',
+      text: isDarkMode ? '#ced4da' : '#333333',
+      textMuted: isDarkMode ? '#878a99' : '#6c757d',
+      textLight: isDarkMode ? '#adb5bd' : '#495057',
+    };
+
+    const hours = parseFloat(this.getEntryDuration(entry));
     const amount = this.getEntryBillingAmount(entry);
-    const rate = this.formatRate(entry);
+    const rate = this.parseRate(entry);
+    const formattedDate = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Format duration
+    const hoursInt = Math.floor(hours);
+    const mins = Math.round((hours - hoursInt) * 60);
+    const duration = hoursInt > 0 ? `${hoursInt}h ${mins}m` : `${mins}m`;
+
+    // Status config
+    const statusMap: { [key: string]: { color: string; bg: string; bgDark: string; label: string } } = {
+      'DRAFT': { color: '#f1b44c', bg: '#fff8ec', bgDark: '#3d3526', label: 'Draft' },
+      'SUBMITTED': { color: '#299cdb', bg: '#e8f4fc', bgDark: '#1e3a4c', label: 'Submitted' },
+      'APPROVED': { color: '#0ab39c', bg: '#e6f7f5', bgDark: '#1a3d36', label: 'Approved' },
+      'BILLING_APPROVED': { color: '#0ab39c', bg: '#e6f7f5', bgDark: '#1a3d36', label: 'Approved' },
+      'BILLED': { color: '#878bfa', bg: '#eef0f7', bgDark: '#2d2f45', label: 'Billed' },
+      'INVOICED': { color: '#878bfa', bg: '#eef0f7', bgDark: '#2d2f45', label: 'Invoiced' },
+      'REJECTED': { color: '#f06548', bg: '#fde8e4', bgDark: '#3d2520', label: 'Rejected' }
+    };
+    const s = statusMap[entry.status] || { color: '#6c757d', bg: '#f5f5f5', bgDark: '#2a2f34', label: entry.status };
+    const isEditable = entry.status === 'DRAFT' || entry.status === 'REJECTED';
+
+    // Get case display - use caseName, fallback to caseNumber or legalCaseId
+    const caseDisplay = entry.caseName || (entry.caseNumber ? `Case ${entry.caseNumber}` : (entry.legalCaseId ? `Case #${entry.legalCaseId}` : 'No case assigned'));
 
     Swal.fire({
-      title: 'Time Entry Details',
+      title: '',
       html: `
-        <div class="text-start">
-          <div class="row g-3">
-            <div class="col-6">
-              <strong class="text-primary">Entry ID:</strong><br>
-              <span class="badge bg-secondary">#${entry.id}</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Status:</strong><br>
-              <span class="badge ${this.getStatusClass(entry.status).replace('bg-', 'bg-')}">${this.getStatusText(entry.status)}</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Date:</strong><br>
-              <span>${new Date(entry.date).toLocaleDateString()}</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Duration:</strong><br>
-              <span class="fw-bold">${hours} hours</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Rate:</strong><br>
-              <span>${rate}/hr</span>
-            </div>
-            <div class="col-6">
-              <strong class="text-primary">Total Amount:</strong><br>
-              <span class="fw-bold text-success">${this.formatCurrency(amount)}</span>
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Case:</strong><br>
-              <span>${entry.caseName || 'No case assigned'}</span>
-              ${entry.caseNumber ? `<br><small class="text-muted">Case #: ${entry.caseNumber}</small>` : ''}
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Description:</strong><br>
-              <span>${entry.description}</span>
-            </div>
-            <div class="col-12">
-              <strong class="text-primary">Billing Status:</strong><br>
-              <span class="badge ${entry.billable ? 'bg-success' : 'bg-secondary'}">
-                ${entry.billable ? 'Billable' : 'Non-billable'}
-              </span>
+        <div style="text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="font-size: 24px; font-weight: 700; color: ${t.text};">#${entry.id}</div>
+            <div style="background: ${isDarkMode ? s.bgDark : s.bg}; color: ${s.color}; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase;">${s.label}</div>
+          </div>
+
+          <!-- Main Info -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Date</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">${formattedDate}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Duration</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">${duration}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Rate</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${t.text};">$${rate}/hr</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 4px;">Amount</div>
+                <div style="font-size: 15px; font-weight: 600; color: ${entry.billable ? '#0ab39c' : t.textMuted};">${this.formatCurrency(amount)}</div>
+              </div>
             </div>
           </div>
+
+          <!-- Case -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 36px; height: 36px; background: #405189; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="ri-briefcase-4-fill" style="color: white; font-size: 16px;"></i>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 2px;">Case</div>
+                <div style="font-size: 14px; font-weight: 600; color: ${t.text};">${caseDisplay}</div>
+                ${entry.caseNumber && entry.caseName ? `<div style="font-size: 12px; color: ${t.textMuted};">${entry.caseNumber}</div>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 8px;">Description</div>
+            <div style="font-size: 14px; color: ${t.textLight}; line-height: 1.6;">${entry.description || '<span style="font-style: italic; opacity: 0.6;">No description</span>'}</div>
+          </div>
+
+          <!-- User -->
+          ${entry.userName ? `
+            <div style="display: flex; align-items: center; gap: 8px; color: ${t.textMuted}; font-size: 13px;">
+              <i class="ri-user-line"></i>
+              <span>${entry.userName}</span>
+            </div>
+          ` : ''}
         </div>
       `,
-      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: entry.status === 'DRAFT' || entry.status === 'REJECTED' ? 'Edit Entry' : 'Close',
+      showConfirmButton: isEditable,
+      confirmButtonText: '<i class="ri-edit-line me-1"></i> Edit',
       cancelButtonText: 'Close',
-      confirmButtonColor: '#0ab39c',
-      width: '600px'
+      confirmButtonColor: '#405189',
+      cancelButtonColor: isDarkMode ? '#3a4046' : '#878a99',
+      width: '420px',
+      padding: '24px',
+      background: t.bg,
+      color: t.text,
+      customClass: {
+        popup: 'time-entry-detail-modal',
+        confirmButton: 'btn btn-primary',
+        cancelButton: 'btn btn-light'
+      }
     }).then((result) => {
-      if (result.isConfirmed && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) {
+      if (result.isConfirmed && isEditable) {
         this.openEditModal(entry);
       }
     });

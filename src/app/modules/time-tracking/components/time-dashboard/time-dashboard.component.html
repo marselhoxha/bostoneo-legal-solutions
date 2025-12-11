@@ -648,26 +648,14 @@
                   {{ recentEntries.length }} {{ showAllEntries ? 'total' : 'recent' }}
                 </span>
               </h5>
-              <div class="d-flex gap-1">
-                <button class="btn btn-soft-secondary btn-sm" (click)="refreshRecentEntries()" title="Refresh entries">
-                  <i class="ri-refresh-line"></i>
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm" (click)="addManualEntry()">
+                  <i class="ri-add-line me-1"></i>New Entry
                 </button>
-                <button class="btn btn-soft-primary btn-sm" (click)="refreshDashboardStats()" title="Refresh dashboard stats">
-                  <i class="ri-dashboard-line"></i>
-                </button>
-                <button class="btn btn-soft-info btn-sm" (click)="loadMoreEntries()" title="Load more entries" *ngIf="!showAllEntries">
-                  <i class="ri-add-circle-line me-1"></i>More
-                </button>
-                <button class="btn btn-soft-primary btn-sm" (click)="addManualEntry()">
-                  <i class="ri-add-line me-1"></i>Add
-                </button>
-                <button class="btn btn-info btn-sm" (click)="viewTimesheet()">
+                <button class="btn btn-soft-info btn-sm" (click)="viewTimesheet()">
                   <i class="ri-eye-line me-1" *ngIf="!showAllEntries"></i>
                   <i class="ri-eye-off-line me-1" *ngIf="showAllEntries"></i>
                   {{ showAllEntries ? 'Show Less' : 'View All' }}
-                </button>
-                <button class="btn btn-success btn-sm" (click)="navigateToInvoiceGeneration()">
-                  <i class="ri-file-list-3-line me-1"></i>Generate Invoice
                 </button>
               </div>
             </div>
