@@ -1,261 +1,299 @@
-<!-- Page Header -->
-<div class="row" style="margin-top: 120px;">
-  <div class="col-12">
-    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-      <h4 class="mb-sm-0">
-        <i class="ri-customer-service-2-line me-2 text-primary"></i>
-        CRM Dashboard
-      </h4>
-      
-      <div class="page-title-right">
-        <ol class="breadcrumb m-0">
-          <li class="breadcrumb-item"><a href="/">Home</a></li>
-          <li class="breadcrumb-item active">CRM Dashboard</li>
-        </ol>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Loading State -->
-<div class="row" *ngIf="isLoading">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading dashboard...</span>
-        </div>
-        <p class="mt-3 text-muted">Loading CRM dashboard...</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Dashboard Content -->
-<div class="row" *ngIf="!isLoading && !error">
-  
-  <!-- Statistics Cards -->
-  <div class="col-xl-3 col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0">
-            <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 p-2">
-              <div class="avatar-title text-warning rounded-circle bg-transparent">
-                <i class="ri-file-list-3-line fs-2"></i>
-              </div>
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Client Management</div>
+            <h4 class="mb-0">CRM Dashboard</h4>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <!-- Global Search -->
+            <div class="search-box d-none d-md-block">
+              <input type="text" class="form-control search-input"
+                     [(ngModel)]="searchQuery"
+                     (keyup.enter)="onSearch()"
+                     placeholder="Search submissions...">
+              <i class="ri-search-line search-icon"></i>
             </div>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <h5 class="mb-1">{{ dashboardData.submissionCounts?.PENDING || 0 }}</h5>
-            <p class="text-muted mb-0 fs-13">Pending Submissions</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-xl-3 col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0">
-            <div class="avatar-sm rounded-circle bg-success bg-opacity-10 p-2">
-              <div class="avatar-title text-success rounded-circle bg-transparent">
-                <i class="ri-user-add-line fs-2"></i>
-              </div>
-            </div>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <h5 class="mb-1">{{ dashboardData.submissionCounts?.CONVERTED_TO_LEAD || 0 }}</h5>
-            <p class="text-muted mb-0 fs-13">Converted to Leads</p>
+            <!-- Quick Actions -->
+            <button class="btn btn-primary" (click)="navigateToSubmissions()">
+              <i class="ri-file-list-3-line me-1"></i> View Submissions
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-xl-3 col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0">
-            <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 p-2">
-              <div class="avatar-title text-primary rounded-circle bg-transparent">
-                <i class="ri-percentage-line fs-2"></i>
-              </div>
-            </div>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <h5 class="mb-1">{{ dashboardData.conversionStats?.conversionRate || 0 }}%</h5>
-            <p class="text-muted mb-0 fs-13">Conversion Rate</p>
-          </div>
+  <!-- Dashboard Stats Cards - Minimal Design -->
+  <div class="stats-row" *ngIf="!isLoading">
+    <!-- Pending -->
+    <div class="stat-item cursor-pointer"
+         [class.active]="selectedFilter === 'PENDING'"
+         (click)="filterByStatus('PENDING')">
+      <div class="stat-header">
+        <span class="stat-label">PENDING REVIEW</span>
+        <span class="stat-indicator stat-indicator-warning">
+          <i class="ri-time-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-time-line stat-icon text-warning"></i>
+        <span class="stat-value">{{ dashboardData.submissionCounts?.['PENDING'] || 0 }}</span>
+      </div>
+    </div>
+
+    <!-- Reviewed -->
+    <div class="stat-item cursor-pointer"
+         [class.active]="selectedFilter === 'REVIEWED'"
+         (click)="filterByStatus('REVIEWED')">
+      <div class="stat-header">
+        <span class="stat-label">REVIEWED</span>
+        <span class="stat-indicator stat-indicator-info">
+          <i class="ri-eye-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-eye-line stat-icon text-info"></i>
+        <span class="stat-value">{{ dashboardData.submissionCounts?.['REVIEWED'] || 0 }}</span>
+      </div>
+    </div>
+
+    <!-- Converted -->
+    <div class="stat-item cursor-pointer"
+         [class.active]="selectedFilter === 'CONVERTED_TO_LEAD'"
+         (click)="filterByStatus('CONVERTED_TO_LEAD')">
+      <div class="stat-header">
+        <span class="stat-label">CONVERTED</span>
+        <span class="stat-indicator stat-indicator-success">
+          <i class="ri-check-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-user-follow-line stat-icon text-success"></i>
+        <span class="stat-value">{{ dashboardData.submissionCounts?.['CONVERTED_TO_LEAD'] || 0 }}</span>
+      </div>
+    </div>
+
+    <!-- Rejected -->
+    <div class="stat-item cursor-pointer"
+         [class.active]="selectedFilter === 'REJECTED'"
+         (click)="filterByStatus('REJECTED')">
+      <div class="stat-header">
+        <span class="stat-label">REJECTED</span>
+        <span class="stat-indicator stat-indicator-danger">
+          <i class="ri-close-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-close-circle-line stat-icon text-danger"></i>
+        <span class="stat-value">{{ dashboardData.submissionCounts?.['REJECTED'] || 0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Stats -->
+  <div class="stats-row" *ngIf="isLoading">
+    <div class="stat-item">
+      <div class="d-flex justify-content-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-xl-3 col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0">
-            <div class="avatar-sm rounded-circle bg-info bg-opacity-10 p-2">
-              <div class="avatar-title text-info rounded-circle bg-transparent">
-                <i class="ri-file-chart-line fs-2"></i>
-              </div>
-            </div>
-          </div>
-          <div class="flex-grow-1 ms-3">
-            <h5 class="mb-1">{{ dashboardData.conversionStats?.totalSubmissions || 0 }}</h5>
-            <p class="text-muted mb-0 fs-13">Total Submissions</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+  <!-- Main Content Card with Tabs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom">
+          <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav nav-pills nav-custom-pills gap-2">
+            <li [ngbNavItem]="'overview'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-dashboard-line fs-16"></i>
+                <span>Overview</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Overview Tab Content -->
+                <div class="py-4">
+                  <div class="row g-4">
+                    <!-- Conversion Stats -->
+                    <div class="col-lg-4">
+                      <div class="conversion-card">
+                        <div class="conversion-header">
+                          <h6 class="mb-0 fw-semibold">Conversion Rate</h6>
+                          <span class="badge bg-success-subtle text-success">
+                            <i class="ri-arrow-up-line me-1"></i>+5%
+                          </span>
+                        </div>
+                        <div class="conversion-body">
+                          <div class="conversion-circle">
+                            <span class="conversion-value">{{ dashboardData.conversionStats?.conversionRate || 0 }}%</span>
+                          </div>
+                          <div class="conversion-info">
+                            <p class="mb-1 text-muted fs-13">
+                              {{ dashboardData.conversionStats?.convertedToLeads || 0 }} of
+                              {{ dashboardData.conversionStats?.totalSubmissions || 0 }} converted
+                            </p>
+                            <div class="progress" style="height: 6px;">
+                              <div class="progress-bar bg-success"
+                                   [style.width.%]="dashboardData.conversionStats?.conversionRate || 0"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-<!-- Status Breakdown -->
-<div class="row" *ngIf="!isLoading && !error">
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed">
-        <h5 class="card-title mb-0">
-          <i class="ri-pie-chart-2-line me-2 text-primary"></i>
-          Status Breakdown
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-6" *ngFor="let status of objectKeys(dashboardData.submissionCounts || {})">
-            <div class="d-flex align-items-center p-3 border rounded">
-              <span class="badge me-3" [ngClass]="getStatusBadgeClass(status)">
-                {{ dashboardData.submissionCounts[status] }}
-              </span>
-              <div>
-                <h6 class="mb-0">{{ status.replace('_', ' ') }}</h6>
-                <small class="text-muted">Submissions</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+                    <!-- Quick Actions -->
+                    <div class="col-lg-4">
+                      <div class="quick-actions-card">
+                        <h6 class="mb-3 fw-semibold">Quick Actions</h6>
+                        <div class="d-flex flex-column gap-2">
+                          <button class="btn btn-soft-warning d-flex align-items-center justify-content-between"
+                                  (click)="navigateToSubmissions('PENDING')"
+                                  *ngIf="dashboardData.submissionCounts?.['PENDING'] > 0">
+                            <span><i class="ri-time-line me-2"></i>Review Pending</span>
+                            <span class="badge bg-warning">{{ dashboardData.submissionCounts?.['PENDING'] }}</span>
+                          </button>
+                          <button class="btn btn-soft-success d-flex align-items-center justify-content-between"
+                                  (click)="navigateToLeads()">
+                            <span><i class="ri-user-follow-line me-2"></i>Manage Leads</span>
+                            <i class="ri-arrow-right-line"></i>
+                          </button>
+                          <button class="btn btn-soft-info d-flex align-items-center justify-content-between"
+                                  (click)="navigateToConflictChecks()">
+                            <span><i class="ri-shield-check-line me-2"></i>Conflict Checks</span>
+                            <i class="ri-arrow-right-line"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed">
-        <h5 class="card-title mb-0">
-          <i class="ri-scales-3-line me-2 text-primary"></i>
-          Practice Areas
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-12" *ngFor="let area of objectKeys(dashboardData.practiceAreaCounts || {})">
-            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
-              <span class="fw-medium">{{ area }}</span>
-              <span class="badge bg-primary-subtle text-primary">
-                {{ dashboardData.practiceAreaCounts[area] }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="row" *ngIf="!isLoading && !error">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed">
-        <h5 class="card-title mb-0">
-          <i class="ri-flashlight-line me-2 text-primary"></i>
-          Quick Actions
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-lg-3 col-md-6">
-            <div class="card border h-100 cursor-pointer" (click)="navigateToSubmissions()">
-              <div class="card-body text-center p-4">
-                <div class="avatar-md mx-auto mb-3">
-                  <div class="avatar-title rounded-circle bg-warning-subtle text-warning">
-                    <i class="ri-file-list-3-line fs-2"></i>
+                    <!-- Priority Summary -->
+                    <div class="col-lg-4">
+                      <div class="priority-card">
+                        <h6 class="mb-3 fw-semibold">Priority Distribution</h6>
+                        <div class="d-flex flex-column gap-2">
+                          <div *ngFor="let priority of getPriorityKeys()"
+                               class="priority-item"
+                               [ngClass]="'priority-' + priority">
+                            <div class="d-flex align-items-center justify-content-between">
+                              <span class="text-capitalize">{{ priority }}</span>
+                              <span class="fw-bold">{{ dashboardData.priorityRanges[priority] || 0 }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <h6 class="mb-2">Review Submissions</h6>
-                <p class="text-muted mb-0 fs-13">Review pending intake submissions</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6">
-            <div class="card border h-100 cursor-pointer" (click)="navigateToLeads()">
-              <div class="card-body text-center p-4">
-                <div class="avatar-md mx-auto mb-3">
-                  <div class="avatar-title rounded-circle bg-success-subtle text-success">
-                    <i class="ri-user-add-line fs-2"></i>
-                  </div>
-                </div>
-                <h6 class="mb-2">Manage Leads</h6>
-                <p class="text-muted mb-0 fs-13">View and manage lead pipeline</p>
-              </div>
-            </div>
-          </div>
+              </ng-template>
+            </li>
 
-          <div class="col-lg-3 col-md-6">
-            <div class="card border h-100 cursor-pointer" (click)="navigateToConflictChecks()">
-              <div class="card-body text-center p-4">
-                <div class="avatar-md mx-auto mb-3">
-                  <div class="avatar-title rounded-circle bg-info-subtle text-info">
-                    <i class="ri-shield-check-line fs-2"></i>
+            <li [ngbNavItem]="'practice-areas'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-briefcase-line fs-16"></i>
+                <span>Practice Areas</span>
+                <span class="badge bg-primary-subtle text-primary ms-1">{{ getPracticeAreaKeys().length }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Practice Areas Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Submissions by Practice Area</h5>
+                      <p class="text-muted mb-0 fs-13">Distribution of submissions across different practice areas</p>
+                    </div>
                   </div>
-                </div>
-                <h6 class="mb-2">Conflict Checks</h6>
-                <p class="text-muted mb-0 fs-13">Review conflict check results</p>
-              </div>
-            </div>
-          </div>
 
-          <div class="col-lg-3 col-md-6">
-            <div class="card border h-100">
-              <div class="card-body text-center p-4">
-                <div class="avatar-md mx-auto mb-3">
-                  <div class="avatar-title rounded-circle bg-primary-subtle text-primary">
-                    <i class="ri-line-chart-line fs-2"></i>
+                  <div class="row g-3" *ngIf="getPracticeAreaKeys().length > 0">
+                    <div class="col-lg-6" *ngFor="let area of getPracticeAreaKeys(); let i = index">
+                      <div class="practice-area-item">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <div class="d-flex align-items-center gap-2">
+                            <div class="practice-area-icon" [ngClass]="'bg-' + getPracticeAreaColor(i) + '-subtle'">
+                              <i class="ri-briefcase-line" [ngClass]="'text-' + getPracticeAreaColor(i)"></i>
+                            </div>
+                            <span class="fw-medium">{{ area }}</span>
+                          </div>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge" [ngClass]="'bg-' + getPracticeAreaColor(i) + '-subtle text-' + getPracticeAreaColor(i)">
+                              {{ dashboardData.practiceAreaCounts[area] }}
+                            </span>
+                            <span class="text-muted fs-12">{{ getPracticeAreaPercentage(area) }}%</span>
+                          </div>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                          <div class="progress-bar"
+                               [ngClass]="'bg-' + getPracticeAreaColor(i)"
+                               [style.width.%]="getPracticeAreaPercentage(area)"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="text-center py-5" *ngIf="getPracticeAreaKeys().length === 0">
+                    <div class="empty-state-icon mx-auto mb-3">
+                      <i class="ri-briefcase-line"></i>
+                    </div>
+                    <h6 class="text-muted">No practice area data available</h6>
                   </div>
                 </div>
-                <h6 class="mb-2">Analytics</h6>
-                <p class="text-muted mb-0 fs-13">View detailed reports</p>
-              </div>
-            </div>
-          </div>
+              </ng-template>
+            </li>
+
+            <li [ngbNavItem]="'submissions'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-file-list-3-line fs-16"></i>
+                <span>Status Breakdown</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Status Breakdown Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Submission Status Breakdown</h5>
+                      <p class="text-muted mb-0 fs-13">Click on a status to filter and view submissions</p>
+                    </div>
+                    <div>
+                      <span class="badge bg-primary-subtle text-primary fs-13 px-3 py-2">
+                        <i class="ri-file-list-3-line me-1"></i>Total: {{ getTotalSubmissions() }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-md-6 col-lg-4" *ngFor="let status of getStatusKeys()">
+                      <div class="status-card cursor-pointer"
+                           [ngClass]="'status-' + getStatusConfig(status).color"
+                           (click)="navigateToSubmissions(status)">
+                        <div class="d-flex align-items-center gap-3">
+                          <div class="status-icon">
+                            <i [class]="getStatusConfig(status).icon"></i>
+                          </div>
+                          <div class="flex-grow-1">
+                            <h5 class="mb-0 fw-bold">{{ dashboardData.submissionCounts[status] || 0 }}</h5>
+                            <span class="text-muted fs-13">{{ getStatusConfig(status).label }}</span>
+                          </div>
+                          <div class="status-percentage">
+                            {{ getStatusPercentage(status) }}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+          </ul>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Error State -->
-<div class="row" *ngIf="error && !isLoading">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="avatar-lg mx-auto mb-4">
-          <div class="avatar-title rounded-circle bg-soft-danger text-danger">
-            <i class="ri-error-warning-line display-6"></i>
-          </div>
+        <div class="card-body pt-0">
+          <div [ngbNavOutlet]="nav"></div>
         </div>
-        <h5 class="mb-3 text-danger">Error Loading Dashboard</h5>
-        <p class="text-muted mb-4">{{ error }}</p>
-        <button class="btn btn-primary" (click)="loadDashboardData()">
-          <i class="ri-refresh-line me-1"></i>Try Again
-        </button>
       </div>
     </div>
   </div>

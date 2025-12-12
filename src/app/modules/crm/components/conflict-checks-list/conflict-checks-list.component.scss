@@ -1,16 +1,9 @@
 /* Conflict Checks List Component Styles */
 
 .table {
-  th {
-    font-weight: 600;
-    color: #495057;
-    background-color: #f8f9fb;
-    border-color: #e9ecef;
-  }
   
   td {
     vertical-align: middle;
-    border-color: #e9ecef;
   }
 }
 
@@ -112,7 +105,6 @@
 }
 
 .card {
-  border: 1px solid #e9ecef;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   
   &:hover {

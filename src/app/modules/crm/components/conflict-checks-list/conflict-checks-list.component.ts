@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { CrmService } from '../../services/crm.service';
 
 export interface ConflictCheckListDTO {
@@ -32,7 +34,9 @@ export interface ConflictCheckListDTO {
   templateUrl: './conflict-checks-list.component.html',
   styleUrls: ['./conflict-checks-list.component.scss']
 })
-export class ConflictChecksListComponent implements OnInit {
+export class ConflictChecksListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   conflictChecks: ConflictCheckListDTO[] = [];
   filteredChecks: ConflictCheckListDTO[] = [];
   isLoading = true;
@@ -88,19 +92,59 @@ export class ConflictChecksListComponent implements OnInit {
   selectedChecks = new Set<number>();
   selectAll = false;
 
+  // Modal states
+  showNewCheckModal = false;
+  showDetailsModal = false;
+  showResolveModal = false;
+  isSubmitting = false;
+
+  // New check form
+  newCheck = {
+    entityType: 'LEAD',
+    entityId: '',
+    entityName: '',
+    checkType: 'CLIENT_ONLY',
+    searchTerms: ''
+  };
+
+  // Currently viewing/editing check
+  viewingCheck: ConflictCheckListDTO | null = null;
+
+  // Resolution form
+  resolution = {
+    type: 'APPROVED',
+    notes: ''
+  };
+
+  // Resolution options
+  resolutionOptions = [
+    { value: 'APPROVED', label: 'Approved - No Conflict' },
+    { value: 'REJECTED', label: 'Rejected - Conflict Exists' },
+    { value: 'WAIVER_APPROVED', label: 'Waiver Approved' },
+    { value: 'WAIVER_DECLINED', label: 'Waiver Declined' },
+    { value: 'REFERRED', label: 'Referred to Ethics Committee' }
+  ];
+
   constructor(
     private crmService: CrmService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadConflictChecks();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadConflictChecks(): void {
     this.isLoading = true;
     this.error = '';
-    
+    this.cdr.detectChanges();
+
     const params = {
       page: this.currentPage,
       size: this.pageSize,
@@ -109,7 +153,7 @@ export class ConflictChecksListComponent implements OnInit {
       checkType: this.selectedCheckType,
       search: this.searchTerm
     };
-    
+
     // Mock data for development - replace with actual service call
     setTimeout(() => {
       this.conflictChecks = this.generateMockConflictChecks();
@@ -118,7 +162,8 @@ export class ConflictChecksListComponent implements OnInit {
       this.totalElements = this.filteredChecks.length;
       this.totalPages = Math.ceil(this.totalElements / this.pageSize);
       this.isLoading = false;
-    }, 1000);
+      this.cdr.detectChanges();
+    }, 500);
     
     /*
     // Actual service call - uncomment when backend is ready
@@ -291,14 +336,63 @@ export class ConflictChecksListComponent implements OnInit {
     return 'text-success';
   }
 
-  onCheckAction(checkId: number, action: string): void {
-    console.log(`Action ${action} on conflict check ${checkId}`);
-    // Implement action logic here
+  onCheckAction(event: Event, checkId: number, action: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const check = this.conflictChecks.find(c => c.id === checkId);
+    if (!check) return;
+
+    switch (action) {
+      case 'review':
+        this.reviewCheck(check);
+        break;
+      case 'resolve':
+        this.openResolveModal(check);
+        break;
+      case 'rerun':
+        this.rerunCheck(check);
+        break;
+    }
   }
 
-  onBulkAction(action: string): void {
-    console.log(`Bulk action ${action} on checks:`, Array.from(this.selectedChecks));
-    // Implement bulk action logic here
+  onBulkAction(event: Event, action: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const selectedIds = Array.from(this.selectedChecks);
+    if (selectedIds.length === 0) return;
+
+    switch (action) {
+      case 'approve':
+        selectedIds.forEach(id => {
+          const check = this.conflictChecks.find(c => c.id === id);
+          if (check) {
+            check.status = 'APPROVED';
+            check.resolution = 'APPROVED';
+          }
+        });
+        break;
+      case 'reject':
+        selectedIds.forEach(id => {
+          const check = this.conflictChecks.find(c => c.id === id);
+          if (check) {
+            check.status = 'REJECTED';
+            check.resolution = 'REJECTED';
+          }
+        });
+        break;
+      case 'rerun':
+        selectedIds.forEach(id => {
+          const check = this.conflictChecks.find(c => c.id === id);
+          if (check) this.rerunCheck(check);
+        });
+        break;
+    }
+    this.selectedChecks.clear();
+    this.selectAll = false;
+    this.applyFilters();
+    this.cdr.detectChanges();
   }
 
   toggleSelection(checkId: number): void {
@@ -341,22 +435,161 @@ export class ConflictChecksListComponent implements OnInit {
     return this.conflictChecks.filter(c => c.status === 'CLEAR' || c.status === 'RESOLVED').length;
   }
 
-  viewCheckDetails(checkId: number): void {
-    // Navigate to check details or open modal
-    console.log('View details for conflict check:', checkId);
+  viewCheckDetails(event: Event, checkId: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const check = this.conflictChecks.find(c => c.id === checkId);
+    if (check) {
+      this.viewingCheck = check;
+      this.showDetailsModal = true;
+      this.cdr.detectChanges();
+    }
   }
 
+  closeDetailsModal(): void {
+    this.showDetailsModal = false;
+    this.viewingCheck = null;
+    this.cdr.detectChanges();
+  }
+
+  // New Check Modal
   runNewConflictCheck(): void {
-    console.log('Run new conflict check');
-    // Navigate to new conflict check form or open modal
+    this.resetNewCheckForm();
+    this.showNewCheckModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeNewCheckModal(): void {
+    this.showNewCheckModal = false;
+    this.resetNewCheckForm();
+    this.cdr.detectChanges();
+  }
+
+  resetNewCheckForm(): void {
+    this.newCheck = {
+      entityType: 'LEAD',
+      entityId: '',
+      entityName: '',
+      checkType: 'CLIENT_ONLY',
+      searchTerms: ''
+    };
+  }
+
+  submitNewCheck(): void {
+    if (!this.newCheck.entityName || !this.newCheck.searchTerms) return;
+
+    this.isSubmitting = true;
+    this.cdr.detectChanges();
+
+    // Simulate API call
+    setTimeout(() => {
+      const newCheckItem: ConflictCheckListDTO = {
+        id: Math.max(...this.conflictChecks.map(c => c.id)) + 1,
+        entityType: this.newCheck.entityType,
+        entityId: parseInt(this.newCheck.entityId) || Date.now(),
+        entityName: this.newCheck.entityName,
+        checkType: this.newCheck.checkType,
+        status: 'PENDING',
+        confidenceScore: 0,
+        autoChecked: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        searchTerms: this.newCheck.searchTerms.split(',').map(t => t.trim()),
+        totalMatches: 0,
+        highRiskMatches: 0
+      };
+
+      this.conflictChecks.unshift(newCheckItem);
+      this.applyFilters();
+      this.isSubmitting = false;
+      this.closeNewCheckModal();
+
+      // Simulate running the check
+      setTimeout(() => this.rerunCheck(newCheckItem), 500);
+    }, 500);
+  }
+
+  // Resolve Modal
+  openResolveModal(check: ConflictCheckListDTO): void {
+    this.viewingCheck = check;
+    this.resolution = { type: 'APPROVED', notes: '' };
+    this.showResolveModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeResolveModal(): void {
+    this.showResolveModal = false;
+    this.viewingCheck = null;
+    this.resolution = { type: 'APPROVED', notes: '' };
+    this.cdr.detectChanges();
+  }
+
+  submitResolution(): void {
+    if (!this.viewingCheck) return;
+
+    this.isSubmitting = true;
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      if (this.viewingCheck) {
+        this.viewingCheck.status = 'RESOLVED';
+        this.viewingCheck.resolution = this.resolution.type;
+        this.viewingCheck.resolutionNotes = this.resolution.notes;
+        this.viewingCheck.resolvedAt = new Date().toISOString();
+        this.viewingCheck.resolvedByName = 'Current User';
+      }
+      this.isSubmitting = false;
+      this.closeResolveModal();
+      this.applyFilters();
+    }, 500);
+  }
+
+  // Review action
+  reviewCheck(check: ConflictCheckListDTO): void {
+    check.status = 'CLEAR';
+    check.confidenceScore = 100;
+    check.checkedAt = new Date().toISOString();
+    check.checkedByName = 'Current User';
+    this.applyFilters();
+    this.cdr.detectChanges();
+  }
+
+  // Re-run check
+  rerunCheck(check: ConflictCheckListDTO): void {
+    check.status = 'PENDING';
+    check.confidenceScore = 0;
+    this.cdr.detectChanges();
+
+    // Simulate check running
+    setTimeout(() => {
+      const hasConflict = Math.random() > 0.6;
+      check.status = hasConflict ? 'POTENTIAL_CONFLICT' : 'CLEAR';
+      check.confidenceScore = Math.floor(Math.random() * 40) + 60;
+      check.totalMatches = hasConflict ? Math.floor(Math.random() * 3) + 1 : 0;
+      check.highRiskMatches = hasConflict && Math.random() > 0.7 ? 1 : 0;
+      check.checkedAt = new Date().toISOString();
+      check.updatedAt = new Date().toISOString();
+      this.applyFilters();
+      this.cdr.detectChanges();
+    }, 1500);
   }
 
   exportChecks(): void {
-    console.log('Export conflict checks');
-    // Implement export functionality
+    const dataStr = JSON.stringify(this.filteredChecks, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conflict-checks-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
 
   // Pagination methods
+  getEndIndex(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
   previousPage(): void {
     if (this.currentPage > 0) {
       this.currentPage--;
