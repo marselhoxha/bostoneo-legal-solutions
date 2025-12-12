@@ -1,63 +1,649 @@
-/* Kanban Board Styles */
+/* ==================== Stats Cards ==================== */
+.stat-card {
+  border: none;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--stat-color), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stat-card .stat-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+}
+
+.stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vz-secondary-color);
+  font-weight: 500;
+}
+
+.stat-card .stat-trend {
+  font-size: 0.7rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.stat-mini-chart {
+  height: 40px;
+  margin-top: 0.5rem;
+}
+
+/* ==================== Velzon Tasks Board (from _kanban.scss) ==================== */
 .tasks-board {
   display: flex;
-  gap: 1.5rem;
   overflow-x: auto;
-  padding-bottom: 1rem;
+  align-items: stretch;
 }
 
-.tasks-list {
+.tasks-board .tasks-list {
   min-width: 300px;
-  flex: 0 0 300px;
-  border-radius: 0.375rem;
-  padding: 1rem;
+  margin-right: 24px;
 }
 
-.tasks-list:last-child {
-  margin-right: 0;
+.tasks-board::-webkit-scrollbar {
+  -webkit-appearance: none;
 }
 
-.tasklist-content {
-  min-height: 400px;
-  max-height: 500px;
-  overflow-y: auto;
+.tasks-board::-webkit-scrollbar:vertical {
+  width: 10px;
 }
 
-.tasks {
-  min-height: 300px;
+.tasks-board::-webkit-scrollbar:horizontal {
+  height: 8px;
 }
 
-/* Task Card Styles */
+.tasks-board::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--vz-dark-rgb), 0.075);
+  border-radius: 8px;
+}
+
+.tasks-board::-webkit-scrollbar-track {
+  border-radius: 8px;
+}
+
+/* Tasks Box */
 .tasks-box {
-  margin-bottom: 1rem;
-  border-radius: 0.375rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .tasks-box:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
 }
 
-/* Avatar Group Styles */
+.tasks-box .progress {
+  border-radius: 0 0 var(--vz-card-border-radius, 0.25rem) var(--vz-card-border-radius, 0.25rem);
+}
+
+.tasks-box .tasks-img {
+  height: 135px;
+  width: 100%;
+  object-fit: cover;
+  object-position: center;
+  margin: 12px 0;
+}
+
+.tasks-box:last-child {
+  margin-bottom: 0;
+}
+
+/* Tasks Wrapper */
+.tasks-wrapper {
+  max-height: calc(100vh - 418px);
+}
+
+/* Tasks Container */
+.tasks {
+  min-height: 180px;
+  position: relative;
+}
+
+/* Tasklist Content */
+.tasklist-content {
+  max-height: calc(100vh - 450px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.tasklist-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.tasklist-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tasklist-content::-webkit-scrollbar-thumb {
+  background: var(--vz-border-color);
+  border-radius: 4px;
+}
+
+.tasklist-content::-webkit-scrollbar-thumb:hover {
+  background: var(--vz-secondary-color);
+}
+
+/* Link Inline */
+.link-inline {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.link-inline .list-inline-item {
+  display: inline-block;
+  margin-right: 0.75rem;
+}
+
+.link-inline .list-inline-item:last-child {
+  margin-right: 0;
+}
+
+/* Avatar Group */
 .avatar-group {
   display: flex;
   flex-wrap: wrap;
 }
 
-.avatar-group-item {
-  position: relative;
-  display: inline-block;
-  margin-right: -0.5rem;
-  border: 2px solid #fff;
+.avatar-group .avatar-group-item {
+  margin-left: -0.5rem;
+  border: 2px solid var(--vz-card-bg);
   border-radius: 50%;
-  transition: all 0.15s ease-in-out;
+  transition: transform 0.2s ease;
+}
+
+.avatar-group .avatar-group-item:first-child {
+  margin-left: 0;
+}
+
+.avatar-group .avatar-group-item:hover {
+  transform: translateY(-2px);
+  z-index: 1;
+}
+
+/* Card Header Dropdown */
+.card-header-dropdown .dropdown-btn {
+  padding: 0;
+}
+
+.dropdown-btn.arrow-none::after {
+  display: none;
+}
+
+/* ==================== Task Card ==================== */
+.task-card {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.375rem;
+  padding: 0.875rem;
+  margin-bottom: 0.625rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.task-card:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  border-color: var(--vz-primary);
+}
+
+.task-card.priority-urgent {
+  border-left: 2px solid var(--vz-danger);
+}
+
+.task-card.priority-high {
+  border-left: 2px solid var(--vz-warning);
+}
+
+.task-card.priority-medium {
+  border-left: 2px solid var(--vz-info);
+}
+
+.task-card.priority-low {
+  border-left: 2px solid var(--vz-secondary);
+}
+
+.task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.625rem;
+}
+
+.task-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.task-checkbox:checked {
+  background-color: var(--vz-success);
+  border-color: var(--vz-success);
+}
+
+.task-checkbox:focus {
+  box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.15);
+}
+
+/* Due Date Warning Colors */
+.task-date.text-warning {
+  color: var(--vz-warning) !important;
+}
+
+.task-date.text-danger {
+  color: var(--vz-danger) !important;
+  font-weight: 500;
+}
+
+.task-id {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.task-card-menu {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.task-card:hover .task-card-menu {
+  opacity: 1;
+}
+
+.task-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--vz-body-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  transition: color 0.2s ease;
+}
+
+.task-card-title:hover {
+  color: var(--vz-primary);
+}
+
+.task-card-desc {
+  font-size: 0.8125rem;
+  color: var(--vz-secondary-color);
+  margin-bottom: 0.625rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+.task-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.625rem;
+}
+
+.task-meta-row .badge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.task-progress-section {
+  margin-bottom: 0.625rem;
+  padding: 0.5rem;
+  background: var(--vz-light);
+  border-radius: 0.25rem;
+}
+
+.progress-sm {
+  height: 5px;
+}
+
+.task-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.625rem;
+}
+
+.task-card-tags .tag {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  background: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.task-card-tags .tag-more {
+  background: transparent;
+  color: var(--vz-secondary-color);
+}
+
+.task-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.625rem;
+  border-top: 1px dashed var(--vz-border-color);
+}
+
+.task-card-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.task-date,
+.task-comments {
+  font-size: 0.75rem;
+  color: var(--vz-secondary-color);
+  display: inline-flex;
+  align-items: center;
+}
+
+.task-date i,
+.task-comments i {
+  font-size: 0.875rem;
+}
+
+.task-assignee {
+  cursor: pointer;
 }
 
 .avatar-xxs {
   width: 1.5rem;
   height: 1.5rem;
+}
+
+.avatar-xxs .avatar-title {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unassigned-avatar {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.task-card:hover .unassigned-avatar {
+  opacity: 1;
+}
+
+.unassigned-avatar:hover .avatar-title {
+  background: rgba(var(--vz-primary-rgb), 0.1) !important;
+  color: var(--vz-primary) !important;
+}
+
+/* ==================== Drag & Drop - Smooth Animations ==================== */
+.dndPlaceholder {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.08), rgba(var(--vz-primary-rgb), 0.03));
+  border: 2px dashed rgba(var(--vz-primary-rgb), 0.3);
+  border-radius: 0.5rem;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: placeholderPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes placeholderPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.01); }
+}
+
+.dndPlaceholder::before {
+  content: "Drop task here";
+  font-size: 0.8rem;
+  color: var(--vz-primary);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.dndDragover .dndPlaceholder {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.15), rgba(var(--vz-primary-rgb), 0.08));
+  border-color: var(--vz-primary);
+  transform: scale(1.02);
+  animation: none;
+  box-shadow: 0 0 20px rgba(var(--vz-primary-rgb), 0.15);
+}
+
+/* Draggable Items - Ultra Smooth */
+[dndDraggable] {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              box-shadow 0.25s ease;
+  will-change: transform, opacity;
+}
+
+[dndDraggable]:hover {
+  cursor: grab;
+}
+
+[dndDraggable]:active {
+  cursor: grabbing;
+}
+
+/* When being dragged */
+.dndDragging,
+[dndDraggable].dndDragging {
+  opacity: 0.85;
+  transform: rotate(2deg) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+/* Card lift effect while dragging */
+.tasks-box {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s ease;
+}
+
+.dndDragover .tasks-box {
+  transform: translateY(-2px);
+}
+
+/* Drop zone highlight */
+.tasks.dndDragover {
+  background: rgba(var(--vz-primary-rgb), 0.02);
+  border-radius: 0.5rem;
+  transition: background 0.3s ease;
+}
+
+/* ==================== Empty States ==================== */
+.empty-column {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.empty-column .empty-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--vz-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-secondary-color);
+  font-size: 1.5rem;
+}
+
+.empty-column .empty-text {
+  font-size: 0.8rem;
+  color: var(--vz-secondary-color);
+  margin: 0;
+}
+
+.empty-state {
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.empty-state .empty-icon-lg {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--vz-light), rgba(var(--vz-primary-rgb), 0.05));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-secondary-color);
+  font-size: 2rem;
+}
+
+.empty-state h6 {
+  color: var(--vz-body-color);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: var(--vz-secondary-color);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ==================== Search Box ==================== */
+.search-box {
+  position: relative;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--vz-secondary-color);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.search-box .form-control:focus + .search-icon,
+.search-box .form-control:focus ~ .search-icon {
+  color: var(--vz-primary);
+}
+
+.search-box .form-control {
+  padding-right: 2.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.search-box .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+}
+
+/* ==================== Filter Bar ==================== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.filter-chip .remove-filter {
+  width: 0.875rem;
+  height: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(var(--vz-primary-rgb), 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-chip .remove-filter:hover {
+  background: var(--vz-primary);
+  color: #fff;
+}
+
+/* ==================== Avatar ==================== */
+.avatar-sm {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.avatar-xs {
+  width: 2rem;
+  height: 2rem;
+}
+
+.avatar-lg {
+  width: 4rem;
+  height: 4rem;
 }
 
 .avatar-title {
@@ -66,75 +652,701 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 0.75rem;
   font-weight: 500;
-  color: #fff;
-  background-color: #6c757d;
   border-radius: 50%;
 }
 
-/* Drag and Drop Styles */
-.dndPlaceholder {
-  background-color: #f8f9fa;
-  border: 2px dashed #dee2e6;
-  border-radius: 0.375rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  text-align: center;
-  color: #6c757d;
-  min-height: 100px;
-  display: flex;
+/* ==================== Badge Styles ==================== */
+.badge-sm {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.priority-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.25rem;
 }
 
-.dndPlaceholder:before {
-  content: "Drop task here";
-  font-size: 0.875rem;
-  opacity: 0.7;
+.priority-badge i {
+  font-size: 0.5rem;
 }
 
-.dndDragover {
-  background-color: rgba(13, 110, 253, 0.1);
-  border-color: #0d6efd;
+/* ==================== Table Styles ==================== */
+.table > :not(caption) > * > * {
+  padding: 1rem 1.25rem;
+  vertical-align: middle;
 }
 
-.dndDragging {
-  opacity: 0.7;
-  transform: rotate(5deg);
+.table-hover > tbody > tr {
+  transition: background 0.15s ease;
 }
 
-/* Link Inline Styles */
-.link-inline {
-  display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  gap: 1rem;
+.table-hover > tbody > tr:hover {
+  background-color: rgba(var(--vz-primary-rgb), 0.04);
 }
 
-.link-inline .list-inline-item {
-  margin-right: 0;
+.table thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--vz-secondary-color);
+  border-bottom-width: 1px;
 }
 
-.link-inline a {
-  color: #6c757d;
-  text-decoration: none;
-  font-size: 0.875rem;
+/* ==================== Cards ==================== */
+.card {
+  transition: all 0.3s ease;
+  border-radius: 0.75rem;
 }
 
-.link-inline a:hover {
-  color: #0d6efd;
+.shadow-sm:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Responsive Styles */
+/* ==================== Nav Tabs ==================== */
+.nav-tabs-custom .nav-link {
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+  color: var(--vz-secondary-color);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs-custom .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: var(--vz-primary);
+  transition: width 0.2s ease;
+}
+
+.nav-tabs-custom .nav-link:hover {
+  color: var(--vz-primary);
+}
+
+.nav-tabs-custom .nav-link.active {
+  color: var(--vz-primary);
+  background: transparent;
+}
+
+.nav-tabs-custom .nav-link.active::after {
+  width: 100%;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 1200px) {
+  .tasks-list {
+    min-width: 280px;
+    max-width: 280px;
+    flex: 0 0 280px;
+  }
+}
+
 @media (max-width: 768px) {
   .tasks-board {
     flex-direction: column;
   }
-  
+
   .tasks-list {
     min-width: 100%;
+    max-width: 100%;
     flex: 1;
+    margin-bottom: 1rem;
   }
+
+  .tasklist-content {
+    max-height: 350px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* ==================== Modal Styles ==================== */
+.modal {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal.show {
+  display: block !important;
+}
+
+.modal-content {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  border-radius: 0.75rem;
+  animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--vz-border-color);
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--vz-border-color);
+  padding: 1rem 1.5rem;
+}
+
+.modal-backdrop {
+  transition: opacity 0.2s ease;
+}
+
+/* ==================== Task Details Modal ==================== */
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--vz-secondary-color);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--vz-border-color);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.detail-item {
+  padding: 1rem;
+  background: var(--vz-light);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.detail-item:hover {
+  background: rgba(var(--vz-primary-rgb), 0.05);
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  color: var(--vz-secondary-color);
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  display: block;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  color: var(--vz-body-color);
+  font-weight: 500;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tags-list .badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+}
+
+/* ==================== Assign Modal Styles ==================== */
+.task-info-card {
+  background: var(--vz-light);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.team-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.team-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.team-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.team-list::-webkit-scrollbar-thumb {
+  background: var(--vz-border-color);
+  border-radius: 4px;
+}
+
+.team-member {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--vz-card-bg);
+}
+
+.team-member:last-child {
+  margin-bottom: 0;
+}
+
+.team-member:hover {
+  border-color: var(--vz-primary);
+  background: rgba(var(--vz-primary-rgb), 0.03);
+  transform: translateX(4px);
+}
+
+.team-member.selected {
+  border-color: var(--vz-primary);
+  background: rgba(var(--vz-primary-rgb), 0.08);
+  box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+}
+
+.team-member .avatar-sm {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+}
+
+.team-member .avatar-title {
+  font-size: 1rem;
+  background: linear-gradient(135deg, var(--vz-primary), #6366f1);
+}
+
+.team-member-info {
+  flex: 1;
+  margin-left: 0.875rem;
+  min-width: 0;
+}
+
+.team-member-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--vz-body-color);
+  margin-bottom: 0.125rem;
+}
+
+.team-member-email {
+  font-size: 0.8rem;
+  color: var(--vz-secondary-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-member-check {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--vz-border-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.team-member.selected .team-member-check {
+  background: var(--vz-primary);
+  border-color: var(--vz-primary);
+  animation: checkPop 0.2s ease;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.team-member.selected .team-member-check i {
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+/* ==================== Detail Card Styling ==================== */
+.detail-card {
+  padding: 1rem;
+  background: var(--vz-light);
+  border-radius: 0.5rem;
+  height: 100%;
+}
+
+.detail-card .detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--vz-secondary-color);
+  margin-bottom: 0;
+}
+
+/* Unassigned button animation */
+.unassigned-btn {
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.unassigned-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Avatar image sizing */
+img.avatar-xxs {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: cover;
+}
+
+img.avatar-sm {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+}
+
+img.avatar-md {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+}
+
+/* Spin animation for refresh icon */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+/* Current assignee highlight in team list */
+.team-member.current-assignee {
+  background: rgba(var(--vz-warning-rgb), 0.1);
+  border-left: 3px solid var(--vz-warning);
+}
+
+.team-member.current-assignee:hover {
+  background: rgba(var(--vz-warning-rgb), 0.15);
+}
+
+/* Min width for truncation */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* White button style for quick actions */
+.btn-white {
+  background-color: #fff;
+  color: var(--vz-body-color);
+  border-color: var(--vz-border-color);
+}
+
+.btn-white:hover {
+  background-color: var(--vz-light);
+  color: var(--vz-body-color);
+  border-color: var(--vz-border-color);
+}
+
+.btn-white:focus {
+  box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+}
+
+.btn-white:disabled {
+  opacity: 0.65;
+  background-color: #fff;
+}
+
+/* Quick Actions Bar */
+.quick-actions-bar .btn:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* Task details modal improvements */
+.modal-dialog-scrollable .modal-body {
+  padding-top: 1.5rem;
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section .detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--vz-secondary-color);
+  margin-bottom: 0.5rem;
+}
+
+/* ==================== Dark Mode ==================== */
+[data-layout-mode="dark"] .tasks-list {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-layout-mode="dark"] .tasks-box {
+  background: var(--vz-card-bg);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .tasks-box:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-color: rgba(var(--vz-primary-rgb), 0.4);
+}
+
+[data-layout-mode="dark"] .tasks-box .card-footer {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .avatar-group .avatar-group-item {
+  border-color: var(--vz-card-bg);
+}
+
+[data-layout-mode="dark"] .task-card {
+  background: var(--vz-card-bg);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .task-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-color: rgba(var(--vz-primary-rgb), 0.4);
+}
+
+[data-layout-mode="dark"] .task-card-tags .tag {
+  background: rgba(var(--vz-primary-rgb), 0.15);
+}
+
+[data-layout-mode="dark"] .task-card-meta .due-date {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .dndPlaceholder {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-layout-mode="dark"] .table-light {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+[data-layout-mode="dark"] .detail-card {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-layout-mode="dark"] .team-member:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .team-member.selected {
+  background: rgba(var(--vz-primary-rgb), 0.15);
+}
+
+[data-layout-mode="dark"] .bg-light {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-layout-mode="dark"] .form-control.bg-light,
+[data-layout-mode="dark"] .form-select.bg-light {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--vz-body-color);
+}
+
+[data-layout-mode="dark"] .form-control.bg-light:focus,
+[data-layout-mode="dark"] .form-select.bg-light:focus {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--vz-primary);
+}
+
+[data-layout-mode="dark"] .avatar-title.bg-light {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-layout-mode="dark"] .shadow-sm:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-layout-mode="dark"] .stat-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-layout-mode="dark"] .modal {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+[data-layout-mode="dark"] .modal-content {
+  background: var(--vz-card-bg);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+[data-layout-mode="dark"] .detail-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .detail-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .task-info-card {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .team-member {
+  background: var(--vz-card-bg);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .team-member:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--vz-primary);
+}
+
+[data-layout-mode="dark"] .team-member.selected {
+  background: rgba(var(--vz-primary-rgb), 0.15);
+}
+
+[data-layout-mode="dark"] .team-member-check {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-layout-mode="dark"] .empty-column .empty-icon,
+[data-layout-mode="dark"] .empty-state .empty-icon-lg {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .filter-chip {
+  background: rgba(var(--vz-primary-rgb), 0.2);
+}
+
+[data-layout-mode="dark"] .kanban-column-header::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+[data-layout-mode="dark"] .task-progress-section {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-layout-mode="dark"] .btn-ghost-secondary {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+[data-layout-mode="dark"] .btn-ghost-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-layout-mode="dark"] .badge.bg-light {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+[data-layout-mode="dark"] .task-card-footer {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-layout-mode="dark"] .btn-white {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-layout-mode="dark"] .btn-white:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+[data-layout-mode="dark"] .btn-white:disabled {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ==================== Progress Bar ==================== */
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--vz-light);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+[data-layout-mode="dark"] .progress {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== Button Enhancements ==================== */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.35);
+}
+
+.btn-soft-primary:hover,
+.btn-soft-info:hover,
+.btn-soft-success:hover,
+.btn-soft-warning:hover,
+.btn-soft-danger:hover {
+  transform: translateY(-1px);
+}
+
+/* ==================== Loading States ==================== */
+.skeleton {
+  background: linear-gradient(90deg, var(--vz-light) 25%, rgba(var(--vz-secondary-rgb), 0.1) 50%, var(--vz-light) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+[data-layout-mode="dark"] .skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
 }
