@@ -2502,27 +2502,27 @@ $cyan-color: #0dcaf0;
   .swal-wide {
     max-width: 600px !important;
     width: 90% !important;
-    
+
     .swal2-popup {
       font-size: 1rem !important;
       padding: 2rem !important;
     }
-    
+
     .swal2-title {
       font-size: 1.5rem !important;
       margin-bottom: 1rem !important;
     }
-    
+
     .swal2-content {
       font-size: 1rem !important;
       line-height: 1.5 !important;
       margin-bottom: 1.5rem !important;
     }
-    
+
     .swal2-actions {
       gap: 0.75rem !important;
       margin-top: 1.5rem !important;
-      
+
       .swal2-confirm,
       .swal2-cancel {
         padding: 0.5rem 1.5rem !important;
@@ -2530,5 +2530,18 @@ $cyan-color: #0dcaf0;
         min-width: 100px !important;
       }
     }
+  }
+}
+
+// File List Row - Double click to open
+.file-row {
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.08) !important;
+  }
+
+  &:active {
+    background-color: rgba(var(--vz-primary-rgb), 0.15) !important;
   }
 }

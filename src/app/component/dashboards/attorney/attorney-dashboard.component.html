@@ -3,18 +3,22 @@
   <div class="col">
     <div class="h-100">
 
-      <!-- Row 1: Greeting Section -->
+      <!-- Row 1: Greeting Section with Quick Actions -->
       <div class="row">
         <div class="col-12">
           <div class="dashboard-greeting">
-            <div class="greeting-date">{{currentDate | date:'EEEE, MMMM d' | uppercase}}</div>
-            <h1 class="greeting-title">{{getGreeting()}}, {{currentUser?.firstName || 'Counselor'}}</h1>
-            <div class="greeting-briefing" *ngIf="!aiBriefingLoading">
-              <p>{{aiBriefing || ('You have ' + scheduleEvents.length + ' events scheduled for today. ' + (urgentItems.length > 0 ? urgentItems.length + ' items require your attention.' : 'All caught up!'))}}</p>
-            </div>
-            <div class="greeting-briefing greeting-loading" *ngIf="aiBriefingLoading">
-              <div class="loading-line"></div>
-              <div class="loading-line short"></div>
+            <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+              <div>
+                <div class="greeting-date">{{currentDate | date:'EEEE, MMMM d' | uppercase}}</div>
+                <h1 class="greeting-title">{{getGreeting()}}, {{currentUser?.firstName || 'Counselor'}}</h1>
+                <div class="greeting-briefing" *ngIf="!aiBriefingLoading">
+                  <p>{{aiBriefing || ('You have ' + scheduleEvents.length + ' events scheduled for today. ' + (urgentItems.length > 0 ? urgentItems.length + ' items require your attention.' : 'All caught up!'))}}</p>
+                </div>
+                <div class="greeting-briefing greeting-loading" *ngIf="aiBriefingLoading">
+                  <div class="loading-line"></div>
+                  <div class="loading-line short"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -828,3 +832,29 @@
   </div>
 </div>
 <div class="modal-backdrop fade" [class.show]="showRescheduleDeclineModal" *ngIf="showRescheduleDeclineModal"></div>
+
+<!-- Floating Action Button -->
+<div class="fab-container" [class.fab-expanded]="fabExpanded">
+  <button class="fab-main btn btn-primary" (click)="fabExpanded = !fabExpanded" title="Quick Actions">
+    <i class="ri-add-line" [class.rotate-45]="fabExpanded"></i>
+  </button>
+  <div class="fab-actions" *ngIf="fabExpanded">
+    <button class="fab-action btn btn-primary" (click)="navigateTo('/legal/cases/new'); fabExpanded = false" title="New Case">
+      <i class="ri-briefcase-line"></i>
+      <span>New Case</span>
+    </button>
+    <button class="fab-action btn btn-success" (click)="openCalendar(); fabExpanded = false" title="New Event">
+      <i class="ri-calendar-event-line"></i>
+      <span>New Event</span>
+    </button>
+    <button class="fab-action btn btn-warning" (click)="navigateTo('/case-management/tasks'); fabExpanded = false" title="New Task">
+      <i class="ri-task-line"></i>
+      <span>New Task</span>
+    </button>
+    <button class="fab-action btn btn-info" (click)="navigateTo('/time-billing/time-entries'); fabExpanded = false" title="Log Time">
+      <i class="ri-time-line"></i>
+      <span>Log Time</span>
+    </button>
+  </div>
+  <div class="fab-backdrop" *ngIf="fabExpanded" (click)="fabExpanded = false"></div>
+</div>

@@ -100,6 +100,13 @@ const routes: Routes = [
         canActivate: [AuthenticationGuard]
       },
 
+      // FAQs / Help
+      {
+        path: 'faqs',
+        component: FaqsComponent,
+        canActivate: [AuthenticationGuard]
+      },
+
       { path: '', redirectTo: 'home', pathMatch: 'full' }
     ]
   },

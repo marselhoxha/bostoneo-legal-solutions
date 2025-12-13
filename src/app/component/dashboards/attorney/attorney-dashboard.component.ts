@@ -141,6 +141,9 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   showAllUrgentItems = false;
   showAllCases = false;
 
+  // FAB (Floating Action Button)
+  fabExpanded = false;
+
   // Availability settings modal
   showAvailabilityModal = false;
 

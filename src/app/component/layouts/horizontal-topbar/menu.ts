@@ -92,12 +92,6 @@ export const SECRETARY_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     link: '/case-management/tasks'
-  },
-  {
-    id: 'sec-profile',
-    label: 'Profile',
-    icon: 'ri-user-settings-line',
-    link: '/user'
   }
 ];
 
@@ -118,9 +112,7 @@ export const PARALEGAL_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'para-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'para-legal' },
-      { id: 'para-legal-documents', label: 'Documents', link: '/legal/documents', parentId: 'para-legal' },
-      { id: 'para-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'para-legal' },
-      { id: 'para-legal-pdf', label: 'PDF Forms', link: '/legal/pdf-forms', parentId: 'para-legal' }
+      { id: 'para-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'para-legal' }
     ]
   },
   {
@@ -151,12 +143,6 @@ export const PARALEGAL_MENU: MenuItem[] = [
     label: 'File Manager',
     icon: 'ri-folder-2-line',
     link: '/file-manager'
-  },
-  {
-    id: 'para-profile',
-    label: 'Profile',
-    icon: 'ri-user-settings-line',
-    link: '/user'
   }
 ];
 
@@ -212,6 +198,7 @@ export const FINANCE_MENU: MenuItem[] = [
       { id: 'fin-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'fin-time-billing' },
       { id: 'fin-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'fin-time-billing' },
       { id: 'fin-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'fin-time-billing' },
+      { id: 'fin-time-rate-mgmt', label: 'Rate Management', link: '/time-tracking/rate-management', parentId: 'fin-time-billing' },
       { id: 'fin-time-invoice-gen', label: 'Invoice Generation', link: '/time-tracking/billing/invoice-generation', parentId: 'fin-time-billing' },
       { id: 'fin-time-cycles', label: 'Billing Cycles', link: '/time-tracking/billing/cycles', parentId: 'fin-time-billing' },
       { id: 'fin-time-reports', label: 'Reports', link: '/time-tracking/reports/all', parentId: 'fin-time-billing' }
@@ -222,12 +209,6 @@ export const FINANCE_MENU: MenuItem[] = [
     label: 'Clients',
     icon: 'ri-user-3-line',
     link: '/clients'
-  },
-  {
-    id: 'fin-profile',
-    label: 'Profile',
-    icon: 'ri-user-settings-line',
-    link: '/user'
   }
 ];
 
@@ -248,23 +229,15 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'att-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'att-legal' },
-      { id: 'att-legal-documents', label: 'Documents', link: '/legal/documents', parentId: 'att-legal' },
-      { id: 'att-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'att-legal' },
-      {
-        id: 'att-ai-tools',
-        label: 'AI Tools',
-        link: '/legal/ai-assistant',
-        parentId: 'att-legal',
-        subItems: [
-          { id: 'att-ai-assistant', label: 'AI Assistant', link: '/legal/ai-assistant', parentId: 'att-ai-tools' },
-          { id: 'att-ai-workspace', label: 'AI Workspace', link: '/legal/ai-assistant/ai-workspace', parentId: 'att-ai-tools' },
-          { id: 'att-ai-contract', label: 'Contract Risk Scanner', link: '/legal/contract-risk-scanner', parentId: 'att-ai-tools' },
-          { id: 'att-ai-doc-analyzer', label: 'Document Analyzer', link: '/legal/document-analyzer', parentId: 'att-ai-tools' },
-          { id: 'att-ai-research', label: 'Legal Research', link: '/legal/legal-research-assistant', parentId: 'att-ai-tools' }
-        ]
-      },
-      { id: 'att-legal-pdf', label: 'PDF Forms', link: '/legal/pdf-forms', parentId: 'att-legal' }
+      { id: 'att-legal-clients', label: 'Clients', link: '/clients', parentId: 'att-legal' },
+      { id: 'att-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'att-legal' }
     ]
+  },
+  {
+    id: 'att-ai-workspace',
+    label: 'AI Workspace',
+    icon: 'ri-robot-line',
+    link: '/legal/ai-assistant/ai-workspace'
   },
   {
     id: 'att-case-mgmt',
@@ -287,6 +260,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
       { id: 'att-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'att-time-billing' },
       { id: 'att-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
       { id: 'att-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'att-time-billing' },
+      { id: 'att-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'att-time-billing' },
       { id: 'att-time-reports', label: 'Reports', link: '/time-tracking/reports', parentId: 'att-time-billing' }
     ]
   },
@@ -296,8 +270,29 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-money-dollar-circle-line',
     link: '/invoices',
     subItems: [
-      { id: 'att-fin-invoices', label: 'Invoices', link: '/invoices', parentId: 'att-financial' },
-      { id: 'att-fin-expenses', label: 'Expenses', link: '/expenses', parentId: 'att-financial' }
+      {
+        id: 'att-invoices',
+        label: 'Invoices',
+        link: '/invoices',
+        parentId: 'att-financial',
+        subItems: [
+          { id: 'att-inv-list', label: 'All Invoices', link: '/invoices', parentId: 'att-invoices' },
+          { id: 'att-inv-payments', label: 'Payments', link: '/invoices/payments', parentId: 'att-invoices' },
+          { id: 'att-inv-templates', label: 'Templates', link: '/invoices/templates', parentId: 'att-invoices' },
+          { id: 'att-inv-workflows', label: 'Workflows', link: '/invoices/workflows', parentId: 'att-invoices' }
+        ]
+      },
+      {
+        id: 'att-expenses',
+        label: 'Expenses',
+        link: '/expenses',
+        parentId: 'att-financial',
+        subItems: [
+          { id: 'att-exp-list', label: 'All Expenses', link: '/expenses', parentId: 'att-expenses' },
+          { id: 'att-exp-categories', label: 'Categories', link: '/expenses/categories', parentId: 'att-expenses' },
+          { id: 'att-exp-vendors', label: 'Vendors', link: '/expenses/vendors', parentId: 'att-expenses' }
+        ]
+      }
     ]
   },
   {
@@ -311,12 +306,6 @@ export const ATTORNEY_MENU: MenuItem[] = [
       { id: 'att-crm-intake', label: 'Intake Submissions', link: '/crm/intake-submissions', parentId: 'att-crm' },
       { id: 'att-crm-conflicts', label: 'Conflict Checks', link: '/crm/conflict-checks', parentId: 'att-crm' }
     ]
-  },
-  {
-    id: 'att-clients',
-    label: 'Clients',
-    icon: 'ri-user-3-line',
-    link: '/clients'
   },
   {
     id: 'att-signatures',
@@ -333,12 +322,6 @@ export const ATTORNEY_MENU: MenuItem[] = [
       { id: 'att-files-main', label: 'My Documents', link: '/file-manager', parentId: 'att-files' },
       { id: 'att-files-templates', label: 'Templates', link: '/file-manager/templates', parentId: 'att-files' }
     ]
-  },
-  {
-    id: 'att-profile',
-    label: 'Profile',
-    icon: 'ri-user-settings-line',
-    link: '/user'
   }
 ];
 
@@ -359,23 +342,15 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'admin-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'admin-legal' },
-      { id: 'admin-legal-documents', label: 'Documents', link: '/legal/documents', parentId: 'admin-legal' },
-      { id: 'admin-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'admin-legal' },
-      {
-        id: 'admin-ai-tools',
-        label: 'AI Tools',
-        link: '/legal/ai-assistant',
-        parentId: 'admin-legal',
-        subItems: [
-          { id: 'admin-ai-assistant', label: 'AI Assistant', link: '/legal/ai-assistant', parentId: 'admin-ai-tools' },
-          { id: 'admin-ai-workspace', label: 'AI Workspace', link: '/legal/ai-assistant/ai-workspace', parentId: 'admin-ai-tools' },
-          { id: 'admin-ai-contract', label: 'Contract Risk Scanner', link: '/legal/contract-risk-scanner', parentId: 'admin-ai-tools' },
-          { id: 'admin-ai-doc-analyzer', label: 'Document Analyzer', link: '/legal/document-analyzer', parentId: 'admin-ai-tools' },
-          { id: 'admin-ai-research', label: 'Legal Research', link: '/legal/legal-research-assistant', parentId: 'admin-ai-tools' }
-        ]
-      },
-      { id: 'admin-legal-pdf', label: 'PDF Forms', link: '/legal/pdf-forms', parentId: 'admin-legal' }
+      { id: 'admin-legal-clients', label: 'Clients', link: '/clients', parentId: 'admin-legal' },
+      { id: 'admin-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'admin-legal' }
     ]
+  },
+  {
+    id: 'admin-ai-workspace',
+    label: 'AI Workspace',
+    icon: 'ri-robot-line',
+    link: '/legal/ai-assistant/ai-workspace'
   },
   {
     id: 'admin-case-mgmt',
@@ -399,7 +374,9 @@ export const ADMIN_MENU: MenuItem[] = [
       { id: 'admin-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
       { id: 'admin-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
       { id: 'admin-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
+      { id: 'admin-time-rate-mgmt', label: 'Rate Management', link: '/time-tracking/rate-management', parentId: 'admin-time-billing' },
       { id: 'admin-time-invoice-gen', label: 'Invoice Generation', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' },
+      { id: 'admin-time-cycles', label: 'Billing Cycles', link: '/time-tracking/billing/cycles', parentId: 'admin-time-billing' },
       { id: 'admin-time-reports', label: 'Reports', link: '/time-tracking/reports/all', parentId: 'admin-time-billing' },
       { id: 'admin-time-analytics', label: 'Analytics', link: '/time-tracking/billing/analytics', parentId: 'admin-time-billing' }
     ]
@@ -449,12 +426,6 @@ export const ADMIN_MENU: MenuItem[] = [
     ]
   },
   {
-    id: 'admin-clients',
-    label: 'Clients',
-    icon: 'ri-user-3-line',
-    link: '/clients'
-  },
-  {
     id: 'admin-signatures',
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
@@ -474,28 +445,17 @@ export const ADMIN_MENU: MenuItem[] = [
     ]
   },
   {
-    id: 'admin-users',
-    label: 'Users',
-    icon: 'ri-team-line',
-    link: '/users'
-  },
-  {
     id: 'admin-admin',
     label: 'Admin',
     icon: 'ri-admin-line',
     link: '/admin/roles',
     subItems: [
+      { id: 'admin-admin-users', label: 'Users', link: '/users', parentId: 'admin-admin' },
       { id: 'admin-admin-roles', label: 'Role Management', link: '/admin/roles', parentId: 'admin-admin' },
       { id: 'admin-admin-user-roles', label: 'User Roles', link: '/admin/user-roles', parentId: 'admin-admin' },
       { id: 'admin-admin-hierarchy', label: 'Role Hierarchy', link: '/admin/hierarchy', parentId: 'admin-admin' },
       { id: 'admin-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'admin-admin' }
     ]
-  },
-  {
-    id: 'admin-profile',
-    label: 'Profile',
-    icon: 'ri-user-settings-line',
-    link: '/user'
   }
 ];
 

@@ -294,13 +294,12 @@ export class ExpensesService {
 
   // Clients
   getClients(): Observable<CustomHttpResponse<any[]>> {
-    return this.http.get<CustomHttpResponse<any>>(`${environment.apiUrl}/client/list?page=0&size=100`, { headers: this.getHeaders() })
+    return this.http.get<CustomHttpResponse<any>>(`${environment.apiUrl}/client?page=0&size=100`, { headers: this.getHeaders() })
       .pipe(
         map(response => ({
           ...response,
-          data: response.data?.page?.content || []
+          data: response.data?.page?.content || response.data?.content || response.data || []
         })),
-        tap(response => console.log('Clients loaded:', response)),
         catchError(this.handleError)
       );
   }

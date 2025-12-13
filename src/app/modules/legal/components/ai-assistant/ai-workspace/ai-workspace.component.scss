@@ -11078,3 +11078,46 @@ button.filter-chip,
     }
   }
 }
+
+// ===========================
+// Case Citation Links
+// CourtListener Integration
+// ===========================
+
+.case-citation-link,
+.legal-link {
+  color: #405189;
+  text-decoration: none;
+  border-bottom: 1px dashed #405189;
+  transition: all 0.2s ease;
+  padding: 1px 2px;
+  border-radius: 2px;
+  
+  &:hover {
+    color: #0ab39c;
+    background-color: rgba(10, 179, 156, 0.1);
+    border-bottom-color: #0ab39c;
+    text-decoration: none;
+  }
+  
+  &::after {
+    content: " ↗";
+    font-size: 0.75em;
+    opacity: 0.6;
+  }
+}
+
+// Dark mode support
+[data-layout-mode="dark"] {
+  .case-citation-link,
+  .legal-link {
+    color: #7dd3fc;
+    border-bottom-color: #7dd3fc;
+    
+    &:hover {
+      color: #22d3ee;
+      background-color: rgba(34, 211, 238, 0.1);
+      border-bottom-color: #22d3ee;
+    }
+  }
+}

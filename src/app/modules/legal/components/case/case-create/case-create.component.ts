@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -11,6 +11,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import flatpickr from 'flatpickr';
 import { CaseService } from '../../../services/case.service';
+import { UserService } from '../../../../../service/user.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-case-create',
@@ -24,26 +27,57 @@ import { CaseService } from '../../../services/case.service';
     FlatpickrModule
   ]
 })
-export class CaseCreateComponent implements OnInit, AfterViewInit {
+export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   caseForm: FormGroup;
   isLoading = false;
   errorMessage = '';
-  
+
+  // Attorneys for dropdown
+  attorneys: any[] = [];
+
   // Enums for template
   CaseStatus = CaseStatus;
   CasePriority = CasePriority;
   PaymentStatus = PaymentStatus;
-  
+
   // Case types array for dropdown
   caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
 
-  @ViewChildren('filingDate, nextHearingDate, estimatedCompletionDate') dateInputs: QueryList<ElementRef>;
+  // Practice areas array for dropdown
+  practiceAreas = [
+    'Personal Injury',
+    'Family Law',
+    'Criminal Defense',
+    'Business Law',
+    'Real Estate Law',
+    'Immigration Law',
+    'Estate Planning',
+    'Employment Law',
+    'Intellectual Property',
+    'Bankruptcy',
+    'Civil Litigation',
+    'Other'
+  ];
+
+  // Billing types array for dropdown
+  billingTypes = [
+    { value: 'HOURLY', label: 'Hourly' },
+    { value: 'FLAT_FEE', label: 'Flat Fee' },
+    { value: 'CONTINGENCY', label: 'Contingency' },
+    { value: 'PRO_BONO', label: 'Pro Bono' },
+    { value: 'HYBRID', label: 'Hybrid' }
+  ];
+
+  @ViewChildren('filingDate, nextHearingDate, estimatedCompletionDate, statuteOfLimitationsDate') dateInputs: QueryList<ElementRef>;
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private snackBar: MatSnackBar,
-    private caseService: CaseService
+    private caseService: CaseService,
+    private userService: UserService
   ) {
     this.caseForm = this.fb.group({
       caseNumber: ['', [Validators.required]],
@@ -51,49 +85,68 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
       status: [CaseStatus.OPEN, [Validators.required]],
       priority: [CasePriority.MEDIUM, [Validators.required]],
       type: ['CIVIL', [Validators.required]],
+      practiceArea: ['', [Validators.required]],
       description: ['', [Validators.required]],
-      
+
       // Client Information
       clientName: ['', [Validators.required]],
       clientEmail: ['', [Validators.required, Validators.email]],
       clientPhone: ['', [Validators.required]],
       clientAddress: [''],
-      
-      // Court Information
-      courtName: ['', [Validators.required]],
-      judgeName: ['', [Validators.required]],
+
+      // Assignment
+      leadAttorneyId: [''],
+
+      // Court Information (optional at creation)
+      courtName: [''],
+      judgeName: [''],
       courtroom: [''],
-      
+
       // Important Dates
       filingDate: ['', [Validators.required]],
-      nextHearingDate: ['', [Validators.required]],
-      estimatedCompletionDate: ['', [Validators.required]],
-      
+      nextHearingDate: [''],
+      estimatedCompletionDate: [''],
+      statuteOfLimitationsDate: [''],
+
       // Billing Information
+      billingType: ['HOURLY', [Validators.required]],
       hourlyRate: [0],
-      totalHours: [0],
-      totalAmount: [0],
+      retainerAmount: [0],
       paymentStatus: [PaymentStatus.PENDING]
     });
   }
 
   ngOnInit(): void {
+    this.loadAttorneys();
+
     // Set default dates
     const today = new Date();
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const threeMonths = new Date();
-    threeMonths.setMonth(threeMonths.getMonth() + 3);
 
     // Generate a unique case number
     const uniqueCaseNumber = this.generateUniqueCaseNumber();
 
     this.caseForm.patchValue({
       caseNumber: uniqueCaseNumber,
-      filingDate: today,
-      nextHearingDate: nextMonth,
-      estimatedCompletionDate: threeMonths
+      filingDate: today
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadAttorneys(): void {
+    this.userService.getAttorneys()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (attorneys) => {
+          this.attorneys = attorneys;
+        },
+        error: (error) => {
+          console.error('Error loading attorneys:', error);
+        }
+      });
   }
 
   /**
@@ -137,11 +190,17 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
     this.errorMessage = '';
 
     // Format phone number to meet backend validation requirements (digits only)
-    const phoneNumber = this.caseForm.value.clientPhone ? 
+    const phoneNumber = this.caseForm.value.clientPhone ?
       this.caseForm.value.clientPhone.replace(/\D/g, '') : '';
 
+    // Build date objects only if values exist
+    const filingDate = this.caseForm.value.filingDate ? new Date(this.caseForm.value.filingDate) : null;
+    const nextHearingDate = this.caseForm.value.nextHearingDate ? new Date(this.caseForm.value.nextHearingDate) : null;
+    const estimatedCompletionDate = this.caseForm.value.estimatedCompletionDate ? new Date(this.caseForm.value.estimatedCompletionDate) : null;
+    const statuteOfLimitationsDate = this.caseForm.value.statuteOfLimitationsDate ? new Date(this.caseForm.value.statuteOfLimitationsDate) : null;
+
     // Transform form values to match API expectations - map to LegalCaseDTO
-    const caseData = {
+    const caseData: any = {
       caseNumber: this.caseForm.value.caseNumber,
       title: this.caseForm.value.title,
       clientName: this.caseForm.value.clientName,
@@ -151,38 +210,48 @@ export class CaseCreateComponent implements OnInit, AfterViewInit {
       status: this.caseForm.value.status,
       priority: this.caseForm.value.priority,
       type: this.caseForm.value.type,
+      practiceArea: this.caseForm.value.practiceArea,
       description: this.caseForm.value.description,
-      
-      // Include both nested and flat properties for maximum compatibility
-      courtInfo: {
+
+      // Lead Attorney Assignment
+      leadAttorneyId: this.caseForm.value.leadAttorneyId || null,
+
+      // Court Information (only include if provided)
+      courtInfo: this.caseForm.value.courtName ? {
         courtName: this.caseForm.value.courtName,
-        judgeName: this.caseForm.value.judgeName,
+        judgeName: this.caseForm.value.judgeName || '',
         courtroom: this.caseForm.value.courtroom || ''
-      },
-      courtName: this.caseForm.value.courtName,
-      judgeName: this.caseForm.value.judgeName,
+      } : null,
+      courtName: this.caseForm.value.courtName || '',
+      judgeName: this.caseForm.value.judgeName || '',
       courtroom: this.caseForm.value.courtroom || '',
-      
-      // Structured dates and flat date fields
+
+      // Important Dates
       importantDates: {
-        filingDate: new Date(this.caseForm.value.filingDate),
-        nextHearing: new Date(this.caseForm.value.nextHearingDate),
-        trialDate: new Date(this.caseForm.value.estimatedCompletionDate)
+        filingDate: filingDate,
+        nextHearing: nextHearingDate,
+        trialDate: estimatedCompletionDate,
+        statuteOfLimitations: statuteOfLimitationsDate
       },
-      filingDate: new Date(this.caseForm.value.filingDate),
-      nextHearing: new Date(this.caseForm.value.nextHearingDate),
-      trialDate: new Date(this.caseForm.value.estimatedCompletionDate),
-      
-      // Structured billing and flat billing fields
+      filingDate: filingDate,
+      nextHearing: nextHearingDate,
+      trialDate: estimatedCompletionDate,
+      statuteOfLimitationsDate: statuteOfLimitationsDate,
+
+      // Billing Information
       billingInfo: {
+        billingType: this.caseForm.value.billingType,
         hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
-        totalHours: parseFloat(this.caseForm.value.totalHours) || 0,
-        totalAmount: parseFloat(this.caseForm.value.totalAmount) || 0,
+        retainerAmount: parseFloat(this.caseForm.value.retainerAmount) || 0,
+        totalHours: 0,
+        totalAmount: 0,
         paymentStatus: this.caseForm.value.paymentStatus
       },
+      billingType: this.caseForm.value.billingType,
       hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
-      totalHours: parseFloat(this.caseForm.value.totalHours) || 0,
-      totalAmount: parseFloat(this.caseForm.value.totalAmount) || 0,
+      retainerAmount: parseFloat(this.caseForm.value.retainerAmount) || 0,
+      totalHours: 0,
+      totalAmount: 0,
       paymentStatus: this.caseForm.value.paymentStatus
     };
 

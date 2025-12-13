@@ -105,7 +105,7 @@ export class DeadlineAlertService {
   private getTasks(): Observable<Task[]> {
     return new Observable(observer => {
       // Get tasks from the task management API
-      this.http.get<any>(`${this.API_URL}/tasks?status=TODO,IN_PROGRESS&size=1000`).subscribe({
+      this.http.get<any>(`${this.API_URL}/legal/tasks?status=TODO,IN_PROGRESS&size=1000`).subscribe({
         next: (response) => {
           const tasks = response.data?.content || response.data || response || [];
           observer.next(tasks);

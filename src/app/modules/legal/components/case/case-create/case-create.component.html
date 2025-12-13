@@ -96,7 +96,7 @@
                           <div class="mb-3">
                             <label for="caseNumber" class="form-label">Case Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="caseNumber" formControlName="caseNumber"
-                              [ngClass]="{'is-invalid': hasError('caseNumber')}" placeholder="Enter case number">
+                              [ngClass]="{'is-invalid': hasError('caseNumber')}" placeholder="Auto-generated">
                             <div class="invalid-feedback" *ngIf="hasError('caseNumber')">
                               {{ getErrorMessage('caseNumber') }}
                             </div>
@@ -109,6 +109,35 @@
                               [ngClass]="{'is-invalid': hasError('title')}" placeholder="Enter case title">
                             <div class="invalid-feedback" *ngIf="hasError('title')">
                               {{ getErrorMessage('title') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="practiceArea" class="form-label">Practice Area <span class="text-danger">*</span></label>
+                            <select class="form-select" id="practiceArea" formControlName="practiceArea"
+                              [ngClass]="{'is-invalid': hasError('practiceArea')}">
+                              <option value="">Select Practice Area</option>
+                              <option *ngFor="let area of practiceAreas" [value]="area">
+                                {{area}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('practiceArea')">
+                              {{ getErrorMessage('practiceArea') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="type" class="form-label">Case Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="type" formControlName="type"
+                              [ngClass]="{'is-invalid': hasError('type')}">
+                              <option *ngFor="let type of caseTypes" [value]="type">
+                                {{type.replace('_', ' ')}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('type')">
+                              {{ getErrorMessage('type') }}
                             </div>
                           </div>
                         </div>
@@ -142,16 +171,13 @@
                         </div>
                         <div class="col-md-6">
                           <div class="mb-3">
-                            <label for="type" class="form-label">Case Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="type" formControlName="type"
-                              [ngClass]="{'is-invalid': hasError('type')}">
-                              <option *ngFor="let type of caseTypes" [value]="type">
-                                {{type.replace('_', ' ')}}
+                            <label for="leadAttorneyId" class="form-label">Lead Attorney</label>
+                            <select class="form-select" id="leadAttorneyId" formControlName="leadAttorneyId">
+                              <option value="">Select Lead Attorney</option>
+                              <option *ngFor="let attorney of attorneys" [value]="attorney.id">
+                                {{attorney.firstName}} {{attorney.lastName}} ({{attorney.roleName}})
                               </option>
                             </select>
-                            <div class="invalid-feedback" *ngIf="hasError('type')">
-                              {{ getErrorMessage('type') }}
-                            </div>
                           </div>
                         </div>
                         <div class="col-12">
@@ -170,36 +196,30 @@
                 </div>
               </div>
 
-              <!-- Court Information -->
+              <!-- Court Information (Optional) -->
               <div class="row mb-4">
                 <div class="col-12">
                   <div class="card border shadow-none">
                     <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Court Information</h5>
+                      <h5 class="card-title mb-0">Court Information <span class="text-muted fs-12 fw-normal">(Optional - can be added later)</span></h5>
                     </div>
                     <div class="card-body">
                       <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                           <div class="mb-3">
-                            <label for="courtName" class="form-label">Court Name <span class="text-danger">*</span></label>
+                            <label for="courtName" class="form-label">Court Name</label>
                             <input type="text" class="form-control" id="courtName" formControlName="courtName"
-                              [ngClass]="{'is-invalid': hasError('courtName')}" placeholder="Enter court name">
-                            <div class="invalid-feedback" *ngIf="hasError('courtName')">
-                              {{ getErrorMessage('courtName') }}
-                            </div>
+                              placeholder="Enter court name">
                           </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                           <div class="mb-3">
-                            <label for="judgeName" class="form-label">Judge Name <span class="text-danger">*</span></label>
+                            <label for="judgeName" class="form-label">Judge Name</label>
                             <input type="text" class="form-control" id="judgeName" formControlName="judgeName"
-                              [ngClass]="{'is-invalid': hasError('judgeName')}" placeholder="Enter judge name">
-                            <div class="invalid-feedback" *ngIf="hasError('judgeName')">
-                              {{ getErrorMessage('judgeName') }}
-                            </div>
+                              placeholder="Enter judge name">
                           </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                           <div class="mb-3">
                             <label for="courtroom" class="form-label">Courtroom</label>
                             <input type="text" class="form-control" id="courtroom" formControlName="courtroom"
@@ -221,16 +241,16 @@
                     </div>
                     <div class="card-body">
                       <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
                             <label for="filingDate" class="form-label">Filing Date <span class="text-danger">*</span></label>
                             <div class="input-group">
                               <span class="input-group-text bg-light border-end-0">
                                 <i class="ri-calendar-line align-middle"></i>
                               </span>
-                              <input type="text" 
-                                     class="form-control border-start-0 flatpickr-input" 
-                                     id="filingDate" 
+                              <input type="text"
+                                     class="form-control border-start-0 flatpickr-input"
+                                     id="filingDate"
                                      formControlName="filingDate"
                                      [ngClass]="{'is-invalid': hasError('filingDate')}"
                                      placeholder="Select filing date"
@@ -241,43 +261,52 @@
                             </div>
                           </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
-                            <label for="nextHearingDate" class="form-label">Next Hearing Date <span class="text-danger">*</span></label>
+                            <label for="statuteOfLimitationsDate" class="form-label">Statute of Limitations</label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light border-end-0">
+                                <i class="ri-error-warning-line align-middle text-danger"></i>
+                              </span>
+                              <input type="text"
+                                     class="form-control border-start-0 flatpickr-input"
+                                     id="statuteOfLimitationsDate"
+                                     formControlName="statuteOfLimitationsDate"
+                                     placeholder="Critical deadline"
+                                     #statuteOfLimitationsDate>
+                            </div>
+                            <small class="text-muted">Critical deadline - set if applicable</small>
+                          </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                          <div class="mb-3">
+                            <label for="nextHearingDate" class="form-label">Next Hearing Date</label>
                             <div class="input-group">
                               <span class="input-group-text bg-light border-end-0">
                                 <i class="ri-calendar-line align-middle"></i>
                               </span>
-                              <input type="text" 
-                                     class="form-control border-start-0 flatpickr-input" 
-                                     id="nextHearingDate" 
+                              <input type="text"
+                                     class="form-control border-start-0 flatpickr-input"
+                                     id="nextHearingDate"
                                      formControlName="nextHearingDate"
-                                     [ngClass]="{'is-invalid': hasError('nextHearingDate')}"
                                      placeholder="Select next hearing date"
                                      #nextHearingDate>
                             </div>
-                            <div class="invalid-feedback" *ngIf="hasError('nextHearingDate')">
-                              {{ getErrorMessage('nextHearingDate') }}
-                            </div>
                           </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
-                            <label for="estimatedCompletionDate" class="form-label">Estimated Completion Date <span class="text-danger">*</span></label>
+                            <label for="estimatedCompletionDate" class="form-label">Est. Completion Date</label>
                             <div class="input-group">
                               <span class="input-group-text bg-light border-end-0">
                                 <i class="ri-calendar-line align-middle"></i>
                               </span>
-                              <input type="text" 
-                                     class="form-control border-start-0 flatpickr-input" 
-                                     id="estimatedCompletionDate" 
+                              <input type="text"
+                                     class="form-control border-start-0 flatpickr-input"
+                                     id="estimatedCompletionDate"
                                      formControlName="estimatedCompletionDate"
-                                     [ngClass]="{'is-invalid': hasError('estimatedCompletionDate')}"
-                                     placeholder="Select estimated completion date"
+                                     placeholder="Select completion date"
                                      #estimatedCompletionDate>
-                            </div>
-                            <div class="invalid-feedback" *ngIf="hasError('estimatedCompletionDate')">
-                              {{ getErrorMessage('estimatedCompletionDate') }}
                             </div>
                           </div>
                         </div>
@@ -296,7 +325,21 @@
                     </div>
                     <div class="card-body">
                       <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-lg-3">
+                          <div class="mb-3">
+                            <label for="billingType" class="form-label">Billing Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="billingType" formControlName="billingType"
+                              [ngClass]="{'is-invalid': hasError('billingType')}">
+                              <option *ngFor="let type of billingTypes" [value]="type.value">
+                                {{type.label}}
+                              </option>
+                            </select>
+                            <div class="invalid-feedback" *ngIf="hasError('billingType')">
+                              {{ getErrorMessage('billingType') }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
                             <label for="hourlyRate" class="form-label">Hourly Rate</label>
                             <div class="input-group">
@@ -304,30 +347,25 @@
                                 <i class="ri-money-dollar-circle-line align-middle"></i>
                               </span>
                               <input type="number" class="form-control border-start-0" id="hourlyRate" formControlName="hourlyRate"
-                                placeholder="Enter hourly rate">
+                                placeholder="0.00" min="0" step="0.01">
                             </div>
+                            <small class="text-muted">Required for hourly billing</small>
                           </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
-                            <label for="totalHours" class="form-label">Total Hours</label>
-                            <input type="number" class="form-control" id="totalHours" formControlName="totalHours"
-                              placeholder="Enter total hours">
-                          </div>
-                        </div>
-                        <div class="col-md-4">
-                          <div class="mb-3">
-                            <label for="totalAmount" class="form-label">Total Amount</label>
+                            <label for="retainerAmount" class="form-label">Retainer Amount</label>
                             <div class="input-group">
                               <span class="input-group-text bg-light border-end-0">
                                 <i class="ri-money-dollar-circle-line align-middle"></i>
                               </span>
-                              <input type="number" class="form-control border-start-0" id="totalAmount" formControlName="totalAmount"
-                                placeholder="Enter total amount">
+                              <input type="number" class="form-control border-start-0" id="retainerAmount" formControlName="retainerAmount"
+                                placeholder="0.00" min="0" step="0.01">
                             </div>
+                            <small class="text-muted">Initial retainer if applicable</small>
                           </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-lg-3">
                           <div class="mb-3">
                             <label for="paymentStatus" class="form-label">Payment Status</label>
                             <select class="form-select" id="paymentStatus" formControlName="paymentStatus">

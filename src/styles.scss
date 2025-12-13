@@ -697,3 +697,17 @@ body.dark-mode .mobile-file-manager-sidebar * {
     }
   }
 }
+
+// ==========================================
+// GLOBAL: User Profile Dropdown Fix
+// ==========================================
+// When using container="body", the dropdown is appended to body
+// This ensures it appears below the header, not above
+body > .dropdown-menu.user-profile-dropdown,
+body > div > .dropdown-menu.user-profile-dropdown {
+  z-index: 1055 !important;
+  min-width: 180px;
+  border-radius: 0.5rem;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--vz-border-color);
+}

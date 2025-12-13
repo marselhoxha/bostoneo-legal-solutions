@@ -793,3 +793,41 @@
     }
   }
 }
+
+// ==========================================
+// USER PROFILE DROPDOWN FIX
+// ==========================================
+:host ::ng-deep {
+  .topbar-user {
+    position: relative;
+
+    .dropdown-menu,
+    .user-profile-dropdown {
+      position: absolute !important;
+      top: 100% !important;
+      bottom: auto !important;
+      right: 0 !important;
+      left: auto !important;
+      margin-top: 0.5rem !important;
+      transform: none !important;
+      min-width: 180px;
+      border-radius: 0.5rem;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--vz-border-color);
+      z-index: 1055 !important;
+      animation: dropdown-fade-in 0.15s ease-out;
+    }
+  }
+}
+
+// Force user profile dropdown to appear below
+.user-profile-dropdown {
+  position: absolute !important;
+  top: 100% !important;
+  bottom: auto !important;
+  right: 0 !important;
+  left: auto !important;
+  margin-top: 8px !important;
+  transform: none !important;
+  inset: auto 0 auto auto !important;
+}
