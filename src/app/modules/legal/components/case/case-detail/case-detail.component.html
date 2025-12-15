@@ -813,11 +813,13 @@
                           <td>
                             <span class="badge fs-11 fw-medium"
                               [ngClass]="{
-                                'bg-danger-subtle text-danger': event.priority === 'HIGH',
+                                'bg-danger-subtle text-danger': event.priority === 'HIGH' || event.highPriority === true,
                                 'bg-warning-subtle text-warning': event.priority === 'MEDIUM',
-                                'bg-success-subtle text-success': event.priority === 'LOW'
+                                'bg-success-subtle text-success': event.priority === 'LOW',
+                                'bg-secondary-subtle text-secondary': !event.priority && !event.highPriority
                               }">
-                              {{ event.priority || 'NORMAL' }}
+                              <i *ngIf="event.priority === 'HIGH' || event.highPriority" class="ri-fire-fill me-1"></i>
+                              {{ event.priority || (event.highPriority ? 'HIGH' : 'NORMAL') }}
                             </span>
                           </td>
                           <td>
@@ -828,28 +830,28 @@
                           </td>
                           <td class="text-end pe-4">
                             <div class="dropdown">
-                              <button class="btn btn-light btn-sm dropdown-toggle btn-icon" type="button" data-bs-toggle="dropdown">
+                              <button class="btn btn-light btn-sm btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="ri-more-2-fill"></i>
                               </button>
-                              <ul class="dropdown-menu dropdown-menu-end">
+                              <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="z-index: 1060;">
                                 <li>
-                                  <a class="dropdown-item" href="#" (click)="viewEvent(event)">
+                                  <a class="dropdown-item" href="javascript:void(0)" (click)="viewEvent(event)">
                                     <i class="ri-eye-line align-bottom me-2 text-muted"></i> View Details
                                   </a>
                                 </li>
                                 <li>
-                                  <a class="dropdown-item" href="#" (click)="editEvent(event)">
+                                  <a class="dropdown-item" href="javascript:void(0)" (click)="editEvent(event)">
                                     <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Edit Event
                                   </a>
                                 </li>
                                 <li>
-                                  <a class="dropdown-item" href="#" (click)="duplicateEvent(event)">
+                                  <a class="dropdown-item" href="javascript:void(0)" (click)="duplicateEvent(event)">
                                     <i class="ri-file-copy-line align-bottom me-2 text-muted"></i> Duplicate
                                   </a>
                                 </li>
                                 <li class="dropdown-divider"></li>
                                 <li>
-                                  <a class="dropdown-item text-danger" href="#" (click)="deleteEvent(event)">
+                                  <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteEvent(event)">
                                     <i class="ri-delete-bin-line align-bottom me-2"></i> Delete
                                   </a>
                                 </li>
@@ -898,10 +900,10 @@
                           </div>
                         </div>
                         <div class="d-flex gap-2">
-                          <button class="btn btn-soft-primary btn-sm">
+                          <button class="btn btn-soft-primary btn-sm" (click)="scheduleCourtDate()">
                             <i class="ri-calendar-schedule-line me-1"></i> Schedule Court Date
                           </button>
-                          <button class="btn btn-soft-info btn-sm">
+                          <button class="btn btn-soft-info btn-sm" (click)="setDeadline()">
                             <i class="ri-alarm-line me-1"></i> Set Deadline
                           </button>
                         </div>

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { UserService } from '../../../service/user.service';
 
 export interface DocumentCollection {
   id: number;
@@ -160,13 +161,21 @@ export class DocumentCollectionService {
   private collectionsSubject = new BehaviorSubject<DocumentCollection[]>([]);
   public collections$ = this.collectionsSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private userService: UserService
+  ) {}
+
+  private getUserId(): number | null {
+    return this.userService.getCurrentUserId();
+  }
 
   /**
    * Get all collections for the current user
    */
   getCollections(userId?: number): Observable<DocumentCollection[]> {
-    const params = userId ? `?userId=${userId}` : '';
+    const effectiveUserId = userId || this.getUserId();
+    const params = effectiveUserId ? `?userId=${effectiveUserId}` : '';
     return this.http.get<{ collections: DocumentCollection[], count: number }>(
       `${this.apiUrl}${params}`,
       { withCredentials: true }
@@ -190,9 +199,10 @@ export class DocumentCollectionService {
     color?: string,
     icon?: string
   ): Observable<DocumentCollection> {
+    const userId = this.getUserId();
     return this.http.post<DocumentCollection>(
       this.apiUrl,
-      { name, description, caseId, color, icon },
+      { name, description, caseId, color, icon, userId },
       { withCredentials: true }
     ).pipe(
       tap(collection => {

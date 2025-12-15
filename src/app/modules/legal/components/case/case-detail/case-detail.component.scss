@@ -338,6 +338,26 @@ body, html {
   height: 28px;
   width: 28px;
   padding: 0;
+
+  // Remove dropdown caret from icon buttons
+  &::after {
+    display: none !important;
+  }
+}
+
+// Ensure modal opens on top with proper z-index
+::ng-deep {
+  .modal-backdrop {
+    z-index: 1050 !important;
+  }
+
+  .modal {
+    z-index: 1055 !important;
+  }
+
+  .modal-dialog {
+    z-index: 1056 !important;
+  }
 }
 
 .hstack {

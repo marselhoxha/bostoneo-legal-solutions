@@ -77,6 +77,10 @@ interface ScheduleEvent {
   meetingType?: 'video' | 'in-person';
   caseInfo?: string;
   caseId?: number;
+  isPast?: boolean;
+  isInProgress?: boolean;
+  rawStart?: Date;
+  rawEnd?: Date;
 }
 
 interface UrgentItem {
@@ -140,6 +144,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   showAllActivities = false;
   showAllUrgentItems = false;
   showAllCases = false;
+  showAllScheduleEvents = false;
 
   // FAB (Floating Action Button)
   fabExpanded = false;
@@ -178,6 +183,9 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   // AI Briefing
   aiBriefing: string | null = null;
   aiBriefingLoading = false;
+  // Flags to track when data sources are loaded for AI briefing
+  private scheduleEventsLoaded = false;
+  private urgentItemsLoaded = false;
 
   currentDate = new Date();
   private destroy$ = new Subject<void>();
@@ -202,59 +210,40 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadUrgentItems(): void {
-    // Load upcoming deadlines from calendar events
-    this.calendarService.getEvents(100).pipe(
+    // Load upcoming events (next 7 days) for urgent items
+    this.calendarService.getUpcomingEvents(7).pipe(
       takeUntil(this.destroy$),
       catchError(error => {
-        console.error('Error loading calendar events for urgent items:', error);
+        console.error('Error loading upcoming events for urgent items:', error);
         return of([]);
       })
     ).subscribe({
       next: (events: any[]) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayTimestamp = today.getTime();
-        const nextWeek = new Date(today);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        const nextWeekTimestamp = nextWeek.getTime();
+        console.log('[UrgentItems] Upcoming events from API:', events.length);
 
-        console.log('[UrgentItems] Today:', today.toISOString(), 'NextWeek:', nextWeek.toISOString());
+        const now = new Date();
 
-        // Filter for deadlines and upcoming important events
+        // Filter for deadlines and important events only
         const urgentEvents = events
           .filter(event => {
-            const dateStr = event.start || event.startTime;
-            if (!dateStr) return false;
-
-            const eventDate = new Date(dateStr);
-            const eventTimestamp = eventDate.getTime();
-
-            // Validate the date is actually in the future (within next 7 days)
-            const isValidFutureDate = eventTimestamp >= todayTimestamp && eventTimestamp <= nextWeekTimestamp;
-
-            // Debug logging for events that might have issues
-            if (!isValidFutureDate && (event.eventType === 'DEADLINE' || event.eventType === 'HEARING')) {
-              console.log('[UrgentItems] Filtered out past/invalid event:', {
-                title: event.title,
-                dateStr: dateStr,
-                parsedDate: eventDate.toISOString(),
-                eventType: event.eventType
-              });
-            }
-
             // Exclude completed or cancelled events
             const isActiveEvent = event.status !== 'COMPLETED' && event.status !== 'CANCELLED';
 
-            // Include events in the next 7 days that are deadlines or hearings
-            return isValidFutureDate && isActiveEvent &&
+            // For today's events, exclude those that have already ended
+            const eventEnd = new Date(event.end || event.endTime);
+            const isNotPast = eventEnd > now;
+
+            // Include deadlines, court dates, or high priority events
+            return isActiveEvent && isNotPast &&
               (event.eventType === 'DEADLINE' || event.eventType === 'HEARING' ||
-               event.eventType === 'COURT' || event.eventType === 'FILING' ||
+               event.eventType === 'COURT' || event.eventType === 'COURT_DATE' ||
+               event.eventType === 'FILING' || event.eventType === 'DEPOSITION' ||
                event.highPriority);
           })
           .sort((a, b) => new Date(a.start || a.startTime).getTime() - new Date(b.start || b.startTime).getTime())
           .slice(0, 10);
 
-        console.log('[UrgentItems] Filtered events:', urgentEvents.map(e => ({ title: e.title, date: e.start || e.startTime })));
+        console.log('[UrgentItems] Filtered urgent events:', urgentEvents.length);
 
         // Map to UrgentItem format
         this.urgentItems = urgentEvents.map((event, index) => ({
@@ -269,6 +258,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
           client: event.clientName || null,
           route: event.caseId ? `/legal/cases/${event.caseId}` : '/legal/calendar'
         }));
+
+        // Signal that urgent items are loaded, then try to load AI briefing
+        this.urgentItemsLoaded = true;
+        this.tryLoadAiBriefing();
         this.cdr.detectChanges();
       }
     });
@@ -280,9 +273,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       'FILING': 'deadline',
       'HEARING': 'deadline',
       'COURT': 'deadline',
+      'COURT_DATE': 'deadline',
+      'DEPOSITION': 'deadline',
       'DOCUMENT_REVIEW': 'document',
       'MEETING': 'task',
-      'CONSULTATION': 'task'
+      'CONSULTATION': 'task',
+      'CLIENT_MEETING': 'task',
+      'TEAM_MEETING': 'task'
     };
     return typeMap[eventType?.toUpperCase()] || 'task';
   }
@@ -294,86 +291,119 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     if (event.highPriority || diffDays <= 0) return 'critical';
-    if (diffDays <= 2 || event.eventType === 'HEARING' || event.eventType === 'COURT') return 'high';
+    if (diffDays <= 2 || event.eventType === 'HEARING' || event.eventType === 'COURT' || event.eventType === 'COURT_DATE') return 'high';
     return 'medium';
   }
 
   private formatDueLabel(dateStr: string): string {
     if (!dateStr) return 'No date';
 
-    const date = new Date(dateStr);
+    // Extract date part only (YYYY-MM-DD) to avoid timezone issues
+    const eventDatePart = dateStr.substring(0, 10);
 
-    // Validate parsed date
-    if (isNaN(date.getTime())) {
-      console.warn('[UrgentItems] Invalid date string:', dateStr);
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDatePart)) {
+      console.warn('[UrgentItems] Invalid date format:', dateStr);
       return 'Invalid date';
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffMs = date.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    // Log for debugging
-    console.log('[UrgentItems] formatDueLabel:', { dateStr, parsedDate: date.toISOString(), diffDays });
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
-    if (diffDays < 0) return 'Overdue';
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
+    // Compare date strings directly (avoids timezone conversion issues)
+    if (eventDatePart < todayStr) return 'Overdue';
+    if (eventDatePart === todayStr) return 'Today';
+    if (eventDatePart === tomorrowStr) return 'Tomorrow';
+
+    // For dates further out, calculate days difference
+    const eventDate = new Date(eventDatePart + 'T00:00:00');
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((eventDate.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
     if (diffDays <= 7) return `${diffDays} days`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   private loadScheduleEvents(): void {
     this.eventsLoading = true;
 
-    // Fetch today's events from CalendarService
-    this.calendarService.getEvents(50).pipe(
+    // Fetch today's events using the dedicated endpoint
+    this.calendarService.getTodayEvents().pipe(
       takeUntil(this.destroy$),
       catchError(error => {
-        console.error('Error loading calendar events:', error);
+        console.error('Error loading today events:', error);
         return of([]);
       })
     ).subscribe({
-      next: (events: any[]) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+      next: (todayEvents: any[]) => {
+        console.log('[Schedule] Today events from API:', todayEvents.length);
 
-        // Filter for today's events
-        const todayEvents = events.filter(event => {
-          const eventDate = new Date(event.start || event.startTime);
-          return eventDate >= today && eventDate < tomorrow;
+        const now = new Date();
+
+        // Map to ScheduleEvent format with time status
+        const mappedEvents: ScheduleEvent[] = todayEvents.map(event => {
+          const rawStart = new Date(event.start || event.startTime);
+          const rawEnd = new Date(event.end || event.endTime);
+          const isPast = rawEnd < now;
+          const isInProgress = rawStart <= now && rawEnd > now;
+
+          return {
+            id: event.id,
+            title: event.title || 'Untitled Event',
+            description: event.description || event.caseTitle || '',
+            startTime: this.formatEventTime(event.start || event.startTime),
+            endTime: this.formatEventTime(event.end || event.endTime),
+            duration: this.calculateDuration(event.start || event.startTime, event.end || event.endTime),
+            type: this.mapEventType(event.eventType || event.type),
+            client: event.clientName || null,
+            location: event.location || null,
+            meetingType: event.meetingType || null,
+            caseInfo: event.caseTitle || event.caseName || null,
+            caseId: event.caseId || null,
+            isPast,
+            isInProgress,
+            rawStart,
+            rawEnd
+          };
         });
 
-        // Map to ScheduleEvent format
-        this.scheduleEvents = todayEvents.map(event => ({
-          id: event.id,
-          title: event.title || 'Untitled Event',
-          description: event.description || event.caseTitle || '',
-          startTime: this.formatEventTime(event.start || event.startTime),
-          endTime: this.formatEventTime(event.end || event.endTime),
-          duration: this.calculateDuration(event.start || event.startTime, event.end || event.endTime),
-          type: this.mapEventType(event.eventType || event.type),
-          client: event.clientName || null,
-          location: event.location || null,
-          meetingType: event.meetingType || null,
-          caseInfo: event.caseTitle || event.caseName || null,
-          caseId: event.caseId || null
-        }));
+        // Sort: in progress first, then upcoming (by start time), then past (by end time desc)
+        this.scheduleEvents = mappedEvents.sort((a, b) => {
+          // In progress events first
+          if (a.isInProgress && !b.isInProgress) return -1;
+          if (!a.isInProgress && b.isInProgress) return 1;
 
-        // Count week events
-        const weekEnd = new Date(today);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-        this.thisWeekEvents = events.filter(event => {
-          const eventDate = new Date(event.start || event.startTime);
-          return eventDate >= today && eventDate < weekEnd;
-        }).length;
+          // Past events last
+          if (a.isPast && !b.isPast) return 1;
+          if (!a.isPast && b.isPast) return -1;
+
+          // Within same category, sort by start time
+          return (a.rawStart?.getTime() || 0) - (b.rawStart?.getTime() || 0);
+        });
+
+        console.log('[Schedule] Mapped schedule events:', this.scheduleEvents.length);
+        console.log('[Schedule] In progress:', this.scheduleEvents.filter(e => e.isInProgress).length);
+        console.log('[Schedule] Past:', this.scheduleEvents.filter(e => e.isPast).length);
 
         this.eventsLoading = false;
-        // Load AI briefing after we have schedule data
-        this.loadAiBriefing();
+        // Signal that schedule events are loaded, then try to load AI briefing
+        this.scheduleEventsLoaded = true;
+        this.tryLoadAiBriefing();
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Also fetch upcoming events for week count
+    this.calendarService.getUpcomingEvents(7).pipe(
+      takeUntil(this.destroy$),
+      catchError(() => of([]))
+    ).subscribe({
+      next: (upcomingEvents: any[]) => {
+        this.thisWeekEvents = upcomingEvents.length;
         this.cdr.detectChanges();
       }
     });
@@ -408,15 +438,20 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       'CONSULTATION': 'consultation',
       'CLIENT_MEETING': 'consultation',
       'COURT_HEARING': 'hearing',
+      'COURT_DATE': 'hearing',  // Added: maps to hearing for AI briefing court detection
       'HEARING': 'hearing',
       'COURT': 'hearing',
       'TRIAL': 'hearing',
       'DOCUMENT_REVIEW': 'review',
       'REVIEW': 'review',
       'DEADLINE': 'review',
+      'REMINDER': 'review',
       'MEETING': 'meeting',
+      'TEAM_MEETING': 'meeting',
       'INTERNAL_MEETING': 'meeting',
-      'DEPOSITION': 'deposition'
+      'MEDIATION': 'meeting',
+      'DEPOSITION': 'deposition',
+      'OTHER': 'meeting'
     };
     return typeMap[type?.toUpperCase()] || 'meeting';
   }
@@ -441,6 +476,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   private loadDashboardData(): void {
     this.isLoading = true;
 
+    // Reset AI briefing loading flags
+    this.scheduleEventsLoaded = false;
+    this.urgentItemsLoaded = false;
+
+    // Clear cached briefing to get fresh data
+    this.aiBriefingService.invalidateCache().subscribe();
+
     // Load all data in parallel
     this.loadCases();
     this.loadTimeEntries();
@@ -449,15 +491,37 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     this.loadRecentActivity();
   }
 
+  /**
+   * Try to load AI briefing only when both schedule events and urgent items are loaded
+   */
+  private tryLoadAiBriefing(): void {
+    if (this.scheduleEventsLoaded && this.urgentItemsLoaded) {
+      console.log('[AIBriefing] Both data sources loaded, generating briefing...');
+      console.log('[AIBriefing] Schedule events:', this.scheduleEvents.length);
+      console.log('[AIBriefing] Urgent items:', this.urgentItems.length);
+      this.loadAiBriefing();
+    } else {
+      console.log('[AIBriefing] Waiting for data sources...', {
+        scheduleEventsLoaded: this.scheduleEventsLoaded,
+        urgentItemsLoaded: this.urgentItemsLoaded
+      });
+    }
+  }
+
   private loadAiBriefing(): void {
     this.aiBriefingLoading = true;
 
-    // Find if there's a court appearance today
+    // Find if there's a court appearance today (that hasn't ended)
     const todayHearing = this.getTodayHearing();
     const nextEvent = this.getNextEvent();
 
+    console.log('[AIBriefing] Today hearing:', todayHearing);
+    console.log('[AIBriefing] Next event:', nextEvent);
+    console.log('[AIBriefing] Active events count:', this.getActiveEventsCount());
+    console.log('[AIBriefing] Completed events count:', this.getCompletedEventsCount());
+
     const request: BriefingRequest = {
-      todayEventsCount: this.scheduleEvents.length,
+      todayEventsCount: this.getActiveEventsCount(), // Only count active (non-past) events
       urgentItemsCount: this.urgentItems.length,
       activeCasesCount: this.activeCasesCount,
       nextEventTitle: nextEvent?.title || null,
@@ -467,6 +531,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       courtTime: todayHearing?.startTime || null,
       recentTeamActivity: [] // TODO: Add team activity when available
     };
+
+    console.log('[AIBriefing] Request:', request);
 
     this.aiBriefingService.getBriefing(request).pipe(
       takeUntil(this.destroy$)
@@ -910,6 +976,14 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return this.showAllCases ? this.recentCases.slice(0, 6) : this.recentCases.slice(0, 3);
   }
 
+  toggleShowAllScheduleEvents(): void {
+    this.showAllScheduleEvents = !this.showAllScheduleEvents;
+  }
+
+  getVisibleScheduleEvents(): ScheduleEvent[] {
+    return this.showAllScheduleEvents ? this.scheduleEvents.slice(0, 6) : this.scheduleEvents.slice(0, 3);
+  }
+
   // Schedule event helpers
   getTotalScheduledHours(): string {
     // Calculate total hours from events
@@ -1276,7 +1350,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   // Briefing helper methods
   getTodayHearing(): ScheduleEvent | null {
-    return this.scheduleEvents.find(e => e.type === 'hearing') || null;
+    // Return first hearing that hasn't ended yet (in progress or upcoming)
+    return this.scheduleEvents.find(e => e.type === 'hearing' && !e.isPast) || null;
   }
 
   getCriticalDeadline(): UrgentItem | null {
@@ -1288,8 +1363,18 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   getNextEvent(): ScheduleEvent | null {
     if (this.scheduleEvents.length === 0) return null;
-    // Return the first event (assuming they're sorted by time)
-    return this.scheduleEvents[0];
+    // Return the first event that is in progress or upcoming (not past)
+    return this.scheduleEvents.find(e => e.isInProgress || !e.isPast) || null;
+  }
+
+  // Get count of active (non-past) events for today
+  getActiveEventsCount(): number {
+    return this.scheduleEvents.filter(e => !e.isPast).length;
+  }
+
+  // Get count of completed (past) events for today
+  getCompletedEventsCount(): number {
+    return this.scheduleEvents.filter(e => e.isPast).length;
   }
 
   getOverdueCount(): number {

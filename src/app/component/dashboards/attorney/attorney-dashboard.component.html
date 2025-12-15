@@ -136,7 +136,8 @@
                 <h4 class="card-title mb-1">Today's Schedule</h4>
                 <div class="d-flex align-items-center gap-3">
                   <span class="text-muted fs-13">{{getCurrentDayFormatted()}}</span>
-                  <span class="badge bg-primary-subtle text-primary">{{scheduleEvents.length}} Event{{scheduleEvents.length !== 1 ? 's' : ''}}</span>
+                  <span class="badge bg-primary-subtle text-primary" *ngIf="getActiveEventsCount() > 0">{{getActiveEventsCount()}} Remaining</span>
+                  <span class="badge bg-secondary-subtle text-secondary" *ngIf="getCompletedEventsCount() > 0">{{getCompletedEventsCount()}} Completed</span>
                   <span class="badge bg-success-subtle text-success" *ngIf="scheduleEvents.length > 0">{{getTotalScheduledHours()}} hrs</span>
                 </div>
               </div>
@@ -155,16 +156,24 @@
             <div class="card-body pt-0">
               <!-- Horizontal Event Cards -->
               <div class="row g-3">
-                <!-- Dynamic Event Cards (show first 3) -->
-                <div class="col-xl-4 col-md-6" *ngFor="let event of scheduleEvents.slice(0, 3); let i = index">
+                <!-- Dynamic Event Cards (show first 3, expandable to 6) -->
+                <div class="col-xl-4 col-lg-4 col-md-6" *ngFor="let event of getVisibleScheduleEvents(); let i = index">
                   <div class="schedule-event-card border rounded-3 h-100 overflow-hidden cursor-pointer"
-                       [class.border-warning]="event.type === 'hearing'"
+                       [class.border-warning]="event.type === 'hearing' && !event.isPast"
+                       [class.event-past]="event.isPast"
+                       [class.event-in-progress]="event.isInProgress"
                        (click)="onEventClick(event)">
                     <!-- Time Header -->
                     <div class="event-time-header px-3 py-2 d-flex align-items-center justify-content-between"
-                         [ngClass]="getEventHeaderClass(event.type)">
-                      <span class="fw-medium"><i class="ri-time-line me-1"></i>{{event.startTime}} - {{event.endTime}}</span>
-                      <span class="badge" [ngClass]="getEventBadgeClass(event.type)">{{event.duration}}</span>
+                         [ngClass]="event.isPast ? 'bg-secondary text-white' : getEventHeaderClass(event.type)">
+                      <span class="fw-medium">
+                        <i class="ri-time-line me-1"></i>{{event.startTime}} - {{event.endTime}}
+                      </span>
+                      <span class="badge" [ngClass]="event.isPast ? 'bg-white text-secondary' : getEventBadgeClass(event.type)">
+                        <ng-container *ngIf="event.isInProgress">NOW</ng-container>
+                        <ng-container *ngIf="event.isPast">Done</ng-container>
+                        <ng-container *ngIf="!event.isPast && !event.isInProgress">{{event.duration}}</ng-container>
+                      </span>
                     </div>
                     <!-- Event Content -->
                     <div class="p-3">
@@ -212,8 +221,8 @@
                   </div>
                 </div>
 
-                <!-- Add Event Placeholder (when less than 3 events) -->
-                <div class="col-xl-4 col-md-6" *ngIf="scheduleEvents.length < 3">
+                <!-- Add Event Placeholder (when less than 3 events and not expanded) -->
+                <div class="col-xl-4 col-lg-4 col-md-6" *ngIf="scheduleEvents.length < 3 && scheduleEvents.length > 0 && !showAllScheduleEvents">
                   <div class="schedule-event-card border border-dashed rounded-3 h-100 d-flex align-items-center justify-content-center cursor-pointer add-event-placeholder"
                        (click)="openCalendar()">
                     <div class="text-center py-4">
@@ -228,31 +237,30 @@
                   </div>
                 </div>
 
-                <!-- Second placeholder if only 1 event -->
-                <div class="col-xl-4 col-md-6" *ngIf="scheduleEvents.length === 1">
-                  <div class="schedule-event-card border border-dashed rounded-3 h-100 d-flex align-items-center justify-content-center cursor-pointer add-event-placeholder"
-                       (click)="openCalendar()">
-                    <div class="text-center py-4">
-                      <div class="avatar-sm mx-auto mb-3">
-                        <span class="avatar-title bg-light text-muted rounded-circle">
-                          <i class="ri-add-line fs-20"></i>
-                        </span>
-                      </div>
-                      <h6 class="text-muted mb-1">Add Event</h6>
-                      <p class="text-muted fs-12 mb-0">Schedule a meeting or task</p>
+                <!-- Empty State - show when no events -->
+                <div class="col-12" *ngIf="scheduleEvents.length === 0">
+                  <div class="text-center py-4">
+                    <div class="avatar-md mx-auto mb-3">
+                      <span class="avatar-title bg-light text-muted rounded-circle">
+                        <i class="ri-calendar-line fs-24"></i>
+                      </span>
                     </div>
+                    <h6 class="text-muted mb-2">No Events Today</h6>
+                    <p class="text-muted fs-13 mb-3">Your schedule is clear for today</p>
+                    <button class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
+                      <i class="ri-add-line me-1"></i>Add Event
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <!-- View More Events Link (when more than 3 events) -->
+              <!-- Show More/Less Link -->
               <div class="text-center mt-3" *ngIf="scheduleEvents.length > 3">
-                <a href="javascript:void(0);" class="text-primary fw-medium" (click)="openCalendar()">
-                  <i class="ri-calendar-event-line me-1"></i>View {{scheduleEvents.length - 3}} more event{{scheduleEvents.length - 3 > 1 ? 's' : ''}} in calendar
+                <a href="javascript:void(0);" class="text-primary fw-medium fs-13" (click)="toggleShowAllScheduleEvents()">
+                  <span *ngIf="!showAllScheduleEvents">Show {{scheduleEvents.length > 6 ? 3 : scheduleEvents.length - 3}} more <i class="ri-arrow-down-s-line align-middle"></i></span>
+                  <span *ngIf="showAllScheduleEvents">Show less <i class="ri-arrow-up-s-line align-middle"></i></span>
                 </a>
               </div>
-
-              <!-- Empty State removed - Add Event card already shown -->
             </div>
           </div>
         </div>
@@ -851,7 +859,7 @@
       <i class="ri-task-line"></i>
       <span>New Task</span>
     </button>
-    <button class="fab-action btn btn-info" (click)="navigateTo('/time-billing/time-entries'); fabExpanded = false" title="Log Time">
+    <button class="fab-action btn btn-info" (click)="navigateTo('/time-tracking/entry'); fabExpanded = false" title="Log Time">
       <i class="ri-time-line"></i>
       <span>Log Time</span>
     </button>

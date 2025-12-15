@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpEventType, HttpContext } from '@angular/co
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError, tap, timeout, filter } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { UserService } from '../../../service/user.service';
 
 export interface DocumentAnalysisResult {
   id: string;
@@ -85,12 +86,22 @@ export class DocumentAnalyzerService {
   private analysisStatusSubject = new BehaviorSubject<string>('idle');
   public analysisStatus$ = this.analysisStatusSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private userService: UserService
+  ) {}
 
   analyzeDocument(file: File, analysisType: string, sessionId?: number, analysisContext?: string, caseId?: number | null): Observable<DocumentAnalysisResult> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('analysisType', analysisType);
+
+    // Always pass userId to ensure documents are saved under correct user
+    const userId = this.userService.getCurrentUserId();
+    if (userId) {
+      formData.append('userId', userId.toString());
+    }
+
     if (sessionId) {
       formData.append('sessionId', sessionId.toString());
     }
@@ -211,9 +222,18 @@ export class DocumentAnalyzerService {
   }
 
   getAnalysisHistory(): Observable<AnalysisHistory[]> {
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      console.warn('No user ID available for analysis history');
+      return throwError(() => new Error('User not authenticated'));
+    }
+
     return this.http.get<{ analyses: AnalysisHistory[] }>(
       `${this.apiUrl}/analysis-history`,
-      { withCredentials: true }
+      {
+        params: { userId: userId.toString() },
+        withCredentials: true
+      }
     ).pipe(
       map(response => response.analyses || []),
       catchError(error => {

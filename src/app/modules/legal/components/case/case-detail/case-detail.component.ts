@@ -953,7 +953,110 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       );
     }
   }
-  
+
+  // Quick action: Schedule Court Date
+  scheduleCourtDate(): void {
+    try {
+      this.modalService.dismissAll();
+
+      const modalRef = this.modalService.open(EventModalComponent, {
+        size: 'lg',
+        backdrop: 'static',
+        keyboard: false,
+        centered: true
+      });
+
+      modalRef.componentInstance.title = 'Schedule Court Date';
+
+      const now = new Date();
+      const twoHoursLater = new Date(now.getTime() + 7200000);
+
+      const courtEvent: Partial<CalendarEvent> = {
+        start: now,
+        end: twoHoursLater,
+        startTime: now,
+        endTime: twoHoursLater,
+        caseId: this.case?.id,
+        caseTitle: this.case?.title,
+        caseNumber: this.case?.caseNumber,
+        eventType: 'COURT_DATE',
+        highPriority: true,
+        status: 'SCHEDULED',
+        title: this.case ? `Court Hearing - ${this.case.title || this.case.caseNumber}` : 'Court Hearing'
+      };
+
+      modalRef.componentInstance.event = courtEvent;
+      if (this.case?.id) {
+        modalRef.componentInstance.caseId = this.case.id;
+      }
+
+      modalRef.result.then(
+        (result) => {
+          if (result && this.case?.id) {
+            this.loadCaseEvents(this.case.id);
+          }
+        },
+        () => {}
+      );
+    } catch (error) {
+      console.error('Error opening court date modal:', error);
+      this.snackBar.open('Unable to open court date scheduler.', 'Close', { duration: 3000 });
+    }
+  }
+
+  // Quick action: Set Deadline
+  setDeadline(): void {
+    try {
+      this.modalService.dismissAll();
+
+      const modalRef = this.modalService.open(EventModalComponent, {
+        size: 'lg',
+        backdrop: 'static',
+        keyboard: false,
+        centered: true
+      });
+
+      modalRef.componentInstance.title = 'Set Deadline';
+
+      // Default to end of business day tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(17, 0, 0, 0);
+
+      const deadlineEvent: Partial<CalendarEvent> = {
+        start: tomorrow,
+        end: tomorrow,
+        startTime: tomorrow,
+        endTime: tomorrow,
+        caseId: this.case?.id,
+        caseTitle: this.case?.title,
+        caseNumber: this.case?.caseNumber,
+        eventType: 'DEADLINE',
+        highPriority: true,
+        status: 'SCHEDULED',
+        allDay: true,
+        title: this.case ? `Deadline - ${this.case.title || this.case.caseNumber}` : 'Deadline'
+      };
+
+      modalRef.componentInstance.event = deadlineEvent;
+      if (this.case?.id) {
+        modalRef.componentInstance.caseId = this.case.id;
+      }
+
+      modalRef.result.then(
+        (result) => {
+          if (result && this.case?.id) {
+            this.loadCaseEvents(this.case.id);
+          }
+        },
+        () => {}
+      );
+    } catch (error) {
+      console.error('Error opening deadline modal:', error);
+      this.snackBar.open('Unable to open deadline scheduler.', 'Close', { duration: 3000 });
+    }
+  }
+
   viewEvent(event: CalendarEvent): void {
     try {
       const modalRef = this.modalService.open(EventModalComponent, {
@@ -962,7 +1065,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         keyboard: false,
         centered: true
       });
-      
+
       modalRef.componentInstance.event = event;
       modalRef.componentInstance.title = 'View Event';
       modalRef.componentInstance.viewMode = true;

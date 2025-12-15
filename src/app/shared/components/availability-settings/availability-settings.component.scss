@@ -14,9 +14,23 @@
   }
 
   .form-switch-lg {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: auto;
+    padding-left: 0;
+
     .form-check-input {
       width: 3em;
       height: 1.5em;
+      margin-left: 0;
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+
+    .form-check-label {
+      margin-bottom: 0;
+      white-space: nowrap;
     }
   }
 

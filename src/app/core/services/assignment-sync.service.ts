@@ -7,6 +7,7 @@ import { NotificationService } from '../../service/notification.service';
 import { CaseContextService } from './case-context.service';
 import { WebSocketService } from './websocket.service';
 import { UserService } from '../../service/user.service';
+import { LegalCaseService } from '../../modules/legal/services/legal-case.service';
 import { CaseAssignment, CaseAssignmentRequest, CaseTransferRequest, TransferUrgency } from '../../interface/case-assignment';
 import { CaseTask, TaskUpdateRequest } from '../../interface/case-task';
 import { User } from '../../interface/user';
@@ -50,7 +51,8 @@ export class AssignmentSyncService implements OnDestroy {
     private notificationService: NotificationService,
     private caseContextService: CaseContextService,
     private webSocketService: WebSocketService,
-    private userService: UserService
+    private userService: UserService,
+    private legalCaseService: LegalCaseService
   ) {
     this.initializeUserSubscription();
     this.initializeAssignmentQueue();
@@ -289,13 +291,27 @@ export class AssignmentSyncService implements OnDestroy {
     return this.caseAssignmentService.assignCase(change.assignmentData).pipe(
       switchMap((response) => {
         const assignment = response.data;
-        
+
         // Update context
         this.caseContextService.addTeamMember(assignment);
-        
+
+        // If this is a LEAD_ATTORNEY assignment, update the case's leadAttorney field
+        if (change.assignmentData?.roleType === 'LEAD_ATTORNEY') {
+          console.log('📝 Updating case leadAttorney to:', assignment.userName);
+          this.legalCaseService.updateCase(String(change.entityId), {
+            leadAttorney: assignment.userName,
+            leadAttorneyId: assignment.userId
+          }).pipe(
+            catchError(err => {
+              console.error('Failed to update case leadAttorney:', err);
+              return of(null);
+            })
+          ).subscribe();
+        }
+
         // Broadcast to WebSocket
         this.broadcastChange(change, assignment);
-        
+
         // Send notifications
         return this.sendAssignmentNotifications(change, assignment).pipe(
           map(() => ({
@@ -477,18 +493,37 @@ export class AssignmentSyncService implements OnDestroy {
   private processUnassignment(change: AssignmentChange): Observable<SyncResult> {
     this.syncInProgress$.next(true);
 
+    // First, check if this user is the lead attorney - if so, clear the case's leadAttorney field
+    const currentTeam = this.caseContextService.getCaseTeamSnapshot();
+    const memberToRemove = currentTeam.find(m => m.userId === change.userId);
+    const isLeadAttorney = memberToRemove?.roleType === 'LEAD_ATTORNEY';
+
     return this.caseAssignmentService.unassignCase(
-      change.entityId, 
-      change.userId, 
+      change.entityId,
+      change.userId,
       change.metadata.reason || 'User unassigned'
     ).pipe(
       tap(() => {
         // Update context
         this.caseContextService.removeTeamMember(change.userId);
-        
+
+        // If removing lead attorney, clear the case's leadAttorney field
+        if (isLeadAttorney) {
+          console.log('📝 Clearing case leadAttorney since LEAD_ATTORNEY was unassigned');
+          this.legalCaseService.updateCase(String(change.entityId), {
+            leadAttorney: null,
+            leadAttorneyId: null
+          }).pipe(
+            catchError(err => {
+              console.error('Failed to clear case leadAttorney:', err);
+              return of(null);
+            })
+          ).subscribe();
+        }
+
         // Broadcast change
         this.broadcastChange(change, null);
-        
+
         // Send notification
         this.sendUnassignmentNotification(change);
       }),

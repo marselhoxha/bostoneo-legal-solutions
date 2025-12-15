@@ -234,11 +234,20 @@ export class CalendarService {
   }
   
   private formatDateForJava(date: Date): string {
-    // Format: YYYY-MM-DDTHH:MM:SS (no timezone)
+    // Format: YYYY-MM-DDTHH:MM:SS (no timezone, local time preserved)
     if (!date) {
-      return null; // Return null if date is undefined or null
+      return null;
     }
-    return date.toISOString().slice(0, 19);
+
+    // Use local date methods to preserve user's selected time
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
   
   private formatStringDateForJava(dateString: string): string {
@@ -502,7 +511,7 @@ export class CalendarService {
       .pipe(
         map(response => {
           console.log('Fetched calendar events successfully', response);
-          
+
           // Extract events from the nested response structure
           if (response && response.data && Array.isArray(response.data.events)) {
             return response.data.events.map(event => ({
@@ -517,12 +526,64 @@ export class CalendarService {
               end: event.endTime || event.end
             }));
           }
-          
+
           return [];
         }),
         catchError(error => {
           console.error('getEvents failed:', error);
           // Return empty events array instead of propagating the error
+          return of([]);
+        })
+      );
+  }
+
+  /**
+   * Get today's calendar events
+   */
+  getTodayEvents(): Observable<any[]> {
+    return this.http.get<any>(`${environment.apiUrl}/api/calendar/events/today`)
+      .pipe(
+        map(response => {
+          console.log('Fetched today events successfully', response);
+
+          if (response && response.data && Array.isArray(response.data.events)) {
+            return response.data.events.map(event => ({
+              ...event,
+              start: event.startTime || event.start,
+              end: event.endTime || event.end
+            }));
+          }
+
+          return [];
+        }),
+        catchError(error => {
+          console.error('getTodayEvents failed:', error);
+          return of([]);
+        })
+      );
+  }
+
+  /**
+   * Get upcoming calendar events (next N days)
+   */
+  getUpcomingEvents(days: number = 30): Observable<any[]> {
+    return this.http.get<any>(`${environment.apiUrl}/api/calendar/events/upcoming?days=${days}`)
+      .pipe(
+        map(response => {
+          console.log('Fetched upcoming events successfully', response);
+
+          if (response && response.data && Array.isArray(response.data.events)) {
+            return response.data.events.map(event => ({
+              ...event,
+              start: event.startTime || event.start,
+              end: event.endTime || event.end
+            }));
+          }
+
+          return [];
+        }),
+        catchError(error => {
+          console.error('getUpcomingEvents failed:', error);
           return of([]);
         })
       );

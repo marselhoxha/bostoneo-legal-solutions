@@ -425,4 +425,35 @@ export class AiWorkspaceStateService {
     this.activeDocumentIdSubject.next(null);
     this.documentViewerModeSubject.next(false);
   }
+
+  /**
+   * Clear stale generation state
+   * Called on component init to reset any stale UI state from previous navigation
+   * This prevents showing "Generating response" when returning to the workspace
+   * after navigating away during an active generation
+   */
+  clearStaleGenerationState(): void {
+    // If isGenerating is true but we're just initializing, it's stale state
+    if (this.isGeneratingSubject.value) {
+      console.log('🧹 Clearing stale generation state');
+      this.isGeneratingSubject.next(false);
+    }
+
+    // Clear any in-progress workflow steps (reset to empty, not pending)
+    const steps = this.workflowStepsSubject.value;
+    if (steps.length > 0 && steps.some(s => s.status === WorkflowStepStatus.Active || s.status === WorkflowStepStatus.Completed)) {
+      console.log('🧹 Clearing stale workflow steps');
+      this.workflowStepsSubject.next([]);
+    }
+
+    // Clear any "analyzing" status documents (they should be fetched fresh from DB)
+    const docs = this.analyzedDocumentsSubject.value;
+    const staleAnalyzingDocs = docs.filter(d => d.status === 'analyzing');
+    if (staleAnalyzingDocs.length > 0) {
+      console.log('🧹 Clearing', staleAnalyzingDocs.length, 'stale analyzing documents');
+      // Remove stale analyzing docs - they'll be refetched from DB with correct status
+      const cleanedDocs = docs.filter(d => d.status !== 'analyzing');
+      this.analyzedDocumentsSubject.next(cleanedDocs);
+    }
+  }
 }

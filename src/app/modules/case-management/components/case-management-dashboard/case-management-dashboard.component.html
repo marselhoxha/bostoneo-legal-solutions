@@ -288,75 +288,91 @@
 
       <!-- Right Column -->
       <div class="col-xl-4">
-        <!-- Case Distribution Chart -->
+        <!-- Case Pipeline Chart -->
         <div class="card border-0 shadow-sm mb-4">
           <div class="card-header bg-transparent">
             <h6 class="card-title mb-0">
-              <i class="ri-pie-chart-line me-2 text-primary"></i>Case Distribution
+              <i class="ri-flow-chart me-2 text-primary"></i>Case Pipeline
             </h6>
           </div>
           <div class="card-body">
-            <div class="chart-container" style="height: 220px;">
-              <canvas id="caseDistributionChart"></canvas>
+            <div class="chart-container" style="height: 180px;" *ngIf="activeCases.length > 0">
+              <canvas id="casePipelineChart"></canvas>
+            </div>
+            <!-- Empty state -->
+            <div *ngIf="activeCases.length === 0" class="text-center py-4">
+              <div class="avatar-md mx-auto mb-3">
+                <div class="avatar-title bg-light text-primary rounded-circle fs-20">
+                  <i class="ri-flow-chart"></i>
+                </div>
+              </div>
+              <p class="text-muted fs-13 mb-0">No cases in pipeline</p>
             </div>
           </div>
         </div>
 
-        <!-- Team Workload Chart (Manager Only) -->
-        <div class="card border-0 shadow-sm mb-4" *ngIf="isManager">
+        <!-- Task Completion Rate -->
+        <div class="card border-0 shadow-sm mb-4">
           <div class="card-header bg-transparent">
             <h6 class="card-title mb-0">
-              <i class="ri-bar-chart-line me-2 text-success"></i>Team Workload
+              <i class="ri-donut-chart-line me-2 text-success"></i>Task Completion
             </h6>
           </div>
           <div class="card-body">
-            <div class="chart-container" style="height: 250px;">
-              <canvas id="workloadChart"></canvas>
+            <div class="task-completion-wrapper">
+              <!-- Gauge Chart -->
+              <div class="chart-container position-relative" style="height: 160px;">
+                <canvas id="taskCompletionChart"></canvas>
+                <!-- Center text overlay -->
+                <div class="gauge-center-text">
+                  <span class="gauge-value">{{ taskStats.completionRate }}%</span>
+                  <span class="gauge-label">Complete</span>
+                </div>
+              </div>
+              <!-- Stats below chart -->
+              <div class="row g-2 mt-3">
+                <div class="col-4 text-center">
+                  <div class="task-stat">
+                    <span class="task-stat-value text-success">{{ taskStats.completed }}</span>
+                    <span class="task-stat-label">Done</span>
+                  </div>
+                </div>
+                <div class="col-4 text-center">
+                  <div class="task-stat">
+                    <span class="task-stat-value text-primary">{{ taskStats.inProgress }}</span>
+                    <span class="task-stat-label">In Progress</span>
+                  </div>
+                </div>
+                <div class="col-4 text-center">
+                  <div class="task-stat">
+                    <span class="task-stat-value text-danger">{{ taskStats.overdue }}</span>
+                    <span class="task-stat-label">Overdue</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Team Members (Manager Only) -->
-        <div class="card border-0 shadow-sm mb-4" *ngIf="isManager && teamMembers.length > 0">
-          <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
+        <!-- Team Capacity Chart -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-transparent">
             <h6 class="card-title mb-0">
-              <i class="ri-team-line me-2 text-info"></i>Team Members
+              <i class="ri-team-line me-2 text-info"></i>Team Capacity
             </h6>
-            <button class="btn btn-sm btn-light" (click)="selectedTeamMember = null" *ngIf="selectedTeamMember">
-              <i class="ri-close-line"></i>
-            </button>
           </div>
-          <div class="card-body p-0">
-            <div class="team-list">
-              <a href="javascript:void(0);"
-                 class="team-item"
-                 *ngFor="let member of teamMembers.slice(0, 5)"
-                 (click)="selectedTeamMember = member.userId"
-                 [class.active]="selectedTeamMember === member.userId">
-                <div class="d-flex align-items-center">
-                  <div class="team-avatar">
-                    <span class="avatar-title">{{ (member.userName || 'U').charAt(0) }}</span>
-                  </div>
-                  <div class="flex-grow-1 ms-3">
-                    <h6 class="mb-0 fs-14">{{ member.userName }}</h6>
-                    <span class="text-muted fs-12">{{ member.activeCases || 0 }} active cases</span>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <span class="badge" [ngClass]="{
-                      'bg-danger-subtle text-danger': (member.workloadPercentage || 0) >= 90,
-                      'bg-warning-subtle text-warning': (member.workloadPercentage || 0) >= 70 && (member.workloadPercentage || 0) < 90,
-                      'bg-success-subtle text-success': (member.workloadPercentage || 0) < 70
-                    }">
-                      {{ member.workloadPercentage || 0 }}%
-                    </span>
-                  </div>
-                </div>
-              </a>
+          <div class="card-body">
+            <div class="chart-container" style="height: 200px;" *ngIf="teamMembers.length > 0">
+              <canvas id="teamCapacityChart"></canvas>
             </div>
-            <div class="p-3 text-center" *ngIf="teamMembers.length > 5">
-              <a routerLink="/case-management/assignments" class="btn btn-sm btn-soft-primary">
-                View All Team Members
-              </a>
+            <!-- Empty state -->
+            <div *ngIf="teamMembers.length === 0" class="text-center py-4">
+              <div class="avatar-md mx-auto mb-3">
+                <div class="avatar-title bg-light text-info rounded-circle fs-20">
+                  <i class="ri-team-line"></i>
+                </div>
+              </div>
+              <p class="text-muted fs-13 mb-0">No team data available</p>
             </div>
           </div>
         </div>

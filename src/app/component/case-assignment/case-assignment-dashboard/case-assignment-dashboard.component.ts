@@ -903,7 +903,18 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       next: (syncResult) => {
         if (syncResult.success) {
           const assignment = syncResult.data;
-          this.notificationService.onSuccess('Case assigned successfully');
+
+          // Show SweetAlert success
+          import('sweetalert2').then(Swal => {
+            Swal.default.fire({
+              icon: 'success',
+              title: 'Assigned',
+              text: 'Case assigned successfully',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          });
+
           this.assignments.push(assignment);
           this.assignmentForm.reset();
           this.selectedCase = null;
@@ -1103,15 +1114,26 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
   removeAssignment(assignment: CaseAssignment): void {
     console.log('🗑️ Removing assignment:', assignment);
-    console.log('   - Assignment ID:', assignment.id);
-    console.log('   - Case ID:', assignment.caseId);
-    console.log('   - User ID:', assignment.userId);
-    console.log('   - User Name:', assignment.userName);
 
-    if (!confirm('Are you sure you want to remove this assignment?')) {
-      return;
-    }
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Remove Assignment',
+        text: `Are you sure you want to remove ${assignment.userName} from "${assignment.caseTitle || 'this case'}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Remove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.performRemoveAssignment(assignment);
+        }
+      });
+    });
+  }
 
+  private performRemoveAssignment(assignment: CaseAssignment): void {
     // Use AssignmentSyncService for unassignment
     this.assignmentSyncService.unassignUserFromCase(
       assignment.caseId,
@@ -1122,10 +1144,21 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (syncResult) => {
         if (syncResult.success) {
-          this.notificationService.onSuccess('Assignment removed successfully');
+          // Show SweetAlert success
+          import('sweetalert2').then(Swal => {
+            Swal.default.fire({
+              icon: 'success',
+              title: 'Removed',
+              text: 'Assignment removed successfully',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          });
+
           this.assignments = this.assignments.filter(a => a.id !== assignment.id);
+          this.myAssignments = this.myAssignments.filter(a => a.id !== assignment.id);
           this.cdr.markForCheck();
-          
+
           // Log removal in audit
           const caseName = assignment.caseTitle || `Case ${assignment.caseId}`;
           this.auditLogService.logAssignmentChange(
@@ -1137,12 +1170,12 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
             undefined,
             'CaseAssignmentDashboard'
           ).subscribe();
-          
+
           // Update context if in case mode
           if (this.caseMode && this.currentCaseId) {
             this.caseContextService.syncWithBackend(this.currentCaseId).subscribe();
           }
-          
+
           this.loadWorkloadData();
         } else {
           this.notificationService.onError(syncResult.error || 'Failed to remove assignment');

@@ -959,6 +959,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
+    // ===== CLEAR STALE STATE =====
+    // Clear any stale generation state from previous navigation
+    // This prevents showing "Generating response" when returning after navigating away
+    this.stateService.clearStaleGenerationState();
+
     // ===== STATE SYNCHRONIZATION =====
     // Restore selectedTask based on current state mode
     // This ensures sidebar shows correct content when navigating back to workspace
@@ -970,9 +975,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe(user => {
         this.currentUser = user;
         console.log('Current user from UserService observable:', user);
-        // Load cases when user is available
+        // Load user-specific data when user is available
         if (user && user.id) {
           this.loadUserCases();
+          this.loadAnalysisHistory();
         }
       });
 
@@ -990,8 +996,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             if (response && response.data && response.data.user) {
               this.currentUser = response.data.user;
               console.log('User profile loaded from backend:', this.currentUser);
-              // Load cases after user is loaded
+              // Load user-specific data after user is loaded
               this.loadUserCases();
+              this.loadAnalysisHistory();
             }
           },
           error: (error) => {
@@ -1004,7 +1011,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.loadConversations();
 
     // Load analysis history for sidebar (Recent Documents section)
-    this.loadAnalysisHistory();
+    // Only load if user is already available; otherwise it's loaded in userData$ subscription
+    if (this.currentUser && this.currentUser.id) {
+      this.loadAnalysisHistory();
+    }
 
     // Load collections for sidebar
     this.loadCollections();
@@ -1037,28 +1047,125 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Called on init and when state changes to ensure sidebar shows correct content
    */
   private syncSelectedTaskWithState(): void {
-    // If in document viewer mode OR there's an active document, ensure we're in upload mode
+    // If in document viewer mode OR there's an active document, validate and set upload mode
     if (this.stateService.getDocumentViewerMode() || this.stateService.getActiveDocumentId()) {
-      this.selectedTask = ConversationType.Upload;
-      this.activeTask = ConversationType.Upload;
-      console.log('📋 State sync: Document viewer mode - setting selectedTask to upload');
-    }
-    // If in drafting mode, ensure task is set appropriately
-    else if (this.stateService.getDraftingMode()) {
-      this.selectedTask = ConversationType.Draft;
-      this.activeTask = ConversationType.Draft;
-      console.log('📋 State sync: Drafting mode - setting selectedTask to draft');
-    }
-    // Otherwise keep current selectedTask or use default
-    else {
-      // Keep the previously selected task (stored in state service)
-      const storedTask = this.stateService.getSelectedTask();
-      if (storedTask) {
-        this.selectedTask = storedTask;
-        this.activeTask = storedTask;
-        console.log('📋 State sync: Restored selectedTask from state:', storedTask);
+      const activeDocId = this.stateService.getActiveDocumentId();
+      const activeDoc = activeDocId ? this.stateService.getActiveDocument() : null;
+
+      // Validate that active document actually exists
+      if (activeDocId && !activeDoc) {
+        console.log('📋 State sync: Active document not found, clearing document viewer state');
+        this.stateService.closeDocumentViewer();
+        // Fall through to default task selection
+      } else {
+        this.selectedTask = ConversationType.Upload;
+        this.activeTask = ConversationType.Upload;
+        console.log('📋 State sync: Document viewer mode - setting selectedTask to upload');
+        return;
       }
     }
+
+    // If in drafting mode, validate there's an active conversation
+    if (this.stateService.getDraftingMode()) {
+      const activeConvId = this.stateService.getActiveConversationId();
+      if (activeConvId) {
+        this.selectedTask = ConversationType.Draft;
+        this.activeTask = ConversationType.Draft;
+        console.log('📋 State sync: Drafting mode - setting selectedTask to draft');
+        return;
+      } else {
+        // Drafting mode but no conversation - reset
+        console.log('📋 State sync: Drafting mode without conversation, resetting');
+        this.stateService.setDraftingMode(false);
+        this.stateService.setShowChat(false);
+        // Fall through to default task selection
+      }
+    }
+
+    // Clear any stale chat state if not in a valid mode
+    // This prevents showing old conversation when returning to workspace
+    if (this.stateService.getShowChat() && !this.stateService.getActiveConversationId()) {
+      console.log('📋 State sync: Clearing stale chat state');
+      this.stateService.setShowChat(false);
+      this.stateService.clearConversationMessages();
+    }
+
+    // Otherwise keep current selectedTask or use default
+    const storedTask = this.stateService.getSelectedTask();
+    if (storedTask) {
+      this.selectedTask = storedTask;
+      this.activeTask = storedTask;
+      console.log('📋 State sync: Restored selectedTask from state:', storedTask);
+    }
+  }
+
+  /**
+   * Validate and clean up stale UI state after data loads
+   * This prevents showing old conversation data that doesn't match current task
+   */
+  private validateAndCleanupState(conversations: Conversation[]): void {
+    const activeConvId = this.stateService.getActiveConversationId();
+    const showChat = this.stateService.getShowChat();
+    const selectedTask = this.selectedTask;
+
+    // If chat is showing but no valid conversation, reset state
+    if (showChat && activeConvId) {
+      const activeConv = conversations.find(c => c.id === activeConvId);
+
+      if (!activeConv) {
+        // Active conversation no longer exists - reset UI state
+        console.log('🧹 Cleanup: Active conversation not found, resetting UI state');
+        this.resetToWelcomeState();
+        return;
+      }
+
+      // Check if active conversation type matches current selected task
+      const convMatchesTask = this.conversationMatchesTask(activeConv.type, selectedTask);
+      if (!convMatchesTask) {
+        console.log('🧹 Cleanup: Active conversation type mismatch:', activeConv.type, 'vs task:', selectedTask);
+        this.resetToWelcomeState();
+        return;
+      }
+    }
+
+    // If chat is showing but no active conversation ID, something is wrong
+    if (showChat && !activeConvId && !this.stateService.getIsGenerating()) {
+      console.log('🧹 Cleanup: Chat showing but no active conversation');
+      this.resetToWelcomeState();
+    }
+  }
+
+  /**
+   * Check if conversation type matches the selected task type
+   */
+  private conversationMatchesTask(convType: ConversationType, taskType: ConversationType): boolean {
+    // Question conversations match question task
+    if (taskType === ConversationType.Question && convType === ConversationType.Question) {
+      return true;
+    }
+    // Draft conversations match draft task
+    if (taskType === ConversationType.Draft && convType === ConversationType.Draft) {
+      return true;
+    }
+    // Upload/document analysis - handled separately through document viewer
+    if (taskType === ConversationType.Upload && (convType === ConversationType.Upload || convType === ConversationType.Summarize)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Reset to welcome state (no active conversation, no chat)
+   */
+  private resetToWelcomeState(): void {
+    this.stateService.setActiveConversationId(null);
+    this.stateService.clearConversationMessages();
+    this.stateService.setShowChat(false);
+    this.stateService.setShowBottomSearchBar(false);
+    this.stateService.setIsGenerating(false);
+    this.stateService.setDraftingMode(false);
+    this.stateService.clearFollowUpQuestions();
+    console.log('🏠 Reset to welcome state');
   }
 
   // Load user's cases for case selector
@@ -1094,7 +1201,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           console.log('📄 Loaded analysis history:', history.length, 'documents');
 
           // Map AnalysisHistory to AnalyzedDocument format
-          const analyzedDocs = history.map(h => ({
+          const dbDocs = history.map(h => ({
             id: `analysis_${h.id}`,
             databaseId: h.id,
             fileName: h.fileName,
@@ -1109,8 +1216,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             status: (h.status?.toLowerCase() === 'completed' ? 'completed' : 'failed') as 'completed' | 'failed'
           }));
 
+          // Merge with current in-memory documents to preserve recently analyzed ones
+          // that might not be in the DB response yet (due to timing/caching)
+          const currentDocs = this.stateService.getAnalyzedDocuments();
+          const dbDocIds = new Set(dbDocs.map(d => d.databaseId));
+
+          // Keep local documents that have full analysis data but aren't in DB response
+          // (recently analyzed documents that haven't synced yet)
+          const localOnlyDocs = currentDocs.filter(doc =>
+            doc.databaseId && !dbDocIds.has(doc.databaseId) && doc.analysis?.fullAnalysis
+          );
+
+          // Merge: DB docs first, then local-only docs
+          const mergedDocs = [...dbDocs, ...localOnlyDocs];
+          console.log('📄 Merged documents:', dbDocs.length, 'from DB +', localOnlyDocs.length, 'local =', mergedDocs.length, 'total');
+
           // Set to state service (this populates the sidebar)
-          this.stateService.setAnalyzedDocuments(analyzedDocs);
+          this.stateService.setAnalyzedDocuments(mergedDocs);
           this.loadingAnalyses = false;
           this.cdr.detectChanges();
         },
@@ -2214,6 +2336,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             // Only update state when all requests are complete
             if (completedRequests === taskTypes.length) {
               this.stateService.setConversations(allConversations);
+              // Validate and clean up stale UI state after conversations load
+              this.validateAndCleanupState(allConversations);
               this.cdr.detectChanges();
             }
           },
@@ -2256,6 +2380,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       relatedDraftId: conv.relatedDraftId
     });
 
+    // CRITICAL: Clear existing messages BEFORE loading new ones
+    // This forces Angular to destroy and recreate DOM elements (including Bootstrap tabs)
+    this.stateService.clearConversationMessages();
+    this.stateService.clearFollowUpQuestions();
+    this.cdr.detectChanges();
+
     // Check if this is a document analysis conversation (Summarize or Upload)
     if (conv.type === ConversationType.Summarize || conv.type === ConversationType.Upload) {
       console.log('📄 Document analysis conversation detected, loading analysis...');
@@ -2280,32 +2410,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               timestamp: new Date(msg.createdAt || new Date())
             };
 
-            // Detect document analysis messages and restore properties
-            // Use two-tier detection: metadata first, then content patterns
-            let hasAnalysisId = false;
-            if (msg.metadata && typeof msg.metadata === 'object') {
+            // Detect DOCUMENT ANALYSIS messages (upload/analyze) - NOT legal research
+            // Only show strategic tabs when there's an analysisId from document analysis
+            // Do NOT use content keywords - they falsely trigger on thorough legal research responses
+            if (msg.metadata && typeof msg.metadata === 'object' && msg.role === 'assistant') {
               const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
-              hasAnalysisId = !!metadata.analysisId;
-            }
-            const hasStrategicContent = msg.content.includes('EXECUTIVE') ||
-              msg.content.includes('CRITICAL') ||
-              msg.content.includes('STRATEGIC');
-
-            if (msg.role === 'assistant' && (hasAnalysisId || hasStrategicContent)) {
-              console.log('🎯 Detected Strategic Document Analysis message (metadata:', hasAnalysisId, 'content:', hasStrategicContent, ')');
-              baseMessage.hasStrategicAnalysis = true;
-              baseMessage.parsedSections = this.parseStrategicSections(msg.content);
-
-              // Extract analysisId from message metadata if available
-              if (msg.metadata && typeof msg.metadata === 'object') {
-                const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
-                if (metadata.analysisId) {
-                  baseMessage.analysisId = metadata.analysisId;
-                  console.log('🎯 Found analysisId in metadata:', metadata.analysisId);
-                }
+              if (metadata.analysisId) {
+                console.log('🎯 Detected Document Analysis message with analysisId:', metadata.analysisId);
+                baseMessage.hasStrategicAnalysis = true;
+                baseMessage.analysisId = metadata.analysisId;
+                baseMessage.parsedSections = this.parseStrategicSections(msg.content);
+                console.log('🎯 Final message with strategic analysis:', baseMessage);
               }
-
-              console.log('🎯 Final message with strategic analysis:', baseMessage);
             }
 
             return baseMessage;

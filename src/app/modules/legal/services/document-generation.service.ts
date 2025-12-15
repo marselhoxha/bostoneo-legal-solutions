@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
+import { UserService } from '../../../service/user.service';
 
 export interface DocumentGenerationRequest {
   templateId?: number;
@@ -99,7 +100,14 @@ export interface DraftGenerationResponse {
 export class DocumentGenerationService {
   private apiUrl = `${environment.apiUrl}/api/ai/documents`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private userService: UserService
+  ) {}
+
+  private getUserId(): number {
+    return this.userService.getCurrentUserId() || 1;
+  }
 
   /**
    * Generate a new legal document using AI
@@ -116,7 +124,7 @@ export class DocumentGenerationService {
    */
   exportDocument(documentId: string | number, format: 'pdf' | 'docx'): Observable<HttpResponse<Blob>> {
     const docId = typeof documentId === 'string' ? parseInt(documentId, 10) : documentId;
-    const userId = 1; // Default user ID, should be injected from auth service in production
+    const userId = this.getUserId();
 
     if (format === 'docx') {
       return this.exportToWord(docId, userId);

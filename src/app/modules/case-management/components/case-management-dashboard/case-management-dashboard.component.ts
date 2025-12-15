@@ -67,8 +67,18 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   };
 
   // Charts
-  workloadChart: Chart<'bar', number[], string> | null = null;
-  caseDistributionChart: Chart<'doughnut', number[], string> | null = null;
+  casePipelineChart: Chart<'bar', number[], string> | null = null;
+  taskCompletionChart: Chart<'doughnut', number[], string> | null = null;
+  teamCapacityChart: Chart<'bar', number[], string> | null = null;
+
+  // Task statistics for completion rate
+  taskStats = {
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    overdue: 0,
+    completionRate: 0
+  };
 
   // Global loading state
   isLoading = true;
@@ -93,13 +103,16 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    
+
     // Destroy charts
-    if (this.workloadChart) {
-      this.workloadChart.destroy();
+    if (this.casePipelineChart) {
+      this.casePipelineChart.destroy();
     }
-    if (this.caseDistributionChart) {
-      this.caseDistributionChart.destroy();
+    if (this.taskCompletionChart) {
+      this.taskCompletionChart.destroy();
+    }
+    if (this.teamCapacityChart) {
+      this.teamCapacityChart.destroy();
     }
   }
 
@@ -170,13 +183,21 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (results) => {
-        this.calculateStatistics();
-        this.initializeCharts();
+        console.log('[Dashboard] Data loaded - Cases:', this.activeCases.length, 'Assignments:', this.myAssignments.length);
 
-        // Add sample data for development if no real data
-        if (this.activeCases.length === 0) {
-          this.addSampleData();
+        // Generate team workload from cases if not already populated
+        if (this.teamMembers.length === 0 && this.activeCases.length > 0) {
+          this.generateTeamWorkloadFromCases();
         }
+
+        this.calculateStatistics();
+
+        // Delay chart initialization to ensure DOM is ready
+        setTimeout(() => {
+          this.initializeCharts();
+          this.cdr.markForCheck();
+        }, 150);
+
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -262,11 +283,72 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$),
       map((response: any) => {
         this.teamMembers = response.data || [];
+
+        // If API returns empty, generate workload from case data
+        if (this.teamMembers.length === 0) {
+          this.generateTeamWorkloadFromCases();
+        }
+
         this.loading.team = false;
         this.cdr.markForCheck();
         return this.teamMembers;
+      }),
+      catchError(error => {
+        console.error('Error loading team workload:', error);
+        // Fallback: generate from case data
+        this.generateTeamWorkloadFromCases();
+        this.loading.team = false;
+        this.cdr.markForCheck();
+        return of(this.teamMembers);
       })
     );
+  }
+
+  /**
+   * Generate team workload from active cases when API doesn't return data
+   */
+  private generateTeamWorkloadFromCases(): void {
+    // Group cases by assigned attorney/lead
+    const workloadMap = new Map<string, { userId: number; userName: string; activeCases: number; caseTypes: string[] }>();
+
+    this.activeCases.forEach(legalCase => {
+      // Use clientName as a proxy for attorney assignment (or you could use a leadAttorney field)
+      const assignee = (legalCase as any).leadAttorneyName || (legalCase as any).assignedTo || this.currentUser?.firstName + ' ' + this.currentUser?.lastName || 'Unassigned';
+      const assigneeId = (legalCase as any).leadAttorneyId || (legalCase as any).assignedToId || this.currentUser?.id || 0;
+
+      if (!workloadMap.has(assignee)) {
+        workloadMap.set(assignee, {
+          userId: assigneeId,
+          userName: assignee,
+          activeCases: 0,
+          caseTypes: []
+        });
+      }
+
+      const entry = workloadMap.get(assignee)!;
+      entry.activeCases++;
+      if (legalCase.type && !entry.caseTypes.includes(legalCase.type)) {
+        entry.caseTypes.push(legalCase.type);
+      }
+    });
+
+    // Convert to array and calculate workload percentage
+    // Assuming 10 cases = 100% workload
+    const maxCasesPerPerson = 10;
+    this.teamMembers = Array.from(workloadMap.values()).map(member => ({
+      ...member,
+      workloadPercentage: Math.min(Math.round((member.activeCases / maxCasesPerPerson) * 100), 100)
+    }));
+
+    // If still empty, add current user as fallback
+    if (this.teamMembers.length === 0 && this.currentUser) {
+      this.teamMembers = [{
+        userId: this.currentUser.id,
+        userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+        activeCases: this.activeCases.length,
+        workloadPercentage: Math.min(Math.round((this.activeCases.length / maxCasesPerPerson) * 100), 100)
+      }];
+    }
   }
 
   private calculateStatistics(): void {
@@ -294,112 +376,320 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   }
 
   private initializeCharts(): void {
-    // Initialize workload chart
+    // Initialize all charts with slight delay to ensure DOM is ready
     setTimeout(() => {
-      this.createWorkloadChart();
-      this.createCaseDistributionChart();
+      this.calculateTaskStats();
+      this.createCasePipelineChart();
+      this.createTaskCompletionChart();
+      this.createTeamCapacityChart();
     }, 100);
   }
 
-  private createWorkloadChart(): void {
-    const canvas = document.getElementById('workloadChart') as HTMLCanvasElement;
-    if (!canvas) return;
+  /**
+   * Calculate task statistics for the completion rate chart
+   */
+  private calculateTaskStats(): void {
+    // Get all tasks (including completed for accurate stats)
+    const allTasks = this.recentTasks;
+    const completedTasks = allTasks.filter(t => t.status === 'COMPLETED');
+    const inProgressTasks = allTasks.filter(t => t.status === 'IN_PROGRESS');
+    const overdueTasks = allTasks.filter(t => {
+      if (!t.dueDate) return false;
+      return new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED';
+    });
+
+    // For a more meaningful completion rate, we'll use completed vs total assigned
+    const totalAssigned = allTasks.length + completedTasks.length; // Include completed in total
+    this.taskStats = {
+      total: totalAssigned || allTasks.length,
+      completed: completedTasks.length,
+      inProgress: inProgressTasks.length,
+      overdue: overdueTasks.length,
+      completionRate: totalAssigned > 0
+        ? Math.round((completedTasks.length / totalAssigned) * 100)
+        : 0
+    };
+
+    console.log('[TaskStats] Calculated:', this.taskStats);
+  }
+
+  /**
+   * Case Pipeline Chart - Horizontal funnel showing cases through stages
+   */
+  private createCasePipelineChart(): void {
+    const canvas = document.getElementById('casePipelineChart') as HTMLCanvasElement;
+    if (!canvas) {
+      console.log('[CasePipeline] Canvas not found, retrying...');
+      setTimeout(() => this.createCasePipelineChart(), 200);
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Destroy existing chart
-    if (this.workloadChart) {
-      this.workloadChart.destroy();
+    if (this.casePipelineChart) {
+      this.casePipelineChart.destroy();
+      this.casePipelineChart = null;
     }
 
-    const teamData = this.teamMembers.slice(0, 10); // Top 10 team members
-    
-    this.workloadChart = new Chart(ctx, {
+    // Define pipeline stages in order
+    const stages = ['OPEN', 'IN_PROGRESS', 'PENDING', 'CLOSED'];
+    const stageLabels = ['Open', 'In Progress', 'Pending', 'Closed'];
+    const stageColors = [
+      'rgba(54, 162, 235, 0.85)',   // Blue - Open
+      'rgba(255, 193, 7, 0.85)',    // Yellow - In Progress
+      'rgba(108, 117, 125, 0.85)',  // Gray - Pending
+      'rgba(40, 167, 69, 0.85)'     // Green - Closed
+    ];
+
+    // Count cases in each stage
+    const stageCounts = stages.map(stage =>
+      this.activeCases.filter(c => c.status === stage).length
+    );
+
+    console.log('[CasePipeline] Stage counts:', stageCounts);
+
+    // If no cases, don't create chart
+    if (stageCounts.every(count => count === 0)) {
+      console.log('[CasePipeline] No cases to display');
+      return;
+    }
+
+    this.casePipelineChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: teamData.map(m => m.userName || m.name),
+        labels: stageLabels,
         datasets: [{
-          label: 'Workload %',
-          data: teamData.map(m => m.workloadPercentage || 0),
-          backgroundColor: teamData.map(m => {
-            const percentage = m.workloadPercentage || 0;
-            if (percentage >= 90) return 'rgba(220, 53, 69, 0.8)';
-            if (percentage >= 70) return 'rgba(255, 193, 7, 0.8)';
-            return 'rgba(40, 167, 69, 0.8)';
-          }),
-          borderWidth: 0
+          label: 'Cases',
+          data: stageCounts,
+          backgroundColor: stageColors,
+          borderRadius: 6,
+          borderWidth: 0,
+          barThickness: 35
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'y',
         plugins: {
           legend: {
             display: false
           },
           tooltip: {
             callbacks: {
-              label: (context) => `Workload: ${context.parsed.y}%`
+              label: (context) => {
+                const total = stageCounts.reduce((a, b) => a + b, 0);
+                const percentage = total > 0 ? Math.round((context.parsed.x / total) * 100) : 0;
+                return `${context.parsed.x} cases (${percentage}%)`;
+              }
             }
           }
         },
         scales: {
-          y: {
+          x: {
             beginAtZero: true,
-            max: 100,
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
             ticks: {
-              callback: (value) => value + '%'
+              stepSize: 1,
+              precision: 0
+            }
+          },
+          y: {
+            grid: {
+              display: false
             }
           }
         }
       }
     });
+
+    console.log('[CasePipeline] Chart created successfully');
   }
 
-  private createCaseDistributionChart(): void {
-    const canvas = document.getElementById('caseDistributionChart') as HTMLCanvasElement;
-    if (!canvas) return;
+  /**
+   * Task Completion Rate Chart - Radial gauge showing progress
+   */
+  private createTaskCompletionChart(): void {
+    const canvas = document.getElementById('taskCompletionChart') as HTMLCanvasElement;
+    if (!canvas) {
+      console.log('[TaskCompletion] Canvas not found, retrying...');
+      setTimeout(() => this.createTaskCompletionChart(), 200);
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Destroy existing chart
-    if (this.caseDistributionChart) {
-      this.caseDistributionChart.destroy();
+    if (this.taskCompletionChart) {
+      this.taskCompletionChart.destroy();
+      this.taskCompletionChart = null;
     }
 
-    // Group cases by status
-    const statusCounts = this.activeCases.reduce((acc, legalCase) => {
-      acc[legalCase.status] = (acc[legalCase.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const completionRate = this.taskStats.completionRate;
+    const remaining = 100 - completionRate;
 
-    this.caseDistributionChart = new Chart(ctx, {
+    // Color based on completion rate
+    let completionColor = 'rgba(40, 167, 69, 0.85)'; // Green for good
+    if (completionRate < 50) {
+      completionColor = 'rgba(220, 53, 69, 0.85)'; // Red for low
+    } else if (completionRate < 75) {
+      completionColor = 'rgba(255, 193, 7, 0.85)'; // Yellow for medium
+    }
+
+    this.taskCompletionChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: Object.keys(statusCounts),
+        labels: ['Completed', 'Remaining'],
         datasets: [{
-          data: Object.values(statusCounts),
-          backgroundColor: [
-            'rgba(54, 162, 235, 0.8)',
-            'rgba(255, 193, 7, 0.8)',
-            'rgba(40, 167, 69, 0.8)',
-            'rgba(220, 53, 69, 0.8)',
-            'rgba(108, 117, 125, 0.8)'
-          ]
+          data: [completionRate, remaining],
+          backgroundColor: [completionColor, 'rgba(233, 236, 239, 0.5)'],
+          borderWidth: 0,
+          circumference: 270,
+          rotation: 225
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '75%',
         plugins: {
           legend: {
-            position: 'bottom'
+            display: false
+          },
+          tooltip: {
+            enabled: false
           }
         }
       }
     });
+
+    console.log('[TaskCompletion] Chart created successfully');
+  }
+
+  /**
+   * Team Capacity Chart - Horizontal bars showing available capacity
+   */
+  private createTeamCapacityChart(): void {
+    const canvas = document.getElementById('teamCapacityChart') as HTMLCanvasElement;
+    if (!canvas) {
+      console.log('[TeamCapacity] Canvas not found, retrying...');
+      setTimeout(() => this.createTeamCapacityChart(), 200);
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Destroy existing chart
+    if (this.teamCapacityChart) {
+      this.teamCapacityChart.destroy();
+      this.teamCapacityChart = null;
+    }
+
+    const teamData = this.teamMembers.slice(0, 6); // Top 6 team members
+
+    console.log('[TeamCapacity] Team data:', teamData);
+
+    // If no team data, don't create chart
+    if (teamData.length === 0) {
+      console.log('[TeamCapacity] No team data to display');
+      return;
+    }
+
+    // Calculate available capacity (100 - workload)
+    const capacityData = teamData.map(m => 100 - (m.workloadPercentage || 0));
+
+    this.teamCapacityChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: teamData.map(m => this.truncateName(m.userName || m.name || 'Unknown')),
+        datasets: [
+          {
+            label: 'Used',
+            data: teamData.map(m => m.workloadPercentage || 0),
+            backgroundColor: teamData.map(m => {
+              const percentage = m.workloadPercentage || 0;
+              if (percentage >= 90) return 'rgba(220, 53, 69, 0.85)';
+              if (percentage >= 70) return 'rgba(255, 193, 7, 0.85)';
+              return 'rgba(40, 167, 69, 0.85)';
+            }),
+            borderRadius: { topLeft: 4, bottomLeft: 4 },
+            borderWidth: 0
+          },
+          {
+            label: 'Available',
+            data: capacityData,
+            backgroundColor: 'rgba(233, 236, 239, 0.6)',
+            borderRadius: { topRight: 4, bottomRight: 4 },
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              padding: 15,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const member = teamData[context.dataIndex];
+                if (context.datasetIndex === 0) {
+                  return `Used: ${context.parsed.x}% (${member.activeCases || 0} cases)`;
+                }
+                return `Available: ${context.parsed.x}%`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: (value) => value + '%'
+            },
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          y: {
+            stacked: true,
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+
+    console.log('[TeamCapacity] Chart created successfully');
+  }
+
+  /**
+   * Helper to truncate long names for chart labels
+   */
+  private truncateName(name: string, maxLength: number = 12): string {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength - 2) + '...';
   }
 
   // Filter methods
@@ -490,78 +780,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
     this.notificationService.onInfo('Assignment modal coming soon');
   }
   
-  private addSampleData(): void {
-    // Add sample data for development
-    this.activeCases = [
-      {
-        id: '1',
-        caseNumber: 'CASE-2025-001',
-        title: 'Smith vs. Johnson Contract Dispute',
-        description: 'Contract breach litigation',
-        status: CaseStatus.OPEN,
-        priority: CasePriority.HIGH,
-        type: 'Contract Litigation',
-        clientName: 'John Smith',
-        clientEmail: 'john.smith@example.com',
-        clientPhone: '555-0123',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: '2',
-        caseNumber: 'CASE-2025-002',
-        title: 'Estate Planning - Williams Family',
-        description: 'Comprehensive estate planning',
-        status: CaseStatus.IN_PROGRESS,
-        priority: CasePriority.MEDIUM,
-        type: 'Estate Planning',
-        clientName: 'Sarah Williams',
-        clientEmail: 'sarah.williams@example.com',
-        clientPhone: '555-0124',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-    
-    this.myAssignments = [
-      {
-        id: 1,
-        caseId: 1,
-        caseNumber: 'CASE-2025-001',
-        caseTitle: 'Smith vs. Johnson Contract Dispute',
-        userId: this.currentUser?.id || 1,
-        userName: this.currentUser?.firstName + ' ' + this.currentUser?.lastName || 'Current User',
-        userEmail: this.currentUser?.email || 'user@example.com',
-        roleType: CaseRoleType.LEAD_ATTORNEY,
-        assignmentType: AssignmentType.MANUAL,
-        assignedAt: new Date(),
-        effectiveFrom: new Date(),
-        active: true,
-        workloadWeight: 60,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-    
-    this.teamMembers = [
-      {
-        userId: 1,
-        userName: 'John Attorney',
-        workloadPercentage: 75,
-        activeCases: 5
-      },
-      {
-        userId: 2,
-        userName: 'Jane Paralegal',
-        workloadPercentage: 60,
-        activeCases: 8
-      }
-    ];
-    
-    this.calculateStatistics();
-    this.initializeCharts();
-    this.cdr.markForCheck();
-  }
 
   // Helper methods
   getPriorityBadgeClass(priority: string): string {

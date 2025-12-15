@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { UserService } from '../../../service/user.service';
 
 export interface WorkflowStep {
   number: number;
@@ -62,7 +63,14 @@ export interface WorkflowExecution {
 export class CaseWorkflowService {
   private apiUrl = `${environment.apiUrl}/api/ai/case-workflow`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private userService: UserService
+  ) {}
+
+  private getUserId(): number | null {
+    return this.userService.getCurrentUserId();
+  }
 
   getWorkflowTemplates(): Observable<WorkflowTemplate[]> {
     return this.http.get<any>(`${this.apiUrl}/templates`).pipe(
@@ -77,7 +85,9 @@ export class CaseWorkflowService {
   }
 
   getUserExecutions(): Observable<WorkflowExecution[]> {
-    return this.http.get<any>(`${this.apiUrl}/executions`).pipe(
+    const userId = this.getUserId();
+    const params = userId ? `?userId=${userId}` : '';
+    return this.http.get<any>(`${this.apiUrl}/executions${params}`).pipe(
       map(response => response.data?.executions || [])
     );
   }
@@ -86,8 +96,10 @@ export class CaseWorkflowService {
    * Get user executions with cache-busting for polling
    */
   getUserExecutionsNoCache(): Observable<WorkflowExecution[]> {
+    const userId = this.getUserId();
     const timestamp = Date.now();
-    return this.http.get<any>(`${this.apiUrl}/executions?_t=${timestamp}`).pipe(
+    const params = userId ? `?userId=${userId}&_t=${timestamp}` : `?_t=${timestamp}`;
+    return this.http.get<any>(`${this.apiUrl}/executions${params}`).pipe(
       map(response => response.data?.executions || [])
     );
   }
@@ -121,12 +133,14 @@ export class CaseWorkflowService {
     caseId?: number,
     name?: string
   ): Observable<WorkflowExecution> {
+    const userId = this.getUserId();
     return this.http.post<any>(`${this.apiUrl}/start`, {
       templateId,
       documentIds,
       collectionId,
       caseId,
-      name
+      name,
+      userId
     }).pipe(
       map(response => response.data?.execution)
     );

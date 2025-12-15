@@ -672,6 +672,8 @@ public class AILegalResearchService {
         system.append("**MANDATORY - FOLLOW-UP QUESTIONS SECTION**:\n");
         system.append("⚠️ CRITICAL: EVERY response MUST end with a '## Follow-up Questions' section.\n");
         system.append("This section is REQUIRED for the user interface to work correctly.\n\n");
+        system.append("⚠️ IMPORTANT DIRECTION: These are questions the USER (attorney) will click to ask YOU (AI) for more research.\n");
+        system.append("They are NOT questions for the user to answer. Generate research-oriented follow-ups that deepen the analysis.\n\n");
         system.append("FORMAT (use EXACTLY this format):\n");
         system.append("## Follow-up Questions\n");
         system.append("- [First attorney-quality follow-up question - 40-80 characters]\n");
@@ -681,7 +683,7 @@ public class AILegalResearchService {
         system.append("- Use '## Follow-up Questions' as the EXACT header (not ### or **)\n");
         system.append("- Each question starts with '- ' (dash space)\n");
         system.append("- Questions must be COMPLETE sentences (40-80 chars), not fragments\n");
-        system.append("- Questions should be attorney-focused research queries, not generic\n");
+        system.append("- Questions should be research queries the attorney would ask the AI, not questions for the attorney to answer\n");
         system.append("- Examples:\n");
         system.append("  - \"Find Mass. SJC cases on good faith purchaser defense\"\n");
         system.append("  - \"Does First Circuit apply heightened pleading to fraud claims?\"\n");
@@ -729,7 +731,7 @@ public class AILegalResearchService {
                 prompt.append("- Focus exclusively on the specific concept, statute, or definition asked about\n");
                 prompt.append("- DO NOT provide full case analysis or multiple arguments\n");
                 prompt.append("- Include the exact statutory text or citation if relevant\n");
-                prompt.append("- End with 2-3 related follow-up questions\n\n");
+                prompt.append("- End with 2-3 follow-up questions the user would ask you to research further\n\n");
                 break;
 
             case FOLLOW_UP_CLARIFICATION:
@@ -739,7 +741,7 @@ public class AILegalResearchService {
                 prompt.append("- DO NOT repeat information already provided - build on it\n");
                 prompt.append("- Focus on the NEW aspect being asked about\n");
                 prompt.append("- Keep it concise and directly responsive\n");
-                prompt.append("- End with 2-3 related follow-up questions\n\n");
+                prompt.append("- End with 2-3 follow-up questions the user would ask you to research further\n\n");
                 break;
 
             case PROCEDURAL_GUIDANCE:
@@ -748,7 +750,7 @@ public class AILegalResearchService {
                 prompt.append("- Include specific deadlines, forms, and court rules\n");
                 prompt.append("- Be practical and action-oriented\n");
                 prompt.append("- Format: 1. First step, 2. Second step, etc.\n");
-                prompt.append("- End with 2-3 related follow-up questions\n\n");
+                prompt.append("- End with 2-3 follow-up questions the user would ask you to research further\n\n");
                 break;
 
             case INITIAL_STRATEGY:
@@ -758,7 +760,7 @@ public class AILegalResearchService {
                 prompt.append("- Include multiple legal arguments ranked by strength\n");
                 prompt.append("- Cite relevant case law and statutes\n");
                 prompt.append("- Address risks and procedural considerations\n");
-                prompt.append("- End with 3-5 strategic follow-up questions\n\n");
+                prompt.append("- End with 3-5 strategic follow-up questions the user would ask you to research further\n\n");
                 break;
         }
 

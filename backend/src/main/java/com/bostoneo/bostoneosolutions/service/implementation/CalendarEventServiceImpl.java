@@ -305,12 +305,16 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
     @Override
     public List<CalendarEventDTO> getTodayEvents() {
-        //log.info("Fetching today's calendar events");
-        
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
-        
-        return calendarEventRepository.findByDateRange(startOfDay, endOfDay).stream()
+
+        log.info("Fetching today's calendar events - Server date: {}, Range: {} to {}",
+                LocalDate.now(), startOfDay, endOfDay);
+
+        List<CalendarEvent> events = calendarEventRepository.findByDateRange(startOfDay, endOfDay);
+        log.info("Found {} events for today", events.size());
+
+        return events.stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }

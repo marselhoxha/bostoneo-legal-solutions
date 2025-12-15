@@ -220,6 +220,55 @@
     font-size: 13px;
   }
 
+  // Past events - greyed out appearance
+  &.event-past {
+    opacity: 0.6;
+    border-color: var(--vz-border-color) !important;
+
+    &:hover {
+      opacity: 0.8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    h5, p {
+      color: var(--vz-secondary-color) !important;
+    }
+
+    .avatar-title {
+      filter: grayscale(30%);
+    }
+  }
+
+  // In progress events - highlighted with subtle pulse
+  &.event-in-progress {
+    border-color: var(--vz-success) !important;
+    box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.15);
+    animation: eventPulse 2s ease-in-out infinite;
+
+    &:hover {
+      box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.2), 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .event-time-header {
+      position: relative;
+
+      // "NOW" indicator dot
+      &::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        background-color: #fff;
+        border-radius: 50%;
+        animation: nowPulse 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
   // Add event placeholder
   &.add-event-placeholder {
     border-style: dashed !important;
@@ -239,6 +288,28 @@
         color: var(--vz-primary) !important;
       }
     }
+  }
+}
+
+// Keyframes for in-progress event pulse
+@keyframes eventPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(var(--vz-success-rgb), 0.1);
+  }
+}
+
+// Keyframes for NOW indicator pulse
+@keyframes nowPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-50%) scale(1.2);
   }
 }
 
@@ -768,6 +839,19 @@
 
     &.event-hearing {
       background: rgba(var(--vz-warning-rgb), 0.15);
+    }
+
+    &.event-past {
+      opacity: 0.5;
+
+      &:hover {
+        opacity: 0.7;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    &.event-in-progress {
+      box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.25);
     }
   }
 

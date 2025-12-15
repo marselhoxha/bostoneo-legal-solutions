@@ -106,24 +106,15 @@ export const PARALEGAL_MENU: MenuItem[] = [
     link: '/home'
   },
   {
-    id: 'para-legal',
-    label: 'Legal',
-    icon: 'ri-scales-3-line',
-    link: '/legal/cases',
-    subItems: [
-      { id: 'para-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'para-legal' },
-      { id: 'para-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'para-legal' }
-    ]
-  },
-  {
     id: 'para-case-mgmt',
     label: 'Case Management',
     icon: 'ri-briefcase-4-line',
-    link: '/case-management/dashboard',
+    link: '/legal/cases',
     subItems: [
-      { id: 'para-case-dashboard', label: 'Dashboard', link: '/case-management/dashboard', parentId: 'para-case-mgmt' },
-      { id: 'para-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'para-case-mgmt' },
-      { id: 'para-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'para-case-mgmt' }
+      { id: 'para-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'para-case-mgmt' },
+      { id: 'para-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'para-case-mgmt' },
+      { id: 'para-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'para-case-mgmt' },
+      { id: 'para-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'para-case-mgmt' }
     ]
   },
   {
@@ -223,14 +214,15 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/home'
   },
   {
-    id: 'att-legal',
-    label: 'Legal',
-    icon: 'ri-scales-3-line',
+    id: 'att-case-mgmt',
+    label: 'Case Management',
+    icon: 'ri-briefcase-4-line',
     link: '/legal/cases',
     subItems: [
-      { id: 'att-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'att-legal' },
-      { id: 'att-legal-clients', label: 'Clients', link: '/clients', parentId: 'att-legal' },
-      { id: 'att-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'att-legal' }
+      { id: 'att-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'att-case-mgmt' },
+      { id: 'att-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'att-case-mgmt' },
+      { id: 'att-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'att-case-mgmt' },
+      { id: 'att-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'att-case-mgmt' }
     ]
   },
   {
@@ -240,15 +232,10 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/ai-workspace'
   },
   {
-    id: 'att-case-mgmt',
-    label: 'Case Management',
-    icon: 'ri-briefcase-4-line',
-    link: '/case-management/dashboard',
-    subItems: [
-      { id: 'att-case-dashboard', label: 'Dashboard', link: '/case-management/dashboard', parentId: 'att-case-mgmt' },
-      { id: 'att-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'att-case-mgmt' },
-      { id: 'att-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'att-case-mgmt' }
-    ]
+    id: 'att-clients',
+    label: 'Clients',
+    icon: 'ri-user-3-line',
+    link: '/clients'
   },
   {
     id: 'att-time-billing',
@@ -336,14 +323,15 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/home'
   },
   {
-    id: 'admin-legal',
-    label: 'Legal',
-    icon: 'ri-scales-3-line',
+    id: 'admin-case-mgmt',
+    label: 'Case Management',
+    icon: 'ri-briefcase-4-line',
     link: '/legal/cases',
     subItems: [
-      { id: 'admin-legal-cases', label: 'Cases', link: '/legal/cases', parentId: 'admin-legal' },
-      { id: 'admin-legal-clients', label: 'Clients', link: '/clients', parentId: 'admin-legal' },
-      { id: 'admin-legal-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'admin-legal' }
+      { id: 'admin-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'admin-case-mgmt' }
     ]
   },
   {
@@ -353,15 +341,10 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/ai-workspace'
   },
   {
-    id: 'admin-case-mgmt',
-    label: 'Case Management',
-    icon: 'ri-briefcase-4-line',
-    link: '/case-management/dashboard',
-    subItems: [
-      { id: 'admin-case-dashboard', label: 'Dashboard', link: '/case-management/dashboard', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'admin-case-mgmt' }
-    ]
+    id: 'admin-clients',
+    label: 'Clients',
+    icon: 'ri-user-3-line',
+    link: '/clients'
   },
   {
     id: 'admin-time-billing',
