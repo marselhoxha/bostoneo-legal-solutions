@@ -22,6 +22,9 @@ public class DocumentTransformRequest {
     private Integer selectionStartIndex;
     private Integer selectionEndIndex;
 
+    // For CUSTOM transformation type - user's natural language revision request
+    private String customPrompt;
+
     // Context information
     private String jurisdiction;
     private String documentType;

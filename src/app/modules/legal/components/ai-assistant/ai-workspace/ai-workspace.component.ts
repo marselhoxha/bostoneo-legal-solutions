@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom, merge } from 'rxjs';
-import { takeUntil, switchMap } from 'rxjs/operators';
+import { takeUntil, switchMap, finalize } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
 import { LegalCaseService } from '../../../services/legal-case.service';
@@ -429,38 +429,38 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   analysisContextOptions = [
     {
       id: 'respond' as const,
-      label: 'I received this',
-      sublabel: 'Need to respond',
-      icon: 'ri-mail-download-line',
-      description: 'Analyze for response strategy, deadlines, and weaknesses to address'
+      label: 'Respond to this',
+      sublabel: 'Received from opposing party',
+      icon: 'ri-reply-line',
+      description: 'Analyze for response strategy, deadlines, weaknesses to exploit, and counter-arguments'
     },
     {
       id: 'negotiate' as const,
-      label: 'Negotiating',
-      sublabel: 'Contract review',
-      icon: 'ri-shake-hands-line',
-      description: 'Identify unfavorable terms, suggest redlines, negotiation priorities'
+      label: 'Review & Negotiate',
+      sublabel: 'Redline suggestions',
+      icon: 'ri-edit-2-line',
+      description: 'Identify unfavorable terms, suggest specific redlines, and negotiation priorities'
     },
     {
       id: 'client_review' as const,
-      label: 'Client review',
-      sublabel: 'Explain to client',
-      icon: 'ri-user-star-line',
-      description: 'Plain-language summary with key points and recommended actions'
+      label: 'Explain to Client',
+      sublabel: 'Plain language summary',
+      icon: 'ri-user-voice-line',
+      description: 'Clear explanation in plain language with key obligations, risks, and recommended actions'
     },
     {
       id: 'due_diligence' as const,
-      label: 'Due diligence',
-      sublabel: 'M&A / Transaction',
-      icon: 'ri-search-eye-line',
-      description: 'Risk matrix, issues by category, missing documents checklist'
+      label: 'Due Diligence',
+      sublabel: 'Transaction review',
+      icon: 'ri-shield-check-line',
+      description: 'Risk matrix, red flags, issues by category, and deal-breaker analysis'
     },
     {
       id: 'general' as const,
-      label: 'Just analyze',
-      sublabel: 'General analysis',
-      icon: 'ri-file-search-line',
-      description: 'Comprehensive strategic analysis (default)'
+      label: 'General Analysis',
+      sublabel: 'Comprehensive review',
+      icon: 'ri-file-list-3-line',
+      description: 'Full strategic analysis without specific context (default)'
     }
   ];
   documentUrl: string = '';
@@ -3153,6 +3153,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Show context selection when files are uploaded
     if (validFiles.length > 0) {
       this.showContextSelection = true;
+
+      // Smart context suggestion based on detected document type
+      // Only suggest if user hasn't already selected a non-general context
+      if (this.selectedAnalysisContext === 'general') {
+        const firstFile = this.uploadedFiles[this.uploadedFiles.length - 1];
+        if (firstFile?.detectedType) {
+          const suggestion = this.suggestContextForDocumentType(firstFile.detectedType);
+          if (suggestion && suggestion !== 'general') {
+            this.suggestedContext = suggestion;
+          }
+        }
+      }
     }
 
     // Don't auto-upload - wait for user to select analysis type and click "Analyze"
@@ -3164,6 +3176,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   selectAnalysisContext(contextId: 'respond' | 'negotiate' | 'client_review' | 'due_diligence' | 'general'): void {
     this.selectedAnalysisContext = contextId;
+    this.suggestedContext = null; // Clear suggestion when user manually selects
   }
 
   /**
@@ -3171,6 +3184,55 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   getSelectedContextOption() {
     return this.analysisContextOptions.find(opt => opt.id === this.selectedAnalysisContext);
+  }
+
+  /**
+   * Suggest context based on detected document type
+   */
+  suggestedContext: 'respond' | 'negotiate' | 'client_review' | 'due_diligence' | 'general' | null = null;
+
+  suggestContextForDocumentType(docType: string): 'respond' | 'negotiate' | 'client_review' | 'due_diligence' | 'general' | null {
+    const lower = docType.toLowerCase();
+
+    // Litigation documents → suggest "respond"
+    if (lower.includes('complaint') || lower.includes('motion') || lower.includes('brief') ||
+        lower.includes('subpoena') || lower.includes('discovery') || lower.includes('interrogator') ||
+        lower.includes('demand') || lower.includes('cease') || lower.includes('desist')) {
+      return 'respond';
+    }
+
+    // Contract documents → suggest "negotiate"
+    if (lower.includes('contract') || lower.includes('agreement') || lower.includes('lease') ||
+        lower.includes('nda') || lower.includes('employment') || lower.includes('settlement')) {
+      return 'negotiate';
+    }
+
+    // Court orders, judgments → suggest "client_review" (explain to client what happened)
+    if (lower.includes('order') || lower.includes('judgment') || lower.includes('decree') ||
+        lower.includes('ruling') || lower.includes('decision')) {
+      return 'client_review';
+    }
+
+    return null; // No suggestion for generic documents
+  }
+
+  /**
+   * Apply suggested context
+   */
+  applySuggestedContext(): void {
+    if (this.suggestedContext) {
+      this.selectedAnalysisContext = this.suggestedContext;
+      this.suggestedContext = null;
+    }
+  }
+
+  /**
+   * Get label for suggested context
+   */
+  getSuggestedContextLabel(): string {
+    if (!this.suggestedContext) return '';
+    const option = this.analysisContextOptions.find(opt => opt.id === this.suggestedContext);
+    return option?.label || '';
   }
 
   /**
@@ -5841,46 +5903,65 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     };
 
     this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
-      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => {
+          // ALWAYS clear generating state when observable completes/errors/unsubscribes
+          console.log('🏁 Transform full document finalized - clearing generating state');
+          this.stateService.setIsGenerating(false);
+          this.completeAllWorkflowSteps();
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: (response) => {
-          // Complete workflow steps
-          this.completeAllWorkflowSteps();
+          try {
+            console.log('✅ Transform full document response received:', response);
 
-          // Generate unique message ID
-          const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
+            // Generate unique message ID
+            const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
-          // Add assistant message with inline comparison
-          this.stateService.addConversationMessage({
-            id: messageId,
-            role: 'assistant',
-            content: response.explanation,
-            timestamp: new Date(),
-            transformationComparison: {
-              oldContent: this.activeDocumentContent,
-              newContent: response.transformedContent,
-              transformationType: tool,
-              scope: 'FULL_DOCUMENT',
-              response: response
+            // Build explanation with diff mode indicator
+            let explanation = response.explanation || 'Transformation complete.';
+            if (response.useDiffMode && response.changes?.length) {
+              explanation = `${explanation} (${response.changes.length} changes identified)`;
             }
-          });
 
-          this.stateService.setIsGenerating(false);
-          this.cdr.detectChanges();
-          this.scrollToBottom();
+            // Add assistant message with inline comparison
+            this.stateService.addConversationMessage({
+              id: messageId,
+              role: 'assistant',
+              content: explanation,
+              timestamp: new Date(),
+              transformationComparison: {
+                oldContent: this.activeDocumentContent,
+                newContent: response.transformedContent || '',
+                transformationType: tool,
+                scope: 'FULL_DOCUMENT',
+                response: response,
+                // Pass diff mode data for token-efficient transformations
+                changes: response.changes,
+                useDiffMode: response.useDiffMode
+              }
+            });
+
+            this.scrollToBottom();
+          } catch (innerError) {
+            console.error('Error processing transform response:', innerError);
+            this.stateService.addConversationMessage({
+              role: 'assistant',
+              content: 'Transformation complete, but there was an issue displaying the result.',
+              timestamp: new Date()
+            });
+          }
         },
         error: (error) => {
           console.error('Error applying drafting tool:', error);
-
           this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error applying the revision. Please try again.',
             timestamp: new Date()
           });
-
-          this.stateService.setIsGenerating(false);
-          this.cdr.detectChanges();
-
           this.notificationService.error('Revision Failed', 'Failed to apply document revision. Please try again.', 3000);
         }
       });
@@ -5936,6 +6017,76 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Apply diff-based changes to Quill editor content
+   * Used for token-efficient transformations (SIMPLIFY, CONDENSE)
+   * Applies find/replace pairs directly to the editor's text
+   */
+  private applyDiffChangesToQuill(changes: Array<{find: string; replace: string}>): void {
+    if (!this.quillEditorInstance) {
+      console.error('❌ Cannot apply diff changes - Quill editor not available');
+      return;
+    }
+
+    const quill = this.quillEditorInstance;
+
+    // Get current plain text from Quill
+    let currentText = quill.getText();
+
+    console.log('📊 Applying diff changes to document...');
+    let successfulChanges = 0;
+    let failedChanges = 0;
+
+    // Apply each change
+    for (const change of changes) {
+      if (!change.find || change.replace === undefined) {
+        continue;
+      }
+
+      // Find the position of the text to replace
+      const index = currentText.indexOf(change.find);
+
+      if (index !== -1) {
+        // Found the text - apply the change using Quill's API
+        // Delete the old text and insert the new text
+        quill.deleteText(index, change.find.length);
+        quill.insertText(index, change.replace);
+
+        // Update our tracking text for subsequent changes
+        currentText = quill.getText();
+
+        // Highlight the changed text briefly
+        const highlightLength = change.replace.length;
+        quill.formatText(index, highlightLength, { 'background': '#d4edda' }); // Green highlight
+
+        successfulChanges++;
+        console.log(`✅ Applied change #${successfulChanges}: "${change.find.substring(0, 30)}..." -> "${change.replace.substring(0, 30)}..."`);
+      } else {
+        failedChanges++;
+        console.warn(`⚠️ Could not find text to replace: "${change.find.substring(0, 50)}..."`);
+      }
+    }
+
+    console.log(`📊 Diff application complete: ${successfulChanges} successful, ${failedChanges} failed`);
+
+    // Remove all highlights after 4 seconds
+    setTimeout(() => {
+      const textLength = quill.getLength();
+      quill.formatText(0, textLength, { 'background': false });
+    }, 4000);
+
+    // Update activeDocumentContent from Quill's current state
+    this.activeDocumentContent = quill.root.innerHTML;
+
+    // Update word count
+    const plainText = quill.getText();
+    this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+    this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+    // Detect changes for save
+    this.cdr.detectChanges();
+  }
+
+  /**
    * Load document content into Quill editor
    * Handles clearing previous content and pasting new HTML
    * Can be called from onEditorCreated() or when switching documents
@@ -5979,6 +6130,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       // Use robust helper that handles clipboard.convert() failures
       this.setQuillContentFromMarkdown(markdownContent);
+
+      // CRITICAL: Sync activeDocumentContent with Quill's actual HTML content
+      // This ensures the drafting mode check works for follow-up messages
+      setTimeout(() => {
+        if (this.quillEditorInstance) {
+          this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+          console.log('✅ Synced activeDocumentContent after initial load, length:', this.activeDocumentContent.length);
+        }
+      }, 50); // Small delay after content is set
     }, 100); // CRITICAL: Must be 100ms, not 0ms!
 
     // Force contenteditable and selection on the editor root and all children
@@ -6207,35 +6367,50 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     };
 
     this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
-      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => {
+          // ALWAYS clear generating state when observable completes/errors/unsubscribes
+          console.log('🏁 Transform selection finalized - clearing generating state');
+          this.stateService.setIsGenerating(false);
+          this.completeAllWorkflowSteps();
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: (response) => {
-          // Complete workflow steps
-          this.completeAllWorkflowSteps();
+          try {
+            console.log('✅ Transform selection response received:', response);
 
-          // Generate unique message ID
-          const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
+            // Generate unique message ID
+            const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
-          // Add AI response to conversation with inline comparison
-          this.stateService.addConversationMessage({
-            id: messageId,
-            role: 'assistant',
-            content: response.explanation,
-            timestamp: new Date(),
-            transformationComparison: {
-              oldContent: this.selectedText || '',
-              newContent: response.transformedSelection || '', // ONLY use snippet, not full doc
-              transformationType: tool,
-              scope: 'SELECTION',
-              response: response,
-              fullDocumentContent: fullPlainText, // Store PLAIN TEXT for context view
-              selectionRange: { index: this.selectionRange.index, length: this.selectionRange.length } // Store for precise replacement
-            }
-          });
+            // Add AI response to conversation with inline comparison
+            this.stateService.addConversationMessage({
+              id: messageId,
+              role: 'assistant',
+              content: response.explanation || 'Transformation complete.',
+              timestamp: new Date(),
+              transformationComparison: {
+                oldContent: this.selectedText || '',
+                newContent: response.transformedSelection || response.transformedContent || '',
+                transformationType: tool,
+                scope: 'SELECTION',
+                response: response,
+                fullDocumentContent: fullPlainText,
+                selectionRange: { index: this.selectionRange.index, length: this.selectionRange.length }
+              }
+            });
 
-          this.stateService.setIsGenerating(false);
-          this.cdr.detectChanges();
-          this.scrollToBottom();
+            this.scrollToBottom();
+          } catch (innerError) {
+            console.error('Error processing transform response:', innerError);
+            this.stateService.addConversationMessage({
+              role: 'assistant',
+              content: 'Transformation complete, but there was an issue displaying the result.',
+              timestamp: new Date()
+            });
+          }
         },
         error: (error) => {
           console.error('Error transforming selection:', error);
@@ -6244,10 +6419,92 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             content: `Sorry, I encountered an error while transforming the text. Please try again.`,
             timestamp: new Date()
           });
-          this.stateService.setIsGenerating(false);
-          this.cdr.detectChanges();
-
           this.notificationService.error('Transformation Failed', 'Failed to transform selected text. Please try again.', 3000);
+        }
+      });
+  }
+
+  /**
+   * Apply custom revision to full document based on user's natural language request
+   * Used when user types revision requests in the chat while in drafting mode
+   */
+  applyCustomRevision(userPrompt: string): void {
+    if (!this.currentDocumentId || !this.activeDocumentContent) {
+      console.error('No document to revise');
+      return;
+    }
+
+    console.log('📝 Applying custom revision:', userPrompt.substring(0, 50) + '...');
+
+    // Start generating state
+    this.stateService.setIsGenerating(true);
+
+    // Initialize and animate workflow steps
+    this.initializeWorkflowSteps('transform');
+    this.animateWorkflowSteps();
+
+    const transformRequest = {
+      documentId: this.currentDocumentId as number,
+      transformationType: 'CUSTOM',
+      transformationScope: 'FULL_DOCUMENT' as const,
+      fullDocumentContent: this.activeDocumentContent,
+      customPrompt: userPrompt, // Pass the user's custom instruction
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill
+    };
+
+    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => {
+          console.log('🏁 Custom revision finalized - clearing generating state');
+          this.stateService.setIsGenerating(false);
+          this.completeAllWorkflowSteps();
+          this.stateService.setShowBottomSearchBar(true);
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          try {
+            console.log('✅ Custom revision response received:', response);
+
+            // Generate unique message ID
+            const messageId = `custom_revision_${Date.now()}_${this.transformationMessageIdCounter++}`;
+
+            // Add assistant message with inline comparison (Accept/Reject buttons)
+            this.stateService.addConversationMessage({
+              id: messageId,
+              role: 'assistant',
+              content: response.explanation || 'I\'ve applied the requested changes to your document.',
+              timestamp: new Date(),
+              transformationComparison: {
+                oldContent: this.activeDocumentContent,
+                newContent: response.transformedContent || '',
+                transformationType: 'CUSTOM',
+                scope: 'FULL_DOCUMENT',
+                response: response
+              }
+            });
+
+            this.scrollToBottom();
+          } catch (innerError) {
+            console.error('Error processing custom revision response:', innerError);
+            this.stateService.addConversationMessage({
+              role: 'assistant',
+              content: 'Revision complete, but there was an issue displaying the result.',
+              timestamp: new Date()
+            });
+          }
+        },
+        error: (error) => {
+          console.error('Error applying custom revision:', error);
+          this.stateService.addConversationMessage({
+            role: 'assistant',
+            content: 'Sorry, I encountered an error applying the revision. Please try again.',
+            timestamp: new Date()
+          });
+          this.notificationService.error('Revision Failed', 'Failed to apply document revision. Please try again.', 3000);
         }
       });
   }
@@ -6525,23 +6782,61 @@ You can:
     const activeConv = this.stateService.getConversations().find(c => c.id === this.stateService.getActiveConversationId());
     if (activeConv) {
       activeConv.messages.push(userMsg);
-      activeConv.messageCount = (activeConv.messageCount || 0) + 1; // Increment message count
+      activeConv.messageCount = (activeConv.messageCount || 0) + 1;
       console.log(`Added user message to conversation ${this.stateService.getActiveConversationId()}, count: ${activeConv.messages.length}, messageCount: ${activeConv.messageCount}`);
     }
 
+    // DRAFTING MODE: Apply changes directly to the document
+    // Check multiple conditions to detect if we're in document editing mode
+    const isDraftingMode = this.stateService.getDraftingMode();
+    const isEditorVisible = this.showEditor && this.quillEditorInstance !== null;
+    const hasDocumentId = this.currentDocumentId !== null && this.currentDocumentId !== undefined;
+
+    // Check content from multiple sources - activeDocumentContent OR directly from Quill
+    // Quill always has at least '\n', so check for length > 1
+    const quillContent = this.quillEditorInstance?.getText()?.trim() || '';
+    const hasContent = (this.activeDocumentContent && this.activeDocumentContent.trim().length > 0) ||
+                       (quillContent.length > 0);
+
+    const hasDocumentOpen = isEditorVisible && hasDocumentId && hasContent;
+
+    console.log('📝 Drafting mode check:', {
+      isDraftingMode,
+      showEditor: this.showEditor,
+      quillExists: this.quillEditorInstance !== null,
+      currentDocumentId: this.currentDocumentId,
+      documentIdType: typeof this.currentDocumentId,
+      activeContentLength: this.activeDocumentContent?.length || 0,
+      quillContentLength: quillContent.length,
+      hasDocumentOpen
+    });
+
+    // If we have a document open in the editor, treat follow-up messages as revisions
+    if (hasDocumentOpen) {
+      console.log('📝 Document editor is open - routing to custom revision');
+
+      // Ensure activeDocumentContent is synced from Quill if it's empty
+      if (!this.activeDocumentContent && this.quillEditorInstance) {
+        this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+        console.log('📝 Synced activeDocumentContent from Quill before revision');
+      }
+
+      this.applyCustomRevision(userMessage);
+      return;
+    }
+
     if (!activeConv || !activeConv.backendConversationId) {
-      // No active conversation - this is likely a document drafting follow-up
-      // Keep original mock behavior for now
+      // No active conversation and not in drafting mode
       this.stateService.setIsGenerating(true);
       setTimeout(() => {
         this.stateService.addConversationMessage({
           role: 'assistant',
-          content: `I understand you'd like to: "${userMessage}". I'll help you with those revisions. This functionality will be connected to the backend API to provide real-time document editing and improvements.`,
+          content: `I understand you'd like to: "${userMessage}". Please generate a document first to apply revisions.`,
           timestamp: new Date()
         });
         this.stateService.setIsGenerating(false);
         this.stateService.setShowBottomSearchBar(true);
-      }, 2000);
+      }, 1000);
       return;
     }
 
@@ -7074,7 +7369,7 @@ You can:
     const response = transformation.response;
 
     if (transformation.scope === 'FULL_DOCUMENT') {
-      // Full document transformation - replace entire content
+      // Full document transformation - replace entire content OR apply diff changes
       this.currentDocumentWordCount = response.wordCount;
       this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.wordCount);
 
@@ -7083,19 +7378,30 @@ You can:
       this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
       this.documentMetadata.costEstimate = (this.documentMetadata.costEstimate || 0) + response.costEstimate;
 
-      // Update Quill editor with transformed content using robust helper
-      setTimeout(() => {
-        this.setQuillContentFromMarkdown(transformation.newContent);
+      // Check if this is a diff-based transformation
+      if (transformation.useDiffMode && transformation.changes && transformation.changes.length > 0) {
+        console.log('📊 Applying DIFF MODE transformation with', transformation.changes.length, 'changes');
 
-        // CRITICAL: Sync activeDocumentContent with Quill's HTML after markdown conversion
-        // Wait for Quill to finish converting markdown to HTML
+        // Apply diffs to current content in Quill editor
+        this.applyDiffChangesToQuill(transformation.changes);
+      } else {
+        // Traditional full replacement mode
+        console.log('📄 Applying FULL REPLACEMENT transformation');
+
+        // Update Quill editor with transformed content using robust helper
         setTimeout(() => {
-          if (this.quillEditorInstance) {
-            this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
-            console.log('✅ Synced activeDocumentContent with Quill HTML after transformation');
-          }
-        }, 50);
-      }, 100);
+          this.setQuillContentFromMarkdown(transformation.newContent);
+
+          // CRITICAL: Sync activeDocumentContent with Quill's HTML after markdown conversion
+          // Wait for Quill to finish converting markdown to HTML
+          setTimeout(() => {
+            if (this.quillEditorInstance) {
+              this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+              console.log('✅ Synced activeDocumentContent with Quill HTML after transformation');
+            }
+          }, 50);
+        }, 100);
+      }
     } else {
       // Selection-based transformation - use Quill operations for precise replacement
       if (!this.documentEditor || !this.quillEditorInstance) {
@@ -7271,6 +7577,7 @@ You can:
       'FORMAL': 'Made Formal',
       'PERSUASIVE': 'Made Persuasive',
       'REDRAFT': 'Redrafted',
+      'CUSTOM': 'Custom Revision',
       'MANUAL_EDIT': 'Manual Edit',
       'RESTORE_VERSION': 'Version Restored'
     };

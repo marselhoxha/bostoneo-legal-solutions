@@ -13,6 +13,16 @@ export interface Message {
   analysisId?: number; // For document analysis
 }
 
+/**
+ * Represents a single diff change for token-efficient transformations
+ */
+export interface DocumentChange {
+  find: string;
+  replace: string;
+  startIndex?: number;
+  reason?: string;
+}
+
 export interface TransformationComparison {
   oldContent: string;
   newContent: string;
@@ -21,6 +31,15 @@ export interface TransformationComparison {
   response: any;
   fullDocumentContent?: string;
   selectionRange?: SelectionRange;
+  /**
+   * For diff-based transformations (CONDENSE, SIMPLIFY):
+   * Contains find/replace pairs instead of full document content.
+   */
+  changes?: DocumentChange[];
+  /**
+   * Indicates whether diff-based transformation was used.
+   */
+  useDiffMode?: boolean;
 }
 
 export interface SelectionRange {

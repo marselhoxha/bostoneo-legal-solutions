@@ -1,38 +1,80 @@
 <div class="transformation-preview-container">
-  <!-- Comparison View -->
-  <div class="comparison-view">
-    <div class="comparison-columns">
-      <!-- Original Content -->
-      <div class="comparison-column comparison-original">
-        <div class="card shadow-sm h-100">
-          <div class="card-header comparison-panel-header">
-            <i class="ri-file-text-line me-2"></i>
-            <span class="text-uppercase fw-semibold">Original</span>
-          </div>
-          <div class="card-body comparison-panel-content" [innerHTML]="transformation.oldContent | markdownToHtml"></div>
-        </div>
-      </div>
+  <!-- Header with transformation info -->
+  <div class="preview-header">
+    <div class="header-title">
+      <i class="ri-magic-line"></i>
+      <span>{{ getTransformationLabel() }}</span>
+    </div>
+    <div class="header-meta">
+      <span class="scope-badge" [class.scope-selection]="transformation.scope === 'SELECTION'">
+        <i [class]="transformation.scope === 'SELECTION' ? 'ri-text-snippet' : 'ri-file-text-line'"></i>
+        {{ transformation.scope === 'SELECTION' ? 'Selection' : 'Full Document' }}
+      </span>
+      <!-- Diff mode badge -->
+      <span class="scope-badge diff-badge" *ngIf="isDiffMode">
+        <i class="ri-flashlight-line"></i>
+        {{ changeCount }} changes
+      </span>
+    </div>
+  </div>
 
-      <!-- Transformed Content -->
-      <div class="comparison-column comparison-transformed">
-        <div class="card shadow-sm h-100">
-          <div class="card-header comparison-panel-header">
-            <i class="ri-sparkle-line me-2"></i>
-            <span class="text-uppercase fw-semibold">Transformed</span>
+  <!-- DIFF MODE: Show list of changes -->
+  <div class="new-content-section" *ngIf="isDiffMode">
+    <div class="section-label">
+      <i class="ri-sparkle-fill"></i>
+      <span>Proposed Changes ({{ changeCount }})</span>
+    </div>
+    <div class="diff-changes-list">
+      <div class="diff-change-item" *ngFor="let change of transformation.changes; let i = index">
+        <div class="change-number">{{ i + 1 }}</div>
+        <div class="change-content">
+          <div class="change-old">
+            <span class="change-label">Find:</span>
+            <span class="change-text">"{{ change.find }}"</span>
           </div>
-          <div class="card-body comparison-panel-content" [innerHTML]="transformation.newContent | markdownToHtml"></div>
+          <div class="change-arrow">
+            <i class="ri-arrow-down-line"></i>
+          </div>
+          <div class="change-new">
+            <span class="change-label">Replace:</span>
+            <span class="change-text">"{{ change.replace }}"</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- FULL MODE: Show full content preview -->
+  <div class="new-content-section" *ngIf="!isDiffMode">
+    <div class="section-label">
+      <i class="ri-sparkle-fill"></i>
+      <span>Proposed Changes</span>
+    </div>
+    <div class="content-preview" [innerHTML]="transformation.newContent | markdownToHtml"></div>
+  </div>
+
+  <!-- Original Content (Collapsible - Hidden by Default) -->
+  <div class="original-toggle" (click)="showOriginal = !showOriginal">
+    <i [class]="showOriginal ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+    <span>{{ showOriginal ? 'Hide' : 'View' }} Original Content</span>
+  </div>
+
+  <div class="original-content-section" *ngIf="showOriginal">
+    <div class="section-label original-label">
+      <i class="ri-file-text-line"></i>
+      <span>Original (for reference)</span>
+    </div>
+    <div class="content-preview original-preview" [innerHTML]="transformation.oldContent | markdownToHtml"></div>
+  </div>
+
   <!-- Action Buttons -->
   <div class="transformation-actions">
-    <button class="btn btn-success btn-label" (click)="onAccept()">
-      <i class="ri-check-line label-icon align-middle fs-16 me-2"></i> Accept Changes
+    <button class="btn btn-accept" (click)="onAccept()">
+      <i class="ri-check-line"></i>
+      <span>Accept Changes</span>
     </button>
-    <button class="btn btn-soft-secondary btn-label" (click)="onReject()">
-      <i class="ri-close-line label-icon align-middle fs-16 me-2"></i> Reject
+    <button class="btn btn-reject" (click)="onReject()">
+      <i class="ri-close-line"></i>
     </button>
   </div>
 </div>

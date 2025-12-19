@@ -27,6 +27,9 @@ import { MessagingService, MessageThread } from 'src/app/service/messaging.servi
 import { WebSocketService } from 'src/app/service/websocket.service';
 import { Key } from 'src/app/enum/key.enum';
 import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client-portal/services/client-portal.service';
+import { TimerService, ActiveTimer } from 'src/app/modules/time-tracking/services/timer.service';
+import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-topbar',
@@ -83,13 +86,31 @@ export class TopbarComponent implements OnInit, OnDestroy {
   isClientUser = false;
   @ViewChild('messageDropdown') messageDropdown!: NgbDropdown;
 
+  // Time Tracking
+  activeTimers: ActiveTimer[] = [];
+  loadingTimers = false;
+  @ViewChild('timerDropdown') timerDropdown!: NgbDropdown;
+
+  // Quick Start Timer
+  showQuickStartForm = false;
+  quickStartCaseId: number | null = null;
+  quickStartDescription = '';
+  startingTimer = false;
+  availableCases: any[] = [];
+
+  // Case Search & Recent Cases
+  caseSearchQuery = '';
+  filteredCases: any[] = [];
+  recentCases: any[] = [];
+
   constructor(@Inject(DOCUMENT) private document: any,   private modalService: NgbModal,
     public _cookiesService: CookieService, private userService: UserService, private notificationService: NotificationService,
     private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
     private notificationManagerService: NotificationManagerService,
     private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService,
     private messagingService: MessagingService, private webSocketService: WebSocketService,
-    private clientPortalService: ClientPortalService) {
+    private clientPortalService: ClientPortalService, private timerService: TimerService,
+    private legalCaseService: LegalCaseService) {
 
      }
 
@@ -155,6 +176,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
 
     // Detect user role and load messages accordingly
     this.detectUserRoleAndLoadMessages();
+
+    // Initialize time tracking - subscribe to active timers
+    this.initializeTimeTracking();
   }
   
   /**
@@ -1348,5 +1372,415 @@ export class TopbarComponent implements OnInit, OnDestroy {
       // For attorneys, show client name
       return thread.clientName || 'Client';
     }
+  }
+
+  // ==========================================
+  // TIME TRACKING METHODS
+  // ==========================================
+
+  /**
+   * Initialize time tracking - subscribe to active timers
+   */
+  private initializeTimeTracking(): void {
+    // Subscribe to active timers from the service
+    this.timerService.activeTimers$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(timers => {
+        console.log('[Topbar] Received timer update from service:', timers.map(t => ({
+          id: t.id,
+          isActive: t.isActive,
+          duration: t.formattedDuration
+        })));
+        this.activeTimers = timers;
+        this.cdr.detectChanges();
+      });
+
+    // Load active timers when user data is available
+    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      if (user && user.id) {
+        this.loadActiveTimers(user.id);
+      }
+    });
+  }
+
+  /**
+   * Load active timers for current user
+   */
+  private loadActiveTimers(userId: number): void {
+    this.loadingTimers = true;
+    this.timerService.getActiveTimers(userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (timers) => {
+          this.activeTimers = timers;
+          this.loadingTimers = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading active timers:', err);
+          this.loadingTimers = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Handle timer dropdown toggle
+   */
+  onTimerDropdownToggle(isOpen: boolean): void {
+    if (isOpen) {
+      // Refresh timers when dropdown opens
+      const user = this.userService.getCurrentUser();
+      if (user && user.id) {
+        this.loadActiveTimers(user.id);
+      }
+      // Load available cases for quick start
+      this.loadAvailableCases();
+    } else {
+      // Reset quick start form when dropdown closes
+      this.showQuickStartForm = false;
+      this.quickStartCaseId = null;
+      this.quickStartDescription = '';
+    }
+  }
+
+  /**
+   * Load available cases for quick start timer
+   */
+  private loadAvailableCases(): void {
+    this.legalCaseService.getAllCases(0, 50)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          let cases: any[] = [];
+          if (response?.data?.page?.content) {
+            cases = response.data.page.content;
+          } else if (Array.isArray(response?.data)) {
+            cases = response.data;
+          } else if (response?.content) {
+            cases = response.content;
+          }
+
+          this.availableCases = cases;
+          this.filteredCases = cases;
+
+          // Set recent cases (first 4 active cases or most recent)
+          this.recentCases = cases
+            .filter((c: any) => c.status === 'ACTIVE' || c.status === 'OPEN' || !c.status)
+            .slice(0, 4);
+
+          // If no active cases, just use first 4
+          if (this.recentCases.length === 0) {
+            this.recentCases = cases.slice(0, 4);
+          }
+
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading cases for timer:', err);
+        }
+      });
+  }
+
+  /**
+   * Filter cases based on search query
+   */
+  filterCases(): void {
+    if (!this.caseSearchQuery || this.caseSearchQuery.trim() === '') {
+      this.filteredCases = this.availableCases;
+    } else {
+      const query = this.caseSearchQuery.toLowerCase().trim();
+      this.filteredCases = this.availableCases.filter((c: any) =>
+        (c.caseNumber && c.caseNumber.toLowerCase().includes(query)) ||
+        (c.title && c.title.toLowerCase().includes(query)) ||
+        (c.clientName && c.clientName.toLowerCase().includes(query))
+      );
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Select a case from the search results
+   */
+  selectCase(caseItem: any): void {
+    this.quickStartCaseId = caseItem.id;
+    this.caseSearchQuery = `${caseItem.caseNumber} - ${caseItem.title}`;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Start timer for a specific case (one-click from recent cases)
+   */
+  startTimerForCase(caseItem: any): void {
+    const user = this.userService.getCurrentUser();
+    if (!user || !user.id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Please log in to start a timer',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    this.startingTimer = true;
+    this.timerService.startTimer(user.id, {
+      legalCaseId: caseItem.id,
+      description: undefined
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (timer) => {
+          this.startingTimer = false;
+          this.cdr.detectChanges();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Timer Started',
+            html: `<p class="mb-0">Tracking time for <strong>${caseItem.caseNumber}</strong></p>`,
+            timer: 1500,
+            showConfirmButton: false
+          });
+        },
+        error: (err) => {
+          this.startingTimer = false;
+          this.cdr.detectChanges();
+          console.error('Error starting timer:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err.error?.message || 'Failed to start timer'
+          });
+        }
+      });
+  }
+
+  /**
+   * Start a new timer from quick start form
+   */
+  startQuickTimer(): void {
+    if (!this.quickStartCaseId) return;
+
+    const user = this.userService.getCurrentUser();
+    if (!user || !user.id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Please log in to start a timer',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    this.startingTimer = true;
+    this.timerService.startTimer(user.id, {
+      legalCaseId: this.quickStartCaseId,
+      description: this.quickStartDescription || undefined
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (timer) => {
+          this.startingTimer = false;
+          this.showQuickStartForm = false;
+          this.quickStartCaseId = null;
+          this.quickStartDescription = '';
+          this.cdr.detectChanges();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Timer Started',
+            text: `Tracking time for ${timer.caseName || 'Case #' + timer.legalCaseId}`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (err) => {
+          this.startingTimer = false;
+          this.cdr.detectChanges();
+          console.error('Error starting timer:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err.error?.message || 'Failed to start timer'
+          });
+        }
+      });
+  }
+
+  /**
+   * Check if there are any running timers (not paused)
+   */
+  hasRunningTimers(): boolean {
+    return this.activeTimers.some(timer => timer.isActive);
+  }
+
+  /**
+   * Get count of running timers
+   */
+  getRunningTimersCount(): number {
+    return this.activeTimers.filter(timer => timer.isActive).length;
+  }
+
+  /**
+   * Get count of paused timers
+   */
+  getPausedTimersCount(): number {
+    return this.activeTimers.filter(timer => !timer.isActive).length;
+  }
+
+  /**
+   * Get today's total tracked time
+   */
+  getTodayTotalTime(): string {
+    let totalSeconds = 0;
+    this.activeTimers.forEach(timer => {
+      if (timer.formattedDuration) {
+        const parts = timer.formattedDuration.split(':');
+        if (parts.length === 3) {
+          const hours = parseInt(parts[0], 10) || 0;
+          const minutes = parseInt(parts[1], 10) || 0;
+          const seconds = parseInt(parts[2], 10) || 0;
+          totalSeconds += hours * 3600 + minutes * 60 + seconds;
+        }
+      }
+    });
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }
+
+  /**
+   * Toggle timer (pause/resume)
+   */
+  toggleTimer(timer: ActiveTimer): void {
+    const user = this.userService.getCurrentUser();
+    if (!user || !user.id || !timer.id) return;
+
+    if (timer.isActive) {
+      // Pause the timer
+      this.timerService.pauseTimer(user.id, timer.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error pausing timer:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to pause timer',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+        });
+    } else {
+      // Resume the timer
+      this.timerService.resumeTimer(user.id, timer.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error resuming timer:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to resume timer',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+        });
+    }
+  }
+
+  /**
+   * Stop timer - show modal with Save or Discard options
+   */
+  stopTimer(timer: ActiveTimer): void {
+    const user = this.userService.getCurrentUser();
+    if (!user || !user.id || !timer.id) return;
+
+    Swal.fire({
+      title: 'Stop Timer',
+      html: `
+        <div class="text-center mb-3">
+          <div class="fs-24 fw-bold text-primary mb-2" style="font-family: monospace;">${timer.formattedDuration || '00:00:00'}</div>
+          <div class="text-muted fs-13">${timer.caseName || 'Untitled Case'}</div>
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label fs-13">Description</label>
+          <textarea id="timer-description" class="form-control" rows="2" placeholder="What did you work on?">${timer.description || ''}</textarea>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonColor: '#0ab39c',
+      denyButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: '<i class="ri-save-line me-1"></i> Save Entry',
+      denyButtonText: '<i class="ri-delete-bin-line me-1"></i> Discard',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusConfirm: true,
+      preConfirm: () => {
+        const descriptionEl = document.getElementById('timer-description') as HTMLTextAreaElement;
+        return descriptionEl?.value || timer.description || 'Time entry from timer';
+      }
+    }).then((result) => {
+      if (result.isConfirmed && timer.id) {
+        // Save time entry
+        const description = result.value as string;
+        this.timerService.convertTimerToTimeEntry(user.id!, timer.id, description)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              Swal.fire({
+                icon: 'success',
+                title: 'Time Entry Saved',
+                text: 'Your time has been recorded',
+                timer: 2000,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error converting timer to time entry:', err);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to save time entry'
+              });
+            }
+          });
+      } else if (result.isDenied && timer.id) {
+        // Discard timer
+        this.timerService.discardTimer(user.id!, timer.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              Swal.fire({
+                icon: 'success',
+                title: 'Timer Discarded',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error discarding timer:', err);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to discard timer'
+              });
+            }
+          });
+      }
+    });
   }
 }

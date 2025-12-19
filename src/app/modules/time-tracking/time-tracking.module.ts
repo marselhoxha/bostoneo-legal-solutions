@@ -34,7 +34,7 @@ import { TimeDashboardComponent } from './components/time-dashboard/time-dashboa
   ],
   providers: [
     TimeTrackingService,
-    TimerService,
+    // TimerService is NOT listed here - it uses providedIn: 'root' for singleton across app
     BillingRateService,
     InvoiceService
   ],

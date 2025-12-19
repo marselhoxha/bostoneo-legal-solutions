@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +8,7 @@ import { UserService } from '../../../../service/user.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
 import { LegalCaseService } from '../../../legal/services/legal-case.service';
 import { interval, Subscription } from 'rxjs';
-import { timeout, catchError, of, finalize } from 'rxjs';
+import { timeout, catchError, of, finalize, distinctUntilChanged, map } from 'rxjs';
 import { Key } from '../../../../enum/key.enum';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
@@ -125,7 +125,9 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   
   // Subscriptions
   private timerUpdateSubscription?: Subscription;
+  private activeTimersSubscription?: Subscription;
   private activeTimer?: ActiveTimer;
+  activeTimers: ActiveTimer[] = []; // All active timers from service
   private flatpickrInstance?: flatpickr.Instance;
 
   constructor(
@@ -135,7 +137,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
     private legalCaseService: LegalCaseService,
-    private notificationManager: NotificationManagerService
+    private notificationManager: NotificationManagerService,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -225,6 +228,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   ngOnDestroy(): void {
     this.timerUpdateSubscription?.unsubscribe();
+    this.activeTimersSubscription?.unsubscribe();
     this.flatpickrInstance?.destroy();
   }
 
@@ -237,6 +241,22 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.loading = true;
       this.error = null;
       this.changeDetectorRef.detectChanges(); // Force initial loading state
+
+      // Subscribe to shared timer state from TimerService
+      // This ensures sync between topbar dropdown and dashboard
+      this.activeTimersSubscription = this.timerService.activeTimers$.subscribe(timers => {
+        // Run inside Angular zone to ensure change detection
+        this.ngZone.run(() => {
+          console.log('[Dashboard] Received timer update from service:', timers.map(t => ({
+            id: t.id,
+            isActive: t.isActive,
+            duration: t.formattedDuration
+          })));
+          this.activeTimers = timers;
+          this.updateLocalTimerState(timers);
+          this.changeDetectorRef.detectChanges();
+        });
+      });
 
       // Enhanced authentication check
       const currentUserId = this.getCurrentUserId();
@@ -717,6 +737,11 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  /**
+   * Sync timer state by fetching from backend.
+   * The actual state update is handled by the activeTimers$ subscription
+   * in updateLocalTimerState() to ensure single source of truth.
+   */
   private async syncTimerState(): Promise<void> {
     return new Promise((resolve) => {
       const userId = this.getCurrentUserId();
@@ -725,50 +750,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         return resolve();
       }
 
+      // Just trigger the fetch - the subscription to activeTimers$
+      // will handle updating local state via updateLocalTimerState()
       this.timerService.getActiveTimers(userId).subscribe({
-        next: (timers) => {
-          const activeTimer = timers.find(t => t.isActive);
-          if (activeTimer) {
-            this.activeTimer = activeTimer;
-            
-            // First try to find the case in our loaded cases
-            let selectedCase = this.availableCases.find(c => c.id === activeTimer.legalCaseId);
-            
-            // If not found in available cases, try to get the case name from the active timer itself
-            // or query the case service for the specific case
-            let caseName = selectedCase?.name;
-            
-            if (!caseName && activeTimer.legalCaseId) {
-              // Try to get case info from legal case service
-              this.legalCaseService.getCaseById(activeTimer.legalCaseId.toString()).subscribe({
-                next: (caseData) => {
-                  if (caseData) {
-                    caseName = caseData.title || `Case #${activeTimer.legalCaseId}`;
-                    // Update the timer state with the correct case name
-                    this.timer.caseName = caseName;
-                    this.changeDetectorRef.detectChanges();
-                  }
-                },
-                error: (error) => {
-                  console.warn('Failed to load case details for active timer:', error);
-                  // Use fallback case name
-                  this.timer.caseName = `Case #${activeTimer.legalCaseId}`;
-                  this.changeDetectorRef.detectChanges();
-                }
-              });
-            }
-            
-            this.timer = {
-              id: activeTimer.id!,
-              description: activeTimer.description || 'Working...',
-              elapsed: this.formatDuration(activeTimer.currentDurationSeconds || 0),
-              isRunning: true,
-              caseId: activeTimer.legalCaseId || null,
-              caseName: caseName || `Case #${activeTimer.legalCaseId || 'Unknown'}`
-            };
-          } else {
-            this.resetTimer();
-          }
+        next: () => {
+          // State is updated via the activeTimers$ subscription
+          console.log('[Dashboard] syncTimerState: fetch complete, state updated via subscription');
           this.changeDetectorRef.detectChanges();
           resolve();
         },
@@ -782,10 +769,81 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  /**
+   * Updates local timer state based on shared observable from TimerService.
+   * This ensures sync between topbar dropdown and dashboard.
+   */
+  private updateLocalTimerState(timers: ActiveTimer[]): void {
+    // Find the first running timer (for backwards compatibility with single timer display)
+    const runningTimer = timers.find(t => t.isActive);
+    const pausedTimer = timers.find(t => !t.isActive);
+    const primaryTimer = runningTimer || pausedTimer;
+
+    console.log('[Dashboard] updateLocalTimerState:', {
+      timersCount: timers.length,
+      runningTimerId: runningTimer?.id,
+      pausedTimerId: pausedTimer?.id,
+      primaryTimerId: primaryTimer?.id,
+      primaryTimerIsActive: primaryTimer?.isActive
+    });
+
+    if (primaryTimer) {
+      // IMPORTANT: Stop timer updates FIRST if timer is now paused
+      // This prevents race conditions with the interval overwriting state
+      if (!primaryTimer.isActive && this.timerUpdateSubscription) {
+        console.log('[Dashboard] Stopping timer updates - timer paused');
+        this.timerUpdateSubscription.unsubscribe();
+        this.timerUpdateSubscription = undefined;
+      }
+
+      this.activeTimer = primaryTimer;
+
+      // Get case name from available cases or use timer data
+      let caseName = this.availableCases.find(c => c.id === primaryTimer.legalCaseId)?.name;
+      if (!caseName) {
+        caseName = primaryTimer.caseName || `Case #${primaryTimer.legalCaseId || 'Unknown'}`;
+      }
+
+      const newTimerState = {
+        id: primaryTimer.id!,
+        description: primaryTimer.isActive ? `Working on ${caseName}` : `Paused - ${caseName}`,
+        elapsed: primaryTimer.formattedDuration || this.formatDuration(primaryTimer.currentDurationSeconds || 0),
+        isRunning: primaryTimer.isActive,
+        caseId: primaryTimer.legalCaseId || null,
+        caseName: caseName
+      };
+
+      console.log('[Dashboard] Setting timer state:', {
+        isRunning: newTimerState.isRunning,
+        elapsed: newTimerState.elapsed,
+        wasRunning: this.timer.isRunning
+      });
+
+      this.timer = newTimerState;
+
+      // Update stats
+      this.stats.activeTimers = timers.filter(t => t.isActive).length;
+
+      // Start timer updates if running and not already running
+      if (primaryTimer.isActive && !this.timerUpdateSubscription) {
+        console.log('[Dashboard] Starting timer updates - timer running');
+        this.startTimerUpdates();
+      }
+    } else {
+      // No active timers
+      console.log('[Dashboard] No timers - resetting');
+      this.activeTimer = undefined;
+      this.resetTimer();
+      this.stats.activeTimers = 0;
+      this.timerUpdateSubscription?.unsubscribe();
+      this.timerUpdateSubscription = undefined;
+    }
+  }
+
   private startTimerUpdates(): void {
     // Remove any existing subscription
     this.timerUpdateSubscription?.unsubscribe();
-    
+
     this.timerUpdateSubscription = interval(1000).subscribe(() => {
       if (this.timer.isRunning && this.activeTimer) {
         const elapsed = this.calculateElapsedTime();
@@ -990,17 +1048,15 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.isProcessing = true;
     const userId = this.getCurrentUserId();
-    
-    // Calculate current elapsed time before pausing
-    const currentElapsed = this.calculateElapsedTime();
-    console.log('Pausing timer at elapsed time:', this.formatDuration(currentElapsed));
-    
+
+    console.log('[Dashboard] Pausing timer:', this.activeTimer.id);
+
     this.timerService.pauseTimer(userId!, this.activeTimer.id).pipe(
       timeout(10000),
       catchError(error => {
         console.error('Timer pause failed:', error);
-        this.error = error.name === 'TimeoutError' ? 
-          'Request timed out. Please try again.' : 
+        this.error = error.name === 'TimeoutError' ?
+          'Request timed out. Please try again.' :
           'Failed to pause timer.';
         return of(null);
       }),
@@ -1011,15 +1067,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     ).subscribe({
       next: (timer) => {
         if (timer) {
-          console.log('Timer paused successfully:', timer);
-          this.activeTimer = timer;
-          this.timer.isRunning = false;
-          this.timer.description = `Paused - ${this.timer.caseName}`;
-          // Keep the current elapsed time, don't reset to backend value
-          this.timer.elapsed = this.formatDuration(currentElapsed);
-          
-          // Stop the timer updates since we're paused
-          this.timerUpdateSubscription?.unsubscribe();
+          console.log('[Dashboard] Timer paused, state will update via subscription');
+          // State is updated via activeTimers$ subscription in updateLocalTimerState()
         }
       },
       error: (error) => {
@@ -1034,15 +1083,15 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.isProcessing = true;
     const userId = this.getCurrentUserId();
-    
-    console.log('Resuming timer from elapsed time:', this.timer.elapsed);
-    
+
+    console.log('[Dashboard] Resuming timer:', this.activeTimer.id);
+
     this.timerService.resumeTimer(userId!, this.activeTimer.id).pipe(
       timeout(10000),
       catchError(error => {
         console.error('Timer resume failed:', error);
-        this.error = error.name === 'TimeoutError' ? 
-          'Request timed out. Please try again.' : 
+        this.error = error.name === 'TimeoutError' ?
+          'Request timed out. Please try again.' :
           'Failed to resume timer.';
         return of(null);
       }),
@@ -1053,18 +1102,135 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     ).subscribe({
       next: (timer) => {
         if (timer) {
-          console.log('Timer resumed successfully:', timer);
-          this.activeTimer = timer;
-          this.timer.isRunning = true;
-          this.timer.description = `Working on ${this.timer.caseName}`;
-          
-          // Restart timer updates to continue from current elapsed time
-          this.startTimerUpdates();
+          console.log('[Dashboard] Timer resumed, state will update via subscription');
+          // State is updated via activeTimers$ subscription in updateLocalTimerState()
         }
       },
       error: (error) => {
         console.error('Resume timer error:', error);
         this.error = 'Failed to resume timer.';
+      }
+    });
+  }
+
+  /**
+   * Toggle timer by specific timer object (for multiple timers list)
+   */
+  toggleTimerById(timer: ActiveTimer): void {
+    if (!timer.id || this.isProcessing) return;
+
+    this.isProcessing = true;
+    const userId = this.getCurrentUserId();
+
+    if (timer.isActive) {
+      // Pause the timer
+      this.timerService.pauseTimer(userId!, timer.id).pipe(
+        timeout(10000),
+        catchError(error => {
+          console.error('Timer pause failed:', error);
+          this.error = 'Failed to pause timer.';
+          return of(null);
+        }),
+        finalize(() => {
+          this.isProcessing = false;
+          this.changeDetectorRef.detectChanges();
+        })
+      ).subscribe();
+    } else {
+      // Resume the timer
+      this.timerService.resumeTimer(userId!, timer.id).pipe(
+        timeout(10000),
+        catchError(error => {
+          console.error('Timer resume failed:', error);
+          this.error = 'Failed to resume timer.';
+          return of(null);
+        }),
+        finalize(() => {
+          this.isProcessing = false;
+          this.changeDetectorRef.detectChanges();
+        })
+      ).subscribe();
+    }
+  }
+
+  /**
+   * Stop specific timer by timer object (for multiple timers list)
+   */
+  stopTimerById(timer: ActiveTimer): void {
+    if (!timer.id || this.isProcessing) return;
+
+    const userId = this.getCurrentUserId();
+    const caseName = timer.caseName || 'this timer';
+    const duration = timer.formattedDuration || '00:00:00';
+
+    Swal.fire({
+      title: 'Stop Timer',
+      html: `
+        <div class="text-center mb-3">
+          <div class="fs-24 fw-bold text-primary" style="font-family: monospace;">${duration}</div>
+          <div class="text-muted">${caseName}</div>
+        </div>
+        <p>Would you like to save this time entry or discard it?</p>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: '<i class="ri-save-line me-1"></i> Save Entry',
+      denyButtonText: '<i class="ri-delete-bin-line me-1"></i> Discard',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0ab39c',
+      denyButtonColor: '#f06548',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Save entry
+        const description = timer.description || `Work on ${caseName}`;
+        this.isProcessing = true;
+        this.timerService.convertTimerToTimeEntry(userId!, timer.id!, description).pipe(
+          timeout(10000),
+          catchError(error => {
+            console.error('Timer conversion failed:', error);
+            Swal.fire('Error', 'Failed to save time entry.', 'error');
+            return of(null);
+          }),
+          finalize(() => {
+            this.isProcessing = false;
+            this.changeDetectorRef.detectChanges();
+          })
+        ).subscribe(entry => {
+          if (entry) {
+            this.loadRecentEntries();
+            Swal.fire({
+              icon: 'success',
+              title: 'Time Entry Saved',
+              text: `Entry saved successfully.`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+        });
+      } else if (result.isDenied) {
+        // Discard timer
+        this.isProcessing = true;
+        this.timerService.discardTimer(userId!, timer.id!).pipe(
+          timeout(10000),
+          catchError(error => {
+            console.error('Timer discard failed:', error);
+            Swal.fire('Error', 'Failed to discard timer.', 'error');
+            return of(null);
+          }),
+          finalize(() => {
+            this.isProcessing = false;
+            this.changeDetectorRef.detectChanges();
+          })
+        ).subscribe(() => {
+          Swal.fire({
+            icon: 'info',
+            title: 'Timer Discarded',
+            text: 'The timer has been discarded.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        });
       }
     });
   }

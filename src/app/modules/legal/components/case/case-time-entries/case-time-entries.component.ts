@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewIn
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TimeTrackingService, TimeEntry, TimeEntryFilter } from '../../../../time-tracking/services/time-tracking.service';
+import { UserService } from 'src/app/service/user.service';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -99,7 +100,8 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
   constructor(
     private timeTrackingService: TimeTrackingService,
     private fb: FormBuilder,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private userService: UserService
   ) {
     this.initForms();
   }
@@ -378,10 +380,22 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
     this.cdr.markForCheck();
 
     const formValue = this.addForm.value;
+    const currentUserId = this.userService.getCurrentUserId();
+
+    if (!currentUserId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Unable to identify current user. Please log in again.'
+      });
+      this.isSubmitting = false;
+      this.cdr.markForCheck();
+      return;
+    }
 
     const newEntry: TimeEntry = {
       legalCaseId: Number(this.caseId),
-      userId: 0,
+      userId: currentUserId,
       date: formValue.date,
       hours: formValue.hours,
       rate: formValue.rate,

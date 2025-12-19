@@ -17,6 +17,7 @@ public class AIRequest {
     private String system;  // System message for high-priority instructions
     private Message[] messages;
     private List<ToolDefinition> tools;  // For tool-calling mode
+    private Double temperature;  // 0.0 for deterministic responses, null for default
 
     @Data
     @NoArgsConstructor

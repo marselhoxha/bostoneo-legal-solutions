@@ -635,6 +635,62 @@
             </div>
           </div>
         </div>
+
+        <!-- Multiple Active Timers List (shown when more than one timer) -->
+        <div class="card border-0 shadow-sm card-enhanced mt-3" *ngIf="activeTimers.length > 1">
+          <div class="card-header border-0 bg-success bg-opacity-10">
+            <div class="d-flex justify-content-between align-items-center">
+              <h6 class="card-title mb-0 text-success fw-semibold">
+                <i class="ri-timer-flash-line me-2"></i>All Active Timers
+                <span class="badge bg-success ms-2">{{ activeTimers.length }}</span>
+              </h6>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              <div *ngFor="let t of activeTimers"
+                   class="list-group-item d-flex align-items-center justify-content-between py-3"
+                   [class.bg-success-subtle]="t.isActive"
+                   [class.bg-warning-subtle]="!t.isActive">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title rounded"
+                          [class.bg-success]="t.isActive"
+                          [class.bg-warning]="!t.isActive">
+                      <i [class]="t.isActive ? 'ri-play-fill' : 'ri-pause-fill'"></i>
+                    </span>
+                  </span>
+                  <div>
+                    <h6 class="mb-1 fw-semibold">{{ t.caseName || 'Untitled Case' }}</h6>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="fs-16 fw-bold"
+                            [class.text-success]="t.isActive"
+                            [class.text-warning]="!t.isActive"
+                            style="font-family: 'SFMono-Regular', Consolas, monospace;">
+                        {{ t.formattedDuration || '00:00:00' }}
+                      </span>
+                      <span *ngIf="!t.isActive" class="badge bg-warning-subtle text-warning fs-10">PAUSED</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-icon"
+                          [class.btn-warning]="t.isActive"
+                          [class.btn-success]="!t.isActive"
+                          (click)="toggleTimerById(t)"
+                          [title]="t.isActive ? 'Pause' : 'Resume'">
+                    <i [class]="t.isActive ? 'ri-pause-fill' : 'ri-play-fill'"></i>
+                  </button>
+                  <button class="btn btn-sm btn-icon btn-soft-danger"
+                          (click)="stopTimerById(t)"
+                          title="Stop Timer">
+                    <i class="ri-stop-fill"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Enhanced Recent Entries -->

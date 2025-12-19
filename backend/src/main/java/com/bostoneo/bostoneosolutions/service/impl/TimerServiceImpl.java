@@ -5,8 +5,10 @@ import com.bostoneo.bostoneosolutions.dto.StartTimerRequest;
 import com.bostoneo.bostoneosolutions.dto.TimeEntryDTO;
 import com.bostoneo.bostoneosolutions.enumeration.TimeEntryStatus;
 import com.bostoneo.bostoneosolutions.model.ActiveTimer;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.TimerSession;
 import com.bostoneo.bostoneosolutions.repository.ActiveTimerRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.TimerSessionRepository;
 import com.bostoneo.bostoneosolutions.service.TimerService;
 import com.bostoneo.bostoneosolutions.service.TimeTrackingService;
@@ -32,6 +34,7 @@ public class TimerServiceImpl implements TimerService {
 
     private final ActiveTimerRepository activeTimerRepository;
     private final TimerSessionRepository timerSessionRepository;
+    private final LegalCaseRepository legalCaseRepository;
     private final TimeTrackingService timeTrackingService;
     private final BillingRateService billingRateService;
     private final CaseRateConfigurationService caseRateConfigurationService;
@@ -257,9 +260,10 @@ public class TimerServiceImpl implements TimerService {
     @Override
     @Transactional(readOnly = true)
     public List<ActiveTimerDTO> getActiveTimers(Long userId) {
-        log.info("Getting active timers for user {}", userId);
+        log.info("Getting all timers (running and paused) for user {}", userId);
 
-        List<ActiveTimer> timers = activeTimerRepository.findByUserIdAndIsActive(userId, true);
+        // Get ALL timers for user (both running and paused)
+        List<ActiveTimer> timers = activeTimerRepository.findAllTimersByUser(userId);
         return timers.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -430,6 +434,32 @@ public class TimerServiceImpl implements TimerService {
     }
 
     private ActiveTimerDTO mapToDTO(ActiveTimer timer) {
+        // Fetch case name and case number from LegalCase
+        String caseName = null;
+        String caseNumber = null;
+
+        try {
+            LegalCase legalCase = legalCaseRepository.findById(timer.getLegalCaseId()).orElse(null);
+            if (legalCase != null) {
+                caseName = legalCase.getTitle();
+                caseNumber = legalCase.getCaseNumber();
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch case details for timer {}: {}", timer.getId(), e.getMessage());
+        }
+
+        // Calculate current duration seconds
+        long currentDurationSeconds;
+        if (Boolean.TRUE.equals(timer.getIsActive())) {
+            // Timer is running: pausedDuration + current session time
+            long currentSessionMs = System.currentTimeMillis() - timer.getStartTime().getTime();
+            int currentSessionSeconds = (int)(currentSessionMs / 1000);
+            currentDurationSeconds = (timer.getPausedDuration() != null ? timer.getPausedDuration() : 0) + currentSessionSeconds;
+        } else {
+            // Timer is paused: just the accumulated pausedDuration
+            currentDurationSeconds = timer.getPausedDuration() != null ? timer.getPausedDuration() : 0;
+        }
+
         return ActiveTimerDTO.builder()
                 .id(timer.getId())
                 .userId(timer.getUserId())
@@ -443,7 +473,9 @@ public class TimerServiceImpl implements TimerService {
                 .isEmergency(timer.getIsEmergency())
                 .workType(timer.getWorkType())
                 .tags(timer.getTags())
-                .currentDurationSeconds(timer.getCurrentDurationSeconds())
+                .currentDurationSeconds(currentDurationSeconds)
+                .caseName(caseName)
+                .caseNumber(caseNumber)
                 .createdAt(timer.getCreatedAt())
                 .updatedAt(timer.getUpdatedAt())
                 .build();

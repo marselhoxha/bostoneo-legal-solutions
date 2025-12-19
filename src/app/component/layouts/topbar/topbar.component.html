@@ -54,16 +54,17 @@
 
            
                 <!-- Case Management Dropdown -->
-                <div class="dropdown topbar-head-dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown">
-                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative" 
-                            ngbDropdownToggle>
+                <div class="dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown" display="dynamic" placement="bottom-end">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
+                            ngbDropdownToggle
+                            id="page-header-case-dropdown">
                         <i class='ri-briefcase-4-line fs-22'></i>
                         <span *ngIf="pendingAssignments > 0" class="position-absolute topbar-badge fs-9 translate-middle badge rounded-pill bg-warning">
                             {{ pendingAssignments }}
                             <span class="visually-hidden">pending assignments</span>
                         </span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-lg p-0 dropdown-menu-end" ngbDropdownMenu style="width: 360px;">
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0 custom-notification-dropdown" ngbDropdownMenu aria-labelledby="page-header-case-dropdown" style="width: 360px;">
                         <div class="p-3 border-top-0 border-start-0 border-end-0 border-dashed border bg-primary bg-pattern">
                             <div class="row align-items-center">
                                 <div class="col">
@@ -184,67 +185,133 @@
                     </div>
                 </div>
 
-                <!-- Web Apps Dropdown (existing) -->
-                <div class="dropdown topbar-head-dropdown ms-1 header-item" ngbDropdown>
-                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
-                        <i class='bx bx-category-alt fs-22'></i>
+                <!-- Timer Dropdown -->
+                <div class="dropdown ms-1 header-item" ngbDropdown #timerDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onTimerDropdownToggle($event)">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
+                            ngbDropdownToggle
+                            id="page-header-timer-dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            title="Time Tracking">
+                        <i class="ri-timer-line fs-22" [ngClass]="{'text-success timer-pulse': hasRunningTimers()}"></i>
+                        <span *ngIf="activeTimers.length > 0" class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill"
+                              [ngClass]="hasRunningTimers() ? 'bg-success' : 'bg-warning'">
+                            {{ activeTimers.length }}
+                            <span class="visually-hidden">active timers</span>
+                        </span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-lg p-0 dropdown-menu-end" ngbDropdownMenu>
-                        <div class="p-3 border-top-0 border-start-0 border-end-0 border-dashed border">
-                            <div class="row align-items-center">
-                                <div class="col">
-                                    <h6 class="m-0 fw-semibold fs-15"> Web Apps </h6>
+                    <div class="dropdown-menu dropdown-menu-end p-0 custom-notification-dropdown" ngbDropdownMenu aria-labelledby="page-header-timer-dropdown"
+                         style="width: 320px; border-radius: 8px; overflow: hidden; box-shadow: var(--vz-box-shadow-lg); border: 1px solid var(--vz-border-color);">
+
+                        <!-- Header -->
+                        <div class="bg-success p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="ri-timer-flash-line text-white fs-18"></i>
+                                    <span class="text-white fw-semibold fs-14">Timers</span>
+                                    <span *ngIf="activeTimers.length > 0" class="badge bg-white text-success fs-10">{{ activeTimers.length }}</span>
                                 </div>
-                                <div class="col-auto">
-                                    <a href="javascript:void(0);" class="btn btn-sm btn-soft-info"> View All Apps
-                                        <i class="ri-arrow-right-s-line align-middle"></i></a>
-                                </div>
+                                <span class="text-white fw-bold fs-12" style="font-family: monospace;" *ngIf="activeTimers.length > 0">{{ getTodayTotalTime() }}</span>
                             </div>
                         </div>
 
-                        <div class="p-2">
-                            <div class="row g-0">
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/github.png" alt="Github">
-                                        <span>GitHub</span>
-                                    </a>
-                                </div>
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/bitbucket.png" alt="bitbucket">
-                                        <span>Bitbucket</span>
-                                    </a>
-                                </div>
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/dribbble.png" alt="dribbble">
-                                        <span>Dribbble</span>
-                                    </a>
+                        <div style="max-height: 360px; overflow-y: auto; background: var(--vz-body-bg);">
+                            <!-- Active Timers -->
+                            <div *ngIf="!loadingTimers && activeTimers.length > 0" class="p-2">
+                                <div *ngFor="let timer of activeTimers" class="mb-2 p-3 rounded-2"
+                                     [class.border-success]="timer.isActive"
+                                     [class.bg-success-subtle]="timer.isActive"
+                                     style="background: var(--vz-card-bg); border: 1px solid var(--vz-border-color);">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="fw-semibold text-truncate fs-12" style="max-width: 180px; color: var(--vz-heading-color);">{{ timer.caseName || 'Untitled' }}</span>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-sm btn-icon" style="width: 28px; height: 28px;"
+                                                    [class.btn-warning]="timer.isActive" [class.btn-success]="!timer.isActive"
+                                                    (click)="toggleTimer(timer); $event.stopPropagation()"
+                                                    [title]="timer.isActive ? 'Pause' : 'Resume'">
+                                                <i [class]="timer.isActive ? 'ri-pause-fill' : 'ri-play-fill'" class="fs-14"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-icon btn-soft-danger" style="width: 28px; height: 28px;"
+                                                    (click)="stopTimer(timer); $event.stopPropagation()" title="Stop Timer">
+                                                <i class="ri-stop-fill fs-14"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold fs-18" style="font-family: 'SFMono-Regular', Consolas, monospace;"
+                                              [class.text-success]="timer.isActive" [class.text-warning]="!timer.isActive">
+                                            {{ timer.formattedDuration || '00:00:00' }}
+                                        </span>
+                                        <span *ngIf="!timer.isActive" class="badge bg-warning-subtle text-warning fs-9">PAUSED</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="row g-0">
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/dropbox.png" alt="dropbox">
-                                        <span>Dropbox</span>
-                                    </a>
+                            <!-- Empty State -->
+                            <div *ngIf="!loadingTimers && activeTimers.length === 0" class="text-center py-4">
+                                <i class="ri-timer-line fs-28 text-muted d-block mb-2"></i>
+                                <span class="text-muted fs-12">No active timers</span>
+                            </div>
+
+                            <!-- Loading -->
+                            <div *ngIf="loadingTimers" class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-success"></div>
+                            </div>
+
+                            <!-- Quick Start -->
+                            <div class="p-3 border-top" *ngIf="!showQuickStartForm">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-muted fw-semibold fs-10 text-uppercase">Start Timer</span>
+                                    <a href="javascript:void(0)" class="text-primary fs-11" (click)="showQuickStartForm = true; $event.stopPropagation()">All Cases</a>
                                 </div>
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/mail_chimp.png" alt="mail_chimp">
-                                        <span>Mail Chimp</span>
-                                    </a>
+                                <div *ngFor="let rc of recentCases.slice(0, 3)"
+                                     class="d-flex align-items-center gap-2 p-2 rounded mb-1"
+                                     style="background: var(--vz-tertiary-bg); cursor: pointer;"
+                                     (click)="startTimerForCase(rc); $event.stopPropagation()">
+                                    <i class="ri-play-circle-fill text-success fs-16"></i>
+                                    <span class="text-truncate fw-medium fs-12">{{ rc.title }}</span>
                                 </div>
-                                <div class="col">
-                                    <a class="dropdown-icon-item" href="javascript:void(0);">
-                                        <img src="assets/images/brands/slack.png" alt="slack">
-                                        <span>Slack</span>
-                                    </a>
+                                <div *ngIf="recentCases.length === 0" class="text-center">
+                                    <button class="btn btn-sm btn-soft-success" (click)="showQuickStartForm = true; $event.stopPropagation()">
+                                        <i class="ri-add-line"></i> New Timer
+                                    </button>
                                 </div>
                             </div>
+
+                            <!-- Search Form (All Cases) -->
+                            <div class="p-3 border-top" style="background: var(--vz-tertiary-bg);" *ngIf="showQuickStartForm" (click)="$event.stopPropagation()">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="fw-semibold fs-12">All Cases</span>
+                                    <i class="ri-close-line text-muted" style="cursor: pointer;" (click)="showQuickStartForm = false; $event.stopPropagation()"></i>
+                                </div>
+                                <input type="text" class="form-control form-control-sm mb-2 fs-12" placeholder="Search cases..."
+                                       [(ngModel)]="caseSearchQuery" (input)="filterCases()" (click)="$event.stopPropagation()">
+                                <div style="max-height: 180px; overflow-y: auto;" *ngIf="filteredCases.length > 0">
+                                    <div *ngFor="let c of filteredCases"
+                                         class="d-flex align-items-center justify-content-between p-2 mb-1 rounded fs-11"
+                                         style="cursor: pointer; background: var(--vz-card-bg); border: 1px solid var(--vz-border-color);"
+                                         [class.bg-success-subtle]="quickStartCaseId === c.id"
+                                         [class.border-success]="quickStartCaseId === c.id"
+                                         (click)="selectCase(c); $event.stopPropagation()">
+                                        <span class="text-truncate fw-medium">{{ c.title }}</span>
+                                        <i *ngIf="quickStartCaseId === c.id" class="ri-check-line text-success"></i>
+                                    </div>
+                                </div>
+                                <div *ngIf="filteredCases.length === 0 && caseSearchQuery" class="text-center py-2 text-muted fs-11">
+                                    No cases found
+                                </div>
+                                <button class="btn btn-success btn-sm w-100 mt-2 fs-12" [disabled]="!quickStartCaseId || startingTimer"
+                                        (click)="startQuickTimer(); $event.stopPropagation()">
+                                    <i class="ri-play-fill"></i> Start Timer
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- Footer -->
+                        <a [routerLink]="['/time-tracking']" class="d-flex align-items-center justify-content-center gap-1 text-muted p-2 border-top fs-12"
+                           style="text-decoration: none; background: var(--vz-tertiary-bg);" (click)="timerDropdown.close()">
+                            All Entries <i class="ri-arrow-right-s-line"></i>
+                        </a>
                     </div>
                 </div>
 
@@ -268,7 +335,7 @@
                   </div>
                   
                 <!-- Messages Dropdown -->
-                <div class="dropdown ms-1 header-item" ngbDropdown #messageDropdown="ngbDropdown" [placement]="'bottom-right'" (openChange)="onMessageDropdownToggle($event)">
+                <div class="dropdown ms-1 header-item" ngbDropdown #messageDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onMessageDropdownToggle($event)">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
                             ngbDropdownToggle
                             id="page-header-messages-dropdown"
@@ -367,7 +434,7 @@
                 </div>
 
                 <!-- Notification Dropdown -->
-                <div class="dropdown ms-1 header-item" ngbDropdown #notificationDropdown="ngbDropdown" display="dynamic" [placement]="'bottom-end'" (openChange)="onNotificationDropdownToggle($event)">
+                <div class="dropdown ms-1 header-item" ngbDropdown #notificationDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onNotificationDropdownToggle($event)">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative notification-bell"
                             ngbDropdownToggle
                             id="page-header-notifications-dropdown"

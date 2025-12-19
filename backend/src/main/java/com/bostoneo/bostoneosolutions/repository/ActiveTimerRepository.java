@@ -29,9 +29,13 @@ public interface ActiveTimerRepository extends PagingAndSortingRepository<Active
     @Query("SELECT COUNT(at) > 0 FROM ActiveTimer at WHERE at.userId = :userId AND at.isActive = true")
     boolean hasActiveTimer(@Param("userId") Long userId);
     
-    // Get all active timers for a user
+    // Get all active timers for a user (running only)
     @Query("SELECT at FROM ActiveTimer at WHERE at.userId = :userId AND at.isActive = true ORDER BY at.startTime DESC")
     List<ActiveTimer> findActiveTimersByUser(@Param("userId") Long userId);
+
+    // Get all timers for a user (both running and paused)
+    @Query("SELECT at FROM ActiveTimer at WHERE at.userId = :userId ORDER BY at.isActive DESC, at.startTime DESC")
+    List<ActiveTimer> findAllTimersByUser(@Param("userId") Long userId);
     
     // Get all active timers for a case
     @Query("SELECT at FROM ActiveTimer at WHERE at.legalCaseId = :legalCaseId AND at.isActive = true ORDER BY at.startTime DESC")

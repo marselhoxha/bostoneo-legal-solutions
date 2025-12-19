@@ -55,8 +55,19 @@ public class CollectionQAService {
      * Uses RAG to retrieve relevant context and generate an answer.
      */
     public CompletableFuture<QAResponse> askQuestion(Long collectionId, String query, int maxSources) {
+        return askQuestion(collectionId, query, maxSources, null);
+    }
+
+    /**
+     * Ask a question about all documents in a collection with analysis context.
+     * Uses RAG to retrieve relevant context and generate an answer.
+     *
+     * @param analysisContext Optional context: 'respond', 'negotiate', 'client_review', 'due_diligence', 'general'
+     */
+    public CompletableFuture<QAResponse> askQuestion(Long collectionId, String query, int maxSources, String analysisContext) {
         long startTime = System.currentTimeMillis();
-        log.info("Collection Q&A: collectionId={}, query='{}', maxSources={}", collectionId, query, maxSources);
+        log.info("Collection Q&A: collectionId={}, query='{}', maxSources={}, context={}",
+            collectionId, query, maxSources, analysisContext);
 
         QAResponse response = new QAResponse();
 
@@ -95,8 +106,8 @@ public class CollectionQAService {
             response.sources.add(source);
         }
 
-        // Step 3: Build prompt for Claude
-        String systemMessage = buildSystemMessage();
+        // Step 3: Build prompt for Claude with context-awareness
+        String systemMessage = buildSystemMessage(analysisContext);
         String userPrompt = buildUserPrompt(query, contextBuilder.toString(), searchResults.size());
 
         // Step 4: Call Claude to generate answer
@@ -117,11 +128,14 @@ public class CollectionQAService {
     }
 
     /**
-     * Build system message for cross-document analysis
+     * Build system message for cross-document analysis with context-awareness
      */
-    private String buildSystemMessage() {
-        return """
+    private String buildSystemMessage(String analysisContext) {
+        String contextInstruction = getContextInstruction(analysisContext);
+
+        return String.format("""
             You are a legal document analyst assistant. Your task is to answer questions about a collection of legal documents.
+            %s
 
             IMPORTANT GUIDELINES:
             1. Answer ONLY based on the provided document excerpts - do not make up information
@@ -137,7 +151,40 @@ public class CollectionQAService {
             - Start with a direct answer to the question
             - Provide supporting details with source citations [Source 1], [Source 2], etc.
             - End with any caveats, inconsistencies, or gaps in the available information
-            """;
+            """, contextInstruction);
+    }
+
+    /**
+     * Get context-specific instruction for collection Q&A
+     */
+    private String getContextInstruction(String analysisContext) {
+        if (analysisContext == null || analysisContext.equals("general")) {
+            return "";
+        }
+
+        return switch (analysisContext) {
+            case "respond" -> """
+
+                ANALYSIS CONTEXT: The attorney is preparing to respond to these documents from opposing counsel.
+                Focus on: response deadlines, counterarguments, weaknesses to exploit, and evidence to gather.
+                """;
+            case "negotiate" -> """
+
+                ANALYSIS CONTEXT: The attorney is negotiating these documents on behalf of their client.
+                Focus on: unfavorable terms, redline suggestions, leverage points, and negotiation priorities.
+                """;
+            case "client_review" -> """
+
+                ANALYSIS CONTEXT: The attorney needs to explain these documents to their client.
+                Focus on: clear explanations accessible to non-lawyers, practical implications, and next steps.
+                """;
+            case "due_diligence" -> """
+
+                ANALYSIS CONTEXT: The attorney is conducting due diligence for a transaction.
+                Focus on: risks, red flags, missing information, deal-breaker issues, and recommended protections.
+                """;
+            default -> "";
+        };
     }
 
     /**

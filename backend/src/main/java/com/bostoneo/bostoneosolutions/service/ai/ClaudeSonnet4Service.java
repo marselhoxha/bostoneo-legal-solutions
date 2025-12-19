@@ -48,13 +48,22 @@ public class ClaudeSonnet4Service implements AIService {
      * Generate completion with cancellation support (using sessionId)
      */
     public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId) {
+        return generateCompletion(prompt, systemMessage, useDeepThinking, sessionId, null);
+    }
+
+    /**
+     * Generate completion with cancellation support and temperature control.
+     * @param temperature Use 0.0 for deterministic responses (e.g., classification).
+     *                    Use null for default temperature.
+     */
+    public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature) {
         // Check if generation has been cancelled BEFORE making expensive API call
         if (sessionId != null && cancellationService.isCancelled(sessionId)) {
             log.warn("🛑 AI generation cancelled before API call for session {}", sessionId);
             cancellationService.clearCancellation(sessionId);
             return CompletableFuture.failedFuture(new IllegalStateException("AI generation cancelled by user"));
         }
-        AIRequest request = createRequest(prompt, systemMessage, useDeepThinking);
+        AIRequest request = createRequest(prompt, systemMessage, useDeepThinking, temperature);
 
         log.info("=== SENDING REQUEST TO ANTHROPIC ===");
         log.info("Model: {}", request.getModel());
@@ -1270,12 +1279,22 @@ public class ClaudeSonnet4Service implements AIService {
     }
 
     private AIRequest createRequest(String prompt, boolean useDeepThinking) {
-        return createRequest(prompt, null, useDeepThinking);
+        return createRequest(prompt, null, useDeepThinking, null);
     }
 
     private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking) {
+        return createRequest(prompt, systemMessage, useDeepThinking, null);
+    }
+
+    private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking, Double temperature) {
         AIRequest request = new AIRequest();
         request.setModel("claude-opus-4-5-20251101");
+
+        // Set temperature for deterministic responses when needed (e.g., classification)
+        if (temperature != null) {
+            request.setTemperature(temperature);
+            log.info("🌡️ Using temperature={} for deterministic response", temperature);
+        }
 
         // Smart token allocation based on query complexity
         int maxTokens;
@@ -1326,7 +1345,7 @@ public class ClaudeSonnet4Service implements AIService {
             // Prevents truncation of evidence checklists, timelines, strategic recommendations
             // Covers all document types: Complaints, Contracts, Leases, Employment, NDA, Discovery, etc.
             maxTokens = 12000;
-            log.info("📄⚖️ Strategic document analysis detected - allocating {} tokens for complete adversarial analysis", maxTokens);
+            log.info("📄⚖️ Strategic document analysis detected - allocating {} tokens for comprehensive analysis", maxTokens);
         } else if (isThoroughModeResearch) {
             // THOROUGH mode: 12000 tokens for comprehensive analysis with verified citations
             maxTokens = 12000;

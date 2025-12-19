@@ -15,11 +15,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.net.HttpURLConnection;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,7 +41,22 @@ public class AIDocumentAnalyzerController {
     private final TimelineEventRepository timelineEventRepository;
     private final AIAnalysisMessageRepository analysisMessageRepository;
     private final CloudStorageUrlConverter urlConverter;
-    private final RestTemplate restTemplate = new RestTemplate();
+
+    // RestTemplate with custom factory that follows redirects and has browser-like headers
+    private final RestTemplate restTemplate = createRestTemplate();
+
+    private static RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                super.prepareConnection(connection, httpMethod);
+                connection.setInstanceFollowRedirects(true);
+            }
+        };
+        factory.setConnectTimeout(30000); // 30 seconds
+        factory.setReadTimeout(60000); // 60 seconds for large documents
+        return new RestTemplate(factory);
+    }
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public DeferredResult<ResponseEntity<Map<String, Object>>> analyzeDocument(
@@ -270,10 +288,19 @@ public class AIDocumentAnalyzerController {
             String provider = urlConverter.getProviderName(url);
             log.info("Provider: {}, Direct URL: {}", provider, directUrl);
 
-            // Set up request headers
+            // Set up request headers - mimic a real browser to avoid 403 errors
             HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-            headers.setAccept(java.util.List.of(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            headers.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+            headers.set("Accept-Language", "en-US,en;q=0.9");
+            headers.set("Accept-Encoding", "identity"); // Don't request compressed responses
+            headers.set("Connection", "keep-alive");
+            headers.set("Upgrade-Insecure-Requests", "1");
+            headers.set("Sec-Fetch-Dest", "document");
+            headers.set("Sec-Fetch-Mode", "navigate");
+            headers.set("Sec-Fetch-Site", "none");
+            headers.set("Sec-Fetch-User", "?1");
+            headers.set("Cache-Control", "max-age=0");
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 

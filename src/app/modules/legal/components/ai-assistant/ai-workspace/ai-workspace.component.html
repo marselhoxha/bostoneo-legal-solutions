@@ -668,8 +668,8 @@
         </div>
       </div>
 
-      <!-- Examples Section (hidden for workflow mode) -->
-      <div class="examples-section card mb-4" *ngIf="selectedTask && selectedTask !== 'workflow'">
+      <!-- Examples Section (hidden for workflow mode and upload mode) -->
+      <div class="examples-section card mb-4" *ngIf="selectedTask && selectedTask !== 'workflow' && selectedTask !== 'upload'">
         <div class="card-body">
           <h6 class="mb-3">{{ getExamplesTitle() }}</h6>
           <div class="example-list">
@@ -692,6 +692,81 @@
       <div class="primary-upload-section mb-4" *ngIf="selectedTask === 'upload'">
         <div class="upload-card card">
           <div class="card-body">
+            <!-- Context Selection FIRST (What's your goal?) - Sky Blue Theme -->
+            <div class="context-selection-section mb-4" *ngIf="!isBatchProcessing">
+              <!-- Header -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <i class="ri-focus-3-line" style="color: #fff; font-size: 1rem;"></i>
+                  </div>
+                  <div>
+                    <h6 style="margin: 0; font-weight: 600; font-size: 0.95rem; color: #495057;">What's your goal?</h6>
+                    <span style="font-size: 0.75rem; color: #878a99;">Select analysis context for better results</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Context Options Grid -->
+              <div class="context-options-grid">
+                <div *ngFor="let option of analysisContextOptions"
+                     class="context-option"
+                     [class.selected]="selectedAnalysisContext === option.id"
+                     (click)="selectAnalysisContext(option.id)">
+
+                  <!-- Icon -->
+                  <div class="context-option-icon">
+                    <i [class]="option.icon"></i>
+                  </div>
+
+                  <!-- Content -->
+                  <div class="context-option-content">
+                    <span class="context-option-label">{{ option.label }}</span>
+                    <span class="context-option-sublabel">{{ option.sublabel }}</span>
+                  </div>
+
+                  <!-- Selected Indicator -->
+                  <div *ngIf="selectedAnalysisContext === option.id" class="context-option-check">
+                    <i class="ri-check-line"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div *ngIf="getSelectedContextOption()" class="context-description">
+                <i class="ri-information-line"></i>
+                <span>{{ getSelectedContextOption()?.description }}</span>
+              </div>
+
+              <!-- Smart Context Suggestion -->
+              <div *ngIf="suggestedContext && selectedAnalysisContext === 'general'" class="context-suggestion">
+                <div class="suggestion-content">
+                  <i class="ri-lightbulb-flash-line"></i>
+                  <span>Try <strong>{{ getSuggestedContextLabel() }}</strong> for this document type</span>
+                </div>
+                <button type="button" class="btn-apply" (click)="applySuggestedContext()">Apply</button>
+              </div>
+            </div>
+
+            <!-- URL Fetch Input (Above upload zone) -->
+            <div class="url-fetch-section mb-3">
+              <div class="input-group">
+                <span class="input-group-text"><i class="ri-link"></i></span>
+                <input type="url"
+                       class="form-control"
+                       [(ngModel)]="documentUrl"
+                       name="documentUrl"
+                       placeholder="Paste document URL to fetch...">
+                <button type="button"
+                        class="btn btn-fetch"
+                        (click)="fetchFromUrl()"
+                        [disabled]="!documentUrl || isFetchingUrl">
+                  <i class="ri-download-cloud-line me-1"></i>
+                  {{ isFetchingUrl ? 'Fetching...' : 'Fetch' }}
+                </button>
+              </div>
+            </div>
+
             <!-- Drag & Drop Zone -->
             <div class="upload-drop-zone-primary"
                  [class.dragover]="isDragover"
@@ -713,25 +788,6 @@
               <p class="upload-description text-muted">
                 Supports PDF, DOCX, DOC, TXT • Auto-detection enabled
               </p>
-            </div>
-
-            <!-- URL Fetch Input -->
-            <div class="url-fetch-section mt-3">
-              <div class="input-group">
-                <span class="input-group-text"><i class="ri-link"></i></span>
-                <input type="url"
-                       class="form-control"
-                       [(ngModel)]="documentUrl"
-                       name="documentUrl"
-                       placeholder="Or paste document URL...">
-                <button type="button"
-                        class="btn btn-primary"
-                        (click)="fetchFromUrl()"
-                        [disabled]="!documentUrl || isFetchingUrl">
-                  <i class="ri-download-cloud-line me-1"></i>
-                  {{ isFetchingUrl ? 'Fetching...' : 'Fetch' }}
-                </button>
-              </div>
             </div>
 
             <!-- Uploaded Files List -->
@@ -777,39 +833,8 @@
                 </button>
               </div>
 
-              <!-- Context Selection (What's your goal?) -->
-              <div class="context-selection-section mt-3" *ngIf="showContextSelection && !isBatchProcessing">
-                <h6 class="mb-2">
-                  <i class="ri-focus-3-line me-1 text-primary"></i>
-                  What's your goal with this document?
-                </h6>
-                <div class="context-options-grid">
-                  <div class="context-option"
-                       *ngFor="let option of analysisContextOptions"
-                       [class.selected]="selectedAnalysisContext === option.id"
-                       (click)="selectAnalysisContext(option.id)">
-                    <div class="context-option-icon">
-                      <i [class]="option.icon"></i>
-                    </div>
-                    <div class="context-option-content">
-                      <div class="context-option-label">{{ option.label }}</div>
-                      <div class="context-option-sublabel">{{ option.sublabel }}</div>
-                    </div>
-                    <div class="context-option-check" *ngIf="selectedAnalysisContext === option.id">
-                      <i class="ri-checkbox-circle-fill text-success"></i>
-                    </div>
-                  </div>
-                </div>
-                <div class="context-description mt-2" *ngIf="getSelectedContextOption()">
-                  <small class="text-muted">
-                    <i class="ri-information-line me-1"></i>
-                    {{ getSelectedContextOption()?.description }}
-                  </small>
-                </div>
-              </div>
-
               <!-- Case Selection (optional) -->
-              <div class="case-selection-section mt-3" *ngIf="showContextSelection && !isBatchProcessing">
+              <div class="case-selection-section mt-3" *ngIf="!isBatchProcessing">
                 <h6 class="mb-2">
                   <i class="ri-briefcase-line me-1 text-primary"></i>
                   Link to a case (optional)
@@ -1180,7 +1205,10 @@
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-submit"
+              <button type="submit"
+                      class="btn btn-submit"
+                      [class.btn-analyze]="selectedTask === 'upload'"
+                      [class.btn-primary]="selectedTask !== 'upload'"
                       [disabled]="selectedTask === 'upload' ? (uploadedFiles.length === 0 || (isGenerating$ | async)) : !canSend">
                 <i [class]="selectedTask === 'upload' ? 'ri-file-search-line' : 'ri-send-plane-fill'"></i>
                 {{ selectedTask === 'upload' ? 'Analyze Documents' : 'Send' }}

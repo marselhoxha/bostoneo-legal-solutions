@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.dto.DocumentChange;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
@@ -10,6 +11,9 @@ import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentVersionRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +24,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -63,6 +69,12 @@ public class AiWorkspaceDocumentService {
 
     // MOCK MODE DISABLED - Using real API
     private static final boolean USE_MOCK_MODE = false;
+
+    // Diff mode configuration
+    private static final int MIN_CONTENT_LENGTH_FOR_DIFF_MODE = 500; // Only use diff mode for documents > 500 chars
+    private static final Set<String> DIFF_ELIGIBLE_TRANSFORMATIONS = Set.of("SIMPLIFY", "CONDENSE");
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Create a new document with initial content
@@ -116,22 +128,30 @@ public class AiWorkspaceDocumentService {
 
     /**
      * Apply transformation to entire document
+     * @param customPrompt For CUSTOM transformation type - user's natural language revision request
      */
     @Transactional
     public AiWorkspaceDocumentVersion transformFullDocument(
         Long documentId,
         Long userId,
         String transformationType,
-        String currentContent
+        String currentContent,
+        String customPrompt
     ) {
-        log.info("Transforming full document id={}, type={}", documentId, transformationType);
+        log.info("Transforming full document id={}, type={}, hasCustomPrompt={}",
+            documentId, transformationType, customPrompt != null && !customPrompt.isEmpty());
 
         // Verify document ownership
         AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
-        // Build transformation prompt
-        String prompt = buildTransformationPrompt(transformationType, currentContent, null, null);
+        // Build transformation prompt - use custom prompt for CUSTOM type
+        String prompt;
+        if ("CUSTOM".equalsIgnoreCase(transformationType) && customPrompt != null && !customPrompt.isEmpty()) {
+            prompt = buildCustomTransformationPrompt(customPrompt, currentContent);
+        } else {
+            prompt = buildTransformationPrompt(transformationType, currentContent, null, null);
+        }
 
         // Check if generation has been cancelled (using document's sessionId as conversation ID)
         if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
@@ -495,6 +515,35 @@ public class AiWorkspaceDocumentService {
             );
             default -> String.format("Please improve %s:\n\n%s", scopePrefix, content);
         };
+    }
+
+    /**
+     * Build prompt for custom user-directed transformation
+     * User provides natural language instructions for document changes
+     */
+    private String buildCustomTransformationPrompt(String userPrompt, String documentContent) {
+        return String.format(
+            """
+            You are an expert legal document editor. The user has requested specific changes to their document.
+
+            USER'S REQUEST:
+            %s
+
+            CURRENT DOCUMENT:
+            %s
+
+            INSTRUCTIONS:
+            1. Apply the user's requested changes to the document
+            2. Maintain the document's legal formatting and structure
+            3. Preserve section numbering and references
+            4. Keep consistent legal terminology and tone
+            5. Return the COMPLETE modified document (not just the changed sections)
+            6. Do not add explanations or commentary - return only the revised document content
+
+            Please provide the complete revised document:
+            """,
+            userPrompt, documentContent
+        );
     }
 
     private int countWords(String text) {
@@ -1795,5 +1844,539 @@ public class AiWorkspaceDocumentService {
                 .setTextAlignment(TextAlignment.CENTER);
 
         document.add(footer);
+    }
+
+    // ========================================
+    // DIFF-BASED TRANSFORMATION METHODS
+    // Token-efficient transformations that return find/replace pairs
+    // instead of regenerating entire documents (80-90% token savings)
+    // ========================================
+
+    /**
+     * Determine if diff mode should be used for this transformation
+     * Only SIMPLIFY and CONDENSE are eligible for diff mode
+     * Only documents > 500 chars benefit from diff mode (smaller docs don't save much)
+     */
+    public boolean shouldUseDiffMode(String transformationType, String content) {
+        if (transformationType == null || content == null) {
+            return false;
+        }
+
+        boolean isEligibleType = DIFF_ELIGIBLE_TRANSFORMATIONS.contains(transformationType.toUpperCase());
+        boolean isLargeEnough = content.length() >= MIN_CONTENT_LENGTH_FOR_DIFF_MODE;
+
+        log.info("📊 Diff mode check: type={}, eligible={}, contentLength={}, largeEnough={}",
+                transformationType, isEligibleType, content.length(), isLargeEnough);
+
+        return isEligibleType && isLargeEnough;
+    }
+
+    /**
+     * Build prompt for diff-based transformation
+     * Instructs AI to return JSON array of find/replace pairs instead of full document
+     */
+    private String buildDiffTransformationPrompt(String transformationType, String content) {
+        String instruction = switch (transformationType.toUpperCase()) {
+            case "SIMPLIFY" -> """
+                Analyze this legal document and identify phrases/sentences that can be simplified.
+                For each change, provide the EXACT original text and its simplified replacement.
+                Focus on:
+                - Complex legal jargon that can be replaced with clearer terms
+                - Long, convoluted sentences that can be made more direct
+                - Redundant phrases that can be shortened
+
+                IMPORTANT: Preserve legal accuracy. Only simplify language, not meaning.
+                """;
+            case "CONDENSE" -> """
+                Analyze this legal document and identify sections that can be condensed.
+                For each change, provide the EXACT original text and its condensed replacement.
+                Focus on:
+                - Redundant or repetitive statements
+                - Overly verbose explanations that can be shortened
+                - Phrases that can be combined or eliminated
+
+                IMPORTANT: Preserve all legal meaning and key points. Remove only filler, not substance.
+                """;
+            default -> "Analyze and improve this document.";
+        };
+
+        return String.format("""
+            You are a legal document editor. %s
+
+            DOCUMENT TO TRANSFORM:
+            ```
+            %s
+            ```
+
+            RESPONSE FORMAT:
+            Return ONLY a valid JSON object with a "changes" array. No markdown, no explanations, just JSON.
+            Each change must have:
+            - "find": The EXACT text from the document (copy-paste precision required)
+            - "replace": The improved text
+
+            Example response format:
+            {"changes":[{"find":"pursuant to the aforementioned provisions","replace":"under these provisions"},{"find":"It is important to note that","replace":"Note:"}]}
+
+            CRITICAL RULES:
+            1. The "find" text MUST appear EXACTLY in the document (case-sensitive, whitespace-sensitive)
+            2. Keep changes surgical - don't rewrite entire paragraphs, just the phrases that need improvement
+            3. Aim for 5-15 targeted changes for typical documents
+            4. If no changes are needed, return: {"changes":[]}
+            5. Do NOT include any text before or after the JSON
+
+            Return your JSON response now:
+            """, instruction, content);
+    }
+
+    /**
+     * Parse the AI response containing JSON diff array
+     * Handles various response formats and extracts the changes array
+     */
+    public List<DocumentChange> parseDiffResponse(String aiResponse) {
+        if (aiResponse == null || aiResponse.trim().isEmpty()) {
+            log.warn("⚠️ Empty AI response for diff parsing");
+            return Collections.emptyList();
+        }
+
+        try {
+            // Try to extract JSON from the response (AI might include markdown or extra text)
+            String jsonStr = extractJsonFromResponse(aiResponse);
+            if (jsonStr == null) {
+                log.warn("⚠️ Could not extract JSON from AI response");
+                return Collections.emptyList();
+            }
+
+            JsonNode root = objectMapper.readTree(jsonStr);
+            JsonNode changesNode = root.get("changes");
+
+            if (changesNode == null || !changesNode.isArray()) {
+                log.warn("⚠️ No 'changes' array found in response");
+                return Collections.emptyList();
+            }
+
+            List<DocumentChange> changes = new ArrayList<>();
+            for (JsonNode changeNode : changesNode) {
+                String find = changeNode.has("find") ? changeNode.get("find").asText() : null;
+                String replace = changeNode.has("replace") ? changeNode.get("replace").asText() : null;
+
+                if (find != null && !find.isEmpty() && replace != null) {
+                    changes.add(DocumentChange.builder()
+                            .find(find)
+                            .replace(replace)
+                            .build());
+                }
+            }
+
+            log.info("✅ Parsed {} changes from AI response", changes.size());
+            return changes;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to parse diff response: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Extract JSON object from AI response that might contain markdown or extra text
+     */
+    private String extractJsonFromResponse(String response) {
+        // Try direct parsing first
+        String trimmed = response.trim();
+        if (trimmed.startsWith("{")) {
+            // Find the matching closing brace
+            int depth = 0;
+            int endIndex = -1;
+            for (int i = 0; i < trimmed.length(); i++) {
+                char c = trimmed.charAt(i);
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        endIndex = i + 1;
+                        break;
+                    }
+                }
+            }
+            if (endIndex > 0) {
+                return trimmed.substring(0, endIndex);
+            }
+        }
+
+        // Try to find JSON in markdown code blocks
+        Pattern codeBlockPattern = Pattern.compile("```(?:json)?\\s*\\n?([\\s\\S]*?)\\n?```");
+        Matcher matcher = codeBlockPattern.matcher(response);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        // Try to find bare JSON object
+        Pattern jsonPattern = Pattern.compile("\\{[\\s\\S]*\"changes\"[\\s\\S]*\\}");
+        matcher = jsonPattern.matcher(response);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+
+        return null;
+    }
+
+    /**
+     * Apply diff changes to original content
+     * Returns the transformed content with all changes applied
+     */
+    public String applyDiffsToContent(String originalContent, List<DocumentChange> changes) {
+        if (changes == null || changes.isEmpty()) {
+            return originalContent;
+        }
+
+        String result = originalContent;
+        int successfulChanges = 0;
+        int failedChanges = 0;
+
+        for (DocumentChange change : changes) {
+            if (change.getFind() == null || change.getReplace() == null) {
+                continue;
+            }
+
+            // Check if the find text exists in the content
+            if (result.contains(change.getFind())) {
+                result = result.replace(change.getFind(), change.getReplace());
+                successfulChanges++;
+                log.debug("✅ Applied change: '{}...' -> '{}...'",
+                        truncate(change.getFind(), 30),
+                        truncate(change.getReplace(), 30));
+            } else {
+                failedChanges++;
+                log.warn("⚠️ Could not find text to replace: '{}'", truncate(change.getFind(), 50));
+            }
+        }
+
+        log.info("📊 Diff application complete: {} successful, {} failed", successfulChanges, failedChanges);
+        return result;
+    }
+
+    /**
+     * Truncate string for logging
+     */
+    private String truncate(String str, int maxLength) {
+        if (str == null) return "";
+        if (str.length() <= maxLength) return str;
+        return str.substring(0, maxLength) + "...";
+    }
+
+    /**
+     * Transform document using diff mode (returns changes array instead of full content)
+     * Called by controller when diff mode is appropriate
+     */
+    @Transactional
+    public Map<String, Object> transformFullDocumentDiffMode(
+            Long documentId,
+            Long userId,
+            String transformationType,
+            String currentContent
+    ) {
+        log.info("🔄 Transforming document {} using DIFF MODE (type={})", documentId, transformationType);
+
+        // Verify document ownership
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
+
+        // Build diff-based prompt
+        String prompt = buildDiffTransformationPrompt(transformationType, currentContent);
+
+        // Check for cancellation
+        if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
+            log.warn("🛑 Diff transformation cancelled for document {}", documentId);
+            cancellationService.clearCancellation(document.getSessionId());
+            throw new IllegalStateException("Transformation cancelled by user");
+        }
+
+        // Call Claude API
+        String aiResponse;
+        if (USE_MOCK_MODE) {
+            aiResponse = generateMockDiffResponse(transformationType);
+        } else {
+            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            try {
+                aiResponse = aiRequest.join();
+            } catch (Exception e) {
+                log.error("❌ AI call failed for diff transformation: {}", e.getMessage());
+                throw e;
+            }
+        }
+
+        // Parse the diff response
+        List<DocumentChange> changes = parseDiffResponse(aiResponse);
+
+        // Apply diffs to get the transformed content (for version storage)
+        String transformedContent = applyDiffsToContent(currentContent, changes);
+
+        // Calculate metrics
+        int tokensUsed = estimateTokens(aiResponse); // Much smaller than full document
+        BigDecimal cost = calculateCost(tokensUsed);
+        int wordCount = countWords(transformedContent);
+
+        // Create new version
+        int newVersionNumber = document.getCurrentVersion() + 1;
+        AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
+                .document(document)
+                .versionNumber(newVersionNumber)
+                .content(transformedContent)
+                .wordCount(wordCount)
+                .transformationType(transformationType)
+                .transformationScope("FULL_DOCUMENT")
+                .createdByUser(false)
+                .tokensUsed(tokensUsed)
+                .costEstimate(cost)
+                .build();
+
+        newVersion = versionRepository.save(newVersion);
+
+        // Update document's current version
+        document.setCurrentVersion(newVersionNumber);
+        document.setUpdatedAt(LocalDateTime.now());
+        documentRepository.save(document);
+
+        log.info("✅ Diff mode transformation complete: {} changes, {} tokens (vs ~{} full mode estimate)",
+                changes.size(), tokensUsed, estimateTokens(currentContent));
+
+        // Return result with changes array for frontend to apply
+        Map<String, Object> result = new HashMap<>();
+        result.put("documentId", documentId);
+        result.put("newVersion", newVersionNumber);
+        result.put("transformedContent", transformedContent);
+        result.put("changes", changes);
+        result.put("useDiffMode", true);
+        result.put("tokensUsed", tokensUsed);
+        result.put("costEstimate", cost);
+        result.put("wordCount", wordCount);
+        result.put("transformationType", transformationType);
+        result.put("transformationScope", "FULL_DOCUMENT");
+
+        return result;
+    }
+
+    /**
+     * Generate mock diff response for testing
+     */
+    private String generateMockDiffResponse(String transformationType) {
+        return """
+            {"changes":[
+                {"find":"pursuant to","replace":"under"},
+                {"find":"aforementioned","replace":"above-mentioned"},
+                {"find":"heretofore","replace":"previously"},
+                {"find":"It is important to note that","replace":"Note:"}
+            ]}
+            """;
+    }
+
+    // ========================================
+    // CUSTOM DIFF MODE FOR CHAT TRANSFORMATIONS
+    // Extends diff mode to user's natural language requests
+    // ========================================
+
+    // Keywords that indicate structural changes requiring full document replacement
+    private static final Set<String> STRUCTURAL_CHANGE_KEYWORDS = Set.of(
+        "add section", "add paragraph", "add a new", "insert section", "insert paragraph",
+        "restructure", "reorganize", "reorder", "rearrange",
+        "move section", "move paragraph", "relocate",
+        "merge", "split", "combine", "separate",
+        "completely rewrite", "start over", "rewrite from scratch",
+        "create new", "draft new", "write new",
+        "delete section", "remove section", "remove paragraph"
+    );
+
+    // Minimum content length for custom diff mode to be beneficial
+    private static final int MIN_CONTENT_LENGTH_FOR_CUSTOM_DIFF = 1500;
+
+    /**
+     * Determine if a custom transformation request should use diff mode
+     * Returns true if:
+     * 1. Document is large enough (>1500 chars)
+     * 2. Request doesn't contain structural change keywords
+     */
+    public boolean shouldUseCustomDiffMode(String userPrompt, String content) {
+        if (userPrompt == null || content == null) {
+            return false;
+        }
+
+        // Check document size
+        boolean isLargeEnough = content.length() >= MIN_CONTENT_LENGTH_FOR_CUSTOM_DIFF;
+        if (!isLargeEnough) {
+            log.info("📊 Custom diff mode: document too small ({} chars), using full mode", content.length());
+            return false;
+        }
+
+        // Check for structural change keywords
+        String promptLower = userPrompt.toLowerCase();
+        for (String keyword : STRUCTURAL_CHANGE_KEYWORDS) {
+            if (promptLower.contains(keyword)) {
+                log.info("📊 Custom diff mode: detected structural keyword '{}', using full mode", keyword);
+                return false;
+            }
+        }
+
+        log.info("📊 Custom diff mode: eligible - large document ({} chars), no structural keywords", content.length());
+        return true;
+    }
+
+    /**
+     * Build prompt for diff-based custom transformation
+     * Instructs AI to return JSON array of find/replace pairs for user's natural language request
+     */
+    private String buildCustomDiffTransformationPrompt(String userPrompt, String documentContent) {
+        return String.format("""
+            You are an expert legal document editor. The user has requested specific changes to their document.
+
+            USER'S REQUEST:
+            %s
+
+            CURRENT DOCUMENT:
+            ```
+            %s
+            ```
+
+            IMPORTANT: Because this is a large document, you must respond with ONLY a JSON object containing find/replace pairs.
+            Do NOT return the full document. Only return the specific changes.
+
+            RESPONSE FORMAT:
+            Return ONLY a valid JSON object with a "changes" array. No markdown, no explanations, just JSON.
+            Each change must have:
+            - "find": The EXACT text from the document that needs to change (copy-paste precision required)
+            - "replace": The new text to replace it with
+
+            Example response format:
+            {"changes":[{"find":"[INSERT COURT NAME]","replace":"Suffolk County Superior Court"},{"find":"[CLIENT NAME]","replace":"John M. Richardson"}]}
+
+            CRITICAL RULES:
+            1. The "find" text MUST appear EXACTLY in the document (case-sensitive, whitespace-sensitive)
+            2. Find ALL occurrences in the document that match the user's request
+            3. If the user asks to change placeholders like [COURT NAME], find the exact placeholder text
+            4. If the user asks to fix dates, find each date that needs changing
+            5. Include enough context in "find" to make each match unique
+            6. If no changes are needed, return: {"changes":[]}
+            7. Do NOT include any text before or after the JSON
+
+            Return your JSON response now:
+            """, userPrompt, documentContent);
+    }
+
+    /**
+     * Transform document using diff mode for custom user requests
+     * Called when user makes a natural language transformation request via chat
+     */
+    @Transactional
+    public Map<String, Object> transformFullDocumentCustomDiffMode(
+            Long documentId,
+            Long userId,
+            String customPrompt,
+            String currentContent
+    ) {
+        log.info("🔄 Transforming document {} using CUSTOM DIFF MODE", documentId);
+        log.info("📝 User prompt: {}", customPrompt.substring(0, Math.min(100, customPrompt.length())) + "...");
+
+        // Verify document ownership
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
+
+        // Build diff-based prompt for custom transformation
+        String prompt = buildCustomDiffTransformationPrompt(customPrompt, currentContent);
+
+        // Check for cancellation
+        if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
+            log.warn("🛑 Custom diff transformation cancelled for document {}", documentId);
+            cancellationService.clearCancellation(document.getSessionId());
+            throw new IllegalStateException("Transformation cancelled by user");
+        }
+
+        // Call Claude API
+        String aiResponse;
+        if (USE_MOCK_MODE) {
+            aiResponse = generateMockCustomDiffResponse(customPrompt);
+        } else {
+            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            try {
+                aiResponse = aiRequest.join();
+            } catch (Exception e) {
+                log.error("❌ AI call failed for custom diff transformation: {}", e.getMessage());
+                throw e;
+            }
+        }
+
+        // Parse the diff response
+        List<DocumentChange> changes = parseDiffResponse(aiResponse);
+
+        // If parsing failed or no changes found, return with fallback flag
+        if (changes.isEmpty()) {
+            log.warn("⚠️ Custom diff mode returned no changes, flagging for fallback");
+            Map<String, Object> result = new HashMap<>();
+            result.put("useDiffMode", false);
+            result.put("fallbackRequired", true);
+            result.put("reason", "No valid changes extracted from AI response");
+            return result;
+        }
+
+        // Apply diffs to get the transformed content
+        String transformedContent = applyDiffsToContent(currentContent, changes);
+
+        // Calculate metrics
+        int tokensUsed = estimateTokens(aiResponse);
+        BigDecimal cost = calculateCost(tokensUsed);
+        int wordCount = countWords(transformedContent);
+
+        // Create new version
+        int newVersionNumber = document.getCurrentVersion() + 1;
+        AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
+                .document(document)
+                .versionNumber(newVersionNumber)
+                .content(transformedContent)
+                .wordCount(wordCount)
+                .transformationType("CUSTOM")
+                .transformationScope("FULL_DOCUMENT")
+                .createdByUser(false)
+                .tokensUsed(tokensUsed)
+                .costEstimate(cost)
+                .build();
+
+        newVersion = versionRepository.save(newVersion);
+
+        // Update document's current version
+        document.setCurrentVersion(newVersionNumber);
+        document.setUpdatedAt(LocalDateTime.now());
+        documentRepository.save(document);
+
+        log.info("✅ Custom diff mode transformation complete: {} changes, {} tokens (vs ~{} full mode estimate)",
+                changes.size(), tokensUsed, estimateTokens(currentContent));
+
+        // Return result with changes array for frontend to apply
+        Map<String, Object> result = new HashMap<>();
+        result.put("documentId", documentId);
+        result.put("newVersion", newVersionNumber);
+        result.put("transformedContent", transformedContent);
+        result.put("changes", changes);
+        result.put("useDiffMode", true);
+        result.put("fallbackRequired", false);
+        result.put("tokensUsed", tokensUsed);
+        result.put("costEstimate", cost);
+        result.put("wordCount", wordCount);
+        result.put("transformationType", "CUSTOM");
+        result.put("transformationScope", "FULL_DOCUMENT");
+
+        return result;
+    }
+
+    /**
+     * Generate mock custom diff response for testing
+     */
+    private String generateMockCustomDiffResponse(String userPrompt) {
+        // Generate mock based on common placeholder patterns
+        return """
+            {"changes":[
+                {"find":"[INSERT COURT NAME]","replace":"Suffolk County Superior Court"},
+                {"find":"[CLIENT NAME]","replace":"John M. Richardson"},
+                {"find":"[COUNTY]","replace":"Suffolk County"},
+                {"find":"[Case Number]","replace":"2024-CV-1234"},
+                {"find":"[ATTORNEY NAME]","replace":"Sarah J. Thompson, Esq."}
+            ]}
+            """;
     }
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -22,4 +23,18 @@ public class DocumentTransformResponse {
     private Integer wordCount;
     private String transformationType;
     private String transformationScope;
+
+    /**
+     * For diff-based transformations (CONDENSE, SIMPLIFY):
+     * Contains find/replace pairs instead of full document content.
+     * Frontend applies these diffs programmatically for 80-90% token savings.
+     * If null/empty, use transformedContent for full document replacement.
+     */
+    private List<DocumentChange> changes;
+
+    /**
+     * Indicates whether diff-based transformation was used.
+     * If true, frontend should apply changes[] instead of transformedContent.
+     */
+    private Boolean useDiffMode;
 }

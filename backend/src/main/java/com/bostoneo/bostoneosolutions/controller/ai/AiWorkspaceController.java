@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.dto.DocumentChange;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformRequest;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformResponse;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationRequest;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import java.util.HashMap;
@@ -37,6 +39,9 @@ public class AiWorkspaceController {
     /**
      * Transform document (full document or selection)
      * POST /api/legal/ai-workspace/transform
+     *
+     * For SIMPLIFY and CONDENSE transformations on documents > 500 chars,
+     * uses diff-based mode for 80-90% token savings.
      */
     @PostMapping("/transform")
     public ResponseEntity<DocumentTransformResponse> transformDocument(
@@ -55,12 +60,12 @@ public class AiWorkspaceController {
             log.info("Transform request: documentId={}, type={}, scope={}, userId={}",
                 request.getDocumentId(), request.getTransformationType(), request.getTransformationScope(), effectiveUserId);
 
-            AiWorkspaceDocumentVersion newVersion;
+            DocumentTransformResponse response;
 
             // Check if selection-based or full document
             if ("SELECTION".equalsIgnoreCase(request.getTransformationScope())) {
-                // Selection-based transformation
-                newVersion = documentService.transformSelection(
+                // Selection-based transformation - always use traditional mode
+                AiWorkspaceDocumentVersion newVersion = documentService.transformSelection(
                     request.getDocumentId(),
                     effectiveUserId,
                     request.getTransformationType(),
@@ -69,29 +74,132 @@ public class AiWorkspaceController {
                     request.getSelectionStartIndex(),
                     request.getSelectionEndIndex()
                 );
-            } else {
-                // Full document transformation
-                newVersion = documentService.transformFullDocument(
+
+                response = DocumentTransformResponse.builder()
+                    .documentId(request.getDocumentId())
+                    .newVersion(newVersion.getVersionNumber())
+                    .transformedContent(newVersion.getContent())
+                    .transformedSelection(newVersion.getTransformedSelection())
+                    .explanation(buildExplanation(request.getTransformationType(), request.getTransformationScope()))
+                    .tokensUsed(newVersion.getTokensUsed())
+                    .costEstimate(newVersion.getCostEstimate())
+                    .wordCount(newVersion.getWordCount())
+                    .transformationType(request.getTransformationType())
+                    .transformationScope(request.getTransformationScope())
+                    .useDiffMode(false)
+                    .build();
+
+            } else if (documentService.shouldUseDiffMode(request.getTransformationType(), request.getFullDocumentContent())) {
+                // DIFF MODE: For SIMPLIFY/CONDENSE on larger documents (80-90% token savings)
+                log.info("📊 Using DIFF MODE for transformation (token-efficient)");
+
+                Map<String, Object> diffResult = documentService.transformFullDocumentDiffMode(
                     request.getDocumentId(),
                     effectiveUserId,
                     request.getTransformationType(),
                     request.getFullDocumentContent()
                 );
-            }
 
-            // Build response
-            DocumentTransformResponse response = DocumentTransformResponse.builder()
-                .documentId(request.getDocumentId())
-                .newVersion(newVersion.getVersionNumber())
-                .transformedContent(newVersion.getContent())
-                .transformedSelection(newVersion.getTransformedSelection()) // Only populated for SELECTION scope
-                .explanation(buildExplanation(request.getTransformationType(), request.getTransformationScope()))
-                .tokensUsed(newVersion.getTokensUsed())
-                .costEstimate(newVersion.getCostEstimate())
-                .wordCount(newVersion.getWordCount())
-                .transformationType(request.getTransformationType())
-                .transformationScope(request.getTransformationScope())
-                .build();
+                // Extract changes list
+                @SuppressWarnings("unchecked")
+                List<DocumentChange> changes = (List<DocumentChange>) diffResult.get("changes");
+
+                response = DocumentTransformResponse.builder()
+                    .documentId(request.getDocumentId())
+                    .newVersion((Integer) diffResult.get("newVersion"))
+                    .transformedContent((String) diffResult.get("transformedContent"))
+                    .explanation(buildExplanation(request.getTransformationType(), request.getTransformationScope()))
+                    .tokensUsed((Integer) diffResult.get("tokensUsed"))
+                    .costEstimate((BigDecimal) diffResult.get("costEstimate"))
+                    .wordCount((Integer) diffResult.get("wordCount"))
+                    .transformationType(request.getTransformationType())
+                    .transformationScope(request.getTransformationScope())
+                    .changes(changes)
+                    .useDiffMode(true)
+                    .build();
+
+            } else if ("CUSTOM".equalsIgnoreCase(request.getTransformationType()) &&
+                       request.getCustomPrompt() != null &&
+                       documentService.shouldUseCustomDiffMode(request.getCustomPrompt(), request.getFullDocumentContent())) {
+                // CUSTOM DIFF MODE: For custom chat transformations on large documents
+                // This saves 80-90% on output tokens and prevents truncation
+                log.info("📊 Using CUSTOM DIFF MODE for chat transformation (token-efficient)");
+
+                Map<String, Object> diffResult = documentService.transformFullDocumentCustomDiffMode(
+                    request.getDocumentId(),
+                    effectiveUserId,
+                    request.getCustomPrompt(),
+                    request.getFullDocumentContent()
+                );
+
+                // Check if fallback is required (diff parsing failed)
+                Boolean fallbackRequired = (Boolean) diffResult.get("fallbackRequired");
+                if (Boolean.TRUE.equals(fallbackRequired)) {
+                    log.info("⚠️ Diff mode failed, falling back to full document mode");
+                    // Fall back to traditional full document transformation
+                    AiWorkspaceDocumentVersion newVersion = documentService.transformFullDocument(
+                        request.getDocumentId(),
+                        effectiveUserId,
+                        request.getTransformationType(),
+                        request.getFullDocumentContent(),
+                        request.getCustomPrompt()
+                    );
+
+                    response = DocumentTransformResponse.builder()
+                        .documentId(request.getDocumentId())
+                        .newVersion(newVersion.getVersionNumber())
+                        .transformedContent(newVersion.getContent())
+                        .explanation(buildExplanation(request.getTransformationType(), request.getTransformationScope()))
+                        .tokensUsed(newVersion.getTokensUsed())
+                        .costEstimate(newVersion.getCostEstimate())
+                        .wordCount(newVersion.getWordCount())
+                        .transformationType(request.getTransformationType())
+                        .transformationScope(request.getTransformationScope())
+                        .useDiffMode(false)
+                        .build();
+                } else {
+                    // Diff mode succeeded
+                    @SuppressWarnings("unchecked")
+                    List<DocumentChange> changes = (List<DocumentChange>) diffResult.get("changes");
+
+                    response = DocumentTransformResponse.builder()
+                        .documentId(request.getDocumentId())
+                        .newVersion((Integer) diffResult.get("newVersion"))
+                        .transformedContent((String) diffResult.get("transformedContent"))
+                        .explanation("I've applied the requested changes to your document. (" + changes.size() + " changes made)")
+                        .tokensUsed((Integer) diffResult.get("tokensUsed"))
+                        .costEstimate((BigDecimal) diffResult.get("costEstimate"))
+                        .wordCount((Integer) diffResult.get("wordCount"))
+                        .transformationType("CUSTOM")
+                        .transformationScope(request.getTransformationScope())
+                        .changes(changes)
+                        .useDiffMode(true)
+                        .build();
+                }
+
+            } else {
+                // TRADITIONAL MODE: Full document transformation (EXPAND, REDRAFT, FORMAL, PERSUASIVE, small CUSTOM)
+                AiWorkspaceDocumentVersion newVersion = documentService.transformFullDocument(
+                    request.getDocumentId(),
+                    effectiveUserId,
+                    request.getTransformationType(),
+                    request.getFullDocumentContent(),
+                    request.getCustomPrompt()
+                );
+
+                response = DocumentTransformResponse.builder()
+                    .documentId(request.getDocumentId())
+                    .newVersion(newVersion.getVersionNumber())
+                    .transformedContent(newVersion.getContent())
+                    .explanation(buildExplanation(request.getTransformationType(), request.getTransformationScope()))
+                    .tokensUsed(newVersion.getTokensUsed())
+                    .costEstimate(newVersion.getCostEstimate())
+                    .wordCount(newVersion.getWordCount())
+                    .transformationType(request.getTransformationType())
+                    .transformationScope(request.getTransformationScope())
+                    .useDiffMode(false)
+                    .build();
+            }
 
             return ResponseEntity.ok(response);
 
@@ -541,6 +649,7 @@ public class AiWorkspaceController {
             case "FORMAL" -> String.format("I rewrote %s in a more formal, professional legal tone.", scopeText);
             case "PERSUASIVE" -> String.format("I enhanced %s to be more persuasive and compelling for legal advocacy.", scopeText);
             case "REDRAFT" -> String.format("I completely redrafted %s with a fresh approach while maintaining the same legal objectives.", scopeText);
+            case "CUSTOM" -> String.format("I've applied the requested changes to %s.", scopeText);
             default -> String.format("I improved %s.", scopeText);
         };
     }

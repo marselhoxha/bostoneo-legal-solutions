@@ -42,9 +42,20 @@ export interface DocumentTransformRequest {
   selectedText?: string;
   selectionStartIndex?: number;
   selectionEndIndex?: number;
+  customPrompt?: string; // For CUSTOM transformation type - user's natural language revision request
   jurisdiction?: string;
   documentType?: string;
   caseId?: number;
+}
+
+/**
+ * Represents a single diff change for token-efficient transformations
+ */
+export interface DocumentChange {
+  find: string;     // The exact text to find in the original document
+  replace: string;  // The replacement text
+  startIndex?: number; // Optional: starting index for positional accuracy
+  reason?: string;  // Optional: explanation of the change
 }
 
 export interface DocumentTransformResponse {
@@ -58,6 +69,17 @@ export interface DocumentTransformResponse {
   wordCount: number;
   transformationType: string;
   transformationScope: string;
+  /**
+   * For diff-based transformations (CONDENSE, SIMPLIFY):
+   * Contains find/replace pairs instead of full document content.
+   * Frontend can apply these diffs programmatically for 80-90% token savings.
+   */
+  changes?: DocumentChange[];
+  /**
+   * Indicates whether diff-based transformation was used.
+   * If true, frontend should apply changes[] instead of transformedContent.
+   */
+  useDiffMode?: boolean;
 }
 
 export interface DraftGenerationRequest {

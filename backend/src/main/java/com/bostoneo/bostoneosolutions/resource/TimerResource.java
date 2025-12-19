@@ -324,6 +324,32 @@ public class TimerResource {
         }
     }
 
+    // Delete/Discard a timer without saving
+    @DeleteMapping("/{timerId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    public ResponseEntity<HttpResponse> deleteTimer(@PathVariable Long timerId, @RequestParam Long userId) {
+        try {
+            timerService.deleteTimer(timerId);
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .data(Map.of("timerId", timerId, "deleted", true))
+                    .message("Timer discarded successfully")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .statusCode(BAD_REQUEST.value())
+                    .status(BAD_REQUEST)
+                    .message("Failed to delete timer: " + e.getMessage())
+                    .build());
+        }
+    }
+
     // Analytics endpoints
     @GetMapping("/analytics/total-active")
     @PreAuthorize("hasAnyAuthority('TIME_TRACKING:VIEW_OWN', 'TIME_TRACKING:VIEW_ALL', 'TIME_TRACKING:VIEW_TEAM')")

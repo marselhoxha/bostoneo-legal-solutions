@@ -298,8 +298,8 @@ export class TimerService {
     );
   }
 
-  deleteTimer(timerId: number): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${timerId}`).pipe(
+  discardTimer(userId: number, timerId: number): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/${timerId}?userId=${userId}`).pipe(
       map(response => {
         this.removeActiveTimer(timerId);
         return response.data;

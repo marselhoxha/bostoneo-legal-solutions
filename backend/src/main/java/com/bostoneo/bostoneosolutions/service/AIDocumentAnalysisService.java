@@ -435,8 +435,9 @@ public class AIDocumentAnalysisService {
         DocumentClassification result = new DocumentClassification();
 
         try {
-            // Synchronous call for classification (blocking but fast)
-            String response = claudeService.generateCompletion(classificationPrompt, null, false, null)
+            // Synchronous call for classification with temperature=0 for DETERMINISTIC results
+            // This ensures the same document always gets the same classification
+            String response = claudeService.generateCompletion(classificationPrompt, null, false, null, 0.0)
                 .get(30, java.util.concurrent.TimeUnit.SECONDS);
 
             // Parse JSON response
@@ -542,8 +543,9 @@ public class AIDocumentAnalysisService {
     }
 
     private String buildAnalysisPrompt(String content, String detectedType, String fileName, String analysisContext) {
-        // Build context-specific instruction
-        String contextInstruction = getContextInstruction(analysisContext);
+        // Build context-specific role instruction that will be prepended to document-type prompts
+        String contextRole = getContextRole(analysisContext);
+        String contextFocus = getContextFocus(analysisContext);
 
         String basePrompt = String.format("""
             You are an expert legal strategist and document analyst.
@@ -554,66 +556,100 @@ public class AIDocumentAnalysisService {
 
             Document Content:
             %s
-            """, contextInstruction, fileName, detectedType, content);
+            """, contextRole, fileName, detectedType, content);
 
         // Route to strategic analysis based on detected document type
+        // Pass analysisContext so prompts can adapt their perspective
         String lowerType = detectedType.toLowerCase();
 
         // Litigation Documents
         if (lowerType.contains("complaint") || lowerType.contains("petition")) {
-            return basePrompt + getComplaintStrategicPrompt();
+            return basePrompt + getComplaintStrategicPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("answer") && !lowerType.contains("interrogator")) {
-            return basePrompt + getAnswerStrategicPrompt();
+            return basePrompt + getAnswerStrategicPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("motion")) {
-            return basePrompt + getMotionAnalysisPrompt();
+            return basePrompt + getMotionAnalysisPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("brief") || lowerType.contains("memorandum")) {
-            return basePrompt + getLegalBriefAnalysisPrompt();
+            return basePrompt + getLegalBriefAnalysisPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("discovery") || lowerType.contains("interrogator") ||
                    lowerType.contains("request for production") || lowerType.contains("admission")) {
-            return basePrompt + getDiscoveryRequestPrompt();
+            return basePrompt + getDiscoveryRequestPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("order") || lowerType.contains("judgment") || lowerType.contains("decree")) {
-            return basePrompt + getCourtOrderAnalysisPrompt();
+            return basePrompt + getCourtOrderAnalysisPrompt(analysisContext, contextFocus);
         }
         // Contract Documents
         else if (lowerType.contains("employment") && (lowerType.contains("agreement") || lowerType.contains("contract"))) {
-            return basePrompt + getEmploymentAgreementPrompt();
+            return basePrompt + getEmploymentAgreementPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("nda") || lowerType.contains("non-disclosure") ||
                    lowerType.contains("confidentiality agreement")) {
-            return basePrompt + getNDAPrompt();
+            return basePrompt + getNDAPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("settlement") && lowerType.contains("agreement")) {
-            return basePrompt + getSettlementAgreementPrompt();
+            return basePrompt + getSettlementAgreementPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("lease")) {
-            return basePrompt + getLeaseStrategicPrompt();
+            return basePrompt + getLeaseStrategicPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("contract") || lowerType.contains("agreement")) {
-            return basePrompt + getContractStrategicPrompt();
+            return basePrompt + getContractStrategicPrompt(analysisContext, contextFocus);
         }
         // Correspondence/Notice Documents (check specific types FIRST)
         else if (lowerType.contains("demand letter") || lowerType.equals("demand")) {
-            return basePrompt + getDemandLetterPrompt();
+            return basePrompt + getDemandLetterPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("cease") && lowerType.contains("desist")) {
-            return basePrompt + getCeaseAndDesistPrompt();
+            return basePrompt + getCeaseAndDesistPrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("regulatory") || lowerType.contains("compliance") ||
                    lowerType.contains("violation")) {
-            return basePrompt + getRegulatoryNoticePrompt();
+            return basePrompt + getRegulatoryNoticePrompt(analysisContext, contextFocus);
         } else if (lowerType.contains("notice")) {
-            return basePrompt + getNoticePrompt();
+            return basePrompt + getNoticePrompt(analysisContext, contextFocus);
         }
         // Default
         else {
-            return basePrompt + getStrategicGeneralAnalysisPrompt();
+            return basePrompt + getStrategicGeneralAnalysisPrompt(analysisContext, contextFocus);
         }
     }
 
     /**
-     * Get context-specific instruction based on user's analysis goal
+     * Get context-specific ROLE instruction based on user's analysis goal.
+     * This sets up the AI's perspective for analyzing the document.
      */
-    private String getContextInstruction(String analysisContext) {
+    private String getContextRole(String analysisContext) {
         return switch (analysisContext) {
             case "respond" -> """
 
-            ANALYSIS CONTEXT: You received this document from opposing counsel and need to respond.
+            ANALYSIS CONTEXT: You received this document from opposing counsel and need to prepare a response.
+            Analyze from the perspective of counsel who must draft a response to this document.
+            """;
 
-            Focus your analysis on:
+            case "negotiate" -> """
+
+            ANALYSIS CONTEXT: You are negotiating this document on behalf of your client.
+            Analyze from the perspective of counsel preparing to negotiate better terms.
+            """;
+
+            case "client_review" -> """
+
+            ANALYSIS CONTEXT: You are reviewing this document to explain it to your client.
+            Analyze from the perspective of counsel who needs to communicate clearly with a non-lawyer.
+            """;
+
+            case "due_diligence" -> """
+
+            ANALYSIS CONTEXT: You are conducting due diligence for a transaction (M&A, investment, etc.).
+            Analyze from the perspective of counsel reviewing documents for a deal evaluation.
+            """;
+
+            default -> ""; // No additional context for 'general' analysis
+        };
+    }
+
+    /**
+     * Get context-specific FOCUS areas based on user's analysis goal.
+     * This is appended to document-type prompts to guide the analysis focus.
+     */
+    private String getContextFocus(String analysisContext) {
+        return switch (analysisContext) {
+            case "respond" -> """
+
+            CONTEXT-SPECIFIC FOCUS (Preparing Response):
             - Response deadline and timeline requirements
             - Weaknesses and vulnerabilities to exploit in your response
             - Arguments and defenses you should raise
@@ -624,9 +660,7 @@ public class AIDocumentAnalysisService {
 
             case "negotiate" -> """
 
-            ANALYSIS CONTEXT: You are negotiating this document on behalf of your client.
-
-            Focus your analysis on:
+            CONTEXT-SPECIFIC FOCUS (Negotiating Terms):
             - Terms that are unfavorable to your client and should be redlined
             - Negotiation priorities (must-have vs nice-to-have changes)
             - Alternative language suggestions for problematic clauses
@@ -637,9 +671,7 @@ public class AIDocumentAnalysisService {
 
             case "client_review" -> """
 
-            ANALYSIS CONTEXT: You are reviewing this document to explain it to your client.
-
-            Focus your analysis on:
+            CONTEXT-SPECIFIC FOCUS (Client Communication):
             - Plain-language summary a non-lawyer can understand
             - Key obligations and commitments for your client
             - Important deadlines and dates they need to know
@@ -650,9 +682,7 @@ public class AIDocumentAnalysisService {
 
             case "due_diligence" -> """
 
-            ANALYSIS CONTEXT: You are conducting due diligence for a transaction (M&A, investment, etc.).
-
-            Focus your analysis on:
+            CONTEXT-SPECIFIC FOCUS (Due Diligence Review):
             - Risk matrix with severity ratings
             - Issues organized by category (legal, financial, operational, compliance)
             - Missing documents or information needed
@@ -661,7 +691,7 @@ public class AIDocumentAnalysisService {
             - Recommended conditions or protections for the transaction
             """;
 
-            default -> ""; // No additional context for 'general' analysis
+            default -> ""; // No additional focus for 'general' analysis
         };
     }
 
@@ -856,10 +886,18 @@ public class AIDocumentAnalysisService {
 
     // ===== STRATEGIC ANALYSIS PROMPTS =====
 
-    private String getComplaintStrategicPrompt() {
-        return """
+    private String getComplaintStrategicPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You are DEFENSE COUNSEL who received this complaint and must prepare an Answer. Focus on response deadlines, affirmative defenses, and immediate actions required.";
+            case "client_review" -> "You are reviewing this complaint to EXPLAIN TO YOUR CLIENT what they've been sued for, what it means, and what happens next. Use plain language.";
+            case "due_diligence" -> "You are reviewing this complaint as part of LITIGATION DUE DILIGENCE for a transaction. Assess the exposure, merits, and potential impact on the deal.";
+            default -> "You are DEFENSE COUNSEL analyzing this complaint to develop a winning defense strategy.";
+        };
 
-            ASSUME YOU ARE DEFENSE COUNSEL analyzing this complaint to develop winning strategy.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE BRIEF (3 sentences)
             - What plaintiff alleges
@@ -918,14 +956,23 @@ public class AIDocumentAnalysisService {
             🎯 SETTLEMENT LEVERAGE: [Weak points to exploit]
 
             Be specific. Focus on ACTIONABILITY.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getContractStrategicPrompt() {
-        return """
+    private String getContractStrategicPrompt(String analysisContext, String contextFocus) {
+        // Dynamic role based on analysis context
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this contract from the other party and need to prepare a response or counter-proposal.";
+            case "negotiate" -> "You are actively negotiating this contract on behalf of your client.";
+            case "client_review" -> "You are reviewing this contract to explain it clearly to your client before they sign.";
+            case "due_diligence" -> "You are reviewing this contract as part of due diligence for a transaction.";
+            default -> "You are reviewing this contract for your client to identify risks and negotiation points.";
+        };
 
-            ASSUME YOU ARE BUSINESS COUNSEL reviewing this contract for your client BEFORE signing.
-            Identify risks, unfavorable terms, and negotiation points.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE RISK SUMMARY (3 sentences)
             - Contract type and purpose
@@ -973,13 +1020,23 @@ public class AIDocumentAnalysisService {
             Must achieve: [Non-negotiable items]
 
             Quantify all dollar amounts. Be specific on redline language.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getLeaseStrategicPrompt() {
-        return """
+    private String getLeaseStrategicPrompt(String analysisContext, String contextFocus) {
+        // Dynamic role based on analysis context
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this lease from the landlord and need to prepare a response with your client's concerns.";
+            case "negotiate" -> "You are actively negotiating this lease on behalf of your client (tenant).";
+            case "client_review" -> "You are reviewing this lease to explain the terms and costs clearly to your client.";
+            case "due_diligence" -> "You are reviewing this lease as part of due diligence for a transaction or acquisition.";
+            default -> "You are reviewing this lease for your client to identify unfavorable terms and total cost exposure.";
+        };
 
-            ASSUME YOU ARE TENANT'S COUNSEL reviewing this lease for unfavorable terms and total cost.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE LEASE SUMMARY (3 sentences)
             - Lease type and term
@@ -988,7 +1045,7 @@ public class AIDocumentAnalysisService {
 
             ## 💰 COMPREHENSIVE FINANCIAL ANALYSIS
             - Base Rent: [breakdown by year]
-            - CAM Charges: $X/year (capped? [Y% / NONE ⚠️])
+            - CAM Charges: $X/year (capped? [Y%% / NONE ⚠️])
             - Property Taxes: tenant share
             - Insurance: tenant share
             - Utilities & Maintenance: $X
@@ -1011,7 +1068,7 @@ public class AIDocumentAnalysisService {
 
             ## 💸 HIDDEN COSTS
             - After-hours HVAC: $X
-            - CAM admin fee: X%
+            - CAM admin fee: X%%
             - Capital improvements in CAM: [Yes ⚠️/No]
             - Other surprises: [List]
 
@@ -1024,13 +1081,22 @@ public class AIDocumentAnalysisService {
             Must achieve: [Changes]
 
             Show true all-in cost, not just base rent.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getMotionAnalysisPrompt() {
-        return """
+    private String getMotionAnalysisPrompt(String analysisContext, String contextFocus) {
+        // Dynamic role based on analysis context
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this motion and need to prepare an opposition.";
+            case "client_review" -> "You are reviewing this motion to explain the implications to your client.";
+            case "due_diligence" -> "You are reviewing this motion as part of litigation due diligence.";
+            default -> "You are analyzing this motion to develop an opposition strategy.";
+        };
 
-            ASSUME YOU ARE OPPOSING COUNSEL analyzing this motion to develop opposition strategy.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE OPPOSITION BRIEF (3 sentences)
             - What movant seeks
@@ -1063,13 +1129,22 @@ public class AIDocumentAnalysisService {
             📅 DAY 14-21: Opposition deadline typically
 
             Focus on counter-arguments, not summary.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getStrategicGeneralAnalysisPrompt() {
-        return """
+    private String getStrategicGeneralAnalysisPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this document and need to prepare a response. Focus on response requirements, deadlines, and strategy.";
+            case "negotiate" -> "You are negotiating this document on behalf of your client. Identify unfavorable terms and suggest changes.";
+            case "client_review" -> "You are reviewing this document to EXPLAIN IT TO YOUR CLIENT in plain language. Focus on what they need to understand and do.";
+            case "due_diligence" -> "You are reviewing this document as part of DUE DILIGENCE for a transaction. Identify risks, red flags, and deal implications.";
+            default -> "Provide comprehensive strategic analysis of this document.";
+        };
 
-            Provide strategic document analysis:
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - Document type and purpose
@@ -1110,14 +1185,22 @@ public class AIDocumentAnalysisService {
             - Enforcement mechanisms
 
             Be action-oriented. Quantify financial terms. Prioritize by urgency.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getEmploymentAgreementPrompt() {
-        return """
+    private String getEmploymentAgreementPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this employment agreement and need to respond with concerns/counterproposal.";
+            case "negotiate" -> "You are negotiating this employment agreement on behalf of the employee. Focus on compensation, covenants, and protections.";
+            case "client_review" -> "You are reviewing this employment agreement to EXPLAIN IT TO YOUR CLIENT (the employee) in plain language.";
+            case "due_diligence" -> "You are reviewing this employment agreement as part of DUE DILIGENCE (e.g., key-employee review in M&A).";
+            default -> "You are EMPLOYEE'S COUNSEL reviewing this employment agreement for compensation, covenants, and protections.";
+        };
 
-            ASSUME YOU ARE EMPLOYEE'S COUNSEL reviewing this employment agreement.
-            Analyze for compensation value, restrictive covenants, and termination protections.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE COMPENSATION SUMMARY (3 sentences)
             - Position and total compensation (Year 1)
@@ -1174,14 +1257,22 @@ public class AIDocumentAnalysisService {
             Must achieve: [List non-negotiables]
 
             Quantify all compensation. Focus on enforceability and downside protection.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getNDAPrompt() {
-        return """
+    private String getNDAPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this NDA and need to respond with concerns/redlines.";
+            case "negotiate" -> "You are negotiating this NDA on behalf of your client. Focus on scope, carve-outs, and duration.";
+            case "client_review" -> "You are reviewing this NDA to EXPLAIN IT TO YOUR CLIENT in plain language before they sign.";
+            case "due_diligence" -> "You are reviewing this NDA as part of DUE DILIGENCE to assess business restrictions and risks.";
+            default -> "You are BUSINESS COUNSEL reviewing this NDA before signing.";
+        };
 
-            ASSUME YOU ARE BUSINESS COUNSEL reviewing this NDA before signing.
-            Analyze scope, duration, carve-outs, and business risks.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - NDA type (Mutual / One-way)
@@ -1228,14 +1319,21 @@ public class AIDocumentAnalysisService {
             Risk level: [Low/Medium/High]
 
             Focus on scope limitations and standard protections.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getDiscoveryRequestPrompt() {
-        return """
+    private String getDiscoveryRequestPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received these discovery requests and must prepare responses/objections.";
+            case "client_review" -> "You are reviewing these discovery requests to EXPLAIN TO YOUR CLIENT what information is being sought and what they need to gather.";
+            case "due_diligence" -> "You are reviewing these discovery requests as part of LITIGATION DUE DILIGENCE to assess discovery burden and exposure.";
+            default -> "You are RESPONDING COUNSEL analyzing these discovery requests for objections and responses.";
+        };
 
-            ASSUME YOU ARE RESPONDING COUNSEL analyzing discovery requests for objections.
-            Identify overbroad requests, privilege issues, and burden.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE ASSESSMENT (3 sentences)
             - Total requests: [X interrogatories, Y document requests, Z admissions]
@@ -1290,14 +1388,22 @@ public class AIDocumentAnalysisService {
             objections, responding party will produce..."
 
             Focus on specific objections and burden quantification.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getSettlementAgreementPrompt() {
-        return """
+    private String getSettlementAgreementPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this settlement proposal and need to respond with counterterms.";
+            case "negotiate" -> "You are negotiating this settlement agreement on behalf of your client. Focus on favorable terms.";
+            case "client_review" -> "You are reviewing this settlement to EXPLAIN IT TO YOUR CLIENT in plain language so they can make an informed decision.";
+            case "due_diligence" -> "You are reviewing this settlement as part of DUE DILIGENCE to assess resolved claims and remaining exposure.";
+            default -> "You are COUNSEL reviewing this settlement agreement for enforceability and favorable terms.";
+        };
 
-            ASSUME YOU ARE COUNSEL reviewing settlement agreement for enforceability and loopholes.
-            Identify ambiguities, tax implications, and enforcement mechanisms.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - Settlement amount and payment terms
@@ -1358,14 +1464,21 @@ public class AIDocumentAnalysisService {
             Must fix: [List deal-breakers]
 
             Quantify tax impact. Ensure enforceability. Close loopholes.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getRegulatoryNoticePrompt() {
-        return """
+    private String getRegulatoryNoticePrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this regulatory notice and must prepare a response. Focus on deadlines, compliance requirements, and response strategy.";
+            case "client_review" -> "You are reviewing this regulatory notice to EXPLAIN IT TO YOUR CLIENT what the agency is requiring, the consequences, and next steps.";
+            case "due_diligence" -> "You are reviewing this regulatory notice as part of DUE DILIGENCE to assess compliance exposure and risk.";
+            default -> "You are COMPLIANCE COUNSEL analyzing this regulatory notice for obligations, deadlines, and defense options.";
+        };
 
-            ASSUME YOU ARE COMPLIANCE COUNSEL analyzing this regulatory notice/demand.
-            Identify obligations, deadlines, penalties, and defense options.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE URGENCY SUMMARY (3 sentences)
             - Issuing Agency: [Name]
@@ -1448,14 +1561,22 @@ public class AIDocumentAnalysisService {
             Risk assessment: [Penalty exposure vs defense costs]
 
             Prioritize by deadline urgency. Quantify penalty exposure. Document everything.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getDemandLetterPrompt() {
-        return """
+    private String getDemandLetterPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this demand letter and must prepare a response. Focus on response deadline, defenses, and counter-arguments.";
+            case "negotiate" -> "You are negotiating in response to this demand letter. Focus on leverage points and settlement strategy.";
+            case "client_review" -> "You are reviewing this demand letter to EXPLAIN IT TO YOUR CLIENT what is being demanded, the exposure, and their options.";
+            case "due_diligence" -> "You are reviewing this demand letter as part of DUE DILIGENCE to assess threatened claims and exposure.";
+            default -> "You are RECIPIENT'S COUNSEL analyzing this demand letter for validity, exposure, and response strategy.";
+        };
 
-            ASSUME YOU ARE RECIPIENT'S COUNSEL analyzing this demand letter to develop response strategy.
-            Assess validity of claims, evaluate leverage, and develop negotiation approach.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - Who is demanding what (and for how much)
@@ -1519,14 +1640,22 @@ public class AIDocumentAnalysisService {
             Key Negotiation Points: [What to concede vs. fight]
 
             Focus on liability assessment and negotiation leverage.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getCeaseAndDesistPrompt() {
-        return """
+    private String getCeaseAndDesistPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this cease and desist and must prepare a response. Focus on validity, compliance options, and defenses.";
+            case "negotiate" -> "You are negotiating in response to this cease and desist. Focus on compliance alternatives and license options.";
+            case "client_review" -> "You are reviewing this cease and desist to EXPLAIN IT TO YOUR CLIENT what is being demanded and their options.";
+            case "due_diligence" -> "You are reviewing this cease and desist as part of DUE DILIGENCE to assess IP/legal exposure.";
+            default -> "You are RECIPIENT'S COUNSEL analyzing this cease and desist for validity, exposure, and response options.";
+        };
 
-            ASSUME YOU ARE RECIPIENT'S COUNSEL analyzing this cease and desist letter.
-            Assess validity of claims, evaluate compliance options, and develop response strategy.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - What activity they want stopped
@@ -1587,13 +1716,21 @@ public class AIDocumentAnalysisService {
             Next Steps: [Specific actions]
 
             Focus on balancing legal risk against business needs.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getNoticePrompt() {
-        return """
+    private String getNoticePrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this notice and need to determine if a response is required and prepare one.";
+            case "client_review" -> "You are reviewing this notice to EXPLAIN IT TO YOUR CLIENT what it means and any required actions.";
+            case "due_diligence" -> "You are reviewing this notice as part of DUE DILIGENCE to assess impact on a transaction.";
+            default -> "You are COUNSEL analyzing this notice for legal implications and required actions.";
+        };
 
-            ASSUME YOU ARE COUNSEL analyzing this notice document for legal implications and required actions.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - Type and purpose of notice
@@ -1633,13 +1770,21 @@ public class AIDocumentAnalysisService {
             3. [Long-term consideration]
 
             Focus on identifying obligations and deadlines.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getAnswerStrategicPrompt() {
-        return """
+    private String getAnswerStrategicPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this answer and need to plan next steps in the litigation.";
+            case "client_review" -> "You are reviewing this answer to EXPLAIN IT TO YOUR CLIENT what defendant is admitting, denying, and what defenses they raise.";
+            case "due_diligence" -> "You are reviewing this answer as part of LITIGATION DUE DILIGENCE to assess the defendant's position and case strength.";
+            default -> "You are PLAINTIFF'S COUNSEL analyzing defendant's answer to identify weaknesses and develop strategy.";
+        };
 
-            ASSUME YOU ARE PLAINTIFF'S COUNSEL analyzing defendant's answer to identify weaknesses and develop trial strategy.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE BRIEF (3 sentences)
             - What defendant admits vs denies
@@ -1693,13 +1838,21 @@ public class AIDocumentAnalysisService {
             🎯 SETTLEMENT LEVERAGE: [How answer affects negotiation position]
 
             Focus on actionable insights. Identify what defendant failed to deny.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getCourtOrderAnalysisPrompt() {
-        return """
+    private String getCourtOrderAnalysisPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You received this court order and need to determine compliance requirements and potential challenges.";
+            case "client_review" -> "You are reviewing this court order to EXPLAIN IT TO YOUR CLIENT what the court ruled, what it means, and what happens next.";
+            case "due_diligence" -> "You are reviewing this court order as part of LITIGATION DUE DILIGENCE to assess outcome and implications for a transaction.";
+            default -> "You are COUNSEL analyzing this court order for compliance requirements and strategic next steps.";
+        };
 
-            ASSUME YOU ARE COUNSEL analyzing this court order for compliance requirements and strategic implications.
+        return String.format("""
+
+            %s
+            %s
 
             ## ⚡ EXECUTIVE SUMMARY (3 sentences)
             - What the court ordered
@@ -1765,11 +1918,18 @@ public class AIDocumentAnalysisService {
             ☐ Update case strategy
 
             Focus on compliance deadlines and strategic implications of ruling.
-            """;
+            """, roleIntro, contextFocus);
     }
 
-    private String getLegalBriefAnalysisPrompt() {
-        return """
+    private String getLegalBriefAnalysisPrompt(String analysisContext, String contextFocus) {
+        String roleIntro = switch (analysisContext) {
+            case "respond" -> "You are OPPOSING COUNSEL who received this brief and must prepare a response/opposition. Focus on weaknesses to exploit and counter-arguments.";
+            case "client_review" -> "You are reviewing this brief to EXPLAIN TO YOUR CLIENT the arguments being made, their strength, and what it means for their case. Use plain language.";
+            case "due_diligence" -> "You are reviewing this brief as part of LITIGATION DUE DILIGENCE. Assess the strength of arguments, likely outcome, and impact on a transaction.";
+            default -> "You are analyzing this brief to develop counter-arguments and identify weaknesses.";
+        };
+
+        return String.format("""
 
             ⚠️⚠️⚠️ MANDATORY OUTPUT REQUIREMENT ⚠️⚠️⚠️
 
@@ -1796,91 +1956,67 @@ public class AIDocumentAnalysisService {
 
             ---
 
-            ASSUME YOU ARE OPPOSING COUNSEL analyzing this brief to develop counter-arguments.
-            Identify weaknesses in legal reasoning, unsupported facts, and missing authorities.
+            %s
+            %s
 
-            ## ⚡ EXECUTIVE OPPOSITION BRIEF (3 sentences)
-            - Movant's primary argument
+            ## ⚡ EXECUTIVE BRIEF SUMMARY (3 sentences)
+            - Primary argument being made
             - STRENGTH ASSESSMENT (Strong / Moderate / Weak)
-            - WINNING COUNTER-ARGUMENT
+            - KEY TAKEAWAY for your analysis context
 
-            ## 🎯 WEAKNESSES IN LEGAL ARGUMENTS
-            ⚠️ [SEVERITY]: Argument Weakness [Title]
-            - Movant's Argument: [Summary]
-            - Legal Flaw: [Misapplication of law / Inapplicable precedent / Logical gap]
-            - Counter-Argument: [How to attack]
-            - Supporting Authority: [Case/statute movant ignored]
+            ## 🎯 ANALYSIS OF LEGAL ARGUMENTS
+            ⚠️ [SEVERITY]: Argument [Title]
+            - Argument Summary: [What's being argued]
+            - Strength/Weakness: [Assessment]
+            - Your Response: [How to address this based on your context]
+            - Supporting Authority: [Relevant cases/statutes]
 
-            ## ⚖️ MISSING OR MISAPPLIED AUTHORITIES
-            ⚠️ [SEVERITY]: Case [Name] Misapplied
-            - How Cited: [Movant's use]
+            ## ⚖️ AUTHORITIES ANALYSIS
+            ⚠️ [SEVERITY]: Case [Name]
+            - How Cited: [How it's used in the brief]
             - Actual Holding: [What case really says]
-            - Distinguishing Facts: [How our facts differ]
-            - Counter-Cite: [Use this case against them]
+            - Relevance to Your Position: [How this affects you]
 
-            **Authorities Movant Failed to Address:**
-            - [Case Name]: [Directly contradicts movant's position]
-            - [Statute]: [Overlooked provision undermining argument]
+            **Key Authorities to Consider:**
+            - [Case Name]: [Why it matters for your situation]
+            - [Statute]: [Relevant provision]
 
-            ## 📑 UNSUPPORTED FACTUAL ASSERTIONS
+            ## 📑 FACTUAL ASSERTIONS
             ⚠️ Factual Claim: [Quote from brief]
-            - Problem: [No evidence cited / Contradicted by record]
-            - Record Citation: [Where record shows otherwise]
-            - Objection: "Counsel's assertion unsupported by cited evidence"
+            - Evidentiary Support: [Cited / Not cited]
+            - Accuracy: [Consistent with record / Disputed]
+            - Significance: [Why this matters]
 
-            ## 🛡️ PROCEDURAL DEFECTS
-            - Standing: [Movant lacks standing because...]
-            - Ripeness: [Not ripe for adjudication because...]
-            - Mootness: [Issue mooted by...]
-            - Waiver: [Argument waived by failure to raise earlier]
+            ## 🛡️ PROCEDURAL CONSIDERATIONS
+            - Standing issues
+            - Ripeness concerns
+            - Waiver implications
+            - Jurisdictional matters
 
-            ## 📝 OPPOSITION STRATEGY
-            **PRIMARY COUNTER-ARGUMENT:**
-            [Clear statement of strongest response]
-            - Legal Basis: [Authority]
-            - Factual Support: [Record citations]
-            - Why It Wins: [Explanation]
+            ## 📝 STRATEGIC ANALYSIS
+            **KEY STRENGTHS of this brief:**
+            - [Strong point 1]
+            - [Strong point 2]
 
-            **ALTERNATIVE ARGUMENTS:**
-            1. [Second-best argument]
-            2. [Fallback position]
+            **KEY WEAKNESSES in this brief:**
+            - [Weak point 1]
+            - [Weak point 2]
 
-            **PROCEDURAL CHALLENGES:**
-            - [Standing/ripeness/mootness objection]
+            **YOUR RECOMMENDED APPROACH:**
+            Based on your context, you should:
+            1. [First priority]
+            2. [Second priority]
+            3. [Third priority]
 
-            ## ⏱️ OPPOSITION TIMELINE
-            📅 DAY 1-5: Legal research on counter-authorities
-            📅 DAY 5-10: Draft opposition brief
-            📅 DAY 10-14: Finalize and file (typical deadline)
+            ## ⏱️ ACTION TIMELINE
+            📅 DAY 1-5: [Actions based on context]
+            📅 DAY 5-10: [Follow-up actions]
+            📅 DAY 10-14: [Completion actions]
 
-            ## 🎯 KEY COUNTER-AUTHORITIES
-            - [Case 1]: [How it undermines movant's argument]
-            - [Case 2]: [Distinguishes movant's cited cases]
-            - [Statute]: [Overlooked provision]
-            - [Legislative History]: [Shows contrary intent]
-
-            ## 💡 RECOMMENDED RESPONSE STRUCTURE
-            **I. Procedural Issues**
-            - [Jurisdictional/standing challenges]
-
-            **II. Factual Disputes**
-            - [Record contradicts brief assertions]
-
-            **III. Legal Arguments**
-            A. [Strongest counter-argument]
-            B. [Second counter-argument]
-            C. [Alternative theory]
-
-            **IV. Conclusion**
-            - Motion should be denied
-
-            ## 🏆 WIN PROBABILITY ASSESSMENT
-            - Movant's Brief Strength: [X/10]
-            - Our Opposition Strength: [Y/10]
-            - Predicted Outcome: [Grant/Deny/Partial]
-            - Recommended Action: [Oppose / Don't oppose / Seek oral argument]
-
-            Focus on exploiting legal and factual weaknesses. Cite controlling authority movant missed.
+            ## 🏆 ASSESSMENT
+            - Brief Strength: [X/10]
+            - Likely Outcome: [Grant/Deny/Partial]
+            - Recommended Action: [Based on your context]
 
             ---
 
@@ -1890,7 +2026,7 @@ public class AIDocumentAnalysisService {
             Format: ```json { "actionItems": [...], "timelineEvents": [...] } ```
 
             This is MANDATORY. Your analysis is INCOMPLETE without it.
-            """;
+            """, roleIntro, contextFocus);
     }
 
     private Map<String, Object> parseAnalysisResponse(String response, String analysisType) {
@@ -1982,6 +2118,7 @@ public class AIDocumentAnalysisService {
     /**
      * Answer a user question about a specific document analysis.
      * Uses the full analysis context to provide accurate, cited responses.
+     * NOW: Reads the stored analysisContext to provide context-aware responses.
      */
     public String askAboutDocument(Long analysisId, String question, Long userId) {
         log.info("🤖 Processing Ask AI question for analysis {}", analysisId);
@@ -1990,11 +2127,18 @@ public class AIDocumentAnalysisService {
         AIDocumentAnalysis analysis = repository.findById(analysisId)
             .orElseThrow(() -> new RuntimeException("Analysis not found: " + analysisId));
 
+        // Get the stored analysis context to tailor the response
+        String analysisContext = analysis.getAnalysisContext();
+        String contextInstruction = getContextInstructionForFollowUp(analysisContext);
+
         // Build context from the analysis
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("DOCUMENT INFORMATION:\n");
         contextBuilder.append("- File Name: ").append(analysis.getFileName()).append("\n");
         contextBuilder.append("- Document Type: ").append(analysis.getDetectedType()).append("\n");
+        if (analysisContext != null && !analysisContext.equals("general")) {
+            contextBuilder.append("- Analysis Purpose: ").append(getContextLabel(analysisContext)).append("\n");
+        }
 
         // Add metadata if available
         if (analysis.getExtractedMetadata() != null) {
@@ -2023,9 +2167,10 @@ public class AIDocumentAnalysisService {
 
         String context = contextBuilder.toString();
 
-        // Build the prompt
+        // Build the prompt with context-aware instructions
         String prompt = String.format("""
             You are a legal AI assistant helping an attorney understand a document that has already been analyzed.
+            %s
 
             %s
 
@@ -2046,13 +2191,57 @@ public class AIDocumentAnalysisService {
             8. End with "📌 Key Takeaway:" followed by the single most important point
 
             Provide your answer:
-            """, context, question);
+            """, contextInstruction, context, question);
 
         // Call Claude for the response (blocking call)
         String response = claudeService.generateCompletion(prompt, false).join();
 
         log.info("✅ Ask AI response generated for analysis {}", analysisId);
         return response;
+    }
+
+    /**
+     * Get human-readable label for analysis context
+     */
+    private String getContextLabel(String analysisContext) {
+        return switch (analysisContext) {
+            case "respond" -> "Preparing Response to Opposing Counsel";
+            case "negotiate" -> "Negotiating Terms";
+            case "client_review" -> "Client Communication";
+            case "due_diligence" -> "Due Diligence Review";
+            default -> "General Analysis";
+        };
+    }
+
+    /**
+     * Get context-specific instruction for follow-up questions
+     */
+    private String getContextInstructionForFollowUp(String analysisContext) {
+        if (analysisContext == null) return "";
+
+        return switch (analysisContext) {
+            case "respond" -> """
+
+                ANALYSIS CONTEXT: The attorney is preparing to respond to this document from opposing counsel.
+                Tailor your answers to focus on: response deadlines, counterarguments, weaknesses to exploit, and evidence to gather.
+                """;
+            case "negotiate" -> """
+
+                ANALYSIS CONTEXT: The attorney is negotiating this document on behalf of their client.
+                Tailor your answers to focus on: unfavorable terms, redline suggestions, leverage points, and negotiation priorities.
+                """;
+            case "client_review" -> """
+
+                ANALYSIS CONTEXT: The attorney needs to explain this document to their client.
+                Tailor your answers to be: clear and accessible to non-lawyers, focused on practical implications and next steps.
+                """;
+            case "due_diligence" -> """
+
+                ANALYSIS CONTEXT: The attorney is conducting due diligence for a transaction.
+                Tailor your answers to focus on: risks, red flags, missing information, and deal implications.
+                """;
+            default -> "";
+        };
     }
 
     private String extractSection(String text, String... keywords) {
