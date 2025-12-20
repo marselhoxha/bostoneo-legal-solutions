@@ -227,15 +227,59 @@
                   </td>
                   <td class="text-end pe-4">
                     <div class="d-flex gap-1 justify-content-end">
-                      <button class="btn btn-sm btn-soft-primary" (click)="viewEntry(entry)" title="View">
-                        <i class="ri-eye-line"></i>
-                      </button>
-                      <button *ngIf="canEditEntry(entry)" class="btn btn-sm btn-soft-warning" (click)="editEntry(entry)" title="Edit">
-                        <i class="ri-edit-line"></i>
-                      </button>
-                      <button *ngIf="canDeleteEntry(entry)" class="btn btn-sm btn-soft-danger" (click)="deleteEntry(entry)" title="Delete">
-                        <i class="ri-delete-bin-line"></i>
-                      </button>
+                      <div class="dropdown">
+                        <button class="btn btn-soft-secondary btn-sm dropdown-toggle"
+                                data-bs-toggle="dropdown"
+                                title="More actions">
+                          Actions
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                          <li>
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); viewEntry(entry)">
+                              <i class="ri-eye-line me-2 text-info"></i>View Details
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'DRAFT'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); editEntry(entry)">
+                              <i class="ri-edit-line me-2 text-primary"></i>Edit Entry
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'REJECTED'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); editEntry(entry)">
+                              <i class="ri-edit-line me-2 text-warning"></i>Edit & Resubmit
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); duplicateEntry(entry)">
+                              <i class="ri-file-copy-line me-2 text-secondary"></i>Duplicate Entry
+                            </a>
+                          </li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li *ngIf="entry.status === 'DRAFT'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); submitEntry(entry)">
+                              <i class="ri-send-plane-line me-2 text-success"></i>Submit for Approval
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'SUBMITTED'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); recallEntry(entry)">
+                              <i class="ri-arrow-go-back-line me-2 text-warning"></i>Recall Submission
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'APPROVED'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); printEntry(entry)">
+                              <i class="ri-printer-line me-2 text-info"></i>Generate Invoice
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'DRAFT' || entry.status === 'REJECTED'">
+                            <hr class="dropdown-divider">
+                          </li>
+                          <li *ngIf="entry.status === 'DRAFT' || entry.status === 'REJECTED'">
+                            <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); deleteEntry(entry)">
+                              <i class="ri-delete-bin-line me-2"></i>Delete Entry
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -432,9 +476,32 @@
                     <span class="badge" [ngClass]="getStatusClass(entry.status)">{{ getStatusText(entry.status) }}</span>
                   </td>
                   <td class="text-end pe-4">
-                    <button class="btn btn-sm btn-soft-primary" (click)="viewEntry(entry)" title="View">
-                      <i class="ri-eye-line"></i>
-                    </button>
+                    <div class="d-flex gap-1 justify-content-end">
+                      <div class="dropdown">
+                        <button class="btn btn-soft-secondary btn-sm dropdown-toggle"
+                                data-bs-toggle="dropdown"
+                                title="More actions">
+                          Actions
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                          <li>
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); viewEntry(entry)">
+                              <i class="ri-eye-line me-2 text-info"></i>View Details
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); duplicateEntry(entry)">
+                              <i class="ri-file-copy-line me-2 text-secondary"></i>Duplicate Entry
+                            </a>
+                          </li>
+                          <li *ngIf="entry.status === 'APPROVED'">
+                            <a class="dropdown-item" href="#" (click)="$event.preventDefault(); printEntry(entry)">
+                              <i class="ri-printer-line me-2 text-info"></i>Generate Invoice
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </tbody>
