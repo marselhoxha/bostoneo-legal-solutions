@@ -1023,9 +1023,10 @@
                               <!-- Member Header -->
                               <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                  <img [src]="member.imageUrl || 'assets/images/users/avatar-' + (member.id % 8 + 1) + '.jpg'" 
-                                       alt="{{ member.name }}" 
-                                       class="avatar-sm rounded-circle me-3">
+                                  <img [src]="member.imageUrl || 'assets/images/users/user-dummy-img.jpg'"
+                                       alt="{{ member.name }}"
+                                       class="avatar-sm rounded-circle me-3"
+                                       (error)="$event.target.src='assets/images/users/user-dummy-img.jpg'">
                                   <div>
                                     <h6 class="mb-1">{{ member.name }}</h6>
                                     <div class="d-flex align-items-center gap-2">

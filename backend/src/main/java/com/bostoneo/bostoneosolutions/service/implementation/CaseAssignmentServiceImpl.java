@@ -759,6 +759,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                 .userId(assignment.getAssignedTo() != null ? assignment.getAssignedTo().getId() : null)
                 .userName(assignment.getAssignedTo() != null ? getFullName(assignment.getAssignedTo()) : "Unknown")
                 .userEmail(assignment.getAssignedTo() != null ? assignment.getAssignedTo().getEmail() : "unknown@example.com")
+                .userImageUrl(assignment.getAssignedTo() != null ? assignment.getAssignedTo().getImageUrl() : null)
                 .roleType(assignment.getRoleType())
                 .assignmentType(assignment.getAssignmentType())
                 .assignedAt(assignment.getAssignedAt())

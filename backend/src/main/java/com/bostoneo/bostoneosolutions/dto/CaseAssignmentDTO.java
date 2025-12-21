@@ -25,6 +25,7 @@ public class CaseAssignmentDTO {
     private Long userId;
     private String userName;
     private String userEmail;
+    private String userImageUrl;
     private CaseRoleType roleType;
     private AssignmentType assignmentType;
     private LocalDateTime assignedAt;

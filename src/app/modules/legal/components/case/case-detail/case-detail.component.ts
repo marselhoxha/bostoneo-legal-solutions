@@ -1722,13 +1722,13 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     if (assignments && assignments.length > 0) {
       this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
         id: assignment.userId,
-        userId: assignment.userId, // Add userId for consistency
+        userId: assignment.userId,
         name: assignment.userName || 'Unknown User',
-        userName: assignment.userName || 'Unknown User', // Add userName for consistency
+        userName: assignment.userName || 'Unknown User',
         title: assignment.roleType,
         roleType: assignment.roleType,
-        imageUrl: null, // Will use default avatar
-        workloadStatus: 'OPTIMAL', // Default status
+        imageUrl: assignment.userImageUrl || null,
+        workloadStatus: 'OPTIMAL',
         workloadPercentage: assignment.workloadWeight || 0,
         assignmentId: assignment.id,
         assignmentDate: assignment.assignedAt

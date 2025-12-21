@@ -6,6 +6,7 @@ export interface CaseAssignment {
   userId: number;
   userName: string;
   userEmail: string;
+  userImageUrl?: string;
   roleType: CaseRoleType;
   assignmentType: AssignmentType;
   assignedAt: Date;
