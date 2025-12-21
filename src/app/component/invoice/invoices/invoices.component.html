@@ -1,205 +1,427 @@
 <ng-container *ngIf="(invoicesState$ | async) as state" [ngSwitch]="state.dataState">
-   <ng-container *ngSwitchCase="DataState.LOADED">
-     <app-layout [user]="state?.appData?.data?.user"></app-layout>
-     
-     <section>
+  <ng-container *ngSwitchCase="DataState.LOADED">
+    <app-layout [user]="state?.appData?.data?.user"></app-layout>
+
+    <section class="invoice-section">
       <div class="container-fluid">
-         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-               <li class="breadcrumb-item">
-                  <a [routerLink]="['/']">Home</a>
-               </li>
-               <li class="breadcrumb-item active"> Invoices </li>
-            </ol>
-         </nav>
-         <div class="row" style="margin-bottom:60px;">
-            <div class="col-lg-12">
-                <div class="card" id="invoiceList">
-                    <div class="card-header border-bottom-dashed">
-                        <div class="row g-4 align-items-center">
-                            <div class="col-sm">
-                                <div>
-                                    <h5 class="card-title mb-0">Invoice List</h5>
-                                </div>
-                            </div>
-                           
-                            <div class="col-sm-auto">
-                                <div class="d-flex flex-wrap align-items-start gap-2">
-                                  <a [routerLink]="['/invoices/new']" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn" id="create-btn">
-                                    <i class="ri-add-line align-bottom me-1"></i> Create Invoice
-                                  </a>
-                                  <a [routerLink]="['/invoices/payments']" class="btn btn-soft-warning">
-                                    <i class="ri-money-dollar-circle-line align-bottom me-1"></i> Payment Dashboard
-                                  </a>
-                                  <a [routerLink]="['/invoices/templates']" class="btn btn-soft-primary">
-                                    <i class="ri-file-list-3-line align-bottom me-1"></i> Templates
-                                  </a>
-                                    <button type="button" class="btn btn-info" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                   
-                      <div class="card-body">
-                        <!-- Subtle loading indicator -->
-                        <div *ngIf="isLoading$ | async" class="position-relative">
-                          <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
-                               style="background-color: rgba(255, 255, 255, 0.8); z-index: 10;">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                              <span class="visually-hidden">Loading...</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div class="table-responsive table-card mb-1 align-middle" 
-                             [class.opacity-50]="isLoading$ | async">
-                          <table class="table">
-                            <thead class="table-light">
-                              <tr>
-                                <th scope="col" class="px-4">Invoice #</th>
-                                <th scope="col" class="px-4">Client</th>
-                                <th scope="col" class="px-4">Status</th>
-                                <th scope="col" class="px-4">Due Date</th>
-                                <th scope="col" class="px-4">Amount</th>
-                                <th scope="col" class="text-center px-4">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody class="list form-check-all">
-                              <tr *ngIf="state?.appData?.data?.content?.length === 0 && !(isLoading$ | async)">
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                  <i class="ri-file-list-3-line ri-2x mb-2 d-block"></i>
-                                  No invoices found
-                                </td>
-                              </tr>
-                              <tr *ngFor="let invoice of state?.appData?.data?.content">
-                                <td class="px-4">{{ invoice.invoiceNumber }}</td>
-                                <td class="px-4">{{ invoice.clientName || 'N/A' }}</td>
-                                <td class="px-4">
-                                  <span class="badge text-uppercase"
-                                    [ngClass]="{
-                                      'bg-success-subtle text-success': invoice.status === 'PAID',
-                                      'bg-warning-subtle text-warning': invoice.status === 'PENDING',
-                                      'bg-danger-subtle text-danger': invoice.status === 'CANCELLED' || invoice.status === 'OVERDUE',
-                                      'bg-info-subtle text-info': invoice.status === 'DRAFT'
-                                    }">{{ invoice.status }}
-                                  </span>
-                                </td>
-                                <td class="px-4">{{ invoice.dueDate | date: 'mediumDate' }}</td>
-                                <td class="px-4">${{ invoice.totalAmount | number:'1.2-2' }}</td>
-                                <td class="text-center px-4">
-                                  <div class="dropdown">
-                                    <button class="btn btn-soft-secondary btn-sm dropdown-toggle" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown"
-                                            [disabled]="isLoading$ | async"
-                                            aria-expanded="false">
-                                      Actions
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                      <li>
-                                        <a [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]" class="dropdown-item">
-                                          <i class="ri-eye-line align-bottom me-2"></i> View
-                                        </a>
-                                      </li>
-                                      <li *ngIf="invoice.status !== 'PAID'">
-                                        <a (click)="editInvoice(invoice)" class="dropdown-item" style="cursor: pointer;">
-                                          <i class="ri-pencil-line align-bottom me-2"></i> Edit
-                                        </a>
-                                      </li>
-                                      <li *ngIf="invoice.status === 'PAID'">
-                                        <span class="dropdown-item text-muted disabled" style="cursor: not-allowed;">
-                                          <i class="ri-pencil-line align-bottom me-2"></i> Edit (Paid invoices cannot be edited)
-                                        </span>
-                                      </li>
-                                      <li>
-                                        <a (click)="downloadPDF(invoice.id)" class="dropdown-item" style="cursor: pointer;">
-                                          <i class="ri-download-line align-bottom me-2"></i> Download PDF
-                                        </a>
-                                      </li>
-                                      <li>
-                                        <a (click)="sendInvoiceEmail(invoice)" class="dropdown-item" style="cursor: pointer;">
-                                          <i class="ri-mail-line align-bottom me-2"></i> Send Email
-                                        </a>
-                                      </li>
-                                      <li *ngIf="invoice.status === 'DRAFT' || invoice.status === 'PENDING'">
-                                        <a (click)="changeStatus(invoice)" class="dropdown-item" style="cursor: pointer;">
-                                          <i class="ri-check-line align-bottom me-2"></i> Mark as Paid
-                                        </a>
-                                      </li>
-                                      <li><hr class="dropdown-divider"></li>
-                                      <li>
-                                        <a (click)="deleteInvoice(invoice.id)" class="dropdown-item text-danger" style="cursor: pointer;">
-                                          <i class="ri-delete-bin-line align-bottom me-2"></i> Delete
-                                        </a>
-                                      </li>
-                                    </ul>
-                                  </div>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <div class="row justify-content-md-between align-items-md-center">
-                          <div class="col col-sm-5">
-                            <div class="dataTables_info mb-2" id="invoices-table_info" role="status" aria-live="polite">
-                               
-                            </div>
-                          </div>
-                      
-                          <!-- Pagination -->
-                          <div class="col-12">
-                            <nav *ngIf="state?.appData?.data?.content?.length > 0" aria-label="Page navigation example">
-                              <ul class="pagination justify-content-end mb-0">
-                                <li [ngClass]="0 == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
-                                  <a (click)="goToNextOrPreviousPage('backward')" 
-                                     class="page-link"
-                                     [class.disabled]="isLoading$ | async"
-                                     [style.pointer-events]="(isLoading$ | async) ? 'none' : 'auto'">&laquo; Prev</a>
-                                </li>
-                                <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.totalPages); let i = index;" class="page-item">
-                                  <a (click)="goToPage(i)" 
-                                     [ngClass]="i == (currentPage$ | async) ? ' active' : ''" 
-                                     class="page-link"
-                                     [class.disabled]="isLoading$ | async"
-                                     [style.pointer-events]="(isLoading$ | async) ? 'none' : 'auto'">
-                                    <span *ngIf="i == (currentPage$ | async) && (isLoading$ | async)" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                    {{ i + 1 }}
-                                  </a>
-                                </li>
-                                <li [ngClass]="(state?.appData?.data?.totalPages - 1) == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
-                                  <a (click)="goToNextOrPreviousPage('forward')" 
-                                     class="page-link"
-                                     [class.disabled]="isLoading$ | async"
-                                     [style.pointer-events]="(isLoading$ | async) ? 'none' : 'auto'">Next &raquo;</a>
-                                </li>
-                              </ul>
-                            </nav>
-                          </div>
-                          <!-- End Pagination -->
-                        </div>
-                      </div>
-                </div>
+        <!-- Page Header -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+              <div>
+                <h4 class="mb-1 fw-semibold">Invoices</h4>
+                <p class="text-muted mb-0 fs-13">Manage and track all your invoices</p>
+              </div>
+              <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                  <li class="breadcrumb-item"><a [routerLink]="['/']">Home</a></li>
+                  <li class="breadcrumb-item active">Invoices</li>
+                </ol>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats Row -->
+        <div class="row g-4 mb-4">
+          <!-- Outstanding Balance Card -->
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-animate overflow-hidden border-0 shadow-sm h-100">
+              <div class="card-body position-relative">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Outstanding</p>
+                    <h3 class="mb-1 text-primary fw-bold">
+                      ${{ (state?.appData?.data?.content | invoiceTotalAmount:'outstanding') | number:'1.2-2' }}
+                    </h3>
+                    <p class="text-muted fs-13 mb-0">
+                      <span class="badge bg-primary-subtle text-primary rounded-pill me-1">
+                        {{ state?.appData?.data?.totalElements || 0 }}
+                      </span>
+                      total invoices
+                    </p>
+                  </div>
+                  <div class="avatar-md flex-shrink-0">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded fs-2">
+                      <i class="ri-wallet-3-line"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="position-absolute bottom-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, var(--vz-primary) 0%, var(--vz-info) 100%);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Card -->
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-animate overflow-hidden border-0 shadow-sm h-100">
+              <div class="card-body position-relative">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Pending</p>
+                    <h3 class="mb-1 text-warning fw-bold">
+                      ${{ (state?.appData?.data?.content | invoiceTotalAmount:'pending') | number:'1.2-2' }}
+                    </h3>
+                    <p class="text-muted fs-13 mb-0">
+                      <span class="badge bg-warning-subtle text-warning rounded-pill me-1">
+                        {{ (state?.appData?.data?.content | invoiceStatusCount:'PENDING':'DRAFT':'SENT':'ISSUED') || 0 }}
+                      </span>
+                      awaiting payment
+                    </p>
+                  </div>
+                  <div class="avatar-md flex-shrink-0">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded fs-2">
+                      <i class="ri-time-line"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="position-absolute bottom-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, var(--vz-warning) 0%, #ffc107 100%);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paid Card -->
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-animate overflow-hidden border-0 shadow-sm h-100">
+              <div class="card-body position-relative">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Paid</p>
+                    <h3 class="mb-1 text-success fw-bold">
+                      ${{ (state?.appData?.data?.content | invoiceTotalAmount:'paid') | number:'1.2-2' }}
+                    </h3>
+                    <p class="text-muted fs-13 mb-0">
+                      <span class="badge bg-success-subtle text-success rounded-pill me-1">
+                        {{ (state?.appData?.data?.content | invoiceStatusCount:'PAID') || 0 }}
+                      </span>
+                      completed
+                    </p>
+                  </div>
+                  <div class="avatar-md flex-shrink-0">
+                    <span class="avatar-title bg-success-subtle text-success rounded fs-2">
+                      <i class="ri-checkbox-circle-line"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="position-absolute bottom-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, var(--vz-success) 0%, #20c997 100%);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overdue Card -->
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-animate overflow-hidden border-0 shadow-sm h-100"
+                 [class.border-danger]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0"
+                 [style.border-width]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0 ? '1px' : '0'">
+              <div class="card-body position-relative">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Overdue</p>
+                    <h3 class="mb-1 text-danger fw-bold">
+                      ${{ (state?.appData?.data?.content | invoiceTotalAmount:'overdue') | number:'1.2-2' }}
+                    </h3>
+                    <p class="text-muted fs-13 mb-0">
+                      <span class="badge rounded-pill me-1"
+                            [ngClass]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0 ? 'bg-danger' : 'bg-danger-subtle text-danger'">
+                        {{ (state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') || 0 }}
+                      </span>
+                      past due
+                    </p>
+                  </div>
+                  <div class="avatar-md flex-shrink-0">
+                    <span class="avatar-title rounded fs-2"
+                          [ngClass]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0 ? 'bg-danger text-white' : 'bg-danger-subtle text-danger'">
+                      <i class="ri-error-warning-line"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="position-absolute bottom-0 start-0 end-0"
+                     [style.height]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0 ? '4px' : '4px'"
+                     [style.background]="(state?.appData?.data?.content | invoiceStatusCount:'OVERDUE') > 0 ? 'linear-gradient(90deg, var(--vz-danger) 0%, #dc3545 100%)' : 'linear-gradient(90deg, #f8d7da 0%, #f5c2c7 100%)'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Invoice List Card -->
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="card border-0 shadow-sm" id="invoiceList">
+              <div class="card-header border-bottom">
+                <div class="row g-3 align-items-center">
+                  <div class="col-sm">
+                    <h5 class="card-title mb-0 fw-semibold">
+                      <i class="ri-file-list-3-line me-2 text-primary"></i>Invoice List
+                    </h5>
+                  </div>
+                  <div class="col-sm-auto">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <a [routerLink]="['/invoices/new']" class="btn btn-success">
+                        <i class="ri-add-line align-bottom me-1"></i> New Invoice
+                      </a>
+                      <a [routerLink]="['/invoices/payments']" class="btn btn-soft-warning">
+                        <i class="ri-money-dollar-circle-line align-bottom me-1"></i> Payments
+                      </a>
+                      <a [routerLink]="['/invoices/templates']" class="btn btn-soft-primary">
+                        <i class="ri-file-list-3-line align-bottom me-1"></i> Templates
+                      </a>
+                      <button type="button" class="btn btn-soft-info" (click)="report()">
+                        <i class="ri-file-download-line align-bottom me-1"></i> Export
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body p-0">
+                <!-- Subtle loading indicator -->
+                <div *ngIf="isLoading$ | async" class="position-relative">
+                  <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                       style="background-color: rgba(255, 255, 255, 0.85); z-index: 10; min-height: 200px;">
+                    <div class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <p class="mt-2 text-muted mb-0">Loading invoices...</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="table-responsive" [class.opacity-50]="isLoading$ | async">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col" class="ps-4" style="min-width: 140px;">Invoice #</th>
+                        <th scope="col" style="min-width: 180px;">Client</th>
+                        <th scope="col" class="text-center" style="width: 120px;">Status</th>
+                        <th scope="col" style="width: 130px;">Issue Date</th>
+                        <th scope="col" style="width: 130px;">Due Date</th>
+                        <th scope="col" class="text-end" style="width: 130px;">Amount</th>
+                        <th scope="col" class="text-center pe-4" style="width: 100px;">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngIf="state?.appData?.data?.content?.length === 0 && !(isLoading$ | async)">
+                        <td colspan="7" class="text-center py-5">
+                          <div class="avatar-lg mx-auto mb-3">
+                            <div class="avatar-title bg-light text-secondary rounded-circle fs-1">
+                              <i class="ri-file-list-3-line"></i>
+                            </div>
+                          </div>
+                          <h5 class="text-muted">No invoices found</h5>
+                          <p class="text-muted mb-3">Create your first invoice to get started</p>
+                          <a [routerLink]="['/invoices/new']" class="btn btn-success">
+                            <i class="ri-add-line me-1"></i> Create Invoice
+                          </a>
+                        </td>
+                      </tr>
+                      <tr *ngFor="let invoice of state?.appData?.data?.content" class="invoice-row">
+                        <td class="ps-4">
+                          <div class="d-flex align-items-center">
+                            <div class="avatar-xs me-2 flex-shrink-0">
+                              <div class="avatar-title rounded-circle fs-6"
+                                   [ngClass]="{
+                                     'bg-success-subtle text-success': invoice.status === 'PAID',
+                                     'bg-warning-subtle text-warning': invoice.status === 'PENDING' || invoice.status === 'DRAFT',
+                                     'bg-danger-subtle text-danger': invoice.status === 'OVERDUE' || invoice.status === 'CANCELLED',
+                                     'bg-info-subtle text-info': invoice.status === 'SENT'
+                                   }">
+                                <i class="ri-file-text-line"></i>
+                              </div>
+                            </div>
+                            <div>
+                              <a [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]"
+                                 class="fw-semibold text-primary text-decoration-none">
+                                {{ invoice.invoiceNumber }}
+                              </a>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="fw-medium">{{ invoice.clientName || 'N/A' }}</span>
+                          <small class="d-block text-muted" *ngIf="invoice.caseName">{{ invoice.caseName }}</small>
+                        </td>
+                        <td class="text-center">
+                          <span class="badge rounded-pill"
+                            [ngClass]="{
+                              'bg-success-subtle text-success': invoice.status === 'PAID',
+                              'bg-warning-subtle text-warning': invoice.status === 'PENDING',
+                              'bg-info-subtle text-info': invoice.status === 'DRAFT' || invoice.status === 'SENT',
+                              'bg-danger-subtle text-danger': invoice.status === 'CANCELLED' || invoice.status === 'OVERDUE'
+                            }">
+                            <i class="me-1" [ngClass]="{
+                              'ri-checkbox-circle-line': invoice.status === 'PAID',
+                              'ri-time-line': invoice.status === 'PENDING',
+                              'ri-draft-line': invoice.status === 'DRAFT',
+                              'ri-send-plane-line': invoice.status === 'SENT',
+                              'ri-error-warning-line': invoice.status === 'OVERDUE',
+                              'ri-close-circle-line': invoice.status === 'CANCELLED'
+                            }"></i>
+                            {{ invoice.status }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="text-muted">{{ invoice.issueDate | date: 'MMM d, y' }}</span>
+                        </td>
+                        <td>
+                          <span [ngClass]="{
+                            'text-danger fw-medium': invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && isOverdue(invoice.dueDate),
+                            'text-muted': invoice.status === 'PAID' || invoice.status === 'CANCELLED' || !isOverdue(invoice.dueDate)
+                          }">
+                            {{ invoice.dueDate | date: 'MMM d, y' }}
+                          </span>
+                          <small class="d-block text-danger" *ngIf="invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && isOverdue(invoice.dueDate)">
+                            Overdue
+                          </small>
+                        </td>
+                        <td class="text-end">
+                          <span class="fw-semibold fs-14">${{ invoice.totalAmount | number:'1.2-2' }}</span>
+                          <small class="d-block text-muted" *ngIf="invoice.balanceDue && invoice.balanceDue !== invoice.totalAmount">
+                            Due: ${{ invoice.balanceDue | number:'1.2-2' }}
+                          </small>
+                        </td>
+                        <td class="text-center pe-4">
+                          <div class="dropdown">
+                            <button class="btn btn-soft-secondary btn-sm"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    [disabled]="isLoading$ | async"
+                                    aria-expanded="false">
+                              <i class="ri-more-2-fill"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                              <li>
+                                <a [routerLink]="['/invoices', invoice.id, invoice.invoiceNumber]" class="dropdown-item">
+                                  <i class="ri-eye-line align-bottom me-2 text-primary"></i> View Details
+                                </a>
+                              </li>
+                              <li *ngIf="invoice.status !== 'PAID'">
+                                <a (click)="editInvoice(invoice)" class="dropdown-item" style="cursor: pointer;">
+                                  <i class="ri-pencil-line align-bottom me-2 text-info"></i> Edit Invoice
+                                </a>
+                              </li>
+                              <li>
+                                <a (click)="downloadPDF(invoice.id)" class="dropdown-item" style="cursor: pointer;">
+                                  <i class="ri-download-2-line align-bottom me-2 text-success"></i> Download PDF
+                                </a>
+                              </li>
+                              <li>
+                                <a (click)="sendInvoiceEmail(invoice)" class="dropdown-item" style="cursor: pointer;">
+                                  <i class="ri-mail-send-line align-bottom me-2 text-warning"></i> Send via Email
+                                </a>
+                              </li>
+                              <li *ngIf="invoice.status === 'DRAFT' || invoice.status === 'PENDING' || invoice.status === 'SENT'">
+                                <a (click)="changeStatus(invoice)" class="dropdown-item" style="cursor: pointer;">
+                                  <i class="ri-checkbox-circle-line align-bottom me-2 text-success"></i> Mark as Paid
+                                </a>
+                              </li>
+                              <li><hr class="dropdown-divider"></li>
+                              <li>
+                                <a (click)="deleteInvoice(invoice.id)" class="dropdown-item text-danger" style="cursor: pointer;">
+                                  <i class="ri-delete-bin-line align-bottom me-2"></i> Delete
+                                </a>
+                              </li>
+                            </ul>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="state?.appData?.data?.content?.length > 0"
+                     class="d-flex justify-content-between align-items-center p-3 border-top">
+                  <p class="text-muted mb-0 fs-13">
+                    Showing <span class="fw-semibold">{{ (state?.appData?.data?.number * state?.appData?.data?.size) + 1 }}</span>
+                    to <span class="fw-semibold">{{ Math.min((state?.appData?.data?.number + 1) * state?.appData?.data?.size, state?.appData?.data?.totalElements) }}</span>
+                    of <span class="fw-semibold">{{ state?.appData?.data?.totalElements }}</span> invoices
+                  </p>
+                  <nav aria-label="Invoice pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                      <li class="page-item" [class.disabled]="(currentPage$ | async) === 0 || (isLoading$ | async)">
+                        <a class="page-link" (click)="goToPage(0)" style="cursor: pointer;">
+                          <i class="ri-skip-back-mini-line"></i>
+                        </a>
+                      </li>
+                      <li class="page-item" [class.disabled]="(currentPage$ | async) === 0 || (isLoading$ | async)">
+                        <a class="page-link" (click)="goToNextOrPreviousPage('backward')" style="cursor: pointer;">
+                          <i class="ri-arrow-left-s-line"></i> Prev
+                        </a>
+                      </li>
+                      <ng-container *ngFor="let pageNumber of [].constructor(state?.appData?.data?.totalPages); let i = index;">
+                        <li class="page-item"
+                            *ngIf="i >= (currentPage$ | async) - 2 && i <= (currentPage$ | async) + 2"
+                            [class.active]="i === (currentPage$ | async)">
+                          <a class="page-link"
+                             (click)="goToPage(i)"
+                             style="cursor: pointer;"
+                             [class.disabled]="isLoading$ | async">
+                            {{ i + 1 }}
+                          </a>
+                        </li>
+                      </ng-container>
+                      <li class="page-item" [class.disabled]="(currentPage$ | async) === state?.appData?.data?.totalPages - 1 || (isLoading$ | async)">
+                        <a class="page-link" (click)="goToNextOrPreviousPage('forward')" style="cursor: pointer;">
+                          Next <i class="ri-arrow-right-s-line"></i>
+                        </a>
+                      </li>
+                      <li class="page-item" [class.disabled]="(currentPage$ | async) === state?.appData?.data?.totalPages - 1 || (isLoading$ | async)">
+                        <a class="page-link" (click)="goToPage(state?.appData?.data?.totalPages - 1)" style="cursor: pointer;">
+                          <i class="ri-skip-forward-mini-line"></i>
+                        </a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-   </section>
-   </ng-container>
+    </section>
+  </ng-container>
 
-   <ng-container *ngSwitchCase="DataState.LOADING">
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+  <ng-container *ngSwitchCase="DataState.LOADING">
+    <app-layout></app-layout>
+    <div class="container-fluid">
+      <div class="row justify-content-center" style="margin-top: 100px;">
+        <div class="col-12 col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+              <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <h5 class="text-muted">Loading invoices...</h5>
+              <p class="text-muted mb-0">Please wait while we fetch your data</p>
+            </div>
+          </div>
         </div>
-        <p class="mt-2 text-muted">Loading invoices...</p>
       </div>
-   </ng-container>
+    </div>
+  </ng-container>
 
-   <ng-container *ngSwitchCase="DataState.ERROR">
-      <div class="alert alert-danger text-center">
-        <i class="ri-error-warning-line ri-2x mb-2 d-block"></i>
-        {{ state.error }}
+  <ng-container *ngSwitchCase="DataState.ERROR">
+    <app-layout></app-layout>
+    <div class="container-fluid">
+      <div class="row justify-content-center" style="margin-top: 100px;">
+        <div class="col-12 col-md-6">
+          <div class="card border-danger border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+              <div class="avatar-lg mx-auto mb-3">
+                <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-1">
+                  <i class="ri-error-warning-line"></i>
+                </div>
+              </div>
+              <h5 class="text-danger">Error Loading Invoices</h5>
+              <p class="text-muted mb-3">{{ state.error }}</p>
+              <button class="btn btn-primary" (click)="loadInvoices()">
+                <i class="ri-refresh-line me-1"></i> Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-   </ng-container>
+    </div>
+  </ng-container>
 </ng-container>
- 

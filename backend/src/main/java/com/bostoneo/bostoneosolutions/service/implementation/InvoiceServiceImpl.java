@@ -14,7 +14,9 @@ import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.IInvoiceService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.Client;
 import com.bostoneo.bostoneosolutions.model.InvoiceLineItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +68,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
+    private final ClientRepository clientRepository;
     
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice", includeResult = true)
     public Invoice createInvoice(Invoice invoice) {
@@ -133,9 +136,22 @@ public class InvoiceServiceImpl implements IInvoiceService {
                 }
             }
             
-            // Add client owner/admin users - this should be customized based on business logic
-            // For now, notify all case assignees if available, otherwise handle separately
-            
+            // Notify the client user if they have a linked user account
+            if (savedInvoice.getClientId() != null) {
+                clientRepository.findById(savedInvoice.getClientId()).ifPresent(client -> {
+                    if (client.getUserId() != null) {
+                        String clientTitle = "New Invoice Available";
+                        String clientMessage = String.format("A new invoice %s for $%.2f is ready for your review",
+                            savedInvoice.getInvoiceNumber(), savedInvoice.getTotalAmount());
+                        notificationService.sendCrmNotification(clientTitle, clientMessage, client.getUserId(),
+                            "INVOICE_CREATED", Map.of("invoiceId", savedInvoice.getId(),
+                                                     "invoiceNumber", savedInvoice.getInvoiceNumber()));
+                        log.info("Invoice notification sent to client user {}", client.getUserId());
+                    }
+                });
+            }
+
+            // Notify case assignees (attorneys, paralegals, etc.)
             for (Long userId : notificationUserIds) {
                 notificationService.sendCrmNotification(title, message, userId, 
                     "INVOICE_CREATED", Map.of("invoiceId", savedInvoice.getId(), 

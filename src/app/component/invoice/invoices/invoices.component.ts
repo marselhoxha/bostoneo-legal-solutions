@@ -24,6 +24,7 @@ import Swal from 'sweetalert2';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InvoicesComponent implements OnInit {
+  Math = Math; // Expose Math for template
   invoicesState$: Observable<State<InvoicePageResponse>>;
   private dataSubject = new BehaviorSubject<InvoicePageResponse>(null);
   private isLoadingSubject = new BehaviorSubject<boolean>(false);
@@ -47,37 +48,13 @@ export class InvoicesComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // Debug authentication status
-    console.log('🔍 Invoices Component - Authentication Debug:');
-    console.log('- Token exists:', !!localStorage.getItem('TOKEN'));
-    console.log('- Token value:', localStorage.getItem('TOKEN')?.substring(0, 50) + '...');
-    console.log('- All localStorage keys:', Object.keys(localStorage));
-    
-    // Initialize invoices state - Load initial data immediately
     this.loadInvoices();
   }
 
-  // Helper method to load invoices (similar to client's searchClients$)
+  // Helper method to load invoices
   private loadInvoices$(page: number = 0): Observable<InvoicePageResponse> {
-    console.log('🔍 Loading invoices for page:', page);
     return this.invoiceService.getInvoices(page, 10).pipe(
-      map(response => {
-        console.log('📑 Raw invoice service response:', response);
-        console.log('📑 Response data:', response.data);
-        console.log('📑 Response data content:', response.data?.content);
-        console.log('📑 Response data totalPages:', response.data?.totalPages);
-        console.log('📑 Response data structure:', {
-          hasData: !!response.data,
-          hasContent: !!response.data?.content,
-          contentLength: response.data?.content?.length,
-          totalPages: response.data?.totalPages,
-          totalElements: response.data?.totalElements,
-          currentPage: response.data?.number
-        });
-        return response;
-      }),
       catchError((error: any) => {
-        console.error('❌ Error loading invoices:', error);
         const errorMessage = ApiResponseUtil.extractErrorMessage(error);
         return throwError(() => new Error(errorMessage));
       })
@@ -112,146 +89,92 @@ export class InvoicesComponent implements OnInit {
     }
   }
 
-  // Load invoices based on the current page (similar to clients component)
+  // Load invoices based on the current page
   loadInvoices(): void {
     const currentPage = this.currentPageSubject.value;
-    console.log('🔄 loadInvoices called for page:', currentPage);
-    
-    // Save scroll position for initial loads (except first load)
+
     if (currentPage > 0) {
       this.saveScrollPosition();
     }
-    
+
     this.isLoadingSubject.next(true);
     this.invoicesState$ = this.loadInvoices$(currentPage)
       .pipe(
         map(response => {
-          console.log('✅ loadInvoices - setting dataSubject with:', response);
           this.dataSubject.next(response);
           this.isLoadingSubject.next(false);
-          
-          // Restore scroll position if it was saved
+
           if (currentPage > 0 && this.savedScrollPosition > 0) {
             setTimeout(() => this.restoreScrollPosition(), 100);
           }
-          
+
           return { dataState: DataState.LOADED, appData: response };
         }),
         catchError((error: string) => {
-          console.error('❌ Error in loadInvoices:', error);
           this.isLoadingSubject.next(false);
           return of({ dataState: DataState.ERROR, error });
         })
       );
   }
 
-  // Go to specific page (following client component pattern)
+  // Go to specific page
   goToPage(pageNumber?: number): void {
-    console.log('🔄 goToPage called with pageNumber:', pageNumber);
-    console.log('🔄 Current page before navigation:', this.currentPageSubject.value);
-    
-    // Prevent navigation if already loading or same page
-    if (this.isLoadingSubject.value) {
-      console.log('🔄 Navigation blocked - already loading');
-      return;
-    }
-    
-    if (pageNumber === this.currentPageSubject.value) {
-      console.log('🔄 Navigation blocked - same page');
-      return;
-    }
-    
-    // Check bounds
+    if (this.isLoadingSubject.value) return;
+    if (pageNumber === this.currentPageSubject.value) return;
+
     const totalPages = this.dataSubject.value?.data?.totalPages || 0;
-    if (pageNumber < 0 || pageNumber >= totalPages) {
-      console.log('🔄 Navigation blocked - out of bounds');
-      return;
-    }
-    
-    // Save current scroll position
+    if (pageNumber < 0 || pageNumber >= totalPages) return;
+
     this.saveScrollPosition();
-    
-    // Update current page first
     this.currentPageSubject.next(pageNumber);
-    
-    // Set loading state without flickering
     this.isLoadingSubject.next(true);
-    
-    // Create a fresh observable for this page request
+
     this.invoicesState$ = this.loadInvoices$(pageNumber)
       .pipe(
         map(response => {
-          console.log('🔄 Page response in goToPage:', response);
-          console.log('🔄 Setting fresh data for page:', pageNumber);
           this.dataSubject.next(response);
           this.isLoadingSubject.next(false);
-          
-          // Restore scroll position after a brief delay to allow DOM updates
           setTimeout(() => this.restoreScrollPosition(), 100);
-          
           return { dataState: DataState.LOADED, appData: response };
         }),
         catchError((error: string) => {
-          console.error('❌ Error in goToPage:', error);
           this.isLoadingSubject.next(false);
           return of({ dataState: DataState.ERROR, error });
         })
       );
   }
 
-  // Save current scroll position
   private saveScrollPosition(): void {
     this.savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    console.log('📍 Saved scroll position:', this.savedScrollPosition);
   }
 
-  // Restore scroll position
   private restoreScrollPosition(): void {
-    console.log('📍 Restoring scroll position to:', this.savedScrollPosition);
-    
-    // If the saved position is very close to the top, keep it at the top
-    if (this.savedScrollPosition < 50) {
-      return;
-    }
-    
-    // Try to find the table element to ensure it's in view
+    if (this.savedScrollPosition < 50) return;
+
     const tableElement = document.querySelector('#invoiceList');
     if (tableElement) {
       const tableTop = tableElement.getBoundingClientRect().top + window.pageYOffset;
       const tableBottom = tableTop + tableElement.clientHeight;
-      
-      // If the saved position would put the table out of view, adjust it
+
       if (this.savedScrollPosition < tableTop - 100) {
         this.savedScrollPosition = Math.max(tableTop - 100, 0);
       } else if (this.savedScrollPosition > tableBottom) {
         this.savedScrollPosition = tableTop - 50;
       }
     }
-    
-    window.scrollTo({
-      top: this.savedScrollPosition,
-      behavior: 'auto' // Use 'auto' for instant positioning
-    });
+
+    window.scrollTo({ top: this.savedScrollPosition, behavior: 'auto' });
   }
 
-  // Go to next or previous page (following client component pattern)
   goToNextOrPreviousPage(direction?: string): void {
     const currentPage = this.currentPageSubject.value;
     const newPage = direction === 'forward' ? currentPage + 1 : currentPage - 1;
-    
-    // Prevent navigation if already loading or invalid page
-    if (this.isLoadingSubject.value) {
-      console.log('🔄 Navigation blocked - already loading');
-      return;
-    }
-    
-    // Check bounds
+
+    if (this.isLoadingSubject.value) return;
+
     const totalPages = this.dataSubject.value?.data?.totalPages || 0;
-    if (newPage < 0 || newPage >= totalPages) {
-      console.log('🔄 Navigation blocked - out of bounds');
-      return;
-    }
-    
+    if (newPage < 0 || newPage >= totalPages) return;
+
     this.goToPage(newPage);
   }
 
@@ -440,6 +363,15 @@ export class InvoicesComponent implements OnInit {
         });
       }
     });
+  }
+
+  // Check if a date is overdue
+  isOverdue(dueDate: string | Date): boolean {
+    if (!dueDate) return false;
+    const due = new Date(dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return due < today;
   }
 
   report(): void {

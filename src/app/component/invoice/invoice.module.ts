@@ -15,19 +15,23 @@ import { InvoicePaymentsComponent } from "./invoice-payments/invoice-payments.co
 import { FlatpickrModule } from 'angularx-flatpickr';
 import { PaymentDashboardComponent } from './payment-dashboard/payment-dashboard.component';  // Use angularx-flatpickr
 import { NgSelectModule } from '@ng-select/ng-select';
+import { InvoiceStatusCountPipe } from './pipes/invoice-status-count.pipe';
+import { InvoiceTotalAmountPipe } from './pipes/invoice-total-amount.pipe';
 
 
 @NgModule({
   declarations: [
-    InvoicesComponent, 
-    NewinvoiceComponent, 
+    InvoicesComponent,
+    NewinvoiceComponent,
     InvoiceDetailComponent,
     InvoiceTemplatesComponent,
     InvoiceTemplateFormComponent,
     InvoiceWorkflowsComponent,
     InvoiceWorkflowConfigComponent,
     InvoicePaymentsComponent,
-    PaymentDashboardComponent
+    PaymentDashboardComponent,
+    InvoiceStatusCountPipe,
+    InvoiceTotalAmountPipe
   ],
   imports: [SharedModule, InvoiceRoutingModule, FlatpickrModule.forRoot(), LayoutsModule, NgSelectModule]
 })

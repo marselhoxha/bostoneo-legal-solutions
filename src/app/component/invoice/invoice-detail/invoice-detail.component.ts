@@ -402,10 +402,10 @@ export class InvoiceDetailComponent implements OnInit {
       taxAmount: this.editableInvoice.taxAmount,
       totalAmount: this.editableInvoice.totalAmount,
       status: 'DRAFT' as 'DRAFT',
-      items: this.invoiceItems.filter(item => item.description && item.rate > 0).map(item => ({
+      lineItems: this.invoiceItems.filter(item => item.description && item.rate > 0).map(item => ({
         description: item.description,
         quantity: item.quantity || 1,
-        rate: item.rate,
+        unitPrice: item.rate,
         amount: item.amount || (item.quantity || 1) * item.rate
       }))
     };

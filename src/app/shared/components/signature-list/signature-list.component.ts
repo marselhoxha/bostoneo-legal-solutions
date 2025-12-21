@@ -55,7 +55,7 @@ export class SignatureListComponent implements OnInit {
     { value: 'All', label: 'All' },
     { value: 'WaitingForMe', label: 'Waiting for me' },
     { value: 'WaitingForOthers', label: 'Waiting for others' },
-    { value: 'NeedsAttention', label: 'Needs attention' },
+    { value: 'NeedAttention', label: 'Needs attention' },
     { value: 'Completed', label: 'Completed' },
     { value: 'Declined', label: 'Declined' },
     { value: 'Expired', label: 'Expired' },

@@ -4760,6 +4760,43 @@ button.filter-chip,
           }
         }
 
+        .mode-selector-inline {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          label {
+            font-size: 0.8125rem;
+            color: var(--vz-secondary-color);
+            margin: 0;
+          }
+
+          .mode-btn-compact {
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--vz-border-color);
+            border-radius: 0.375rem;
+            background: var(--vz-card-bg);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+
+            .mode-name-compact {
+              font-weight: 500;
+            }
+
+            .mode-cost-compact {
+              font-size: 0.75rem;
+              color: var(--vz-secondary-color);
+            }
+
+            &::after {
+              font-size: 0.625rem;
+              margin-left: 0.25rem;
+            }
+          }
+        }
+
         .btn-send {
           width: 40px;
           height: 40px;

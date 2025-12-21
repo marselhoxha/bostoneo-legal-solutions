@@ -87,9 +87,9 @@
 
     <!-- Needs Attention -->
     <div class="stat-item cursor-pointer"
-         [class.active]="selectedDashboardFilter === 'NeedsAttention'"
+         [class.active]="selectedDashboardFilter === 'NeedAttention'"
          [class.has-alert]="dashboard?.needsAttention > 0"
-         (click)="filterByDashboard('NeedsAttention')">
+         (click)="filterByDashboard('NeedAttention')">
       <div class="stat-header">
         <span class="stat-label">NEEDS ATTENTION</span>
         <span class="stat-indicator stat-indicator-warning">

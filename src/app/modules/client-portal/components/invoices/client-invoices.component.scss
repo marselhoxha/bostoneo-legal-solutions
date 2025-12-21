@@ -1,21 +1,25 @@
 // Client Invoices Styles
 
+// Card animations
 .card-animate {
-  transition: transform 0.2s ease-in-out;
+  transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
   }
 }
 
+// Invoice row hover effect
 .invoice-row {
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.05);
+    background-color: rgba(var(--vz-primary-rgb), 0.04);
   }
 }
 
+// Search box styling
 .search-box {
   position: relative;
 
@@ -25,13 +29,21 @@
     top: 50%;
     transform: translateY(-50%);
     color: var(--vz-secondary-color);
+    font-size: 16px;
   }
 
   .search {
-    padding-left: 38px;
+    padding-left: 40px;
+    border-radius: 6px;
+
+    &:focus {
+      border-color: var(--vz-primary);
+      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.1);
+    }
   }
 }
 
+// Avatar sizes
 .avatar-sm {
   width: 40px;
   height: 40px;
@@ -45,26 +57,258 @@
   }
 }
 
-.bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+.avatar-xs {
+  width: 32px;
+  height: 32px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
 }
 
-.bg-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1) !important;
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
-.bg-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
+// Soft background colors
+.bg-primary-subtle { background-color: rgba(var(--vz-primary-rgb), 0.15) !important; }
+.bg-success-subtle { background-color: rgba(var(--vz-success-rgb), 0.15) !important; }
+.bg-warning-subtle { background-color: rgba(var(--vz-warning-rgb), 0.15) !important; }
+.bg-danger-subtle { background-color: rgba(var(--vz-danger-rgb), 0.15) !important; }
+.bg-info-subtle { background-color: rgba(var(--vz-info-rgb), 0.15) !important; }
+.bg-secondary-subtle { background-color: rgba(var(--vz-secondary-rgb), 0.15) !important; }
+
+// Soft badge styles
+.badge-soft-primary {
+  color: var(--vz-primary);
+  background-color: rgba(var(--vz-primary-rgb), 0.15);
+}
+.badge-soft-success {
+  color: var(--vz-success);
+  background-color: rgba(var(--vz-success-rgb), 0.15);
+}
+.badge-soft-warning {
+  color: var(--vz-warning);
+  background-color: rgba(var(--vz-warning-rgb), 0.15);
+}
+.badge-soft-danger {
+  color: var(--vz-danger);
+  background-color: rgba(var(--vz-danger-rgb), 0.15);
+}
+.badge-soft-info {
+  color: var(--vz-info);
+  background-color: rgba(var(--vz-info-rgb), 0.15);
+}
+.badge-soft-secondary {
+  color: var(--vz-secondary);
+  background-color: rgba(var(--vz-secondary-rgb), 0.15);
+}
+.badge-soft-dark {
+  color: var(--vz-dark);
+  background-color: rgba(var(--vz-dark-rgb), 0.15);
 }
 
-.bg-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1) !important;
+// Font sizes
+.fs-12 { font-size: 12px; }
+.fs-13 { font-size: 13px; }
+
+// Table styling
+.table {
+  > :not(caption) > * > * {
+    padding: 0.875rem 1rem;
+  }
+
+  thead {
+    th {
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--vz-secondary-color);
+      border-bottom: 1px solid var(--vz-border-color);
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--vz-border-color);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
 }
 
-.fs-12 {
-  font-size: 12px;
+// Button soft styles
+.btn-soft-primary {
+  color: var(--vz-primary);
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: var(--vz-primary);
+    border-color: var(--vz-primary);
+  }
 }
 
-.table > :not(caption) > * > * {
-  padding: 0.75rem 1rem;
+.btn-soft-success {
+  color: var(--vz-success);
+  background-color: rgba(var(--vz-success-rgb), 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: var(--vz-success);
+    border-color: var(--vz-success);
+  }
+}
+
+.btn-soft-secondary {
+  color: var(--vz-secondary);
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  border-color: transparent;
+
+  &:hover {
+    color: #fff;
+    background-color: var(--vz-secondary);
+    border-color: var(--vz-secondary);
+  }
+}
+
+// Modal styles
+.modal {
+  &.show {
+    display: block !important;
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+
+  &.show {
+    opacity: 1;
+  }
+}
+
+.modal-dialog {
+  z-index: 1050;
+}
+
+.modal-content {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1rem 1.25rem;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.25rem;
+}
+
+// Page title styling
+.page-title-box {
+  padding-bottom: 1rem;
+
+  h4 {
+    font-weight: 600;
+    color: var(--vz-heading-color);
+  }
+}
+
+// Pagination
+.pagination {
+  .page-link {
+    border-radius: 4px;
+    margin: 0 2px;
+    border: none;
+    color: var(--vz-body-color);
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.1);
+      color: var(--vz-primary);
+    }
+  }
+
+  .page-item.active .page-link {
+    background-color: var(--vz-primary);
+    color: #fff;
+  }
+
+  .page-item.disabled .page-link {
+    color: var(--vz-secondary-color);
+    opacity: 0.5;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 767.98px) {
+  .page-title-box {
+    text-align: center;
+
+    .page-title-right {
+      display: none;
+    }
+  }
+
+  .card-animate {
+    margin-bottom: 0.75rem;
+  }
+}
+
+// Alert styling in modal
+.alert {
+  border-radius: 0.5rem;
+  border: none;
+
+  &.alert-success {
+    background-color: rgba(var(--vz-success-rgb), 0.15);
+    color: var(--vz-success);
+  }
+
+  &.alert-warning {
+    background-color: rgba(var(--vz-warning-rgb), 0.15);
+    color: var(--vz-warning);
+  }
+
+  &.alert-danger {
+    background-color: rgba(var(--vz-danger-rgb), 0.15);
+    color: var(--vz-danger);
+  }
+
+  &.alert-secondary {
+    background-color: rgba(var(--vz-secondary-rgb), 0.15);
+    color: var(--vz-secondary);
+  }
+
+  .alert-heading {
+    font-weight: 600;
+  }
 }

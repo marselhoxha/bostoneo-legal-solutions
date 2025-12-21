@@ -36,6 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -975,14 +977,46 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     public Page<ClientPortalInvoiceDTO> getClientInvoices(Long userId, int page, int size) {
         Client client = getClientByUserId(userId);
 
-        // TODO: Get invoices for client
-        return new PageImpl<>(new ArrayList<>(), PageRequest.of(page, size), 0);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("issueDate").descending());
+        Page<com.bostoneo.bostoneosolutions.model.Invoice> invoices = invoiceRepository.findByClientId(client.getId(), pageable);
+
+        List<ClientPortalInvoiceDTO> dtos = invoices.getContent().stream()
+            .map(this::mapToClientPortalInvoiceDTO)
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, invoices.getTotalElements());
     }
 
     @Override
     public ClientPortalInvoiceDTO getInvoice(Long userId, Long invoiceId) {
-        // TODO: Verify invoice belongs to client and return
-        throw new ApiException("Invoice retrieval not yet implemented");
+        Client client = getClientByUserId(userId);
+
+        com.bostoneo.bostoneosolutions.model.Invoice invoice = invoiceRepository.findById(invoiceId)
+            .orElseThrow(() -> new ApiException("Invoice not found"));
+
+        // Verify invoice belongs to this client
+        if (!invoice.getClientId().equals(client.getId())) {
+            throw new ApiException("Invoice not found");
+        }
+
+        return mapToClientPortalInvoiceDTO(invoice);
+    }
+
+    private ClientPortalInvoiceDTO mapToClientPortalInvoiceDTO(com.bostoneo.bostoneosolutions.model.Invoice invoice) {
+        return ClientPortalInvoiceDTO.builder()
+            .id(invoice.getId())
+            .invoiceNumber(invoice.getInvoiceNumber())
+            .caseId(invoice.getLegalCaseId())
+            .caseName(invoice.getCaseName())
+            .amount(invoice.getTotalAmount())
+            .amountPaid(invoice.getTotalPaid() != null ? invoice.getTotalPaid() : BigDecimal.ZERO)
+            .balanceDue(invoice.getBalanceDue() != null ? invoice.getBalanceDue() : invoice.getTotalAmount())
+            .status(invoice.getStatus() != null ? invoice.getStatus().name() : "DRAFT")
+            .invoiceDate(invoice.getIssueDate())
+            .dueDate(invoice.getDueDate())
+            .description(invoice.getNotes())
+            .canPayOnline(true)
+            .build();
     }
 
     // =====================================================

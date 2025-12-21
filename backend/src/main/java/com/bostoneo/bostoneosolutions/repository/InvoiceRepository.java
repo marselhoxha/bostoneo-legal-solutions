@@ -53,10 +53,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Double sumTotalAmountByClient(@Param("clientId") Long clientId);
     
     List<Invoice> findTop5ByOrderByCreatedAtDesc();
-    
-    List<Invoice> findTop1ByInvoiceNumberStartingWithOrderByIdDesc(String prefix);
-    
-    long countByInvoiceNumberStartingWith(String prefix);
+
+    @Query("SELECT i FROM Invoice i WHERE i.invoiceNumber LIKE CONCAT(:prefix, '%') ORDER BY i.id DESC LIMIT 1")
+    List<Invoice> findTop1ByInvoiceNumberStartingWithOrderByIdDesc(@Param("prefix") String prefix);
+
+    @Query("SELECT COUNT(i) FROM Invoice i WHERE i.invoiceNumber LIKE CONCAT(:prefix, '%')")
+    long countByInvoiceNumberStartingWith(@Param("prefix") String prefix);
     
     @Query("SELECT i FROM Invoice i LEFT JOIN FETCH i.lineItems WHERE i.id = :id")
     Optional<Invoice> findByIdWithLineItems(@Param("id") Long id);

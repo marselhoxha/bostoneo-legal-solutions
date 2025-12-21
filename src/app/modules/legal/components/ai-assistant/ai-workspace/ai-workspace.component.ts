@@ -3244,9 +3244,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.selectedPracticeArea = areaId;
   }
 
-  // Select task (Protégé-style)
-  selectedTask: ConversationType = ConversationType.Draft;
-  activeTask: ConversationType = ConversationType.Draft;
+  // Select task (Protégé-style) - Default to Question (Legal Research)
+  selectedTask: ConversationType = ConversationType.Question;
+  activeTask: ConversationType = ConversationType.Question;
 
   selectTask(task: ConversationType): void {
     console.log('⭐ selectTask called:', task);

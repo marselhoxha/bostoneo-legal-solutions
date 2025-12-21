@@ -1868,6 +1868,42 @@
               </select>
             </div>
 
+            <!-- Research Mode Selector (for follow-up) -->
+            <div class="mode-selector-inline" *ngIf="selectedTask === 'question'">
+              <label>Mode:</label>
+              <div class="btn-group" ngbDropdown placement="top-start">
+                <button id="mode-dropdown-followup"
+                        ngbDropdownToggle
+                        type="button"
+                        class="btn btn-light btn-sm mode-btn-compact"
+                        [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
+                  <span class="mode-name-compact">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
+                  <span class="mode-cost-compact">{{ selectedResearchMode === 'FAST' ? '~15s' : '~90s' }}</span>
+                </button>
+                <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
+                  <a class="dropdown-item mode-option-minimal"
+                     [class.active]="selectedResearchMode === 'FAST'"
+                     (click)="onResearchModeChange('FAST')">
+                    <div class="mode-header-minimal">
+                      <span class="mode-title">Fast</span>
+                      <span class="mode-meta">~15s</span>
+                    </div>
+                    <p class="mode-desc-minimal">Quick guidance, no citations</p>
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item mode-option-minimal"
+                     [class.active]="selectedResearchMode === 'THOROUGH'"
+                     (click)="onResearchModeChange('THOROUGH')">
+                    <div class="mode-header-minimal">
+                      <span class="mode-title">Thorough</span>
+                      <span class="mode-meta">~90s</span>
+                    </div>
+                    <p class="mode-desc-minimal">Verified citations via CourtListener</p>
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <button type="submit" class="btn btn-primary btn-send" [disabled]="!followUpMessage?.trim()">
               <i class="ri-send-plane-fill"></i>
             </button>

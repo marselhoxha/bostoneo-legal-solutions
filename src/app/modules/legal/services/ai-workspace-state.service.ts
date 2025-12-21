@@ -74,7 +74,7 @@ export class AiWorkspaceStateService {
   private showBottomSearchBarSubject = new BehaviorSubject<boolean>(false);
   private isGeneratingSubject = new BehaviorSubject<boolean>(false);
   private draftingModeSubject = new BehaviorSubject<boolean>(false);
-  private selectedTaskSubject = new BehaviorSubject<ConversationType>(ConversationType.Draft);
+  private selectedTaskSubject = new BehaviorSubject<ConversationType>(ConversationType.Question);
   private showVersionHistorySubject = new BehaviorSubject<boolean>(false);
   private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
   private viewerSidebarCollapsedSubject = new BehaviorSubject<boolean>(false);

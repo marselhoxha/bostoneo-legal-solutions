@@ -24,36 +24,20 @@ export class InvoiceService {
       );
   }
 
-  // Get all invoices with pagination
-  getInvoices(page = 0, size = 10, sortBy = 'id', sortDirection = 'asc'): Observable<InvoicePageResponse> {
+  // Get all invoices with pagination (sorted by most recent first)
+  getInvoices(page = 0, size = 10, sortBy = 'createdAt', sortDirection = 'desc'): Observable<InvoicePageResponse> {
     const timestamp = new Date().getTime();
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sortBy', sortBy)
       .set('sortDirection', sortDirection)
-      .set('_t', timestamp.toString()); // Cache busting parameter
-    
-    const url = `${this.baseUrl}?${params.toString()}`;
-    console.log('🌐 Invoice Service - Making API call to:', url);
-    console.log('🌐 Invoice Service - Parameters:', { page, size, sortBy, sortDirection, timestamp });
-    
+      .set('_t', timestamp.toString());
+
     return this.http.get<InvoicePageResponse>(this.baseUrl, { params })
       .pipe(
         map(response => {
-          console.log('🌐 Invoice Service - Raw API response:', response);
-          console.log('🌐 Invoice Service - Response data page info:', {
-            currentPage: response.data?.number,
-            totalPages: response.data?.totalPages,
-            totalElements: response.data?.totalElements,
-            contentLength: response.data?.content?.length,
-            firstInvoiceId: response.data?.content?.[0]?.id,
-            lastInvoiceId: response.data?.content?.[response.data?.content?.length - 1]?.id
-          });
-          
-          // Ensure data is properly structured
           if (!response.data || !('content' in response.data)) {
-            console.warn('🌐 Invoice Service - Unexpected response structure, attempting to fix...');
             const pageData = ApiResponseUtil.extractPageData<Invoice>(response);
             if (pageData) {
               response.data = pageData;

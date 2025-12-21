@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, TemplateRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -30,7 +30,8 @@ import { BoldSignEmbedComponent, BoldSignEvent } from '../../shared/components/b
     BoldSignEmbedComponent
   ],
   templateUrl: './signatures.component.html',
-  styleUrls: ['./signatures.component.scss']
+  styleUrls: ['./signatures.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SignaturesComponent implements OnInit {
   @ViewChild('detailModal') detailModal!: TemplateRef<any>;
@@ -214,15 +215,19 @@ export class SignaturesComponent implements OnInit {
 
   loadStats(): void {
     this.loadingStats = true;
+    this.cdr.markForCheck();
+
     this.signatureService.getStatistics(this.organizationId).subscribe({
       next: (response) => {
         this.stats = response.data?.statistics;
         this.loadingStats = false;
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading stats:', err);
         this.loadingStats = false;
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
       }
     });
@@ -230,15 +235,19 @@ export class SignaturesComponent implements OnInit {
 
   loadDashboard(): void {
     this.loadingDashboard = true;
+    this.cdr.markForCheck();
+
     this.signatureService.getDashboard(this.organizationId).subscribe({
       next: (response) => {
         this.dashboard = response.data?.dashboard;
         this.loadingDashboard = false;
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading dashboard:', err);
         this.loadingDashboard = false;
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
 
         // Check for rate limit error
@@ -376,14 +385,20 @@ export class SignaturesComponent implements OnInit {
 
   loadTemplates(): void {
     this.loadingTemplates = true;
+    this.cdr.markForCheck();
+
     this.signatureService.getTemplates(this.organizationId).subscribe({
       next: (response) => {
         this.templates = response.data?.templates || [];
         this.loadingTemplates = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading templates:', err);
         this.loadingTemplates = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -405,14 +420,20 @@ export class SignaturesComponent implements OnInit {
 
   loadClients(): void {
     this.loadingClients = true;
+    this.cdr.markForCheck();
+
     this.clientService.allClients$().subscribe({
       next: (response: any) => {
         this.clients = response.data?.page?.content || [];
         this.loadingClients = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading clients:', err);
         this.loadingClients = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       }
     });
   }

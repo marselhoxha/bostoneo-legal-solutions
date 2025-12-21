@@ -14,30 +14,6 @@
   </div>
 </div>
 
-<!-- Authentication Status Debug -->
-<div class="row mb-3">
-  <div class="col-12">
-    <div class="alert alert-info" role="alert">
-      <h6 class="alert-heading"><i class="ri-information-line me-2"></i>Debug Information</h6>
-      <p class="mb-1"><strong>Authentication Status:</strong> 
-        <span class="badge" [ngClass]="isAuthenticated() ? 'bg-success' : 'bg-danger'">
-          {{ isAuthenticated() ? 'Logged In' : 'Not Logged In' }}
-        </span>
-      </p>
-      <p class="mb-1"><strong>Clients Loaded:</strong> {{ clients.length }}</p>
-      <p class="mb-0"><strong>Loading Clients:</strong> {{ loadingClients ? 'Yes' : 'No' }}</p>
-      <hr>
-      <p class="mb-0">
-        <small>
-          <strong>Note:</strong> If you're not logged in, please go to the 
-          <a [routerLink]="['/auth/login']" class="alert-link">login page</a> first.
-          The client dropdown will only work after authentication.
-        </small>
-      </p>
-    </div>
-  </div>
-</div>
-
 <!-- Error Alert -->
 <div class="row" *ngIf="error">
   <div class="col-12">
