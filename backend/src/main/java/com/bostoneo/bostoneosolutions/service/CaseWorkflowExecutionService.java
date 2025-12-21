@@ -689,6 +689,58 @@ public class CaseWorkflowExecutionService {
     }
 
     /**
+     * Build legal research prompt based on document context
+     */
+    private String buildLegalResearchPrompt(String documentContext, String researchQuery, String stepName) {
+        String baseInstruction = """
+            You are an expert legal research assistant. Based on the provided document analyses,
+            conduct comprehensive legal research to support the case. Provide actionable insights
+            with specific legal references where applicable.
+
+            """;
+
+        String specificInstruction = """
+            Perform the following research tasks:
+
+            1. **Case Law Analysis**
+               - Identify relevant precedents and controlling authority
+               - Note distinguishing factors and potential weaknesses
+               - Cite specific cases with proper citations
+
+            2. **Statutory Framework**
+               - Identify applicable statutes and regulations
+               - Note relevant amendments or pending changes
+               - Include regulatory guidance if applicable
+
+            3. **Legal Issues Identified**
+               - List primary legal issues from the documents
+               - Analyze strengths and weaknesses of each position
+               - Identify potential arguments and counter-arguments
+
+            4. **Strategic Recommendations**
+               - Provide specific actionable recommendations
+               - Prioritize by importance and urgency
+               - Note any time-sensitive considerations
+
+            5. **Research Gaps**
+               - Identify areas requiring additional research
+               - Note missing information that would strengthen analysis
+               - Suggest follow-up research tasks
+
+            Format your response with clear headings and bullet points for easy reference.
+            Be thorough but concise - focus on actionable intelligence for legal strategy.
+
+            """;
+
+        String querySection = "";
+        if (researchQuery != null && !researchQuery.isEmpty()) {
+            querySection = "\n\nSPECIFIC RESEARCH FOCUS: " + researchQuery + "\n";
+        }
+
+        return baseInstruction + specificInstruction + querySection + "\n\nDOCUMENT ANALYSES:\n" + documentContext;
+    }
+
+    /**
      * INTEGRATION step - Create drafts/research via other services
      * Creates actual AiConversationSession or ResearchSession records
      */
@@ -745,27 +797,65 @@ public class CaseWorkflowExecutionService {
                 result.put("message", "Draft created and available in Drafting");
             }
             case "legal_research" -> {
-                // Create actual ResearchSession record
-                String sessionName = "Research - " + (execution.getName() != null ? execution.getName() : "Workflow");
-                ResearchSession researchSession = ResearchSession.builder()
-                        .sessionId(UUID.randomUUID().toString())
-                        .userId(execution.getCreatedBy().getId())
-                        .sessionName(sessionName)
-                        .description("Legal research initiated from workflow: " + execution.getTemplate().getName())
-                        .workflowExecutionId(execution.getId())
-                        .isActive(true)
-                        .totalSearches(0)
-                        .totalDocumentsViewed(0)
-                        .build();
-                researchSession = researchSessionRepository.save(researchSession);
+                // Perform actual legal research based on document context
+                List<Long> documentIds = getDocumentIds(inputData);
+                String researchQuery = (String) stepConfig.getOrDefault("researchQuery", "");
 
-                log.info("Created research session {} for workflow {}", researchSession.getId(), execution.getId());
+                // Build research context from documents
+                StringBuilder documentContext = new StringBuilder();
+                documentContext.append("Based on the following documents, perform comprehensive legal research:\n\n");
 
-                result.put("researchSessionId", researchSession.getId());
-                result.put("researchSessionUuid", researchSession.getSessionId());
-                result.put("sessionName", sessionName);
-                result.put("status", "research_session_created");
-                result.put("message", "Research session created and available in Legal Research");
+                for (Long docId : documentIds) {
+                    try {
+                        var analysisOpt = documentAnalysisService.getAnalysisByDatabaseId(docId);
+                        if (analysisOpt.isPresent()) {
+                            var analysis = analysisOpt.get();
+                            documentContext.append("--- Document: ").append(analysis.getFileName()).append(" ---\n");
+                            documentContext.append("Type: ").append(analysis.getDetectedType()).append("\n");
+                            documentContext.append("Summary: ").append(analysis.getSummary()).append("\n");
+                            documentContext.append("Key Findings: ").append(analysis.getKeyFindings()).append("\n\n");
+                        }
+                    } catch (Exception e) {
+                        log.warn("Could not load analysis for document {}: {}", docId, e.getMessage());
+                    }
+                }
+
+                // Build legal research prompt
+                String researchPrompt = buildLegalResearchPrompt(documentContext.toString(), researchQuery, step.getStepName());
+
+                try {
+                    // Perform legal research via Claude
+                    String researchContent = claudeService.generateCompletion(researchPrompt, true).get();
+
+                    // Create research session record
+                    String sessionName = "Research - " + (execution.getName() != null ? execution.getName() : "Workflow");
+                    ResearchSession researchSession = ResearchSession.builder()
+                            .sessionId(UUID.randomUUID().toString())
+                            .userId(execution.getCreatedBy().getId())
+                            .sessionName(sessionName)
+                            .description("Legal research from workflow: " + execution.getTemplate().getName())
+                            .workflowExecutionId(execution.getId())
+                            .isActive(true)
+                            .totalSearches(1)
+                            .totalDocumentsViewed(documentIds.size())
+                            .build();
+                    researchSession = researchSessionRepository.save(researchSession);
+
+                    log.info("Created research session {} with content for workflow {}", researchSession.getId(), execution.getId());
+
+                    result.put("content", researchContent);
+                    result.put("researchSessionId", researchSession.getId());
+                    result.put("researchSessionUuid", researchSession.getSessionId());
+                    result.put("sessionName", sessionName);
+                    result.put("documentCount", documentIds.size());
+                    result.put("status", "research_completed");
+                    result.put("message", "Legal research completed - " + sessionName);
+                } catch (Exception e) {
+                    log.error("Legal research failed: {}", e.getMessage());
+                    result.put("status", "error");
+                    result.put("error", e.getMessage());
+                    result.put("message", "Legal research failed: " + e.getMessage());
+                }
             }
             default -> {
                 result.put("status", "completed");

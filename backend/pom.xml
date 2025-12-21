@@ -109,11 +109,11 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.3.0</version>
 		</dependency>
-		<!-- Apache Commons IO (required by POI 5.3.0) -->
+		<!-- Apache Commons IO (required by POI 5.3.0 - needs 2.16.0+ for BoundedInputStream.builder()) -->
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.15.1</version>
+			<version>2.18.0</version>
 		</dependency>
 		<!-- Apache PDFBox for PDF manipulation (version compatible with Tika 2.9.1) -->
 		<dependency>

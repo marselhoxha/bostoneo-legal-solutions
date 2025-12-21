@@ -18,6 +18,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.nio.file.AccessDeniedException;
@@ -56,6 +57,18 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                         .status(resolve(statusCode.value()))
                         .statusCode(statusCode.value())
                         .build(), statusCode);
+    }
+
+    /**
+     * Handle client disconnection during async requests (e.g., long-running AI analysis).
+     * This is expected behavior when users navigate away - not an error.
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public ResponseEntity<HttpResponse> asyncRequestNotUsableException(AsyncRequestNotUsableException exception) {
+        // Log at DEBUG level - this is expected when clients disconnect during long requests
+        log.debug("Client disconnected during async request (Broken pipe): {}", exception.getMessage());
+        // Return null - the client is gone anyway, no point returning a response
+        return null;
     }
 
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)

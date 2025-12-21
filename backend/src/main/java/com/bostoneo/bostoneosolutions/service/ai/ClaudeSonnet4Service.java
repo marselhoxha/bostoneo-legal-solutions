@@ -1335,6 +1335,29 @@ public class ClaudeSonnet4Service implements AIService {
                                    lowerPrompt.contains("draft a demand letter") ||
                                    lowerPrompt.contains("draft a legal document");
 
+        // Detect workflow-specific generation/synthesis patterns that need high token allocation
+        // These are typically complex outputs from case workflow steps (GENERATION, SYNTHESIS)
+        boolean isWorkflowGeneration = lowerPrompt.contains("opposition brief") ||
+                                       lowerPrompt.contains("due diligence report") ||
+                                       lowerPrompt.contains("due diligence review") ||
+                                       lowerPrompt.contains("contract redlines") ||
+                                       lowerPrompt.contains("redline analysis") ||
+                                       lowerPrompt.contains("evidence checklist") ||
+                                       lowerPrompt.contains("risk matrix") ||
+                                       lowerPrompt.contains("risk assessment") ||
+                                       lowerPrompt.contains("legal research on") ||
+                                       lowerPrompt.contains("case law research") ||
+                                       lowerPrompt.contains("synthesize the following") ||
+                                       lowerPrompt.contains("generate comprehensive") ||
+                                       lowerPrompt.contains("create a detailed report") ||
+                                       lowerPrompt.contains("create action items") ||
+                                       lowerPrompt.contains("create timeline") ||
+                                       lowerPrompt.contains("litigation strategy") ||
+                                       lowerPrompt.contains("case assessment") ||
+                                       lowerPrompt.contains("opposing party") ||
+                                       lowerPrompt.contains("counterclaim") ||
+                                       lowerPrompt.contains("affirmative defense");
+
         // Detect THOROUGH mode in draft generation
         boolean isThoroughModeDraft = isDraftGeneration &&
                                      (prompt.contains("**tool usage requirements** (citation verification mandatory)") ||
@@ -1359,6 +1382,12 @@ public class ClaudeSonnet4Service implements AIService {
             // Increased from 8000-10000 to prevent mid-list truncation
             maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ? 20000 : 16000;
             log.info("📄 Draft generation detected - allocating {} tokens for complete document", maxTokens);
+        } else if (isWorkflowGeneration) {
+            // Workflow synthesis/generation steps need 16000-20000 tokens for complete outputs
+            // Prevents truncation of opposition briefs, due diligence reports, risk matrices, etc.
+            maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ||
+                       lowerPrompt.contains("complete") || lowerPrompt.contains("thorough") ? 20000 : 16000;
+            log.info("⚙️ Workflow generation/synthesis detected - allocating {} tokens for complete output", maxTokens);
         } else if (useDeepThinking) {
             // Detect if query needs extra-long response
             boolean isComplexQuery = lowerPrompt.contains("comprehensive analysis") ||

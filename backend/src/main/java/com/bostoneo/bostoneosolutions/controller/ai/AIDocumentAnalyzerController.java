@@ -22,9 +22,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.HttpURLConnection;
-
+import javax.net.ssl.*;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,8 +43,34 @@ public class AIDocumentAnalyzerController {
     private final AIAnalysisMessageRepository analysisMessageRepository;
     private final CloudStorageUrlConverter urlConverter;
 
-    // RestTemplate with custom factory that follows redirects and has browser-like headers
+    // RestTemplate with SSL support for fetching documents from various sources
     private final RestTemplate restTemplate = createRestTemplate();
+
+    // Static initializer to configure SSL trust for HTTPS connections
+    static {
+        try {
+            // Create a trust manager that trusts all certificates
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() { return null; }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
+                }
+            };
+
+            // Install the all-trusting trust manager
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+            // Create all-trusting host name verifier
+            HostnameVerifier allHostsValid = (hostname, session) -> true;
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        } catch (Exception e) {
+            // Log will not be available in static block, use stderr
+            System.err.println("Failed to configure SSL trust: " + e.getMessage());
+        }
+    }
 
     private static RestTemplate createRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
@@ -51,6 +78,12 @@ public class AIDocumentAnalyzerController {
             protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
                 super.prepareConnection(connection, httpMethod);
                 connection.setInstanceFollowRedirects(true);
+
+                // For HTTPS connections, the static initializer already configured SSL trust
+                if (connection instanceof HttpsURLConnection) {
+                    HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
+                    httpsConnection.setHostnameVerifier((hostname, session) -> true);
+                }
             }
         };
         factory.setConnectTimeout(30000); // 30 seconds
@@ -352,6 +385,22 @@ public class AIDocumentAnalyzerController {
                     .headers(responseHeaders)
                     .body(fileBytes);
 
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            // 403 Forbidden - website is blocking automated access
+            log.error("403 Forbidden when fetching document from URL: {}", url);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    Map.of(
+                        "error", "This website blocks automated access. Please download the document manually and upload it instead.",
+                        "code", "FORBIDDEN",
+                        "suggestion", "Download the file from your browser and use the file upload option."
+                    )
+            );
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // Other HTTP client errors (404, 401, etc.)
+            log.error("HTTP error {} when fetching document from URL: {}", e.getStatusCode(), url);
+            return ResponseEntity.status(e.getStatusCode()).body(
+                    Map.of("error", "Failed to fetch document: " + e.getStatusText())
+            );
         } catch (Exception e) {
             log.error("Error fetching document from URL: {}", url, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(

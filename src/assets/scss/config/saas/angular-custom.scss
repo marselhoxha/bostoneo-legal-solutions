@@ -1143,3 +1143,144 @@ a.ck.ck-button.ck-on {
 .swiper-container {
   overflow: hidden;
 }
+
+// ===== AI TASK TOAST NOTIFICATIONS =====
+// SweetAlert toast container - Velzon theme styling
+.swal2-container.swal2-top-end.swal2-backdrop-show,
+.swal2-container.swal2-top-end {
+  top: 70px !important;
+  right: 24px !important;
+  left: auto !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  pointer-events: none;
+
+  .swal2-popup {
+    pointer-events: auto;
+  }
+}
+
+.ai-task-toast {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0.25rem !important;
+  box-shadow: 0 5px 10px rgba(30, 32, 37, 0.12) !important;
+  border: 1px solid var(--vz-border-color, #e9ebec) !important;
+  background: #fff !important;
+  overflow: hidden !important;
+
+  .swal2-html-container {
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    text-align: left !important;
+    overflow: visible !important;
+    border-left: 4px solid #0ab39c;
+    background: #fff !important;
+  }
+
+  .swal2-actions {
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    justify-content: flex-end !important;
+    background: #f3f6f9 !important;
+    border-top: 1px solid #e9ebec !important;
+  }
+
+  .swal2-confirm {
+    font-size: 0.75rem !important;
+    padding: 0.3rem 0.75rem !important;
+    border-radius: 0.25rem !important;
+    font-weight: 500 !important;
+    background: #405189 !important;
+    border: 1px solid #405189 !important;
+    box-shadow: none !important;
+
+    &:hover {
+      background: #364574 !important;
+      border-color: #364574 !important;
+    }
+  }
+
+  .swal2-timer-progress-bar {
+    background: #0ab39c !important;
+    height: 3px !important;
+  }
+
+  // Toast content
+  .toast-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 1.125rem;
+    }
+  }
+
+  .toast-body {
+    .toast-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #212529;
+      margin-bottom: 2px;
+    }
+
+    .toast-message {
+      font-size: 0.8125rem;
+      color: #878a99;
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+
+    .toast-time {
+      font-size: 0.6875rem;
+      color: #adb5bd;
+    }
+  }
+}
+
+.ai-task-toast-error {
+  .swal2-html-container {
+    border-left-color: #f06548 !important;
+  }
+
+  .swal2-timer-progress-bar {
+    background: #f06548 !important;
+  }
+}
+
+// Dark mode - solid backgrounds, no transparency
+[data-bs-theme="dark"] {
+  .ai-task-toast {
+    background: #212529 !important;
+    border-color: #32383e !important;
+
+    .swal2-html-container {
+      background: #212529 !important;
+    }
+
+    .swal2-actions {
+      background: #2a2f34 !important;
+      border-top-color: #32383e !important;
+    }
+
+    .toast-body {
+      .toast-title {
+        color: #ced4da !important;
+      }
+      .toast-message {
+        color: #878a99 !important;
+      }
+      .toast-time {
+        color: #6c757d !important;
+      }
+    }
+  }
+}

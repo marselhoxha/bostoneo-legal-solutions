@@ -533,17 +533,47 @@
                   <ng-container [ngSwitch]="step.stepType">
                     <!-- DISPLAY type -->
                     <ng-container *ngSwitchCase="'DISPLAY'">
-                      <div *ngIf="step.outputData.documents?.length" class="output-text">
-                        <strong>Documents Analyzed:</strong>
-                        <ul>
-                          <li *ngFor="let doc of step.outputData.documents">{{ doc.fileName }} - {{ doc.pageCount || '?' }} pages</li>
+                      <!-- Analysis summaries -->
+                      <div *ngIf="step.outputData.analyses?.length" class="output-text mb-2">
+                        <strong>Documents Analyzed:</strong> {{ step.outputData.analyses.length }}
+                        <div class="analysis-preview" *ngFor="let analysis of step.outputData.analyses.slice(0, 2)">
+                          <div class="preview-item">
+                            <i class="ri-file-text-line text-primary me-1"></i>
+                            <span class="preview-title">{{ analysis.fileName }}</span>
+                            <span class="badge bg-soft-info text-info ms-1" *ngIf="analysis.documentType">{{ analysis.documentType }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Action items with preview -->
+                      <div *ngIf="step.outputData.actionItems?.length" class="output-text mb-2">
+                        <strong><i class="ri-checkbox-circle-line text-warning me-1"></i>Action Items:</strong> {{ step.outputData.actionItems.length }} items
+                        <ul class="action-preview-list">
+                          <li *ngFor="let item of step.outputData.actionItems.slice(0, 3)" class="action-preview-item">
+                            <span class="badge me-1" [ngClass]="{
+                              'bg-soft-danger text-danger': item.priority === 'HIGH',
+                              'bg-soft-warning text-warning': item.priority === 'MEDIUM',
+                              'bg-soft-success text-success': item.priority === 'LOW'
+                            }">{{ item.priority }}</span>
+                            {{ item.title || item.description | slice:0:60 }}{{ (item.title || item.description)?.length > 60 ? '...' : '' }}
+                          </li>
+                          <li *ngIf="step.outputData.actionItems.length > 3" class="text-muted">
+                            <i class="ri-more-line"></i> +{{ step.outputData.actionItems.length - 3 }} more items
+                          </li>
                         </ul>
                       </div>
-                      <div *ngIf="step.outputData.actionItems?.length" class="output-text">
-                        <strong>Action Items:</strong> {{ step.outputData.actionItems.length }} items
-                      </div>
+                      <!-- Timeline events with preview -->
                       <div *ngIf="step.outputData.timelineEvents?.length" class="output-text">
-                        <strong>Timeline Events:</strong> {{ step.outputData.timelineEvents.length }} events
+                        <strong><i class="ri-calendar-event-line text-info me-1"></i>Timeline Events:</strong> {{ step.outputData.timelineEvents.length }} events
+                        <ul class="timeline-preview-list">
+                          <li *ngFor="let event of step.outputData.timelineEvents.slice(0, 3)" class="timeline-preview-item">
+                            <span class="badge bg-soft-primary text-primary me-1" *ngIf="event.eventDate">{{ event.eventDate | slice:0:10 }}</span>
+                            <span class="badge bg-soft-danger text-danger me-1" *ngIf="event.isDeadline">DEADLINE</span>
+                            {{ event.title | slice:0:50 }}{{ event.title?.length > 50 ? '...' : '' }}
+                          </li>
+                          <li *ngIf="step.outputData.timelineEvents.length > 3" class="text-muted">
+                            <i class="ri-more-line"></i> +{{ step.outputData.timelineEvents.length - 3 }} more events
+                          </li>
+                        </ul>
                       </div>
                     </ng-container>
 
@@ -1165,8 +1195,8 @@
                 </select>
               </div>
 
-              <!-- Research Mode Selector (Compact) - Hidden for upload mode -->
-              <div class="mode-selector-compact" *ngIf="selectedTask !== 'upload'">
+              <!-- Research Mode Selector (Compact) - Only shown for question mode -->
+              <div class="mode-selector-compact" *ngIf="selectedTask === 'question'">
                 <label>Mode:</label>
                 <div class="btn-group" ngbDropdown placement="top-start">
                   <button id="mode-dropdown-compact"
@@ -1235,41 +1265,13 @@
         </div>
       </div>
       <div class="action-bar-right">
-        <!-- Research Mode Selector -->
-        <div class="mode-selector" ngbDropdown>
-          <button id="mode-dropdown"
-                  ngbDropdownToggle
-                  type="button"
-                  class="btn btn-light btn-sm mode-selector-btn"
-                  [attr.aria-label]="'Selected mode: ' + (selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough')">
-            <span class="mode-label">{{ selectedResearchMode === 'FAST' ? 'Fast' : 'Thorough' }}</span>
-            <span class="mode-badge">{{ selectedResearchMode === 'FAST' ? '~15s' : '~90s' }}</span>
-          </button>
-          <div ngbDropdownMenu class="dropdown-menu mode-dropdown-minimal">
-            <!-- FAST Mode Option -->
-            <a class="dropdown-item mode-option-minimal"
-               [class.active]="selectedResearchMode === 'FAST'"
-               (click)="onResearchModeChange('FAST')">
-              <div class="mode-header-minimal">
-                <span class="mode-title">Fast</span>
-                <span class="mode-meta">~15s</span>
-              </div>
-              <p class="mode-desc-minimal">Quick guidance, no citations</p>
-            </a>
-
-            <div class="dropdown-divider"></div>
-
-            <!-- THOROUGH Mode Option -->
-            <a class="dropdown-item mode-option-minimal"
-               [class.active]="selectedResearchMode === 'THOROUGH'"
-               (click)="onResearchModeChange('THOROUGH')">
-              <div class="mode-header-minimal">
-                <span class="mode-title">Thorough</span>
-                <span class="mode-meta">~90s</span>
-              </div>
-              <p class="mode-desc-minimal">Verified citations via CourtListener</p>
-            </a>
-          </div>
+        <!-- Thorough Mode Indicator (static - drafting always uses thorough mode) -->
+        <div class="mode-indicator">
+          <span class="btn btn-soft-primary btn-sm" style="cursor: default; pointer-events: none;">
+            <i class="ri-verified-badge-line me-1"></i>
+            <span class="mode-label">Thorough</span>
+            <span class="mode-badge">~90s</span>
+          </span>
         </div>
 
         <!-- Export Dropdown Button -->

@@ -38,6 +38,7 @@ import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
 import { CaseWorkflowService, WorkflowTemplate } from '../../../services/case-workflow.service';
+import { BackgroundTaskService, BackgroundTask } from '../../../services/background-task.service';
 
 // NEW: Models and enums
 import { Conversation, Message } from '../../../models/conversation.model';
@@ -121,6 +122,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   loadingWorkflows = false;
   workflowPollingInterval: any = null;
   workflowPollingStartTime: number = 0; // Track when polling started
+  previouslyRunningWorkflowIds: Set<number> = new Set(); // Track workflows for completion notifications
   selectedWorkflowForDetails: any = null;
   showWorkflowDetailsModal = false; // Legacy - keeping for backwards compatibility
   showWorkflowDetailsPage = false; // New full-page view
@@ -393,6 +395,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   newCollectionName = '';
   bulkUploadCollectionId: number | null = null;
   isBatchProcessing = false;
+  private currentAnalysisTaskId: string | null = null; // Background task ID for document analysis
 
   // Collection selection for upload
   selectedUploadCollectionId: number | string | null = null;  // number for existing, 'new' for create new
@@ -918,7 +921,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private conversationOrchestration: ConversationOrchestrationService,
     private transformationService: DocumentTransformationService,
     private route: ActivatedRoute,
-    private caseWorkflowService: CaseWorkflowService
+    private caseWorkflowService: CaseWorkflowService,
+    private backgroundTaskService: BackgroundTaskService
   ) {}
 
   /**
@@ -959,10 +963,50 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
-    // ===== CLEAR STALE STATE =====
-    // Clear any stale generation state from previous navigation
-    // This prevents showing "Generating response" when returning after navigating away
-    this.stateService.clearStaleGenerationState();
+    // ===== BACKGROUND TASK SERVICE SETUP =====
+    // Mark that user is on AI Workspace (suppresses notifications while on this page)
+    this.backgroundTaskService.setIsOnAiWorkspace(true);
+
+    // Subscribe to completed background tasks
+    this.backgroundTaskService.completedTask$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(task => {
+        this.handleCompletedBackgroundTask(task);
+      });
+
+    // Check for any tasks that completed while user was away
+    this.checkForCompletedBackgroundTasks();
+
+    // ===== CLEAR STALE STATE OR RESTORE ACTIVE STATE =====
+    // Check if there are running background tasks - if so, don't clear state
+    const runningTasks = this.backgroundTaskService.getRunningTasks();
+    if (runningTasks.length > 0) {
+      console.log(`🔄 Found ${runningTasks.length} running background tasks - restoring generation state`);
+      // Restore the generation state and workflow steps for running tasks
+      this.stateService.setIsGenerating(true);
+
+      // Re-initialize workflow steps for the active task type
+      const activeTask = runningTasks[0];
+      if (activeTask.type === 'question') {
+        this.initializeWorkflowSteps('question');
+        this.selectedTask = ConversationType.Question;
+      } else if (activeTask.type === 'draft') {
+        this.initializeWorkflowSteps('draft');
+        this.selectedTask = ConversationType.Draft;
+      }
+      this.animateWorkflowSteps();
+
+      // Restore active conversation if the task has one
+      if (activeTask.conversationId) {
+        this.stateService.setActiveConversationId(activeTask.conversationId);
+        this.stateService.setShowChat(true);
+        this.stateService.setShowBottomSearchBar(false); // Hide bottom bar while generating
+      }
+    } else {
+      // No running tasks - clear any stale generation state from previous navigation
+      // This prevents showing "Generating response" when returning after navigating away
+      this.stateService.clearStaleGenerationState();
+    }
 
     // ===== STATE SYNCHRONIZATION =====
     // Restore selectedTask based on current state mode
@@ -1010,6 +1054,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Load conversations for the default task type
     this.loadConversations();
 
+    // Check for pending navigation from background task service (View Result button)
+    this.checkPendingNavigation();
+
     // Load analysis history for sidebar (Recent Documents section)
     // Only load if user is already available; otherwise it's loaded in userData$ subscription
     if (this.currentUser && this.currentUser.id) {
@@ -1030,8 +1077,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.loadUserCases();
     }
 
-    // Handle caseId from query params (when coming from Case Details)
+    // Handle query params (caseId, openConversation, openWorkflow from notifications)
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      // Handle caseId from Case Details page
       if (params['caseId']) {
         const caseId = parseInt(params['caseId'], 10);
         if (!isNaN(caseId)) {
@@ -1039,7 +1087,187 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           console.log('Pre-selected case from query params:', caseId);
         }
       }
+
+      // Handle openConversation from background task notification
+      if (params['openConversation']) {
+        const conversationId = params['openConversation'];
+        const taskType = params['taskType'];
+        const backendId = params['backendId'] ? parseInt(params['backendId'], 10) : undefined;
+        console.log('🔗 Opening conversation from notification:', conversationId, 'taskType:', taskType, 'backendId:', backendId);
+
+        // Wait for conversations to load, then open the specified one with retry logic
+        this.openConversationWithRetry(conversationId, taskType, 0, backendId);
+      }
+
+      // Handle openWorkflow from background task notification
+      if (params['openWorkflow']) {
+        const workflowId = parseInt(params['openWorkflow'], 10);
+        if (!isNaN(workflowId)) {
+          console.log('🔗 Opening workflow from notification:', workflowId);
+          this.selectedTask = ConversationType.Workflow;
+
+          // Wait for workflows to load, then open details
+          setTimeout(() => {
+            const workflow = this.userWorkflows.find(w => w.id === workflowId);
+            if (workflow) {
+              this.viewWorkflowDetails(workflow);
+            } else {
+              // Load the workflow directly
+              this.caseWorkflowService.getExecutionWithSteps(workflowId)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (executionWithSteps) => {
+                    this.selectedWorkflowForDetails = executionWithSteps;
+                    this.showWorkflowDetailsPage = true;
+                    this.cdr.detectChanges();
+                  },
+                  error: (err) => console.error('Failed to load workflow:', err)
+                });
+            }
+          }, 500);
+        }
+      }
     });
+  }
+
+  /**
+   * Open a conversation with retry logic (handles async conversation loading)
+   * @param conversationId - Frontend conversation ID (may be temp ID like conv_xxx_abc)
+   * @param taskType - Type of task (draft, question, etc.)
+   * @param retryCount - Current retry attempt
+   * @param backendConversationId - Backend ID to match against (more reliable after page reload)
+   */
+  private openConversationWithRetry(conversationId: string, taskType?: string, retryCount: number = 0, backendConversationId?: number): void {
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 500;
+
+    console.log(`🔄 openConversationWithRetry attempt ${retryCount + 1}/${MAX_RETRIES}`);
+    console.log(`   conversationId: ${conversationId}, backendId: ${backendConversationId}`);
+
+    // Find the conversation in our list
+    const conversations = this.stateService.getConversations();
+    console.log(`📋 Available conversations: ${conversations.length}`);
+
+    let conversation = conversations.find(c => c.id === conversationId);
+
+    // CRITICAL: Also try to find by backendConversationId (most reliable after page reload)
+    // Frontend IDs are regenerated on reload, but backend IDs persist
+    if (!conversation && backendConversationId) {
+      console.log(`🔍 Searching by backendConversationId: ${backendConversationId}`);
+      conversation = conversations.find(c => c.backendConversationId === backendConversationId);
+      if (conversation) {
+        console.log(`✅ Found by backendConversationId: ${conversation.id}`);
+      }
+    }
+
+    // Also try other formats for compatibility
+    if (!conversation) {
+      conversation = conversations.find(c =>
+        c.id === `conv_${conversationId}` ||
+        c.backendConversationId?.toString() === conversationId ||
+        conversationId.includes(c.backendConversationId?.toString() || 'NOMATCH')
+      );
+    }
+
+    if (conversation) {
+      console.log('✅ Found conversation, opening:', conversation.id, conversation.title);
+
+      // Set the correct task type
+      if (taskType === 'draft' || conversation.taskType === 'GENERATE_DRAFT') {
+        this.selectedTask = ConversationType.Draft;
+        this.activeTask = ConversationType.Draft;
+      } else {
+        this.selectedTask = ConversationType.Question;
+        this.activeTask = ConversationType.Question;
+      }
+
+      // Open the conversation
+      this.switchConversation(conversation.id);
+      this.cdr.detectChanges();
+    } else if (retryCount < MAX_RETRIES) {
+      console.log(`⏳ Conversation not found yet, retrying in ${RETRY_DELAY}ms...`);
+      // Retry after delay
+      setTimeout(() => {
+        this.openConversationWithRetry(conversationId, taskType, retryCount + 1, backendConversationId);
+      }, RETRY_DELAY);
+    } else {
+      console.warn('❌ Conversation not found after max retries:', conversationId);
+      // Show the Question tab so user can see their conversations
+      this.selectedTask = taskType === 'draft' ? ConversationType.Draft : ConversationType.Question;
+      this.notificationService.warning('Conversation Not Found', 'The conversation may have been deleted or is still loading.');
+    }
+  }
+
+  /**
+   * Open a conversation by ID (called from notification navigation) - legacy method
+   */
+  private openConversationById(conversationId: string, taskType?: string): void {
+    this.openConversationWithRetry(conversationId, taskType, 0);
+  }
+
+  /**
+   * Check for pending navigation from BackgroundTaskService (View Result button)
+   */
+  private checkPendingNavigation(): void {
+    const pendingNav = this.backgroundTaskService.getPendingNavigation();
+    if (pendingNav) {
+      // Handle conversation navigation
+      if (pendingNav.conversationId || pendingNav.backendConversationId) {
+        // Wait for conversations to load with retry - pass backendConversationId for reliable matching
+        this.openConversationWithRetry(
+          pendingNav.conversationId || '',
+          pendingNav.taskType,
+          0,
+          pendingNav.backendConversationId
+        );
+      }
+      // Handle workflow navigation
+      else if (pendingNav.workflowId) {
+        this.selectedTask = ConversationType.Workflow;
+
+        // Wait for workflows to load, then open details
+        setTimeout(() => {
+          const workflow = this.userWorkflows.find(w => w.id === pendingNav.workflowId);
+          if (workflow) {
+            this.viewWorkflowDetails(workflow);
+          } else {
+            // Load the workflow directly from API
+            this.caseWorkflowService.getExecutionWithSteps(pendingNav.workflowId!)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (executionWithSteps) => {
+                  this.selectedWorkflowForDetails = executionWithSteps;
+                  this.showWorkflowDetailsPage = true;
+                  this.cdr.detectChanges();
+                },
+                error: (err) => console.error('Failed to load workflow:', err)
+              });
+          }
+        }, 1000);
+      }
+      // Handle analysis navigation
+      else if (pendingNav.taskType === 'analysis' && pendingNav.analysisIds && pendingNav.analysisIds.length > 0) {
+        this.selectedTask = ConversationType.Upload;
+
+        // Display the last analysis result - use databaseId for API call
+        const lastResult = pendingNav.analysisIds[pendingNav.analysisIds.length - 1];
+        const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
+
+        this.documentAnalyzerService.getAnalysisById(analysisId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (fullResult) => {
+              // Pass false to suppress notification - background task toast already notified user
+              this.displayAnalysisResults(fullResult, false);
+              this.cdr.detectChanges();
+            },
+            error: () => {
+              // Fallback: just refresh the analysis history
+              this.loadAnalysisHistory();
+            }
+          });
+      }
+    }
   }
 
   /**
@@ -1393,6 +1621,41 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               progress: w.progressPercentage
             })));
           }
+
+          // Check for newly completed workflows (was running, now completed/failed)
+          const currentRunningIds = new Set(runningWorkflows.map(w => w.id));
+          const completedWorkflows = workflows.filter(w =>
+            this.previouslyRunningWorkflowIds.has(w.id) &&
+            (w.status === 'COMPLETED' || w.status === 'FAILED')
+          );
+
+          // Send notifications for completed workflows
+          completedWorkflows.forEach(workflow => {
+            const workflowName = workflow.name || workflow.template?.name || 'Workflow';
+            if (workflow.status === 'COMPLETED') {
+              // Register and complete a background task for notification
+              const taskId = this.backgroundTaskService.registerTask(
+                'workflow',
+                workflowName,
+                'Case workflow completed',
+                { workflowId: workflow.id }
+              );
+              this.backgroundTaskService.completeTask(taskId, workflow);
+            } else if (workflow.status === 'FAILED') {
+              const taskId = this.backgroundTaskService.registerTask(
+                'workflow',
+                workflowName,
+                'Case workflow failed',
+                { workflowId: workflow.id }
+              );
+              this.backgroundTaskService.failTask(taskId, 'Workflow execution failed');
+            }
+            // Remove from tracking
+            this.previouslyRunningWorkflowIds.delete(workflow.id);
+          });
+
+          // Update tracking for currently running workflows
+          runningWorkflows.forEach(w => this.previouslyRunningWorkflowIds.add(w.id));
 
           // Update the workflows array (creates new reference for change detection)
           this.userWorkflows = [...workflows];
@@ -2097,16 +2360,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Legal documents need citations for credibility and court filings
    */
   private setModeForDrafting(): void {
-    const previousMode = this.selectedResearchMode;
     this.selectedResearchMode = ResearchMode.Thorough;
-
-    if (previousMode !== ResearchMode.Thorough) {
-      console.log('⭐ Drafting mode: Auto-switched to THOROUGH for verified citations');
-      this.notificationService.info(
-        'THOROUGH Mode Active',
-        'Drafting mode automatically uses THOROUGH mode for verified citations'
-      );
-    }
   }
 
   /**
@@ -2120,6 +2374,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Mark that user left AI Workspace (re-enables notifications)
+    this.backgroundTaskService.setIsOnAiWorkspace(false);
+
     this.destroy$.next();
     this.destroy$.complete();
     this.cancelGeneration$.complete();
@@ -2470,13 +2727,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               setTimeout(() => {
                 this.quillEditorInstance = null;
-                this.showEditor = true;
 
-                // Activate drafting mode
+                // CRITICAL: Set drafting mode FIRST so container becomes visible
                 this.stateService.setDraftingMode(true);
                 this.stateService.setShowChat(true);
                 this.stateService.setShowBottomSearchBar(false);
+                this.cdr.detectChanges(); // Render container first
 
+                // NOW show editor - container exists
+                this.showEditor = true;
                 this.setModeForDrafting();
                 this.cdr.detectChanges();
               }, 0);
@@ -2568,13 +2827,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     // Clear editor instance BEFORE recreating component
                     this.quillEditorInstance = null;
 
-                    // Recreate editor component
-                    this.showEditor = true;
-
-                    // Activate drafting mode
+                    // CRITICAL: Set drafting mode FIRST so container becomes visible
                     this.stateService.setDraftingMode(true);
                     this.stateService.setShowChat(true);
                     this.stateService.setShowBottomSearchBar(false);
+                    this.cdr.detectChanges(); // Render container first
+
+                    // NOW show editor - container exists
+                    this.showEditor = true;
 
                     // Auto-switch to THOROUGH mode for drafting
                     this.setModeForDrafting();
@@ -3258,6 +3518,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
     this.stateService.updateWorkflowStep(1, { status: WorkflowStepStatus.Active });
 
+    // Register background task for document analysis
+    const fileNames = filesToUpload.map(f => f.name).join(', ');
+    const taskTitle = totalFiles === 1 ? filesToUpload[0].name : `${totalFiles} documents`;
+    this.currentAnalysisTaskId = this.backgroundTaskService.registerTask(
+      'analysis',
+      taskTitle,
+      `Analyzing: ${fileNames.substring(0, 50)}${fileNames.length > 50 ? '...' : ''}`
+    );
+    this.backgroundTaskService.startTask(this.currentAnalysisTaskId);
+
     filesToUpload.forEach((fileItem) => {
       if (!fileItem.file) {
         completedCount++;
@@ -3270,14 +3540,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       // Call document analyzer service - DON'T pass sessionId to avoid deadlocks
       // Session will be updated once at the end in finalizeUpload
+      // NOTE: No takeUntil(destroy$) - analysis continues even if user navigates away
       this.documentAnalyzerService.analyzeDocument(
         fileItem.file,
         this.selectedAnalysisType,
         undefined,  // No sessionId for parallel uploads - prevents DB deadlocks
         this.selectedAnalysisContext,
         this.selectedCaseId
-      ).pipe(
-        takeUntil(this.destroy$)
       ).subscribe({
         next: (result) => {
           // Service now filters to only emit Response events with valid results
@@ -3285,21 +3554,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           fileItem.status = 'completed';
           fileItem.analysisId = result.id;
           analysisResults.push({ id: result.id, databaseId: result.databaseId, fileName: result.fileName });
-          console.log(`✅ File ${completedCount + 1}/${totalFiles} analyzed:`, result.fileName);
 
           // Add to collection if target collection exists
           if (targetCollectionId && result.databaseId) {
             const addPromise = new Promise<void>((resolve, reject) => {
+              let resolved = false;
+              // NOTE: No takeUntil - collection add continues even if user navigates away
               this.collectionService.addDocumentToCollection(targetCollectionId, result.databaseId)
-                .pipe(takeUntil(this.destroy$))
                 .subscribe({
                   next: () => {
-                    console.log(`📁 Added ${result.fileName} to collection ${targetCollectionId}`);
-                    resolve();
+                    if (!resolved) { resolved = true; resolve(); }
                   },
                   error: (err) => {
-                    console.error(`Failed to add ${result.fileName} to collection:`, err);
-                    reject(err);
+                    if (!resolved) { resolved = true; reject(err); }
+                  },
+                  complete: () => {
+                    // Ensure promise resolves even if subscription completes without next/error
+                    if (!resolved) { resolved = true; resolve(); }
                   }
                 });
             });
@@ -3309,8 +3580,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           completedCount++;
           this.checkUploadCompletion(completedCount, failedCount, totalFiles, sessionId, analysisResults, targetCollectionId, pendingCollectionAdds);
         },
-        error: (error) => {
-          console.error('❌ File analysis failed:', error);
+        error: () => {
           fileItem.status = 'failed';
           failedCount++;
           completedCount++;
@@ -3341,13 +3611,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log(`📊 All ${totalFiles} files processed: ${analysisResults.length} succeeded, ${failedCount} failed`);
-
     // Wait for all collection additions to complete before finalizing
     if (targetCollectionId && pendingCollectionAdds.length > 0) {
-      Promise.allSettled(pendingCollectionAdds).then((results) => {
-        const successfulAdds = results.filter(r => r.status === 'fulfilled').length;
-        console.log(`📁 Collection additions complete: ${successfulAdds}/${pendingCollectionAdds.length} succeeded`);
+      Promise.allSettled(pendingCollectionAdds).then(() => {
         this.finalizeUpload(failedCount, totalFiles, sessionId, analysisResults, targetCollectionId);
       });
     } else {
@@ -3365,84 +3631,95 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     analysisResults: Array<{ id: string; databaseId: number; fileName: string }>,
     targetCollectionId: number | null
   ): void {
-    // Complete all workflow steps
-    this.completeAllWorkflowSteps();
-    this.stateService.setIsGenerating(false);
-
-    // End batch processing
-    this.isBatchProcessing = false;
-
-    // Save assistant message to backend with analysis metadata
-    if (sessionId && analysisResults.length > 0) {
-      const lastResult = analysisResults[analysisResults.length - 1];
-      const assistantContent = analysisResults.length === 1
-        ? `Document analysis completed for ${lastResult.fileName}`
-        : `Batch analysis completed for ${analysisResults.length} documents`;
-
-      this.legalResearchService.addMessageToSession(
-        sessionId,
-        this.currentUser?.id || 1,
-        'assistant',
-        assistantContent,
-        { analysisId: lastResult.id, databaseId: lastResult.databaseId }
-      ).pipe(takeUntil(this.destroy$))
-       .subscribe({
-         next: () => console.log('✅ Analysis metadata saved to conversation'),
-         error: (err) => console.error('❌ Failed to save analysis metadata:', err)
-       });
+    // CRITICAL: Complete background task FIRST (before any component operations)
+    // This ensures toast notification is sent even if component is destroyed
+    if (this.currentAnalysisTaskId) {
+      if (failedCount === totalFiles) {
+        this.backgroundTaskService.failTask(this.currentAnalysisTaskId, 'All documents failed to analyze');
+      } else {
+        this.backgroundTaskService.completeTask(this.currentAnalysisTaskId, {
+          successCount: analysisResults.length,
+          failedCount,
+          results: analysisResults
+        });
+      }
+      this.currentAnalysisTaskId = null;
     }
 
-    // Handle collection upload completion
-    if (targetCollectionId) {
-      const successCount = analysisResults.length;
-      if (successCount > 0) {
-        this.notificationService.success(
-          'Added to Collection',
-          `${successCount} document${successCount > 1 ? 's' : ''} added to collection${failedCount > 0 ? ` (${failedCount} failed)` : ''}`
-        );
-      } else {
-        this.notificationService.error('Upload Failed', 'No documents were successfully analyzed');
+    // Component UI updates - wrapped in try-catch because component may be destroyed
+    try {
+      // Complete all workflow steps
+      this.completeAllWorkflowSteps();
+      this.stateService.setIsGenerating(false);
+
+      // End batch processing
+      this.isBatchProcessing = false;
+      // Save assistant message to backend with analysis metadata
+      if (sessionId && analysisResults.length > 0) {
+        const lastResult = analysisResults[analysisResults.length - 1];
+        const assistantContent = analysisResults.length === 1
+          ? `Document analysis completed for ${lastResult.fileName}`
+          : `Batch analysis completed for ${analysisResults.length} documents`;
+
+        this.legalResearchService.addMessageToSession(
+          sessionId,
+          this.currentUser?.id || 1,
+          'assistant',
+          assistantContent,
+          { analysisId: lastResult.id, databaseId: lastResult.databaseId }
+        ).pipe(takeUntil(this.destroy$))
+         .subscribe();
       }
 
-      // Reset collection state
-      this.createCollectionOnUpload = false;
-      this.newCollectionName = '';
-      this.selectedUploadCollectionId = null;
-      this.newUploadCollectionName = '';
-      this.bulkUploadCollectionId = null;
+      // Handle collection upload completion
+      if (targetCollectionId) {
+        // No notification here - background task toast already notified user
 
-      // Refresh collections list
-      this.loadCollections();
+        // Reset collection state
+        this.createCollectionOnUpload = false;
+        this.newCollectionName = '';
+        this.selectedUploadCollectionId = null;
+        this.newUploadCollectionName = '';
+        this.bulkUploadCollectionId = null;
 
-      // Open collection viewer
-      this.isViewingCollection = true;
-      this.activeCollectionId = targetCollectionId;
-      this.stateService.setShowChat(false);
-      this.cdr.detectChanges();
-    } else if (analysisResults.length > 0) {
-      // No collection - show document viewer for single document, or last document for batch
-      const lastResult = analysisResults[analysisResults.length - 1];
-      this.documentAnalyzerService.getAnalysisById(lastResult.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (fullResult) => {
-            this.displayAnalysisResults(fullResult);
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            // Fallback: just refresh the analysis history
-            this.loadAnalysisHistory();
-            this.cdr.detectChanges();
-          }
+        // Refresh collections list
+        this.loadCollections();
+
+        // Open collection viewer
+        this.isViewingCollection = true;
+        this.activeCollectionId = targetCollectionId;
+        this.stateService.setShowChat(false);
+        this.cdr.detectChanges();
+      } else if (analysisResults.length > 0) {
+        // No collection - show document viewer for single document, or last document for batch
+        const lastResult = analysisResults[analysisResults.length - 1];
+        // Use databaseId for API call (more reliable than frontend id)
+        const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
+        this.documentAnalyzerService.getAnalysisById(analysisId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (fullResult) => {
+              // Pass false - no notification needed, background task toast already notified
+              this.displayAnalysisResults(fullResult, false);
+              this.cdr.detectChanges();
+            },
+            error: () => {
+              // Fallback: just refresh the analysis history
+              this.loadAnalysisHistory();
+              this.cdr.detectChanges();
+            }
+          });
+      } else {
+        // All failed
+        this.stateService.addConversationMessage({
+          role: 'assistant',
+          content: `❌ All ${totalFiles} document analyses failed. Please try again.`,
+          timestamp: new Date()
         });
-    } else {
-      // All failed
-      this.stateService.addConversationMessage({
-        role: 'assistant',
-        content: `❌ All ${totalFiles} document analyses failed. Please try again.`,
-        timestamp: new Date()
-      });
-      this.cdr.detectChanges();
+        this.cdr.detectChanges();
+      }
+    } catch (e) {
+      // Component was destroyed - UI updates not needed, but background task already completed
     }
   }
 
@@ -3672,8 +3949,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   /**
    * Display analysis results - opens Document Analysis Viewer
+   * @param result - The analysis result to display
+   * @param showNotification - Whether to show a success notification (default: true)
+   *                           Set to false when called from background task handlers to avoid duplicate toasts
    */
-  private displayAnalysisResults(result: any): void {
+  private displayAnalysisResults(result: any, showNotification: boolean = true): void {
     // Create analyzed document object for state
     const analyzedDoc: AnalyzedDocument = {
       id: result.id,
@@ -3699,11 +3979,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setViewerSidebarCollapsed(true);
     this.stateService.openDocumentViewer(result.id);
 
-    // Show success notification
-    this.notificationService.success(
-      'Analysis Complete',
-      `${result.fileName} has been analyzed successfully`
-    );
+    // Show success notification only if requested (skip for background task results)
+    if (showNotification) {
+      this.notificationService.success(
+        'Analysis Complete',
+        `${result.fileName} has been analyzed successfully`
+      );
+    }
 
     // Force change detection
     this.cdr.detectChanges();
@@ -5541,11 +5823,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             conversationId: initResponse.conversationId
           };
 
-          this.documentGenerationService.generateDraftWithConversation(draftRequestWithConversation)
-            .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+          // Register background task for draft generation
+          const taskId = this.backgroundTaskService.registerTask(
+            'draft',
+            title,
+            `Drafting: ${documentType}`,
+            { conversationId: tempConvId, backendConversationId: initResponse.conversationId }
+          );
+          this.backgroundTaskService.startTask(taskId);
+
+          // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
+          const subscription = this.documentGenerationService.generateDraftWithConversation(draftRequestWithConversation)
+            .pipe(takeUntil(this.cancelGeneration$))
             .subscribe({
               next: (response) => {
                 console.log('Draft generated with conversation:', response);
+
+          // Complete the background task
+          this.backgroundTaskService.completeTask(taskId, response);
 
           // Complete workflow steps
           this.completeAllWorkflowSteps();
@@ -5613,6 +5908,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           // Store content in pending property - will be loaded in onEditorCreated()
           this.pendingDocumentContent = response.document.content || '';
+          console.log('📝 pendingDocumentContent SET, length:', this.pendingDocumentContent.length);
+          console.log('📝 Content preview:', this.pendingDocumentContent.substring(0, 200));
 
           // Add assistant message
           this.stateService.addConversationMessage({
@@ -5622,29 +5919,43 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           });
 
           // FORCE editor destruction and recreation
+          console.log('🔄 Destroying editor (showEditor = false)');
           this.showEditor = false;
           this.cdr.detectChanges();
 
           // Recreate editor - content will load automatically in onEditorCreated()
+          // Use 50ms delay to ensure Angular fully destroys the old editor
           setTimeout(() => {
+            console.log('🔄 Recreating editor...');
+            console.log('📝 pendingDocumentContent at recreation time:', this.pendingDocumentContent?.length || 'NULL');
+
             // Clear editor instance BEFORE recreating component
             this.quillEditorInstance = null;
 
-            // Recreate editor component
-            this.showEditor = true;
-
-            // ACTIVATE SPLIT-VIEW DRAFTING MODE
+            // CRITICAL FIX: Set drafting mode FIRST so the container becomes visible
+            // The split-view-container has *ngIf="draftingMode$ | async"
+            // If we set showEditor=true before draftingMode, Quill won't be created
+            // because its parent container isn't in the DOM yet
             this.stateService.setDraftingMode(true);
             this.stateService.setIsGenerating(false);
+            this.cdr.detectChanges(); // Render the split-view-container first
+            console.log('🔄 Drafting mode activated, container should be visible');
+
+            // NOW set showEditor to true - the container exists, so Quill can be created
+            this.showEditor = true;
 
             // Auto-switch to THOROUGH mode for drafting
             this.setModeForDrafting();
 
             this.cdr.detectChanges();
-          }, 0);
+            console.log('🔄 showEditor=true, detectChanges called, Quill editor should be created now');
+          }, 50);
         },
         error: (error) => {
           console.error('Error generating document:', error);
+
+          // Fail the background task
+          this.backgroundTaskService.failTask(taskId, error.message || 'Failed to generate document');
 
           // Remove temp conversation if it still exists
           const conversations = this.stateService.getConversations();
@@ -5671,6 +5982,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         }
       });
+
+          // Store subscription for cleanup
+          this.backgroundTaskService.storeSubscription(taskId, subscription);
         },
         error: (error) => {
           console.error('Error initializing draft conversation:', error);
@@ -5744,11 +6058,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             const requestConversationId = newConv.id;
             const requestBackendId = session.id;
 
-            this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt, researchMode)
-              .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+            // Register background task (continues even if user navigates away)
+            const taskId = this.backgroundTaskService.registerTask(
+              'question',
+              title,
+              `Legal research: ${userPrompt.substring(0, 50)}...`,
+              { conversationId: requestConversationId, backendConversationId: requestBackendId }
+            );
+            this.backgroundTaskService.startTask(taskId);
+
+            // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
+            // Only cancel on explicit user cancellation
+            const subscription = this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt, researchMode)
+              .pipe(takeUntil(this.cancelGeneration$))
               .subscribe({
                 next: (message) => {
                   console.log('Received AI response for conversation:', requestConversationId);
+
+                  // Complete the background task with result
+                  this.backgroundTaskService.completeTask(taskId, message);
 
                   // Only update UI if THIS conversation is still active (prevents race condition)
                   if (this.stateService.getActiveConversationId() === requestConversationId) {
@@ -5780,12 +6108,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     this.stateService.setShowBottomSearchBar(true);
                     this.cdr.detectChanges();
                   } else {
-                    console.log('Response arrived for inactive conversation, ignoring UI update');
+                    console.log('Response arrived for inactive conversation - will show notification');
                     this.stateService.setIsGenerating(false);
                   }
                 },
                 error: (error) => {
                   console.error('Error getting AI response:', error);
+
+                  // Fail the background task
+                  this.backgroundTaskService.failTask(taskId, error.message || 'Failed to get AI response');
 
                   // Mark workflow as error
                   if (this.stateService.getWorkflowSteps().length > 0) {
@@ -5801,6 +6132,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   this.cdr.detectChanges();
                 }
               });
+
+            // Store subscription for cleanup
+            this.backgroundTaskService.storeSubscription(taskId, subscription);
           }
         },
         error: (error) => {
@@ -6852,15 +7186,28 @@ You can:
     const requestConversationId = this.stateService.getActiveConversationId();
     const requestBackendId = activeConv.backendConversationId;
 
-    this.legalResearchService.sendMessageToConversation(
+    // Register background task for follow-up message
+    const taskId = this.backgroundTaskService.registerTask(
+      'question',
+      activeConv.title || 'Follow-up Question',
+      `Follow-up: ${userMessage.substring(0, 50)}...`,
+      { conversationId: requestConversationId!, backendConversationId: requestBackendId }
+    );
+    this.backgroundTaskService.startTask(taskId);
+
+    // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
+    const subscription = this.legalResearchService.sendMessageToConversation(
       requestBackendId,
       userMessage,
       researchMode
     )
-      .pipe(takeUntil(merge(this.destroy$, this.cancelGeneration$)))
+      .pipe(takeUntil(this.cancelGeneration$))
       .subscribe({
         next: (message) => {
           console.log('Received AI response for conversation:', requestConversationId);
+
+          // Complete the background task with result
+          this.backgroundTaskService.completeTask(taskId, message);
 
           // Only update UI if THIS conversation is still active (prevents race condition)
           if (this.stateService.getActiveConversationId() === requestConversationId) {
@@ -6892,12 +7239,15 @@ You can:
             this.stateService.setShowBottomSearchBar(true);
             this.cdr.detectChanges();
           } else {
-            console.log('Response arrived for inactive conversation, ignoring UI update');
+            console.log('Response arrived for inactive conversation - will show notification');
             this.stateService.setIsGenerating(false);
           }
         },
         error: (error) => {
           console.error('Error sending message:', error);
+
+          // Fail the background task
+          this.backgroundTaskService.failTask(taskId, error.message || 'Failed to send message');
 
           // Mark workflow as error
           if (this.stateService.getWorkflowSteps().length > 0) {
@@ -6913,6 +7263,9 @@ You can:
           this.cdr.detectChanges();
         }
       });
+
+    // Store subscription for cleanup
+    this.backgroundTaskService.storeSubscription(taskId, subscription);
   }
 
   // Handle Enter key press in textarea
@@ -7780,6 +8133,144 @@ You can:
       console.error('Error saving to file manager:', error);
       this.notificationService.error('Error', 'Failed to save to File Manager');
     }
+  }
+
+  // ===== BACKGROUND TASK METHODS =====
+
+  /**
+   * Handle a completed background task
+   * Called when a task completes (either while on this page or from completedTask$ subscription)
+   */
+  private handleCompletedBackgroundTask(task: BackgroundTask): void {
+    console.log('📬 Handling completed background task:', task.id, task.type);
+
+    switch (task.type) {
+      case 'question':
+        this.handleCompletedQuestionTask(task);
+        break;
+      case 'draft':
+        this.handleCompletedDraftTask(task);
+        break;
+      case 'analysis':
+        this.handleCompletedAnalysisTask(task);
+        break;
+      case 'workflow':
+        this.handleCompletedWorkflowTask(task);
+        break;
+    }
+
+    // Remove the task after handling
+    this.backgroundTaskService.removeTask(task.id);
+  }
+
+  /**
+   * Check for completed background tasks when returning to workspace
+   */
+  private checkForCompletedBackgroundTasks(): void {
+    const completedTasks = this.backgroundTaskService.getCompletedTasks();
+    if (completedTasks.length > 0) {
+      completedTasks.forEach(task => {
+        this.handleCompletedBackgroundTask(task);
+      });
+    }
+  }
+
+  /**
+   * Handle completed question/research task
+   */
+  private handleCompletedQuestionTask(task: BackgroundTask): void {
+    if (task.result && task.conversationId) {
+      // If the conversation is currently active, add the message
+      if (this.stateService.getActiveConversationId() === task.conversationId) {
+        // Complete workflow steps
+        this.completeAllWorkflowSteps();
+
+        // Extract follow-up questions and remove from content
+        const cleanedContent = this.extractAndRemoveFollowUpQuestions(task.result.content);
+
+        // Add assistant message
+        const assistantMessage = {
+          role: 'assistant' as 'assistant',
+          content: cleanedContent,
+          timestamp: new Date(task.result.createdAt || new Date())
+        };
+        this.stateService.addConversationMessage(assistantMessage);
+
+        // Update conversation message count
+        const conv = this.stateService.getConversations().find(c => c.id === task.conversationId);
+        if (conv) {
+          conv.messages.push(assistantMessage);
+          conv.messageCount = (conv.messageCount || 0) + 1;
+        }
+
+        this.stateService.setIsGenerating(false);
+        this.stateService.setShowBottomSearchBar(true);
+        this.cdr.detectChanges();
+
+        this.notificationService.success('Response Ready', 'AI response has been added to the conversation');
+      } else {
+        // Store for later and notify user
+        this.stateService.storeBackgroundResult(task.conversationId, task.result);
+        this.notificationService.info('Response Available', `Click on the conversation "${task.title}" to view the response`);
+      }
+    }
+  }
+
+  /**
+   * Handle completed draft task
+   */
+  private handleCompletedDraftTask(task: BackgroundTask): void {
+    if (task.result && task.conversationId) {
+      // Store the result for when user switches to this conversation
+      this.stateService.storeBackgroundResult(task.conversationId, task.result);
+      this.notificationService.info('Draft Ready', `"${task.title}" has been drafted. Click the conversation to view.`);
+    }
+  }
+
+  /**
+   * Handle completed analysis task - displays the analysis result
+   * Note: No additional notification shown here since toast already notified the user
+   */
+  private handleCompletedAnalysisTask(task: BackgroundTask): void {
+    // Refresh the analysis history to show new results
+    this.loadAnalysisHistory();
+
+    // Display the analysis result if available
+    if (task.result && task.result.results && task.result.results.length > 0) {
+      const lastResult = task.result.results[task.result.results.length - 1];
+
+      // Use databaseId for API call (more reliable than frontend id)
+      const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
+
+      // Fetch and display the analysis
+      this.documentAnalyzerService.getAnalysisById(analysisId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (fullResult) => {
+            // Pass false to suppress notification - background task toast already notified user
+            this.displayAnalysisResults(fullResult, false);
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            // Silently fail - user can find analysis in history
+          }
+        });
+    }
+  }
+
+  /**
+   * Handle completed workflow task
+   */
+  private handleCompletedWorkflowTask(task: BackgroundTask): void {
+    // Refresh workflows list
+    this.loadUserWorkflows();
+
+    // If user is viewing this workflow, refresh it
+    if (this.selectedWorkflowForDetails && this.selectedWorkflowForDetails.id === task.workflowId) {
+      this.refreshWorkflowDetails();
+    }
+
+    this.notificationService.success('Workflow Completed', `"${task.title}" has finished processing`);
   }
 
 }

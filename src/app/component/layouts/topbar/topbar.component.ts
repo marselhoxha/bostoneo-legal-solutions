@@ -187,21 +187,18 @@ export class TopbarComponent implements OnInit, OnDestroy {
   private loadCaseManagementData(): void {
     // Skip if user not authenticated
     if (!this.userService.isAuthenticated()) {
-      console.log('User not authenticated, skipping case management data load');
       return;
     }
     
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
       if (!user || !user.id) {
-        console.log('No user data available, retrying...');
         // Retry after a delay if user data not available
         setTimeout(() => {
           this.loadCaseManagementDataDirect();
         }, 500);
         return;
       }
-      
-      console.log('Loading case management data for user:', user.id);
+
       this.loadCaseDataForUser(user.id);
     });
   }
@@ -212,7 +209,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
   private loadCaseManagementDataDirect(): void {
     const userData = this.userService.getCurrentUser();
     if (userData && userData.id) {
-      console.log('Direct loading case management data for user:', userData.id);
       this.loadCaseDataForUser(userData.id);
     }
   }
@@ -221,18 +217,14 @@ export class TopbarComponent implements OnInit, OnDestroy {
    * Load case data for a specific user
    */
   private loadCaseDataForUser(userId: number): void {
-    console.log('Loading case data for user ID:', userId);
-      
       // Load user's case assignments
       this.caseAssignmentService.getUserAssignments(userId, 0, 10)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            console.log('Case assignments response:', response);
             if (response && response.data) {
               // Service now handles the mapping
               const assignments = response.data;
-              console.log('Processed assignments:', assignments);
               if (assignments.length > 0) {
                 this.recentAssignments = assignments.slice(0, 3).map((assignment: CaseAssignment) => ({
                   id: assignment.id,
@@ -260,8 +252,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
             }
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Error loading case assignments:', error);
+          error: () => {
             // Set default values on error
             this.recentAssignments = [];
             this.myCasesCount = 0;
@@ -269,23 +260,20 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           }
         });
-      
+
       // Load user's workload
       this.caseAssignmentService.calculateUserWorkload(userId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            console.log('Workload response:', response);
             if (response && response.data) {
               // Service now handles the mapping
               const workload = response.data;
               this.teamWorkloadPercentage = Math.round(workload.capacityPercentage || 0);
-              console.log('Team workload percentage:', this.teamWorkloadPercentage);
             }
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Error loading workload:', error);
+          error: () => {
             // Set default value on error
             this.teamWorkloadPercentage = 0;
             this.cdr.detectChanges();
@@ -297,24 +285,20 @@ export class TopbarComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            console.log('Tasks response:', response);
             if (response && response.data) {
               // Service now handles the mapping
               const tasks = response.data;
-              console.log('Processed tasks:', tasks);
               if (tasks.length > 0) {
-                this.myTasksCount = tasks.filter((task: any) => 
+                this.myTasksCount = tasks.filter((task: any) =>
                   task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
                 ).length;
               } else {
                 this.myTasksCount = 0;
               }
-              console.log('Active tasks count:', this.myTasksCount);
             }
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Error loading tasks:', error);
+          error: () => {
             // Set default value on error
             this.myTasksCount = 0;
             this.cdr.detectChanges();
@@ -368,23 +352,20 @@ export class TopbarComponent implements OnInit, OnDestroy {
       if (user && user.id) {
         // If user changed, reset notifications loaded flag
         if (previousUserId && previousUserId !== user.id) {
-          console.log('🔄 User changed, resetting notifications state');
           this.notificationsLoaded = false;
           this.pushNotifications = [];
           this.unreadNotificationCount = 0;
         }
-        
+
         // Load notifications only if not already loaded for this user
         if (!this.notificationsLoaded) {
-          console.log('🔔 Loading backend notifications for user (first time):', user.id);
           this.loadBackendNotifications(user.id);
           this.notificationsLoaded = true;
         }
-        
+
         previousUserId = user.id;
       } else {
         // User logged out, reset everything
-        console.log('🔄 User logged out, resetting notifications state');
         this.notificationsLoaded = false;
         this.pushNotifications = [];
         this.unreadNotificationCount = 0;
@@ -398,21 +379,13 @@ export class TopbarComponent implements OnInit, OnDestroy {
    */
   private async loadBackendNotifications(userId: number): Promise<void> {
     try {
-      console.log('📡 Fetching backend notifications for user:', userId);
-      
       // Use the NotificationManagerService to check for missed notifications
       // This will use the proper authentication and API setup
       await this.notificationManagerService.checkMissedNotifications(userId);
-      
-      console.log('✅ Requested backend notifications via NotificationManagerService');
-      
+
     } catch (error) {
-      console.error('❌ Error loading backend notifications:', error);
-      
       // Fallback: Try direct API call as a backup
       try {
-        console.log('🔄 Trying direct API call as fallback...');
-        
         const response = await fetch(`http://localhost:8085/api/v1/notifications/user/${userId}?page=0&size=10`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -422,8 +395,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
         
         if (response.ok) {
           const data = await response.json();
-          console.log('📬 Backend notifications response (fallback):', data);
-          
+
           if (data?.data?.notifications && data.data.notifications.length > 0) {
             // Process each individual notification and add it to the UI
             data.data.notifications.forEach((backendNotification: any) => {
@@ -447,16 +419,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
               this.addNotification(frontendNotification);
             });
             
-            console.log(`✅ Loaded ${data.data.notifications.length} backend notifications (fallback)`);
-          } else {
-            console.log('📭 No backend notifications found (fallback)');
           }
-        } else {
-          console.error('❌ Fallback API call also failed:', response.status);
         }
-        
+
       } catch (fallbackError) {
-        console.error('❌ Fallback API call error:', fallbackError);
+        // Silently fail on fallback error
       }
     }
   }
@@ -476,12 +443,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
   requestNotificationPermission(): void {
     this.pushNotificationService.requestPermission()
       .then(token => {
-        console.log('Notification permission granted. Token:', token);
         this.firebaseToken = token;
         this.notificationPermissionStatus = 'granted';
       })
-      .catch(error => {
-        console.error('Error requesting notification permission:', error);
+      .catch(() => {
         this.notificationPermissionStatus = Notification.permission;
       });
   }
@@ -494,7 +459,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
     const notificationType = notification.data?.type?.toUpperCase() || '';
     const messageTypes = ['NEW_MESSAGE', 'CLIENT_MESSAGE', 'ATTORNEY_MESSAGE', 'MESSAGE'];
     if (messageTypes.includes(notificationType)) {
-      console.log('📧 Skipping message notification (shown in messages icon):', notificationType);
       return;
     }
 
@@ -513,7 +477,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Check for duplicates based on ID
     const existingNotification = this.pushNotifications.find(n => n.id === notificationId);
     if (existingNotification) {
-      console.log('📝 Notification already exists, skipping:', notificationId);
       return;
     }
     
@@ -546,11 +509,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
     
     // Update unread count
     this.updateUnreadCount();
-    
+
     // Force UI update
     this.cdr.detectChanges();
-    
-    console.log('📝 Added notification:', notificationObj.title);
   }
   
   /**
@@ -583,21 +544,21 @@ export class TopbarComponent implements OnInit, OnDestroy {
         audio.volume = 0.3;
         
         // Add error handler to avoid console errors
-        audio.addEventListener('error', (e) => {
-          console.log('Notification sound could not be played:', e.error);
+        audio.addEventListener('error', () => {
+          // Silently fail if sound cannot be played
         });
-        
+
         // Try to play and catch any errors
         const playPromise = audio.play();
-        
+
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log('Audio playback prevented by browser policy:', error);
+          playPromise.catch(() => {
+            // Audio playback prevented by browser policy
           });
         }
       }
     } catch (error) {
-      console.log('Notification sound not available');
+      // Notification sound not available
     }
   }
   
@@ -680,16 +641,13 @@ export class TopbarComponent implements OnInit, OnDestroy {
       if (notification.id.startsWith('backend_')) {
         backendId = notification.id.replace('backend_', '');
       }
-      
-      console.log('🔄 Marking notification as read - UI ID:', notification.id, 'Backend ID:', backendId);
-      
+
       // Persist to backend using the correct ID format
       this.notificationService.markAsRead(backendId).subscribe({
         next: () => {
-          console.log('✅ Notification marked as read in backend:', backendId);
+          // Successfully marked as read
         },
-        error: (error) => {
-          console.error('❌ Failed to mark notification as read in backend:', error);
+        error: () => {
           // Revert local state if backend call fails
           notification.read = false;
           this.updateUnreadCount();
@@ -728,7 +686,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
       },
       () => {
         // Handle modal dismiss
-        console.log('Notification modal dismissed');
       }
     );
   }
@@ -761,10 +718,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
     if (unreadNotifications.length > 0) {
       this.notificationService.markAllAsRead().subscribe({
         next: () => {
-          console.log('✅ All notifications marked as read in backend');
+          // Successfully marked all as read
         },
-        error: (error) => {
-          console.error('❌ Failed to mark all notifications as read in backend:', error);
+        error: () => {
           // Revert local state if backend call fails
           unreadNotifications.forEach(notification => {
             const localNotification = this.pushNotifications.find(n => n.id === notification.id);
@@ -885,8 +841,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           }
         },
-        error: (error) => {
-          console.error('Error fetching user profile:', error);
+        error: () => {
           this.userService.refreshToken$()
             .pipe(takeUntil(this.destroy$))
             .subscribe({
@@ -896,8 +851,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
                   this.cdr.detectChanges();
                 }
               },
-              error: (refreshError) => {
-                console.error('Error refreshing token:', refreshError);
+              error: () => {
                 this.logOut();
               }
             });
@@ -1184,8 +1138,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.unreadMessageCount = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error loading client unread message count:', err);
+          error: () => {
+            // Silently fail
           }
         });
     } else {
@@ -1197,8 +1151,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.unreadMessageCount = count;
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error loading unread message count:', err);
+          error: () => {
+            // Silently fail
           }
         });
     }
@@ -1222,8 +1176,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.loadingMessages = false;
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error loading client message threads:', err);
+          error: () => {
             this.loadingMessages = false;
             this.cdr.detectChanges();
           }
@@ -1240,8 +1193,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
             this.loadingMessages = false;
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error loading message threads:', err);
+          error: () => {
             this.loadingMessages = false;
             this.cdr.detectChanges();
           }
@@ -1386,11 +1338,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.timerService.activeTimers$
       .pipe(takeUntil(this.destroy$))
       .subscribe(timers => {
-        console.log('[Topbar] Received timer update from service:', timers.map(t => ({
-          id: t.id,
-          isActive: t.isActive,
-          duration: t.formattedDuration
-        })));
         this.activeTimers = timers;
         this.cdr.detectChanges();
       });
@@ -1416,8 +1363,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
           this.loadingTimers = false;
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          console.error('Error loading active timers:', err);
+        error: () => {
           this.loadingTimers = false;
           this.cdr.detectChanges();
         }
@@ -1476,8 +1422,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
 
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          console.error('Error loading cases for timer:', err);
+        error: () => {
+          // Silently fail
         }
       });
   }
@@ -1545,7 +1491,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.startingTimer = false;
           this.cdr.detectChanges();
-          console.error('Error starting timer:', err);
           Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -1597,7 +1542,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.startingTimer = false;
           this.cdr.detectChanges();
-          console.error('Error starting timer:', err);
           Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -1664,8 +1608,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
           next: () => {
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error pausing timer:', err);
+          error: () => {
             Swal.fire({
               icon: 'error',
               title: 'Error',
@@ -1683,8 +1626,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
           next: () => {
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Error resuming timer:', err);
+          error: () => {
             Swal.fire({
               icon: 'error',
               title: 'Error',
@@ -1748,8 +1690,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
               });
               this.cdr.detectChanges();
             },
-            error: (err) => {
-              console.error('Error converting timer to time entry:', err);
+            error: () => {
               Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -1771,8 +1712,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
               });
               this.cdr.detectChanges();
             },
-            error: (err) => {
-              console.error('Error discarding timer:', err);
+            error: () => {
               Swal.fire({
                 icon: 'error',
                 title: 'Error',

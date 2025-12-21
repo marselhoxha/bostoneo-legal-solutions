@@ -1210,7 +1210,7 @@ public class AIDocumentAnalysisService {
             ## 💰 TOTAL COMPENSATION BREAKDOWN
             - Base Salary: $X/year
             - Bonus (Target): $Y/year
-            - Equity Grant: Z shares (X% of company)
+            - Equity Grant: Z shares (X%% of company)
             - Benefits Value: $A/year
             - **YEAR 1 TOTAL: $XXX,XXX**
 
@@ -1516,7 +1516,7 @@ public class AIDocumentAnalysisService {
 
             ⚠️ [VIABILITY]: Negotiate Settlement
             - Leverage: [Voluntary compliance, cooperation]
-            - Likely Reduction: [X% of maximum penalty]
+            - Likely Reduction: [X%% of maximum penalty]
 
             ## 📝 COMPLIANCE CHECKLIST
             ☐ DAY 1-3 (URGENT):
@@ -1615,7 +1615,7 @@ public class AIDocumentAnalysisService {
 
             ## 📝 RESPONSE STRATEGY
             **OPTION 1: Negotiate**
-            - Counteroffer: $X (X% of demand)
+            - Counteroffer: $X (X%% of demand)
             - Leverage Points: [Weaknesses to exploit]
             - Settlement Terms: [What to require]
 
@@ -1636,7 +1636,7 @@ public class AIDocumentAnalysisService {
 
             ## 🎯 RECOMMENDED APPROACH
             [Negotiate / Reject / Partial Settlement] + detailed reasoning
-            Target Settlement: $X (X% of demand)
+            Target Settlement: $X (X%% of demand)
             Key Negotiation Points: [What to concede vs. fight]
 
             Focus on liability assessment and negotiation leverage.

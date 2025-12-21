@@ -96,6 +96,11 @@ export class AiWorkspaceStateService {
   private followUpQuestionsSubject = new BehaviorSubject<string[]>([]);
   public followUpQuestions$ = this.followUpQuestionsSubject.asObservable();
 
+  // ===== BACKGROUND TASK RESULTS =====
+  // Store results from background tasks that completed while user was away
+  private pendingBackgroundResultsSubject = new BehaviorSubject<Map<string, any>>(new Map());
+  public pendingBackgroundResults$ = this.pendingBackgroundResultsSubject.asObservable();
+
   // ===== CONVERSATION METHODS =====
 
   setConversations(conversations: Conversation[]): void {
@@ -455,5 +460,65 @@ export class AiWorkspaceStateService {
       const cleanedDocs = docs.filter(d => d.status !== 'analyzing');
       this.analyzedDocumentsSubject.next(cleanedDocs);
     }
+  }
+
+  // ===== BACKGROUND TASK RESULTS METHODS =====
+
+  /**
+   * Store a background task result for later retrieval
+   * @param conversationId The conversation ID the result belongs to
+   * @param result The result data
+   */
+  storeBackgroundResult(conversationId: string, result: any): void {
+    const currentResults = this.pendingBackgroundResultsSubject.value;
+    const newResults = new Map(currentResults);
+    newResults.set(conversationId, result);
+    this.pendingBackgroundResultsSubject.next(newResults);
+    console.log(`📦 Stored background result for conversation: ${conversationId}`);
+  }
+
+  /**
+   * Get a pending background result for a conversation
+   * @param conversationId The conversation ID
+   * @returns The stored result or undefined
+   */
+  getBackgroundResult(conversationId: string): any | undefined {
+    return this.pendingBackgroundResultsSubject.value.get(conversationId);
+  }
+
+  /**
+   * Check if there are pending background results
+   */
+  hasPendingBackgroundResults(): boolean {
+    return this.pendingBackgroundResultsSubject.value.size > 0;
+  }
+
+  /**
+   * Get all pending background result conversation IDs
+   */
+  getPendingBackgroundResultIds(): string[] {
+    return Array.from(this.pendingBackgroundResultsSubject.value.keys());
+  }
+
+  /**
+   * Clear a specific background result after it's been consumed
+   * @param conversationId The conversation ID
+   */
+  clearBackgroundResult(conversationId: string): void {
+    const currentResults = this.pendingBackgroundResultsSubject.value;
+    if (currentResults.has(conversationId)) {
+      const newResults = new Map(currentResults);
+      newResults.delete(conversationId);
+      this.pendingBackgroundResultsSubject.next(newResults);
+      console.log(`🗑️ Cleared background result for conversation: ${conversationId}`);
+    }
+  }
+
+  /**
+   * Clear all pending background results
+   */
+  clearAllBackgroundResults(): void {
+    this.pendingBackgroundResultsSubject.next(new Map());
+    console.log('🗑️ Cleared all pending background results');
   }
 }
