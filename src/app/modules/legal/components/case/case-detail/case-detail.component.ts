@@ -1722,27 +1722,86 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private processTeamData(assignments: CaseAssignment[]): void {
     console.log('📑 Processing team data:', assignments);
     if (assignments && assignments.length > 0) {
+      // First, map basic team data
       this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
         id: assignment.userId,
         userId: assignment.userId,
         name: assignment.userName || 'Unknown User',
         userName: assignment.userName || 'Unknown User',
+        firstName: this.getFirstName(assignment.userName),
+        lastName: this.getLastName(assignment.userName),
         title: assignment.roleType,
         roleType: assignment.roleType,
         imageUrl: assignment.userImageUrl || null,
         workloadStatus: 'OPTIMAL',
-        workloadPercentage: assignment.workloadWeight || 0,
+        workloadPercentage: 0, // Will be updated from API
         assignmentId: assignment.id,
         assignmentDate: assignment.assignedAt
       }));
+
+      // Then, fetch actual workload data for each team member
+      this.loadTeamWorkloads();
     } else {
       this.caseTeamMembers = [];
     }
-    
+
     // Update the context service with the loaded team data
     this.caseContextService.updateCaseTeam(assignments);
-    
+
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Load actual workload data for all team members from the API
+   */
+  private loadTeamWorkloads(): void {
+    if (!this.caseTeamMembers || this.caseTeamMembers.length === 0) return;
+
+    const workloadRequests = this.caseTeamMembers.map(member =>
+      this.caseAssignmentService.calculateUserWorkload(member.userId).pipe(
+        catchError(error => {
+          console.warn(`Failed to load workload for user ${member.userId}:`, error);
+          return of({ data: null });
+        })
+      )
+    );
+
+    forkJoin(workloadRequests).subscribe({
+      next: (responses) => {
+        responses.forEach((response, index) => {
+          if (response.data && this.caseTeamMembers[index]) {
+            const workload = response.data;
+            this.caseTeamMembers[index].workloadPercentage = workload.capacityPercentage || 0;
+            this.caseTeamMembers[index].workloadStatus = workload.workloadStatus || 'OPTIMAL';
+            this.caseTeamMembers[index].activeCasesCount = workload.activeCasesCount || 0;
+            this.caseTeamMembers[index].overdueTasksCount = workload.overdueTasksCount || 0;
+          }
+        });
+        console.log('✅ Team workloads updated:', this.caseTeamMembers);
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading team workloads:', error);
+      }
+    });
+  }
+
+  /**
+   * Extract first name from full name
+   */
+  private getFirstName(fullName: string | undefined): string {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ');
+    return parts[0] || '';
+  }
+
+  /**
+   * Extract last name from full name
+   */
+  private getLastName(fullName: string | undefined): string {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ');
+    return parts.length > 1 ? parts.slice(1).join(' ') : '';
   }
 
   /**
@@ -2537,19 +2596,64 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Load available users for modals
+   * Load available users for modals with their workload data
    */
   private async loadAvailableUsers(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.userService.getUsers().subscribe({
         next: (response) => {
-          this.availableUsers = response?.data?.users || [];
-          resolve();
+          this.availableUsers = (response?.data?.users || []).map((user: any) => ({
+            ...user,
+            workloadPercentage: 0,
+            workloadStatus: 'OPTIMAL'
+          }));
+
+          // Load workload data for each user
+          this.loadUsersWorkloads(this.availableUsers).then(() => {
+            resolve();
+          });
         },
         error: (error) => {
           console.error('Error loading users:', error);
           this.availableUsers = [];
           reject(error);
+        }
+      });
+    });
+  }
+
+  /**
+   * Load workload data for a list of users
+   */
+  private async loadUsersWorkloads(users: any[]): Promise<void> {
+    if (!users || users.length === 0) return;
+
+    const workloadRequests = users.map(user =>
+      this.caseAssignmentService.calculateUserWorkload(user.id).pipe(
+        catchError(error => {
+          console.warn(`Failed to load workload for user ${user.id}:`, error);
+          return of({ data: null });
+        })
+      )
+    );
+
+    return new Promise((resolve) => {
+      forkJoin(workloadRequests).subscribe({
+        next: (responses) => {
+          responses.forEach((response, index) => {
+            if (response.data && users[index]) {
+              const workload = response.data;
+              users[index].workloadPercentage = workload.capacityPercentage || 0;
+              users[index].workloadStatus = workload.workloadStatus || 'OPTIMAL';
+              users[index].activeCasesCount = workload.activeCasesCount || 0;
+            }
+          });
+          this.cdr.detectChanges();
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error loading user workloads:', error);
+          resolve();
         }
       });
     });

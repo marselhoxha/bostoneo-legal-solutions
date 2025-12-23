@@ -15,8 +15,11 @@ public class Constants {
     public static final String AUTHORITIES = "authorities";
     public static final String BOSTONEO_SOLUTIONS_LLC = "BOSTONEO_SOLUTIONS_LLC";
     public static final String CLIENT_MANAGEMENT_SERVICE = "CLIENT_MANAGEMENT_SERVICE";
-    public static final long ACCESS_TOKEN_EXPIRATION_TIME = 432_000_000; //1_800_000 - 30 min to expire in ms
-    public static final long REFRESH_TOKEN_EXPIRATION_TIME = 432_000_000; //5 days to expire in ms
+    // SECURITY: Token expiration times for HIPAA compliance
+    // Access token: 30 minutes (short-lived for security)
+    public static final long ACCESS_TOKEN_EXPIRATION_TIME = 1_800_000; // 30 minutes in ms
+    // Refresh token: 8 hours (allows workday session without re-login)
+    public static final long REFRESH_TOKEN_EXPIRATION_TIME = 28_800_000; // 8 hours in ms
     public static final String TOKEN_CANNOT_BE_VERIFIED = "Token cannot be verified";
 
     //Date

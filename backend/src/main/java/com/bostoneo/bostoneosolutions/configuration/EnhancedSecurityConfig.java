@@ -26,7 +26,8 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 
 @Configuration
 @EnableWebSecurity
-//@EnableMethodSecurity(prePostEnabled = true)
+// TODO: Re-enable after ensuring all endpoints have proper @PreAuthorize annotations
+// @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class EnhancedSecurityConfig {
     
@@ -70,17 +71,17 @@ public class EnhancedSecurityConfig {
             )
         );
         
-        // CSRF Configuration
+        // CSRF Configuration - Only disable for truly stateless API endpoints
+        // SECURITY: CSRF is disabled for JWT-authenticated API endpoints since they use token-based auth
         http.csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             .ignoringRequestMatchers(PUBLIC_URLS)
             .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
-            .ignoringRequestMatchers("/api/time-entries/**", "/api/**")
-            .ignoringRequestMatchers("/user/delete/**")  // Ignore CSRF for user deletion
-            .ignoringRequestMatchers("/client/delete/**")  // Ignore CSRF for client deletion
-            .ignoringRequestMatchers("/ws/**")  // Ignore CSRF for WebSocket endpoints
-            .ignoringRequestMatchers("/api/ai/**")  // Ignore CSRF for AI endpoints
-            .ignoringRequestMatchers("/user/update/**")  // Ignore CSRF for user profile updates including image upload
+            .ignoringRequestMatchers("/ws/**")  // WebSocket endpoints use their own auth
+            .ignoringRequestMatchers("/user/new/password", "/user/resetpassword/**")
+            // Note: All /api/** endpoints use JWT tokens which provide CSRF protection
+            // Disabling CSRF for stateless API is acceptable when using Bearer tokens
+            .ignoringRequestMatchers("/api/**")
         );
         
         // CORS Configuration
@@ -104,15 +105,15 @@ public class EnhancedSecurityConfig {
             .authenticationEntryPoint(customAuthenticationEntryPoint)
         );
         
-        // Authorization - Allow WebSocket connections to bypass authentication
+        // Authorization Rules
+        // SECURITY: All API endpoints require authentication except explicitly public routes
         http.authorizeHttpRequests(authorize -> authorize
             .requestMatchers(OPTIONS).permitAll()
             .requestMatchers(PUBLIC_URLS).permitAll()
-            .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
-            .requestMatchers("/api/crm/**").permitAll()  // Temporarily allow public access to CRM for debugging
-            .requestMatchers("/api/ai/**").permitAll()  // Allow public access to AI for testing
-            .requestMatchers("/api/legal/**").permitAll()  // Allow public access to legal research for testing
-            .requestMatchers("/api/files/**").permitAll()  // Allow public access to file downloads for PDF viewing
+            .requestMatchers("/ws/**").permitAll()  // WebSocket has its own token validation
+            .requestMatchers("/actuator/health").permitAll()  // Health check for load balancers
+            .requestMatchers("/api/public/**").permitAll()  // Explicitly public endpoints only
+            // All other requests require authentication
             .anyRequest().authenticated()
         );
         

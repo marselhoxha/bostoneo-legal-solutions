@@ -5,6 +5,9 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { CaseTaskService } from '../../../../../service/case-task.service';
 import { UserService } from '../../../../../service/user.service';
 import { NotificationService } from '../../../../../service/notification.service';
+import { CaseAssignmentService } from '../../../../../service/case-assignment.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 export interface WorkloadBalancingData {
   caseId: number;
@@ -37,6 +40,7 @@ export class WorkloadBalancingModalComponent implements OnInit {
   @Output() workloadBalanced = new EventEmitter<any>();
 
   isLoading = false;
+  isLoadingWorkloads = true;
   teamMembers: any[] = [];
   unassignedTasks: any[] = [];
   proposedReassignments: TaskReassignment[] = [];
@@ -46,18 +50,86 @@ export class WorkloadBalancingModalComponent implements OnInit {
     public activeModal: NgbActiveModal,
     private caseTaskService: CaseTaskService,
     private userService: UserService,
+    private caseAssignmentService: CaseAssignmentService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.setupData();
-    this.generateBalancingRecommendations();
+    this.loadFreshWorkloads();
   }
 
   private setupData(): void {
     this.teamMembers = [...(this.data.teamMembers || [])];
     this.unassignedTasks = [...(this.data.unassignedTasks || [])];
+  }
+
+  /**
+   * Load fresh workload data from the API for all team members
+   */
+  private loadFreshWorkloads(): void {
+    if (!this.teamMembers || this.teamMembers.length === 0) {
+      this.isLoadingWorkloads = false;
+      return;
+    }
+
+    const workloadRequests = this.teamMembers.map(member =>
+      this.caseAssignmentService.calculateUserWorkload(member.userId || member.id).pipe(
+        catchError(error => {
+          console.warn(`Failed to load workload for user ${member.userId || member.id}:`, error);
+          return of({ data: null });
+        })
+      )
+    );
+
+    forkJoin(workloadRequests).subscribe({
+      next: (responses) => {
+        responses.forEach((response, index) => {
+          if (response.data && this.teamMembers[index]) {
+            const workload = response.data;
+            this.teamMembers[index].workloadPercentage = workload.capacityPercentage || 0;
+            this.teamMembers[index].workloadStatus = workload.workloadStatus || 'OPTIMAL';
+            this.teamMembers[index].activeCasesCount = workload.activeCasesCount || 0;
+            this.teamMembers[index].overdueTasksCount = workload.overdueTasksCount || 0;
+          }
+        });
+        this.isLoadingWorkloads = false;
+        this.generateBalancingRecommendations();
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading workloads:', error);
+        this.isLoadingWorkloads = false;
+        this.generateBalancingRecommendations();
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Get team health summary
+   */
+  getTeamHealthSummary(): { overloaded: number; optimal: number; available: number; avgWorkload: number } {
+    const overloaded = this.teamMembers.filter(m => (m.workloadPercentage || 0) >= 80).length;
+    const optimal = this.teamMembers.filter(m => (m.workloadPercentage || 0) >= 50 && (m.workloadPercentage || 0) < 80).length;
+    const available = this.teamMembers.filter(m => (m.workloadPercentage || 0) < 50).length;
+    const avgWorkload = this.teamMembers.length > 0
+      ? Math.round(this.teamMembers.reduce((sum, m) => sum + (m.workloadPercentage || 0), 0) / this.teamMembers.length)
+      : 0;
+    return { overloaded, optimal, available, avgWorkload };
+  }
+
+  /**
+   * Get workload status text
+   */
+  getWorkloadStatusText(percentage: number): string {
+    if (percentage >= 90) return 'Overloaded';
+    if (percentage >= 80) return 'High Load';
+    if (percentage >= 70) return 'Near Capacity';
+    if (percentage >= 50) return 'Optimal';
+    if (percentage >= 30) return 'Available';
+    return 'Under-utilized';
   }
 
   private generateBalancingRecommendations(): void {
