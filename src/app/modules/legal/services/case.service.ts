@@ -87,6 +87,13 @@ export class CaseService {
     );
   }
 
+  searchCases(query: string, page: number = 0, size: number = 20): Observable<any> {
+    return this.http.get<ApiResponse<{ page: any }>>(
+      `${this.apiUrl}/search?q=${encodeURIComponent(query)}&page=${page}&size=${size}`,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
   getCaseById(id: string): Observable<any> {
     return this.http.get<ApiResponse<{ case: LegalCase }>>(
       `${this.apiUrl}/get/${id}`,

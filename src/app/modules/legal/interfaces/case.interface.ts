@@ -24,7 +24,7 @@ export enum PaymentStatus {
 }
 
 export interface CourtInfo {
-  courtName: string;
+  countyName: string;
   judgeName: string;
   courtroom: string;
 }

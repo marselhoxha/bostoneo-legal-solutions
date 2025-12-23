@@ -322,11 +322,11 @@ public class CaseCalendarController {
             hearingEvent.setReminderSent(false);
             
             // Add court information if available
-            if (legalCase.getCourtName() != null) {
-                hearingEvent.setLocation(legalCase.getCourtName() + 
+            if (legalCase.getCountyName() != null) {
+                hearingEvent.setLocation(legalCase.getCountyName() +
                         (legalCase.getCourtroom() != null ? ", " + legalCase.getCourtroom() : ""));
             }
-            
+
             CalendarEventDTO createdHearingEvent = calendarEventService.createEvent(hearingEvent);
             createdEvents.add(createdHearingEvent);
         }
@@ -353,11 +353,11 @@ public class CaseCalendarController {
             trialEvent.setReminderSent(false);
             
             // Add court information if available
-            if (legalCase.getCourtName() != null) {
-                trialEvent.setLocation(legalCase.getCourtName() + 
+            if (legalCase.getCountyName() != null) {
+                trialEvent.setLocation(legalCase.getCountyName() +
                         (legalCase.getCourtroom() != null ? ", " + legalCase.getCourtroom() : ""));
             }
-            
+
             CalendarEventDTO createdTrialEvent = calendarEventService.createEvent(trialEvent);
             createdEvents.add(createdTrialEvent);
         }

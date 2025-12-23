@@ -29,6 +29,7 @@ public interface LegalCaseService {
     LegalCaseDTO getCaseByNumber(String caseNumber);
     Page<LegalCaseDTO> getAllCases(int page, int size);
     Page<LegalCaseDTO> getCasesForUser(Long userId, int page, int size);
+    Page<LegalCaseDTO> searchCases(String search, int page, int size);
     Page<LegalCaseDTO> searchCasesByTitle(String title, int page, int size);
     Page<LegalCaseDTO> searchCasesByClientName(String clientName, int page, int size);
     Page<LegalCaseDTO> getCasesByStatus(CaseStatus status, int page, int size);

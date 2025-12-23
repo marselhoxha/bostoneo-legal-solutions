@@ -363,7 +363,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       caseDescription: [''],
       practiceArea: [''],
       jurisdiction: [''],
-      courtName: [''],
+      countyName: [''],
       opposingParty: [''],
       opposingCounsel: [''],
       retainerAmount: [''],
@@ -1864,7 +1864,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
           description: formData.caseDescription,
           type: formData.practiceArea,
           urgencyLevel: formData.urgencyLevel || 'MEDIUM',
-          courtName: formData.courtName,
+          countyName: formData.countyName,
           hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
         };
         conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, matterData);
@@ -1886,7 +1886,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             description: formData.caseDescription,
             type: formData.practiceArea,
             urgencyLevel: formData.urgencyLevel || 'MEDIUM',
-            courtName: formData.courtName,
+            countyName: formData.countyName,
             hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
             status: 'ACTIVE'
           }
@@ -2103,7 +2103,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
           description: formData.caseDescription,
           type: formData.practiceArea,
           urgencyLevel: formData.urgencyLevel || 'MEDIUM',
-          courtName: formData.courtName,
+          countyName: formData.countyName,
           hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
         };
         conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, matterOnlyData);
@@ -2125,7 +2125,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             description: formData.caseDescription,
             type: formData.practiceArea,
             urgencyLevel: formData.urgencyLevel || 'MEDIUM',
-            courtName: formData.courtName,
+            countyName: formData.countyName,
             hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
             status: 'ACTIVE'
           }

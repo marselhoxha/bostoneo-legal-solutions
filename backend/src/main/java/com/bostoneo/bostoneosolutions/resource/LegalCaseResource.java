@@ -111,6 +111,23 @@ public class LegalCaseResource {
                         .build());
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<HttpResponse> searchCases(
+            @AuthenticationPrincipal UserDTO user,
+            @RequestParam String q,
+            @RequestParam Optional<Integer> page,
+            @RequestParam Optional<Integer> size) {
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "page", legalCaseService.searchCases(q, page.orElse(0), size.orElse(20))))
+                        .message("Legal cases retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     @GetMapping("/search/title")
     public ResponseEntity<HttpResponse> searchCasesByTitle(
             @AuthenticationPrincipal UserDTO user,

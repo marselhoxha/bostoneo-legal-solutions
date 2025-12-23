@@ -52,7 +52,7 @@ public class LegalCaseDTO {
     private String description;
     
     // Court Information
-    private String courtName;
+    private String countyName;
     private String courtroom;
     private String judgeName;
     

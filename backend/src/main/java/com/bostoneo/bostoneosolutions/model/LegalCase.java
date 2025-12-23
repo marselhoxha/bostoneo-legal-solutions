@@ -69,8 +69,8 @@ public class LegalCase {
     private String description;
 
     // Court Information
-    @Column(name = "court_name")
-    private String courtName;
+    @Column(name = "county_name")
+    private String countyName;
     
     @Column(name = "courtroom")
     private String courtroom;
@@ -90,6 +90,10 @@ public class LegalCase {
     @Column(name = "trial_date")
     @Temporal(TemporalType.DATE)
     private Date trialDate;
+
+    @Column(name = "closed_date")
+    @Temporal(TemporalType.DATE)
+    private Date closedDate;
 
     // Billing Information
     @Column(name = "hourly_rate")
@@ -116,6 +120,13 @@ public class LegalCase {
     @OneToMany(mappedBy = "legalCase", fetch = FetchType.LAZY)
     @JsonIgnoreProperties("legalCase")
     private Collection<Expense> expenses;
+
+    // Timeline fields
+    @Column(name = "current_timeline_phase")
+    private Integer currentTimelinePhase;
+
+    @Column(name = "timeline_initialized")
+    private Boolean timelineInitialized;
 
     @PrePersist
     protected void onCreate() {

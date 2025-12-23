@@ -26,7 +26,7 @@ public class LegalCaseDTOMapper {
             .clientAddress(entity.getClientAddress())
             .type(entity.getType())
             .description(entity.getDescription())
-            .courtName(entity.getCourtName())
+            .countyName(entity.getCountyName())
             .courtroom(entity.getCourtroom())
             .judgeName(entity.getJudgeName())
             .filingDate(entity.getFilingDate())
@@ -60,7 +60,7 @@ public class LegalCaseDTOMapper {
         entity.setPriority(dto.getPriority());
         entity.setType(dto.getType());
         entity.setDescription(dto.getDescription());
-        entity.setCourtName(dto.getCourtName());
+        entity.setCountyName(dto.getCountyName());
         entity.setJudgeName(dto.getJudgeName());
         entity.setCourtroom(dto.getCourtroom());
         entity.setFilingDate(dto.getFilingDate());
@@ -103,7 +103,7 @@ public class LegalCaseDTOMapper {
         entity.setClientAddress(dto.getClientAddress());
         entity.setType(dto.getType());
         entity.setDescription(dto.getDescription());
-        entity.setCourtName(dto.getCourtName());
+        entity.setCountyName(dto.getCountyName());
         entity.setCourtroom(dto.getCourtroom());
         entity.setJudgeName(dto.getJudgeName());
         entity.setFilingDate(dto.getFilingDate());

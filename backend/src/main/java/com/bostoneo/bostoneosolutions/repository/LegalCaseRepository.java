@@ -32,7 +32,8 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
     @Query("SELECT c FROM LegalCase c WHERE " +
            "(LOWER(c.caseNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(c.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(c.clientName) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "LOWER(c.clientName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.type) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<LegalCase> searchCases(@Param("search") String search, Pageable pageable);
     
     @Query("SELECT c FROM LegalCase c WHERE " +

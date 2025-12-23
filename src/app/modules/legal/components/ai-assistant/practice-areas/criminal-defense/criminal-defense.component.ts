@@ -90,7 +90,7 @@ export class CriminalDefenseComponent extends PracticeAreaBaseComponent implemen
       motionType: ['', Validators.required],
       caseNumber: ['', Validators.required],
       defendantName: ['', Validators.required],
-      courtName: ['', Validators.required],
+      countyName: ['', Validators.required],
       factualBasis: ['', [Validators.required, Validators.minLength(20)]], // Reduced from 50 to 20
       legalArguments: ['', Validators.required], // Removed minLength requirement
       requestedRelief: ['', Validators.required]
@@ -195,7 +195,7 @@ export class CriminalDefenseComponent extends PracticeAreaBaseComponent implemen
               'Motion Type': this.selectedMotionTemplate?.name || formData.motionType,
               'Case Number': formData.caseNumber,
               'Defendant': formData.defendantName,
-              'Court': formData.courtName
+              'County': formData.countyName
             };
             this.aiModalService.openMotionDraft(response.content, contextInfo);
           } else {
@@ -215,7 +215,7 @@ export class CriminalDefenseComponent extends PracticeAreaBaseComponent implemen
 
   private createMotionContent(data: any): string {
     return `
-IN THE ${data.courtName}
+IN THE ${data.countyName}
 
 Case No. ${data.caseNumber}
 
@@ -532,7 +532,7 @@ Attorney for Defendant
       motionType: 'Motion to Suppress Evidence',
       caseNumber: 'CR-2024-00123',
       defendantName: 'John Michael Smith',
-      courtName: 'Superior Court of Massachusetts, Worcester County',
+      countyName: 'Worcester County',
       factualBasis: 'On January 15, 2024, defendant was stopped by Officer Johnson for allegedly running a red light. During the traffic stop, Officer Johnson conducted a search of the vehicle without consent, a warrant, or probable cause. The search yielded evidence that the prosecution now seeks to use against defendant. The stop itself was pretextual, as video evidence shows the light was yellow when defendant entered the intersection.',
       legalArguments: 'The Fourth Amendment to the United States Constitution and Article 14 of the Massachusetts Declaration of Rights protect against unreasonable searches and seizures. Under Terry v. Ohio and Commonwealth v. Gonsalves, police officers may only conduct searches incident to arrest with proper justification. Here, no exigent circumstances existed, no consent was given, and no warrant was obtained. The exclusionary rule mandates suppression of illegally obtained evidence.',
       requestedRelief: 'Defendant respectfully requests that this Honorable Court suppress all evidence obtained during the unlawful search of January 15, 2024, including any statements made by defendant following the illegal search, and any derivative evidence obtained as a result thereof.'

@@ -912,7 +912,7 @@ public class AiWorkspaceDocumentService {
             legalCase.getCaseNumber(),
             legalCase.getTitle(),
             legalCase.getType(),
-            legalCase.getCourtName(),
+            legalCase.getCountyName(),
             legalCase.getStatus(),
             legalCase.getClientName(),
             legalCase.getFilingDate(),

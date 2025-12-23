@@ -4,14 +4,10 @@
     <div class="col-sm-12">
       <div class="page-title-box">
         <div class="float-end">
-          <!-- Added wrapper div that also captures clicks -->
-          <div class="button-wrapper" (click)="$event.target.tagName !== 'BUTTON' ? null : null">
-            <a routerLink="test-reminders" class="btn btn-primary me-2">
-              <i class="ri-notification-3-line align-middle me-1"></i> Test Reminders
-            </a>
-            <div class="btn-wrapper" (click)="openCreateEventModal()" style="display: inline-block; cursor: pointer;"><button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn">
+          <div class="btn-wrapper" (click)="openCreateEventModal()" style="display: inline-block; cursor: pointer;">
+            <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn">
               <i class="ri-add-line align-middle me-1"></i> Create Event
-            </button></div>
+            </button>
           </div>
         </div>
         <h4 class="page-title mb-sm-0">Calendar</h4>

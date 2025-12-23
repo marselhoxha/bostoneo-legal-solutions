@@ -381,7 +381,7 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     public Map<String, Object> getOptionalCaseFields() {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("priority", Map.of("type", "select", "description", "Case priority", "options", Arrays.asList("LOW", "MEDIUM", "HIGH", "URGENT")));
-        fields.put("courtName", Map.of("type", "string", "description", "Court name"));
+        fields.put("countyName", Map.of("type", "string", "description", "County name"));
         fields.put("filingDate", Map.of("type", "date", "description", "Filing date"));
         fields.put("hourlyRate", Map.of("type", "number", "description", "Hourly rate"));
         return fields;
@@ -455,7 +455,7 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             .priority(com.bostoneo.bostoneosolutions.enumeration.CasePriority.valueOf(getStringValue(caseData, "priority", "MEDIUM")))
             .type(getStringValue(caseData, "type"))
             .description(getStringValue(caseData, "description"))
-            .courtName(getStringValue(caseData, "courtName"))
+            .countyName(getStringValue(caseData, "countyName"))
             .hourlyRate(getDoubleValue(caseData, "hourlyRate", 0.0))
             .paymentStatus(com.bostoneo.bostoneosolutions.enumeration.PaymentStatus.PENDING)
             .build();

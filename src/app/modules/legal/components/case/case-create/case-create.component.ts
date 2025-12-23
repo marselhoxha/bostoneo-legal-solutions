@@ -98,7 +98,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       leadAttorneyId: [''],
 
       // Court Information (optional at creation)
-      courtName: [''],
+      countyName: [''],
       judgeName: [''],
       courtroom: [''],
 
@@ -217,12 +217,12 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       leadAttorneyId: this.caseForm.value.leadAttorneyId || null,
 
       // Court Information (only include if provided)
-      courtInfo: this.caseForm.value.courtName ? {
-        courtName: this.caseForm.value.courtName,
+      courtInfo: this.caseForm.value.countyName ? {
+        countyName: this.caseForm.value.countyName,
         judgeName: this.caseForm.value.judgeName || '',
         courtroom: this.caseForm.value.courtroom || ''
       } : null,
-      courtName: this.caseForm.value.courtName || '',
+      countyName: this.caseForm.value.countyName || '',
       judgeName: this.caseForm.value.judgeName || '',
       courtroom: this.caseForm.value.courtroom || '',
 

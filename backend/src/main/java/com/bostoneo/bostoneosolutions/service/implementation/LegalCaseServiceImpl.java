@@ -102,7 +102,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         existingCase.setDescription(caseDTO.getDescription());
         
         // Update court info
-        existingCase.setCourtName(caseDTO.getCourtName());
+        existingCase.setCountyName(caseDTO.getCountyName());
         existingCase.setCourtroom(caseDTO.getCourtroom());
         existingCase.setJudgeName(caseDTO.getJudgeName());
         
@@ -389,6 +389,16 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         
         // Default: no access
         return Page.empty(PageRequest.of(page, size));
+    }
+
+    @Override
+    public Page<LegalCaseDTO> searchCases(String search, int page, int size) {
+        log.info("Searching cases with term: {}", search);
+        Page<LegalCase> cases = legalCaseRepository.searchCases(
+            search,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return cases.map(this::toDTOWithAttorneys);
     }
 
     @Override

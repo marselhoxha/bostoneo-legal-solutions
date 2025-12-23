@@ -1,0 +1,261 @@
+<div class="case-timeline-wrapper">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="timeline-loading-state">
+    <div class="loading-animation">
+      <div class="loading-circle"></div>
+      <div class="loading-circle"></div>
+      <div class="loading-circle"></div>
+    </div>
+    <p class="loading-text">Loading your case timeline...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="timeline-error-state">
+    <div class="error-icon-wrapper">
+      <i class="ri-error-warning-line"></i>
+    </div>
+    <h6 class="error-title">Unable to Load Timeline</h6>
+    <p class="error-message">{{ error }}</p>
+    <button class="retry-btn" (click)="loadTimeline()">
+      <i class="ri-refresh-line"></i>
+      <span>Try Again</span>
+    </button>
+  </div>
+
+  <!-- Timeline Content -->
+  <div *ngIf="timeline && !loading && !error" class="timeline-content">
+
+    <!-- Premium Progress Header -->
+    <div class="progress-header">
+      <div class="progress-info">
+        <div class="progress-title-section">
+          <h5 class="progress-title">
+            <i class="ri-route-line"></i>
+            Case Progress
+          </h5>
+          <div class="phase-counter">
+            <span class="current-phase">{{ timeline.currentPhase }}</span>
+            <span class="phase-separator">/</span>
+            <span class="total-phases">{{ timeline.totalPhases }}</span>
+            <span class="phase-label">phases</span>
+          </div>
+        </div>
+
+        <div class="progress-stats">
+          <div class="stat-item completed" *ngIf="timeline.completedPhases > 0">
+            <i class="ri-checkbox-circle-fill"></i>
+            <span>{{ timeline.completedPhases }} Completed</span>
+          </div>
+          <div class="stat-item skipped" *ngIf="timeline.skippedPhases > 0">
+            <i class="ri-skip-forward-fill"></i>
+            <span>{{ timeline.skippedPhases }} Skipped</span>
+          </div>
+          <div class="stat-item remaining" *ngIf="timeline.totalPhases - timeline.completedPhases - (timeline.skippedPhases || 0) > 0">
+            <i class="ri-time-line"></i>
+            <span>{{ timeline.totalPhases - timeline.completedPhases - (timeline.skippedPhases || 0) }} Remaining</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-percentage-wrapper">
+        <div class="percentage-circle" [class.complete]="timeline.progressPercentage === 100">
+          <svg viewBox="0 0 100 100">
+            <circle class="bg-circle" cx="50" cy="50" r="45"></circle>
+            <circle class="progress-circle" cx="50" cy="50" r="45"
+                    [style.stroke-dasharray]="'283'"
+                    [style.stroke-dashoffset]="283 - (283 * timeline.progressPercentage / 100)">
+            </circle>
+          </svg>
+          <div class="percentage-text">
+            <span class="number">{{ timeline.progressPercentage | number:'1.0-0' }}</span>
+            <span class="symbol">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enhanced Progress Bar -->
+    <div class="progress-bar-container">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill"
+             [style.width]="getProgressWidth()"
+             [class.complete]="timeline.progressPercentage === 100">
+          <div class="progress-glow"></div>
+        </div>
+      </div>
+      <div class="progress-milestones">
+        <div class="milestone" *ngFor="let phase of timeline.phases; let i = index"
+             [class.completed]="phase.status === 'COMPLETED'"
+             [class.skipped]="phase.status === 'SKIPPED'"
+             [class.current]="phase.isCurrent"
+             [class.pending]="phase.status === 'PENDING' && !phase.isCurrent"
+             [style.left.%]="((i) / (timeline.phases.length - 1)) * 100">
+        </div>
+      </div>
+    </div>
+
+    <!-- Visual Timeline Phases -->
+    <div class="phases-container">
+      <div class="phases-grid">
+        <div *ngFor="let phase of timeline.phases; let i = index; let first = first; let last = last"
+             class="phase-card"
+             [class.completed]="phase.status === 'COMPLETED'"
+             [class.current]="phase.isCurrent"
+             [class.pending]="phase.status === 'PENDING' && !phase.isCurrent"
+             [class.skipped]="phase.status === 'SKIPPED'"
+             [class.final-completed]="last && timeline.caseStatus === 'CLOSED' && phase.status === 'COMPLETED'">
+
+          <!-- Phase Content -->
+          <div class="phase-body">
+            <div class="phase-icon-wrapper" [style.background-color]="phase.color + '15'" [style.color]="phase.color">
+              <i [class]="phase.icon"></i>
+            </div>
+
+            <h6 class="phase-title">{{ phase.phaseName }}</h6>
+
+            <p class="phase-description" *ngIf="phase.phaseDescription">
+              {{ phase.phaseDescription }}
+            </p>
+
+            <!-- Status Badge -->
+            <div class="phase-status-badge">
+              <span *ngIf="phase.status === 'COMPLETED'" class="badge-completed">
+                <i class="ri-checkbox-circle-fill"></i> Completed
+              </span>
+              <span *ngIf="phase.isCurrent && phase.status !== 'COMPLETED' && timeline.caseStatus !== 'CLOSED'" class="badge-current">
+                <i class="status-dot"></i> In Progress
+              </span>
+              <span *ngIf="phase.status === 'PENDING' && !phase.isCurrent && timeline.caseStatus !== 'CLOSED'" class="badge-pending">
+                <i class="ri-time-line"></i> Upcoming
+              </span>
+              <span *ngIf="phase.status === 'PENDING' && timeline.caseStatus === 'CLOSED'" class="badge-pending">
+                <i class="ri-lock-line"></i> Not Reached
+              </span>
+              <span *ngIf="phase.status === 'SKIPPED'" class="badge-skipped">
+                <i class="ri-skip-forward-line"></i> Skipped
+              </span>
+            </div>
+
+            <!-- Phase Meta Info -->
+            <div class="phase-meta" *ngIf="phase.completedAt || phase.startedAt || (phase.isCurrent && phase.estimatedDurationDays)">
+              <div class="meta-item" *ngIf="phase.completedAt">
+                <i class="ri-calendar-check-line"></i>
+                <span>{{ formatDate(phase.completedAt) }}</span>
+              </div>
+              <div class="meta-item" *ngIf="phase.isCurrent && phase.startedAt && !phase.completedAt">
+                <i class="ri-calendar-line"></i>
+                <span>Started {{ formatDate(phase.startedAt) }}</span>
+              </div>
+              <div class="meta-item estimate" *ngIf="phase.isCurrent && phase.estimatedDurationDays && timeline.caseStatus !== 'CLOSED'">
+                <i class="ri-hourglass-line"></i>
+                <span>~{{ phase.estimatedDurationDays }} days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Phase Highlight Card (only show when case is NOT closed) -->
+    <div class="current-phase-highlight" *ngIf="timeline.phases && timeline.caseStatus !== 'CLOSED'">
+      <ng-container *ngFor="let phase of timeline.phases">
+        <div *ngIf="phase.isCurrent && phase.status !== 'COMPLETED'" class="highlight-card">
+          <div class="highlight-glow"></div>
+          <div class="highlight-content">
+            <div class="highlight-header">
+              <div class="highlight-icon" [style.background]="'linear-gradient(135deg, ' + phase.color + ' 0%, ' + phase.color + '99 100%)'">
+                <i [class]="phase.icon"></i>
+              </div>
+              <div class="highlight-title-section">
+                <span class="highlight-label">Currently Active</span>
+                <h5 class="highlight-title">{{ phase.phaseName }}</h5>
+              </div>
+              <div class="highlight-status">
+                <span class="status-pulse"></span>
+                <span class="status-text">In Progress</span>
+              </div>
+            </div>
+
+            <p class="highlight-description">{{ phase.phaseDescription }}</p>
+
+            <div class="highlight-timeline">
+              <div class="timeline-item" *ngIf="phase.startedAt">
+                <div class="timeline-icon started">
+                  <i class="ri-play-circle-line"></i>
+                </div>
+                <div class="timeline-text">
+                  <span class="label">Started</span>
+                  <span class="date">{{ formatDate(phase.startedAt) }}</span>
+                </div>
+              </div>
+              <div class="timeline-connector" *ngIf="phase.startedAt && phase.estimatedCompletionDate"></div>
+              <div class="timeline-item" *ngIf="phase.estimatedCompletionDate">
+                <div class="timeline-icon estimated">
+                  <i class="ri-flag-line"></i>
+                </div>
+                <div class="timeline-text">
+                  <span class="label">Est. Completion</span>
+                  <span class="date">{{ formatDate(phase.estimatedCompletionDate) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Case Completed Highlight Card -->
+    <div class="current-phase-highlight" *ngIf="timeline.caseStatus === 'CLOSED'">
+      <div class="highlight-card completed-card">
+        <div class="highlight-glow success-glow"></div>
+        <div class="highlight-content">
+          <div class="highlight-header">
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #0ab39c 0%, #0ab39c99 100%);">
+              <i class="ri-checkbox-circle-fill"></i>
+            </div>
+            <div class="highlight-title-section">
+              <span class="highlight-label text-success">Case Complete</span>
+              <h5 class="highlight-title">Your case has been successfully concluded</h5>
+            </div>
+            <div class="highlight-status completed-status">
+              <i class="ri-shield-check-fill"></i>
+              <span class="status-text">Closed</span>
+            </div>
+          </div>
+          <p class="highlight-description">All phases have been completed. Thank you for trusting us with your case.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-banner" *ngIf="isClientView">
+      <div class="info-icon">
+        <i class="ri-lightbulb-line"></i>
+      </div>
+      <div class="info-content">
+        <p class="info-text">
+          This timeline tracks your case progress through each legal phase.
+          Your attorney will update milestones as your case advances.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!timeline && !loading && !error" class="timeline-empty-state">
+    <div class="empty-illustration">
+      <div class="empty-circle">
+        <i class="ri-route-line"></i>
+      </div>
+      <div class="empty-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    <h5 class="empty-title">Timeline Not Available</h5>
+    <p class="empty-description">
+      Your case timeline will appear here once your attorney initializes it.
+    </p>
+  </div>
+</div>

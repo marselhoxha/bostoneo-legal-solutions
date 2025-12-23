@@ -7,12 +7,13 @@ import { takeUntil, finalize } from 'rxjs/operators';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ClientPortalService, ClientCase, ClientDocument, ClientAppointment, ClientActivity } from '../../services/client-portal.service';
 import { ClientDocumentPreviewModalComponent } from '../document-preview-modal/client-document-preview-modal.component';
+import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-client-case-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CaseTimelineComponent],
   templateUrl: './client-case-detail.component.html',
   styleUrls: ['./client-case-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,6 +27,7 @@ export class ClientCaseDetailComponent implements OnInit, OnDestroy {
   error: string | null = null;
   caseId: number | null = null;
   activeTab: 'documents' | 'activity' = 'documents';
+  timelineProgress: number = 0;
 
   private destroy$ = new Subject<void>();
   private apiUrl = environment.apiUrl;
@@ -71,12 +73,33 @@ export class ClientCaseDetailComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.caseData = data;
           this.loadDocuments();
+          this.loadTimelineProgress();
           this.cdr.markForCheck();
         },
         error: (err) => {
           console.error('Error loading case:', err);
           this.error = 'Failed to load case details. Please try again.';
           this.cdr.markForCheck();
+        }
+      });
+  }
+
+  loadTimelineProgress(): void {
+    if (!this.caseId) return;
+
+    this.http.get<any>(`${this.apiUrl}/api/case-timeline/cases/${this.caseId}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const timeline = response.data?.timeline;
+          if (timeline) {
+            this.timelineProgress = timeline.progressPercentage || 0;
+            this.cdr.markForCheck();
+          }
+        },
+        error: (err) => {
+          console.error('Error loading timeline progress:', err);
+          // Keep using status-based progress as fallback
         }
       });
   }
@@ -114,13 +137,30 @@ export class ClientCaseDetailComponent implements OnInit, OnDestroy {
 
   getDaysOpen(): number {
     if (!this.caseData?.openDate) return 0;
+
+    // Parse the date properly (handles ISO format from backend)
     const opened = new Date(this.caseData.openDate);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - opened.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (isNaN(opened.getTime())) return 0;
+
+    // Set to start of day to avoid timezone/time issues
+    const openedDate = new Date(opened.getFullYear(), opened.getMonth(), opened.getDate());
+    const today = new Date();
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Calculate difference in days
+    const diffTime = todayDate.getTime() - openedDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // Return 0 if date is in the future
+    return diffDays > 0 ? diffDays : 0;
   }
 
   getProgressPercentage(): number {
+    // Use timeline progress if available
+    if (this.timelineProgress > 0) {
+      return Math.round(this.timelineProgress);
+    }
+    // Fallback to status-based progress
     const statusProgress: { [key: string]: number } = {
       'OPEN': 10,
       'ACTIVE': 25,

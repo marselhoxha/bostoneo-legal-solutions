@@ -1,10 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { LegalCase, CaseStatus, CasePriority, PaymentStatus } from '../../../interfaces/case.interface';
 import { CaseService } from '../../../services/case.service';
 import Swal from 'sweetalert2';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, map, startWith } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import { catchError, map, startWith, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { DataState } from 'src/app/enum/datastate.enum';
 import { State } from 'src/app/interface/state';
 import { CustomHttpResponse, Page } from 'src/app/interface/appstates';
@@ -15,10 +15,12 @@ import { User } from 'src/app/interface/user';
   templateUrl: './case-list.component.html',
   styleUrls: ['./case-list.component.scss']
 })
-export class CaseListComponent implements OnInit {
+export class CaseListComponent implements OnInit, OnDestroy {
   cases: LegalCase[] = [];
+  allCases: LegalCase[] = []; // Store all cases from current page for local filtering
   isLoading = false;
   error: string | null = null;
+  isSearching = false;
 
   // Stats - Attorney Focused
   hearingsThisWeekCount = 0;
@@ -30,6 +32,10 @@ export class CaseListComponent implements OnInit {
   searchTerm = '';
   selectedFilter: string | null = null;
   sortBy: string = 'deadline';
+
+  // Server-side search
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
 
   // Pagination-related variables
   state: { dataState: DataState, appData?: any } = { dataState: DataState.LOADING };
@@ -45,13 +51,70 @@ export class CaseListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCases();
+    this.setupSearchDebounce();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private setupSearchDebounce(): void {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      if (searchTerm && searchTerm.trim().length >= 2) {
+        this.performServerSearch(searchTerm.trim());
+      } else if (!searchTerm || searchTerm.trim().length === 0) {
+        // Reset to show all cases
+        this.cases = [...this.allCases];
+        this.isSearching = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private performServerSearch(query: string): void {
+    this.isSearching = true;
+    this.cdr.detectChanges();
+
+    this.caseService.searchCases(query, 0, 50).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        console.log('Search response:', response);
+        if (response?.data?.page?.content) {
+          this.cases = response.data.page.content;
+        } else if (response?.data?.page) {
+          this.cases = response.data.page;
+        } else {
+          this.cases = [];
+        }
+        this.isSearching = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Search error:', err);
+        this.isSearching = false;
+        // Fallback to local search
+        this.cases = this.allCases.filter(c =>
+          c.caseNumber?.toLowerCase().includes(query.toLowerCase()) ||
+          c.title?.toLowerCase().includes(query.toLowerCase()) ||
+          c.clientName?.toLowerCase().includes(query.toLowerCase()) ||
+          c.type?.toLowerCase().includes(query.toLowerCase())
+        );
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   loadCases(): void {
     this.isLoading = true;
     this.error = null;
     this.cdr.detectChanges();
-    
+
     // Use real data from the API with pagination
     this.caseService.getCases(this.currentPageSubject.value).subscribe({
       next: (response) => {
@@ -61,32 +124,38 @@ export class CaseListComponent implements OnInit {
           // Handle both formats: data.page and data.cases
           if (response.data.page && response.data.page.content) {
             this.cases = response.data.page.content || [];
+            this.allCases = [...this.cases]; // Store for local filtering
             // Update state for pagination
-            this.state = { 
-              dataState: DataState.LOADED, 
-              appData: response 
+            this.state = {
+              dataState: DataState.LOADED,
+              appData: response
             };
           } else if (response.data.cases) {
             this.cases = response.data.cases || [];
-            this.state = { 
-              dataState: DataState.LOADED, 
-              appData: response 
+            this.allCases = [...this.cases];
+            this.state = {
+              dataState: DataState.LOADED,
+              appData: response
             };
           } else if (Array.isArray(response.data)) {
             this.cases = response.data;
-            this.state = { 
-              dataState: DataState.LOADED, 
-              appData: response 
+            this.allCases = [...this.cases];
+            this.state = {
+              dataState: DataState.LOADED,
+              appData: response
             };
           } else {
             console.warn('Unexpected data format:', response.data);
             this.cases = [];
+            this.allCases = [];
           }
         } else if (Array.isArray(response)) {
           this.cases = response;
+          this.allCases = [...this.cases];
         } else {
           console.warn('Unexpected response format:', response);
           this.cases = [];
+          this.allCases = [];
         }
         this.calculateStats();
         this.isLoading = false;
@@ -97,6 +166,7 @@ export class CaseListComponent implements OnInit {
         this.error = 'Failed to load cases. Please try again later.';
         this.isLoading = false;
         this.cases = [];
+        this.allCases = [];
         // Set sample data for development
         this.setSampleData();
         this.cdr.detectChanges();
@@ -206,7 +276,7 @@ export class CaseListComponent implements OnInit {
         createdAt: new Date(),
         updatedAt: new Date(),
         courtInfo: {
-          courtName: 'Suffolk Superior Court',
+          countyName: 'Suffolk County',
           judgeName: 'Hon. Jane Doe',
           courtroom: 'Room 501'
         },
@@ -350,10 +420,14 @@ export class CaseListComponent implements OnInit {
   clearFilter(): void {
     this.selectedFilter = null;
     this.searchTerm = '';
+    this.cases = [...this.allCases];
+    this.isSearching = false;
+    this.cdr.detectChanges();
   }
 
   onSearch(): void {
-    // Search is handled by getFilteredCases()
+    // Trigger server-side search via debounced subject
+    this.searchSubject.next(this.searchTerm);
   }
 
   getFilteredCases(): LegalCase[] {

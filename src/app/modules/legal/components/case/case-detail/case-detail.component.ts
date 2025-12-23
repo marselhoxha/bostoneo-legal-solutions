@@ -14,6 +14,7 @@ import { CaseDocumentsComponent } from '../case-documents/case-documents.compone
 import { CaseTimelineComponent } from '../case-timeline/case-timeline.component';
 import { CaseTimeEntriesComponent } from '../case-time-entries/case-time-entries.component';
 import { CaseResearchComponent } from '../case-research/case-research.component';
+import { CaseProgressManagerComponent } from '../case-progress-manager/case-progress-manager.component';
 import { CalendarService } from '../../../services/calendar.service';
 import { CalendarEvent } from '../../../interfaces/calendar-event.interface';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -54,7 +55,8 @@ import { NotificationManagerService, NotificationCategory, NotificationPriority 
     CaseDocumentsComponent,
     CaseTimelineComponent,
     CaseTimeEntriesComponent,
-    CaseResearchComponent
+    CaseResearchComponent,
+    CaseProgressManagerComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -143,7 +145,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       priority: [CasePriority.MEDIUM, Validators.required],
       type: [''],
       description: ['', Validators.required],
-      courtName: [''],
+      countyName: [''],
       judgeName: [''],
       courtroom: [''],
       filingDate: [null],
@@ -652,7 +654,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       const nextHearing = this.case.importantDates?.nextHearing || (this.case as any).nextHearing;
       const trialDate = this.case.importantDates?.trialDate || (this.case as any).trialDate;
       
-      const courtName = this.case.courtInfo?.courtName || (this.case as any).courtName;
+      const countyName = this.case.courtInfo?.countyName || (this.case as any).countyName;
       const judgeName = this.case.courtInfo?.judgeName || (this.case as any).judgeName;
       const courtroom = this.case.courtInfo?.courtroom || (this.case as any).courtroom;
       
@@ -676,7 +678,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         priority: this.case.priority,
         type: this.case.type,
         description: this.case.description,
-        courtName,
+        countyName,
         judgeName,
         courtroom,
         filingDate: filingDate ? new Date(filingDate) : null,
@@ -695,7 +697,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         nextHearing: nextHearing ? new Date(nextHearing) : null,
         trialDate: trialDate ? new Date(trialDate) : null,
         judge: judgeName,
-        court: courtName,
+        court: countyName,
         jurisdiction: courtroom,
         description: this.case.description
       });
@@ -731,12 +733,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             // Ensure courtInfo exists
             if (!caseData.courtInfo) {
               caseData.courtInfo = {
-                courtName: caseData.courtName || '',
+                countyName: caseData.countyName || '',
                 judgeName: caseData.judgeName || '',
                 courtroom: caseData.courtroom || ''
               };
             }
-            
+
             // Ensure billingInfo exists
             if (!caseData.billingInfo) {
               caseData.billingInfo = {
@@ -746,12 +748,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 paymentStatus: caseData.paymentStatus || 'PENDING'
               };
             }
-            
+
             this.case = caseData as any;
           } else if (response && typeof response === 'object' && 'id' in response) {
             // Handle direct case object response
             const caseData = response as any;
-            
+
             // Ensure importantDates exists
             if (!caseData.importantDates) {
               caseData.importantDates = {
@@ -760,11 +762,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 trialDate: caseData.trialDate || null
               };
             }
-            
+
             // Ensure courtInfo exists
             if (!caseData.courtInfo) {
               caseData.courtInfo = {
-                courtName: caseData.courtName || '',
+                countyName: caseData.countyName || '',
                 judgeName: caseData.judgeName || '',
                 courtroom: caseData.courtroom || ''
               };
@@ -1307,11 +1309,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           
           // Include both nested and flat fields for maximum compatibility
           courtInfo: {
-            courtName: formValues.courtName || '',
+            countyName: formValues.countyName || '',
             judgeName: formValues.judgeName || '',
             courtroom: formValues.courtroom || ''
           },
-          courtName: formValues.courtName || '',
+          countyName: formValues.countyName || '',
           judgeName: formValues.judgeName || '',
           courtroom: formValues.courtroom || '',
           

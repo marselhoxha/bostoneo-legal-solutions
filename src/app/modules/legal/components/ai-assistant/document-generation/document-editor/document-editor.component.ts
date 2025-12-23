@@ -244,7 +244,7 @@ Generated Date: [CURRENT_DATE]`;
       case_priority: selectedCase.priority || '',
       
       // Court information
-      court_name: selectedCase.courtName || '',
+      county_name: selectedCase.countyName || '',
       courtroom: selectedCase.courtroom || '',
       judge_name: selectedCase.judgeName || '',
       

@@ -533,7 +533,7 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
         variables.put("CASE_TITLE", legalCase.getTitle());
         variables.put("CASE_TYPE", legalCase.getType());
         variables.put("CASE_DESCRIPTION", legalCase.getDescription());
-        variables.put("COURT_NAME", legalCase.getCourtName());
+        variables.put("COUNTY_NAME", legalCase.getCountyName());
         variables.put("JUDGE_NAME", legalCase.getJudgeName());
         variables.put("FILING_DATE", legalCase.getFilingDate());
         variables.put("TRIAL_DATE", legalCase.getTrialDate());

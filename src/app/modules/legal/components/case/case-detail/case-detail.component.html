@@ -114,8 +114,8 @@
               <i class="ri-scales-line"></i>
             </div>
             <div class="info-content">
-              <div class="info-label">Court</div>
-              <div class="info-value">{{ case.courtInfo?.courtName || 'Not assigned' }}</div>
+              <div class="info-label">County</div>
+              <div class="info-value">{{ case.courtInfo?.countyName || 'Not assigned' }}</div>
             </div>
           </div>
         </div>
@@ -178,6 +178,12 @@
           <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#timeline" role="tab" aria-selected="false">
             <i class="ri-timeline-view me-2 align-middle fs-16"></i>
             <span>Timeline</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#case-manager" role="tab" aria-selected="false">
+            <i class="ri-route-line me-2 align-middle fs-16"></i>
+            <span>Case Manager</span>
           </a>
         </li>
         <li class="nav-item">
@@ -348,13 +354,13 @@
                       </div>
 
                       <div class="court-details">
-                        <div class="court-main" *ngIf="case?.courtInfo?.courtName">
+                        <div class="court-main" *ngIf="case?.courtInfo?.countyName">
                           <div class="court-icon">
                             <i class="ri-scales-3-line"></i>
                           </div>
                           <div class="court-info">
-                            <span class="court-label">Court</span>
-                            <h5 class="court-name">{{ case.courtInfo.courtName }}</h5>
+                            <span class="court-label">County</span>
+                            <h5 class="court-name">{{ case.courtInfo.countyName }}</h5>
                           </div>
                         </div>
 
@@ -376,7 +382,7 @@
                           </div>
                         </div>
 
-                        <div class="empty-court" *ngIf="!case?.courtInfo?.courtName && !case?.courtInfo?.judgeName && !case?.courtInfo?.courtroom">
+                        <div class="empty-court" *ngIf="!case?.courtInfo?.countyName && !case?.courtInfo?.judgeName && !case?.courtInfo?.courtroom">
                           <div class="empty-court-icon">
                             <i class="ri-building-2-line"></i>
                           </div>
@@ -529,8 +535,8 @@
                     <div class="row g-3">
                       <div class="col-md-6">
                         <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Court Name</label>
-                          <input type="text" class="form-control" formControlName="courtName" placeholder="Enter court name">
+                          <label class="form-label fw-semibold text-white-dark">County Name</label>
+                          <input type="text" class="form-control" formControlName="countyName" placeholder="Enter county name">
                         </div>
                       </div>
                       <div class="col-md-6">
@@ -653,10 +659,11 @@
             </div>
           </div>
 
-          <!-- Timeline Tab -->
+          <!-- Timeline Tab - Case Activity History -->
           <div class="tab-pane fade" id="timeline" role="tabpanel">
             <div class="p-4">
               <app-case-timeline [caseId]="caseId" *ngIf="canViewPrivateActivities"></app-case-timeline>
+
               <div *ngIf="!canViewPrivateActivities" class="text-center py-5">
                 <div class="avatar-lg mx-auto mb-4">
                   <div class="avatar-title rounded-circle bg-soft-warning text-warning fs-24">
@@ -665,6 +672,23 @@
                 </div>
                 <h5 class="mb-3">Access Restricted</h5>
                 <p class="text-muted mb-0">You don't have permission to view the case timeline.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Case Manager Tab - Progress Phases Management -->
+          <div class="tab-pane fade" id="case-manager" role="tabpanel">
+            <div class="p-4">
+              <app-case-progress-manager [caseId]="caseId" *ngIf="canViewPrivateActivities"></app-case-progress-manager>
+
+              <div *ngIf="!canViewPrivateActivities" class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-4">
+                  <div class="avatar-title rounded-circle bg-soft-warning text-warning fs-24">
+                    <i class="ri-lock-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">Access Restricted</h5>
+                <p class="text-muted mb-0">You don't have permission to manage case progress.</p>
               </div>
             </div>
           </div>

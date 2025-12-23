@@ -53,8 +53,8 @@
                 </div>
 
            
-                <!-- Case Management Dropdown -->
-                <div class="dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown" display="dynamic" placement="bottom-end">
+                <!-- Case Management Dropdown (hidden for client users) -->
+                <div class="dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown" display="dynamic" placement="bottom-end" *ngIf="!isClientUser">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
                             ngbDropdownToggle
                             id="page-header-case-dropdown">
@@ -185,8 +185,8 @@
                     </div>
                 </div>
 
-                <!-- Timer Dropdown -->
-                <div class="dropdown ms-1 header-item" ngbDropdown #timerDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onTimerDropdownToggle($event)">
+                <!-- Timer Dropdown (hidden for client users) -->
+                <div class="dropdown ms-1 header-item" ngbDropdown #timerDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onTimerDropdownToggle($event)" *ngIf="!isClientUser">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
                             ngbDropdownToggle
                             id="page-header-timer-dropdown"

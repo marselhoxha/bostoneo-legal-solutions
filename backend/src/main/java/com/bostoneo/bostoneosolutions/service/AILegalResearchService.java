@@ -816,7 +816,7 @@ public class AILegalResearchService {
                     boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
                     // Declare these outside the conditional so they're available later
-                    String courtName = legalCase.getCourtName();
+                    String countyName = legalCase.getCountyName();
                     String jurisdictionType = "UNKNOWN";
                     String applicableRules = "applicable procedural rules";
 
@@ -837,19 +837,19 @@ public class AILegalResearchService {
                             prompt.append("- Case Description: ").append(cleanDescription).append("\n");
                         }
 
-                        // Court and Jurisdiction Information
+                        // County and Jurisdiction Information
 
-                        if (courtName != null && !courtName.isEmpty()) {
-                            prompt.append("- Court: ").append(courtName).append("\n");
+                        if (countyName != null && !countyName.isEmpty()) {
+                            prompt.append("- County: ").append(countyName).append("\n");
 
-                            // Determine jurisdiction from court name
-                            String courtLower = courtName.toLowerCase();
-                            if (courtLower.contains("u.s. district") || courtLower.contains("federal") ||
-                                courtLower.contains("usdc") || courtLower.contains("united states district")) {
+                            // Determine jurisdiction from county name
+                            String countyLower = countyName.toLowerCase();
+                            if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
+                                countyLower.contains("usdc") || countyLower.contains("united states district")) {
                                 jurisdictionType = "FEDERAL";
                                 applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                            } else if (courtLower.contains("superior") || courtLower.contains("massachusetts") ||
-                                       courtLower.contains("district court") || courtLower.contains("ma ")) {
+                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
+                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
                                 jurisdictionType = "STATE";
                                 applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
                             }
@@ -863,8 +863,8 @@ public class AILegalResearchService {
                         }
 
                         // Add court-specific rules and standing orders
-                        String caseDetails = String.format("Court: %s, Type: %s, Description: %s",
-                            courtName != null ? courtName : "",
+                        String caseDetails = String.format("County: %s, Type: %s, Description: %s",
+                            countyName != null ? countyName : "",
                             legalCase.getType() != null ? legalCase.getType() : "",
                             legalCase.getDescription() != null ? legalCase.getDescription() : ""
                         );
@@ -1130,7 +1130,7 @@ public class AILegalResearchService {
                     // Duplicate the same logic as above
                     boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
-                    String courtName = legalCase.getCourtName();
+                    String countyName = legalCase.getCountyName();
                     String jurisdictionType = "UNKNOWN";
                     String applicableRules = "applicable procedural rules";
 
@@ -1148,16 +1148,16 @@ public class AILegalResearchService {
                             prompt.append("- Case Description: ").append(cleanDescription).append("\n");
                         }
 
-                        if (courtName != null && !courtName.isEmpty()) {
-                            prompt.append("- Court: ").append(courtName).append("\n");
+                        if (countyName != null && !countyName.isEmpty()) {
+                            prompt.append("- County: ").append(countyName).append("\n");
 
-                            String courtLower = courtName.toLowerCase();
-                            if (courtLower.contains("u.s. district") || courtLower.contains("federal") ||
-                                courtLower.contains("usdc") || courtLower.contains("united states district")) {
+                            String countyLower = countyName.toLowerCase();
+                            if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
+                                countyLower.contains("usdc") || countyLower.contains("united states district")) {
                                 jurisdictionType = "FEDERAL";
                                 applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                            } else if (courtLower.contains("superior") || courtLower.contains("massachusetts") ||
-                                       courtLower.contains("district court") || courtLower.contains("ma ")) {
+                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
+                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
                                 jurisdictionType = "STATE";
                                 applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
                             }
@@ -1170,8 +1170,8 @@ public class AILegalResearchService {
                             }
                         }
 
-                        String caseDetails = String.format("Court: %s, Type: %s, Description: %s",
-                            courtName != null ? courtName : "",
+                        String caseDetails = String.format("County: %s, Type: %s, Description: %s",
+                            countyName != null ? countyName : "",
                             legalCase.getType() != null ? legalCase.getType() : "",
                             legalCase.getDescription() != null ? legalCase.getDescription() : ""
                         );

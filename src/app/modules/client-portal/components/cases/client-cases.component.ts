@@ -222,10 +222,19 @@ export class ClientCasesComponent implements OnInit, OnDestroy {
 
   getDaysOpen(openDate: string): number {
     if (!openDate) return 0;
+
     const opened = new Date(openDate);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - opened.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (isNaN(opened.getTime())) return 0;
+
+    // Normalize to start of day to avoid timezone issues
+    const openedDate = new Date(opened.getFullYear(), opened.getMonth(), opened.getDate());
+    const today = new Date();
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const diffTime = todayDate.getTime() - openedDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays > 0 ? diffDays : 0;
   }
 
   get pages(): number[] {
