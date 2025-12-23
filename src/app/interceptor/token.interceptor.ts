@@ -57,28 +57,26 @@ export class TokenInterceptor implements HttpInterceptor {
       return this.userService.refreshToken$().pipe(
         switchMap((response) => {
           this.isTokenRefreshing = false;
-          
+
           // Check if refresh was successful
           if (!response || !response.data || !response.data.access_token) {
-            console.error('Token refresh failed - no valid response or access token');
+            console.warn('Token refresh failed - session expired');
             this.refreshTokenSubject.next(null);
-            // Redirect to login or handle failed refresh
-            localStorage.removeItem('TOKEN');
-            localStorage.removeItem('REFRESH_TOKEN');
-            return throwError(() => new Error('Token refresh failed'));
+            // Show notification and redirect to login
+            this.userService.handleSessionExpired();
+            return throwError(() => new Error('Session expired'));
           }
-          
+
           this.refreshTokenSubject.next(response);
           return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
         }),
         catchError((error) => {
-          console.error('Token refresh error:', error);
+          console.warn('Token refresh failed - session expired');
           this.isTokenRefreshing = false;
           this.refreshTokenSubject.next(null);
-          // Clear tokens and redirect to login
-          localStorage.removeItem('TOKEN');
-          localStorage.removeItem('REFRESH_TOKEN');
-          return throwError(() => error);
+          // Show notification and redirect to login
+          this.userService.handleSessionExpired();
+          return throwError(() => new Error('Session expired'));
         })
       );
     } else {
@@ -86,8 +84,8 @@ export class TokenInterceptor implements HttpInterceptor {
         switchMap((response) => {
           // Check if we have a valid response
           if (!response || !response.data || !response.data.access_token) {
-            console.error('No valid refresh token response available');
-            return throwError(() => new Error('No valid refresh token available'));
+            console.warn('No valid refresh token - session expired');
+            return throwError(() => new Error('Session expired'));
           }
           return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
         })

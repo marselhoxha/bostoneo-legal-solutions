@@ -34,26 +34,18 @@ public class ExceptionUtils {
         } else {
             HttpResponse httpResponse = getHttpResponse(response, "An error occurred. Please try again.", INTERNAL_SERVER_ERROR);
             writeResponse(response, httpResponse);
-
         }
-
-        System.out.println(exception.getMessage());
+        // Removed System.out.println - logging is handled by calling code
     }
 
     private static void writeResponse(HttpServletResponse response, HttpResponse httpResponse) {
-        OutputStream out;
-        try {
-
-            out = response.getOutputStream();
+        try (OutputStream out = response.getOutputStream()) {
             ObjectMapper mapper = new ObjectMapper();
             mapper.writeValue(out, httpResponse);
             out.flush();
-
-        } catch (Exception exception){
-            log.error(exception.getMessage());
-            exception.printStackTrace();
+        } catch (Exception exception) {
+            log.error("Failed to write error response: {}", exception.getMessage());
         }
-
     }
 
     private static HttpResponse getHttpResponse(HttpServletResponse response, String message, HttpStatus httpStatus){

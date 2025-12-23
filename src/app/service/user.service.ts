@@ -20,8 +20,12 @@ export class UserService {
   userData$ = this.userDataSubject.asObservable();
   private currentUser: User | null = null;
 
-  constructor(private http: HttpClient, private httpCache: HttpCacheService,
-     private router: Router, private preloaderService: PreloaderService) { }
+  constructor(
+    private http: HttpClient,
+    private httpCache: HttpCacheService,
+    private router: Router,
+    private preloaderService: PreloaderService
+  ) { }
 
   setUserData(user: User) {
     if (user) {
@@ -307,6 +311,20 @@ export class UserService {
     localStorage.removeItem(Key.REFRESH_TOKEN);
     this.preloaderService.hide();
     this.router.navigate(['/login']);
+  }
+
+  /**
+   * Handle session expiration - clears session and redirects to login with message
+   * Called by TokenInterceptor when token refresh fails
+   */
+  handleSessionExpired(): void {
+    this.httpCache.evictAll();
+    this.clearUserCache();
+    localStorage.removeItem(Key.TOKEN);
+    localStorage.removeItem(Key.REFRESH_TOKEN);
+    this.preloaderService.hide();
+    // Redirect to login with session expired flag
+    this.router.navigate(['/login'], { queryParams: { sessionExpired: 'true' } });
   }
 
   isAuthenticated = (): boolean => {

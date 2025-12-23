@@ -1,5 +1,7 @@
 package com.bostoneo.bostoneosolutions.filter;
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -64,8 +66,20 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.clearContext();
             }
             filterChain.doFilter(request, response);
-        } catch (Exception exception){
-            log.error("🚨 AUTHORIZATION FILTER ERROR: {}", exception.getMessage(), exception);
+        } catch (TokenExpiredException exception) {
+            // Expected error - user's session expired, log at WARN level without stack trace
+            log.warn("Token expired for request {} - user needs to re-authenticate",
+                maskPath(request.getRequestURI()));
+            processError(request, response, exception);
+        } catch (JWTVerificationException exception) {
+            // Token validation failed - could be tampering or corruption
+            log.warn("JWT verification failed for request {}: {}",
+                maskPath(request.getRequestURI()), exception.getMessage());
+            processError(request, response, exception);
+        } catch (Exception exception) {
+            // Unexpected error - log full details for debugging
+            log.error("Authorization error for {}: {}",
+                maskPath(request.getRequestURI()), exception.getMessage());
             processError(request, response, exception);
         }
     }
@@ -97,5 +111,14 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         
         return request.getHeader(AUTHORIZATION) == null || !request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
             || request.getMethod().equalsIgnoreCase(HTTP_OPTIONS_METHOD) || asList(PUBLIC_ROUTES).contains(request.getRequestURI());
+    }
+
+    /**
+     * Mask sensitive path parameters in logs (e.g., IDs, tokens)
+     */
+    private String maskPath(String path) {
+        if (path == null) return "unknown";
+        // Mask numeric IDs in paths for privacy
+        return path.replaceAll("/\\d+", "/{id}");
     }
 }

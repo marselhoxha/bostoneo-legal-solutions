@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { catchError } from 'rxjs/operators';
@@ -24,10 +24,24 @@ export class LoginComponent implements OnInit{
   readonly DataState = DataState;
   fieldTextType!: boolean;
 
-  constructor(private router: Router, private userService: UserService, 
-    private notificationService: NotificationService, private httpCache: HttpCacheService) { }
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private userService: UserService,
+    private notificationService: NotificationService,
+    private httpCache: HttpCacheService
+  ) { }
 
   ngOnInit(): void {
+    // Check for session expired query param
+    this.route.queryParams.subscribe(params => {
+      if (params['sessionExpired'] === 'true') {
+        this.notificationService.onWarning('Session expired. Please log in again.');
+        // Clean up the URL
+        this.router.navigate(['/login'], { replaceUrl: true });
+      }
+    });
+
     this.userService.isAuthenticated() ? this.router.navigate(['/']) : this.router.navigate(['/login']);
   }
 

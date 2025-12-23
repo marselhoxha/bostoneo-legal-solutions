@@ -47,77 +47,88 @@
         </div>
 
         <!-- Row 2: Quick Stats Overview -->
-        <div class="row g-3 mb-4">
-          <div class="col-xl-3 col-sm-6">
-            <div class="stat-card stat-card-primary cursor-pointer" routerLink="/client/cases">
-              <div class="stat-icon">
-                <i class="ri-briefcase-line"></i>
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header border-0">
+                <h4 class="card-title mb-0 fs-18">Overview</h4>
               </div>
-              <div class="stat-content">
-                <h3 class="stat-value">{{dashboard.activeCases}}</h3>
-                <p class="stat-label">Active Cases</p>
-                <span class="stat-detail" *ngIf="dashboard.totalCases > 0">
-                  of {{dashboard.totalCases}} total
-                </span>
-              </div>
-              <div class="stat-arrow">
-                <i class="ri-arrow-right-s-line"></i>
-              </div>
-            </div>
-          </div>
+              <div class="card-body pt-0">
+                <div class="row g-3">
+                  <div class="col-xl-3 col-sm-6 d-flex">
+                    <div class="stat-card stat-card-primary cursor-pointer w-100" routerLink="/client/cases">
+                      <div class="stat-icon">
+                        <i class="ri-briefcase-line"></i>
+                      </div>
+                      <div class="stat-content">
+                        <h3 class="stat-value">{{dashboard.activeCases}}</h3>
+                        <p class="stat-label">Active Cases</p>
+                        <span class="stat-detail" *ngIf="dashboard.totalCases > 0">
+                          of {{dashboard.totalCases}} total
+                        </span>
+                      </div>
+                      <div class="stat-arrow">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </div>
+                    </div>
+                  </div>
 
-          <div class="col-xl-3 col-sm-6">
-            <div class="stat-card stat-card-info cursor-pointer" routerLink="/client/documents">
-              <div class="stat-icon">
-                <i class="ri-file-text-line"></i>
-              </div>
-              <div class="stat-content">
-                <h3 class="stat-value">{{dashboard.totalDocuments}}</h3>
-                <p class="stat-label">Documents</p>
-                <span class="stat-detail stat-new" *ngIf="dashboard.recentDocuments > 0">
-                  +{{dashboard.recentDocuments}} new
-                </span>
-              </div>
-              <div class="stat-arrow">
-                <i class="ri-arrow-right-s-line"></i>
-              </div>
-            </div>
-          </div>
+                  <div class="col-xl-3 col-sm-6 d-flex">
+                    <div class="stat-card stat-card-info cursor-pointer w-100" routerLink="/client/documents">
+                      <div class="stat-icon">
+                        <i class="ri-file-text-line"></i>
+                      </div>
+                      <div class="stat-content">
+                        <h3 class="stat-value">{{dashboard.totalDocuments}}</h3>
+                        <p class="stat-label">Documents</p>
+                        <span class="stat-detail stat-new" *ngIf="dashboard.recentDocuments > 0">
+                          +{{dashboard.recentDocuments}} new
+                        </span>
+                      </div>
+                      <div class="stat-arrow">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </div>
+                    </div>
+                  </div>
 
-          <div class="col-xl-3 col-sm-6">
-            <div class="stat-card stat-card-warning cursor-pointer" routerLink="/client/appointments">
-              <div class="stat-icon">
-                <i class="ri-calendar-check-line"></i>
-              </div>
-              <div class="stat-content">
-                <h3 class="stat-value">{{dashboard.upcomingAppointments}}</h3>
-                <p class="stat-label">Appointments</p>
-                <span class="stat-detail">upcoming</span>
-              </div>
-              <div class="stat-arrow">
-                <i class="ri-arrow-right-s-line"></i>
-              </div>
-            </div>
-          </div>
+                  <div class="col-xl-3 col-sm-6 d-flex">
+                    <div class="stat-card stat-card-warning cursor-pointer w-100" routerLink="/client/appointments">
+                      <div class="stat-icon">
+                        <i class="ri-calendar-check-line"></i>
+                      </div>
+                      <div class="stat-content">
+                        <h3 class="stat-value">{{dashboard.upcomingAppointments}}</h3>
+                        <p class="stat-label">Appointments</p>
+                        <span class="stat-detail">upcoming</span>
+                      </div>
+                      <div class="stat-arrow">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </div>
+                    </div>
+                  </div>
 
-          <div class="col-xl-3 col-sm-6">
-            <div class="stat-card stat-card-success cursor-pointer" routerLink="/client/messages">
-              <div class="stat-icon">
-                <i class="ri-message-2-line"></i>
+                  <div class="col-xl-3 col-sm-6 d-flex">
+                    <div class="stat-card stat-card-success cursor-pointer w-100" routerLink="/client/messages">
+                      <div class="stat-icon">
+                        <i class="ri-message-2-line"></i>
+                      </div>
+                      <div class="stat-content">
+                        <h3 class="stat-value">{{dashboard.unreadMessages}}</h3>
+                        <p class="stat-label">Messages</p>
+                        <span class="stat-detail stat-unread" *ngIf="dashboard.unreadMessages > 0">
+                          unread
+                        </span>
+                      </div>
+                      <div class="stat-arrow">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </div>
+                      <span class="stat-badge" *ngIf="dashboard.unreadMessages > 0">
+                        {{dashboard.unreadMessages}}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="stat-content">
-                <h3 class="stat-value">{{dashboard.unreadMessages}}</h3>
-                <p class="stat-label">Messages</p>
-                <span class="stat-detail stat-unread" *ngIf="dashboard.unreadMessages > 0">
-                  unread
-                </span>
-              </div>
-              <div class="stat-arrow">
-                <i class="ri-arrow-right-s-line"></i>
-              </div>
-              <span class="stat-badge" *ngIf="dashboard.unreadMessages > 0">
-                {{dashboard.unreadMessages}}
-              </span>
             </div>
           </div>
         </div>

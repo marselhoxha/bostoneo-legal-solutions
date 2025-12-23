@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.exception;
 
 import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.error.ErrorController;
@@ -125,15 +126,16 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<HttpResponse> runtimeException(RuntimeException exception, WebRequest request) {
-        log.error("Runtime exception: ", exception);
-
         // CRITICAL FIX: Don't handle SSE (Server-Sent Events) exceptions here
         // Let SSE endpoints handle their own errors gracefully
         String requestUri = request.getDescription(false);
         if (requestUri != null && requestUri.contains("/progress-stream")) {
-            log.warn("SSE endpoint runtime exception - letting endpoint handle it: {}", exception.getMessage());
+            log.debug("SSE endpoint runtime exception - letting endpoint handle it: {}", exception.getMessage());
             return null;
         }
+
+        // Log without full stack trace for cleaner logs
+        log.error("Runtime exception on {}: {}", requestUri, exception.getMessage());
 
         String reason = exception.getMessage();
         if (reason == null || reason.isEmpty()) {
@@ -144,7 +146,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(reason)
-                        .developerMessage(exception.toString())
+                        .developerMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage())
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -152,18 +154,19 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<HttpResponse> exception(Exception exception, WebRequest request) {
-        log.error("Unhandled exception: ", exception);
-        System.out.println(exception);
-
         // CRITICAL FIX: Don't handle SSE (Server-Sent Events) exceptions here
         // SSE endpoints have Content-Type: text/event-stream and can't return JSON
-        // Let SSE endpoints handle their own errors gracefully
         String requestUri = request.getDescription(false);
         if (requestUri != null && requestUri.contains("/progress-stream")) {
-            log.warn("SSE endpoint exception - letting endpoint handle it: {}", exception.getMessage());
-            // Return minimal response - SSE connection will close naturally
+            log.debug("SSE endpoint exception - letting endpoint handle it: {}", exception.getMessage());
             return null;
         }
+
+        // Log concisely - only include stack trace for truly unexpected errors
+        log.error("Unhandled exception on {}: {} - {}",
+            requestUri,
+            exception.getClass().getSimpleName(),
+            exception.getMessage());
 
         String reason = exception.getMessage();
         if (reason == null || reason.isEmpty()) {
@@ -176,7 +179,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(reason)
-                        .developerMessage(exception.toString())
+                        .developerMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage())
                         .status(INTERNAL_SERVER_ERROR)
                         .statusCode(INTERNAL_SERVER_ERROR.value())
                         .build(), INTERNAL_SERVER_ERROR);
@@ -184,15 +187,29 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
 
     @ExceptionHandler(JWTDecodeException.class)
     public ResponseEntity<HttpResponse> exception(JWTDecodeException exception) {
-        log.error(exception.getMessage());
+        log.warn("JWT decode error: {}", exception.getMessage());
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason("Could not decode the token")
                         .developerMessage(exception.getMessage())
-                        .status(INTERNAL_SERVER_ERROR)
-                        .statusCode(INTERNAL_SERVER_ERROR.value())
-                        .build(), INTERNAL_SERVER_ERROR);
+                        .status(UNAUTHORIZED)
+                        .statusCode(UNAUTHORIZED.value())
+                        .build(), UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<HttpResponse> tokenExpiredException(TokenExpiredException exception) {
+        // Expected error - don't log as error, just warn
+        log.warn("Token expired - user needs to re-authenticate");
+        return new ResponseEntity<>(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .reason("Session expired. Please log in again.")
+                        .developerMessage("Token expired")
+                        .status(UNAUTHORIZED)
+                        .statusCode(UNAUTHORIZED.value())
+                        .build(), UNAUTHORIZED);
     }
 
     @ExceptionHandler(EmptyResultDataAccessException.class)
