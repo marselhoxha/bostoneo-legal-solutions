@@ -117,6 +117,11 @@ public interface ClientPortalService {
      */
     ClientPortalMessageThreadDTO startNewThread(Long userId, Long caseId, String subject, String initialMessage);
 
+    /**
+     * Delete a message thread - only if it belongs to client
+     */
+    void deleteThread(Long userId, Long threadId);
+
     // =====================================================
     // INVOICES & BILLING
     // =====================================================

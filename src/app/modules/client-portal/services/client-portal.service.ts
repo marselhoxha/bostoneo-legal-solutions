@@ -42,7 +42,8 @@ export interface ClientCase {
   caseType?: string; // alias for type
   status: string;
   description: string;
-  attorneyName: string;
+  attorneyName: string; // Lead attorney or "Your Legal Team" if multiple
+  assignedAttorneys?: string[]; // All assigned attorney names
   leadAttorney?: string; // alias for attorneyName
   openDate: string;
   filingDate?: string; // alias for openDate
@@ -104,6 +105,7 @@ export interface ClientMessageThread {
   caseId: number;
   caseNumber: string;
   subject: string;
+  channel?: string; // 'SMS' | 'PORTAL' | 'EMAIL'
   lastMessage: string;
   lastSenderName: string;
   lastMessageAt: string;
@@ -117,9 +119,11 @@ export interface ClientMessage {
   threadId: number;
   senderName: string;
   senderType: string;
+  channel?: string; // 'SMS' | 'PORTAL' | 'EMAIL'
   content: string;
   sentAt: string;
   isRead: boolean;
+  readAt?: string;
   hasAttachment: boolean;
   attachmentName: string;
 }

@@ -12,7 +12,7 @@ import {
 } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { filter, takeUntil } from 'rxjs/operators';
-import { Subject } from 'rxjs';
+import { Subject, interval } from 'rxjs';
 import { PreloaderService } from './service/preloader.service';
 import { UrlSerializer } from '@angular/router';
 import { UserService } from './service/user.service';
@@ -105,28 +105,54 @@ export class AppComponent implements OnInit, OnDestroy {
     if (window.location.pathname === '/' || window.location.pathname === '') {
       this.router.navigate(['/home']);
     }
-    
-    // Preload user data if authenticated
+
+    // Subscribe to login success events to reinitialize services after login
+    // Use setTimeout to ensure the interceptor state is fully reset before making requests
+    this.userService.loginSuccess$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        console.log('Login success detected, waiting for interceptor reset...');
+        // Small delay to ensure interceptor state is fully reset
+        setTimeout(() => {
+          console.log('Initializing authenticated services...');
+          this.initializeAuthenticatedServices();
+        }, 100);
+      });
+
+    // Preload user data if already authenticated (page refresh scenario)
     if (this.userService.isAuthenticated()) {
-      this.userService.preloadUserData();
-      
-      // Start deadline reminder service for authenticated users
-      this.reminderService.startReminders();
-      console.log('Reminder service started with improved error handling');
-      
-      // Start deadline alert monitoring
-      this.deadlineAlertService.startDeadlineMonitoring();
-      console.log('Deadline alert monitoring started');
-      
-      // Initialize Enhanced Notification Manager with EventBus
-      this.enhancedNotificationManager.initialize();
-      console.log('Enhanced Notification Manager with EventBus initialized');
-      
-      // Initialize WebSocket connection
-      this.initializeWebSocketNotifications();
+      this.initializeAuthenticatedServices();
     }
 
     console.log('App component initialized');
+  }
+
+  /**
+   * Initialize services that require authentication
+   * Called on app init if already authenticated, or after login success
+   */
+  private initializeAuthenticatedServices(): void {
+    console.log('Initializing authenticated services...');
+
+    this.userService.preloadUserData();
+
+    // Start deadline reminder service for authenticated users
+    this.reminderService.startReminders();
+    console.log('Reminder service started with improved error handling');
+
+    // Start deadline alert monitoring
+    this.deadlineAlertService.startDeadlineMonitoring();
+    console.log('Deadline alert monitoring started');
+
+    // Initialize Enhanced Notification Manager with EventBus
+    this.enhancedNotificationManager.initialize();
+    console.log('Enhanced Notification Manager with EventBus initialized');
+
+    // Initialize WebSocket connection
+    this.initializeWebSocketNotifications();
+
+    // Start proactive token refresh check (every 2 minutes)
+    this.startProactiveTokenRefresh();
   }
 
   private isExcludedRoute(url: string): boolean {
@@ -219,12 +245,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private handleWebSocketNotification(message: any): void {
     console.log('🎯 Processing notification:', message);
-    
+
     try {
       const data = message.data || message;
       const title = data.title || message.title || 'Notification';
       const messageText = data.message || message.message || 'You have a new notification';
-      
+
       // Create push notification payload
       const notificationPayload = {
         notification: {
@@ -236,13 +262,30 @@ export class AppComponent implements OnInit, OnDestroy {
           ...data
         }
       };
-      
+
       // Send push notification using the same service as task assignments
       this.pushNotificationService.sendCustomNotification(notificationPayload);
-      
+
     } catch (error) {
       console.error('❌ Error handling WebSocket notification:', error);
     }
+  }
+
+  /**
+   * Start periodic proactive token refresh check
+   * This runs every 2 minutes to check if the token is about to expire
+   */
+  private startProactiveTokenRefresh(): void {
+    // Check every 2 minutes (120000ms)
+    interval(120000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.userService.proactiveTokenRefresh();
+      });
+
+    // Also do an immediate check on startup
+    this.userService.proactiveTokenRefresh();
+    console.log('Proactive token refresh monitoring started');
   }
 
   ngOnDestroy(): void {

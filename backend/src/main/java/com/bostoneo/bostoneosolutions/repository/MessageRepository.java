@@ -17,10 +17,14 @@ public interface MessageRepository extends ListCrudRepository<Message, Long> {
     @Query("SELECT m FROM Message m WHERE m.threadId = :threadId ORDER BY m.createdAt DESC")
     List<Message> findByThreadIdOrderByCreatedAtDesc(@Param("threadId") Long threadId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Message m SET m.isRead = true, m.readAt = :readAt WHERE m.threadId = :threadId AND m.senderType = :senderType AND m.isRead = false")
     int markAsRead(@Param("threadId") Long threadId, @Param("senderType") Message.SenderType senderType, @Param("readAt") LocalDateTime readAt);
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.threadId = :threadId AND m.senderType = :senderType AND m.isRead = false")
     int countUnread(@Param("threadId") Long threadId, @Param("senderType") Message.SenderType senderType);
+
+    @Modifying
+    @Query("DELETE FROM Message m WHERE m.threadId = :threadId")
+    void deleteByThreadId(@Param("threadId") Long threadId);
 }

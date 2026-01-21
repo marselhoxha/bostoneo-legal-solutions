@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Key } from '../../../../../../enum/key.enum';
 
 interface TemplateVariable {
   name: string;
@@ -36,8 +37,8 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   private loadVariables(): void {
-    const token = localStorage.getItem('access_token');
-    
+    const token = localStorage.getItem(Key.TOKEN);
+
     fetch(`http://localhost:8085/api/ai/templates/${this.templateId}/variables`, {
       method: 'GET',
       headers: {

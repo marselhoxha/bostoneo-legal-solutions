@@ -5,6 +5,7 @@ import { User } from 'src/app/interface/user';
 import { UserService } from 'src/app/service/user.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { AuthService } from 'src/app/services/auth.service';
+import { Key } from 'src/app/enum/key.enum';
 
 @Component({
   selector: 'app-home',
@@ -214,7 +215,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // 4. Check JWT token
     if (roles.length === 0) {
-      const token = localStorage.getItem('token') || localStorage.getItem('Token') || localStorage.getItem('TOKEN');
+      const token = localStorage.getItem(Key.TOKEN);
       if (token) {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));

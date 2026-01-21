@@ -8,9 +8,8 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { StoreModule } from '@ngrx/store';
 import { NgChartsModule } from 'ng2-charts';
-import { JwtModule } from '@auth0/angular-jwt';
+import { JwtHelperService, JWT_OPTIONS } from '@auth0/angular-jwt';
 import { AppRoutingModule } from './app-routing.module';
-import { Key } from './enum/key.enum';
 import { AppComponent } from './app.component';
 import { AuthModule } from './component/auth/auth.module';
 // Client and Invoice modules are lazy-loaded via routing
@@ -21,9 +20,9 @@ import { ToastrNotificationModule } from './notification.module';
 import { rootReducer } from './store';
 import { CountUpModule } from 'ngx-countup';
 import { NgbAccordionModule } from '@ng-bootstrap/ng-bootstrap';
-import { FaqsComponent } from './component/faqs/faqs.component'; 
- 
-import { PreloaderComponent } from './component/preloader/preloader.component'; 
+import { FaqsComponent } from './component/faqs/faqs.component';
+
+import { PreloaderComponent } from './component/preloader/preloader.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 @NgModule({
@@ -43,22 +42,19 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
     CoreModule,
     AuthModule,
     MatSnackBarModule,
-    AppRoutingModule, 
-    NgChartsModule, 
-    CountUpModule, 
+    AppRoutingModule,
+    NgChartsModule,
+    CountUpModule,
     NgbAccordionModule,
-    JwtModule.forRoot({
-      config: {
-        tokenGetter: () => localStorage.getItem(Key.TOKEN),
-        allowedDomains: ['localhost:8085'],
-        disallowedRoutes: ['localhost:8085/auth/']
-      }
-    }),
+    // JwtModule removed - custom TokenInterceptor handles auth to avoid conflicts
     StoreModule.forRoot(rootReducer)
   ],
     
-  providers: [],
-  
+  providers: [
+    { provide: JWT_OPTIONS, useValue: {} },
+    JwtHelperService
+  ],
+
   bootstrap: [AppComponent]
 })
 export class AppModule { }

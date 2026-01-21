@@ -24,6 +24,7 @@ import { CaseAssignmentService } from 'src/app/service/case-assignment.service';
 import { CaseTaskService } from 'src/app/service/case-task.service';
 import { CaseAssignment } from 'src/app/interface/case-assignment';
 import { MessagingService, MessageThread } from 'src/app/service/messaging.service';
+import { MessagingStateService } from 'src/app/service/messaging-state.service';
 import { WebSocketService } from 'src/app/service/websocket.service';
 import { Key } from 'src/app/enum/key.enum';
 import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client-portal/services/client-portal.service';
@@ -84,6 +85,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   clientMessageThreads: ClientMessageThread[] = [];
   loadingMessages = false;
   isClientUser = false;
+  private messagingStateSubscribed = false; // Guard to prevent duplicate subscriptions
   @ViewChild('messageDropdown') messageDropdown!: NgbDropdown;
 
   // Time Tracking
@@ -108,7 +110,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
     private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
     private notificationManagerService: NotificationManagerService,
     private caseAssignmentService: CaseAssignmentService, private caseTaskService: CaseTaskService,
-    private messagingService: MessagingService, private webSocketService: WebSocketService,
+    private messagingService: MessagingService, private messagingStateService: MessagingStateService,
+    private webSocketService: WebSocketService,
     private clientPortalService: ClientPortalService, private timerService: TimerService,
     private legalCaseService: LegalCaseService) {
 
@@ -117,15 +120,15 @@ export class TopbarComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Initialize user data
     this.user$ = this.userService.userData$;
-    
+
     // Load user data if authenticated
     if (this.userService.isAuthenticated()) {
       this.loadUserData();
     }
-    
+
     // Check notification permission status
     this.checkNotificationPermission();
-    
+
     // Load theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -133,14 +136,18 @@ export class TopbarComponent implements OnInit, OnDestroy {
     } else {
       this.changeMode('light');
     }
-  
+
     this.element = document.documentElement;
 
     // Subscribe to user data changes
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (user) => {
         if (user) {
+          // Update client role when user data changes
+          this.isClientUser = user.roleName === 'ROLE_CLIENT' ||
+                              user.roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
           // Force change detection when user data changes
+          this.cdr.markForCheck();
           this.cdr.detectChanges();
         }
       }
@@ -154,28 +161,32 @@ export class TopbarComponent implements OnInit, OnDestroy {
         this.userService.refreshUserData();
       }
     });
-    
+
     // Initialize push notifications
     this.initializePushNotifications();
-    
+
     // Initialize backend notifications
     this.initializeBackendNotifications();
-    
+
     // Initialize unread notification count
     this.updateUnreadCount();
-    
+
     // Initialize dropdown component with a small delay to ensure proper rendering
     setTimeout(() => {
       this.cdr.detectChanges();
     }, 100);
-    
+
     // Load case management data with a delay to ensure user data is ready
     setTimeout(() => {
       this.loadCaseManagementData();
     }, 1000);
 
-    // Detect user role and load messages accordingly
-    this.detectUserRoleAndLoadMessages();
+    // IMPORTANT: Subscribe to messaging state IMMEDIATELY (don't wait for user data)
+    // This ensures we receive WebSocket notifications from the start
+    this.subscribeToMessagingState();
+
+    // Detect user role (for UI display purposes only - messaging subscription already done above)
+    this.detectUserRole();
 
     // Initialize time tracking - subscribe to active timers
     this.initializeTimeTracking();
@@ -388,7 +399,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
       try {
         const response = await fetch(`http://localhost:8085/api/v1/notifications/user/${userId}?page=0&size=10`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem(Key.TOKEN)}`,
             'Content-Type': 'application/json'
           }
         });
@@ -1106,121 +1117,189 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Detect user role and load messages accordingly
+   * Detect user role for UI display purposes
+   * Note: Messaging state subscription is now handled separately in ngOnInit
    */
-  private detectUserRoleAndLoadMessages(): void {
-    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (user) {
-        // Check if user has ROLE_CLIENT
-        this.isClientUser = user.roleName === 'ROLE_CLIENT' ||
-                            user.roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
+  private detectUserRole(): void {
+    // Check current user immediately if available
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser) {
+      this.isClientUser = currentUser.roleName === 'ROLE_CLIENT' ||
+                          (currentUser as any).roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
+      this.cdr.markForCheck();
+    }
+  }
 
-        // Load messages based on user type
-        this.loadUnreadMessageCount();
-        this.loadMessageThreads();
-        this.initMessageWebSocket();
+  /**
+   * Subscribe to centralized messaging state service
+   * This ensures state persists across route navigation
+   */
+  private subscribeToMessagingState(): void {
+    // Guard to prevent duplicate subscriptions
+    if (this.messagingStateSubscribed) return;
+    this.messagingStateSubscribed = true;
 
+    // Subscribe to unread count from centralized service
+    // OPTIMIZATION: Only update if value changed to prevent unnecessary re-renders
+    this.messagingStateService.unreadCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(count => {
+        console.log('[Topbar] unreadCount$ received:', count, 'current:', this.unreadMessageCount);
+        if (this.unreadMessageCount === count) {
+          console.log('[Topbar] Skipping - count unchanged');
+          return; // Skip if unchanged
+        }
+        this.unreadMessageCount = count;
+        console.log('[Topbar] Updated unreadMessageCount to:', this.unreadMessageCount);
+        // CRITICAL: For unread count badge, we need detectChanges to ensure immediate update
+        // This is necessary because OnPush change detection may not catch BehaviorSubject emissions
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
+        // NOTE: Do NOT play notification sound here!
+        // The unread count can change for many reasons (polling, marking as read, etc.)
+        // Notification sounds should ONLY be triggered by newMessage$ from WebSocket
+        // which correctly identifies incoming messages from OTHER users.
+      });
+
+    // Subscribe to threads from centralized service
+    // OPTIMIZATION: Only update if threads actually changed
+    this.messagingStateService.threads$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(threads => {
+        // Clone and take only top 5 most recent threads for dropdown
+        const newThreads = (threads || [])
+          .map(t => ({ ...t }))
+          .sort((a, b) => {
+            const dateA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+            const dateB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+            return dateB - dateA;
+          })
+          .slice(0, 5);
+
+        const isEqual = this.areMessageThreadsEqual(this.messageThreads, newThreads);
+        console.log('[Topbar] threads$ received:', newThreads.map(t => ({ id: t.id, unread: t.unreadCount, lastMsg: t.lastMessage?.substring(0, 20) })), 'isEqual:', isEqual);
+
+        // Skip update if data is the same (prevents flickering)
+        if (isEqual) {
+          return;
+        }
+
+        this.messageThreads = newThreads;
+        console.log('[Topbar] Updated messageThreads');
+        // For threads update, also need detectChanges to ensure dropdown updates
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
+
+    // Subscribe to loading state
+    this.messagingStateService.loading$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(loading => {
+        if (this.loadingMessages === loading) return; // Skip if unchanged
+        this.loadingMessages = loading;
+        this.cdr.markForCheck();
+      });
+
+    // Subscribe to new messages for notification sound/animation
+    // The messaging-state.service already filters out own messages before emitting
+    // We just need to check _playSoundAllowed flag for sound control
+    this.messagingStateService.newMessage$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data) => {
+        // Only play notification sound if explicitly allowed by the service
+        // (service sets _playSoundAllowed=true only when it can confirm message is from someone else)
+        if (data?.message?._playSoundAllowed && !data.message._polled) {
+          this.playMessageNotificationSound();
+        }
+
+        // Trigger visual update for new messages
+        this.cdr.markForCheck();
+      });
+
+    // Force initial load of threads from centralized service (works for both clients and attorneys)
+    // The MessagingService.getThreads() routes to the correct API based on user role
+    // Use force=true to bypass debounce and ensure data loads immediately on component init
+    this.messagingStateService.refreshThreads(true);
+
+    // Also refresh after a short delay to catch any timing issues with service initialization
+    setTimeout(() => {
+      this.messagingStateService.refreshThreads(true);
+      this.cdr.markForCheck();
+    }, 500);
+  }
+
+  /**
+   * Shallow equality check for message threads to prevent unnecessary re-renders
+   */
+  private areMessageThreadsEqual(current: any[], incoming: any[]): boolean {
+    if (!current || !incoming) return false;
+    if (current.length !== incoming.length) return false;
+
+    for (let i = 0; i < current.length; i++) {
+      const c = current[i];
+      const n = incoming[i];
+      if (c.id !== n.id ||
+          c.unreadCount !== n.unreadCount ||
+          c.lastMessage !== n.lastMessage ||
+          c.lastMessageAt !== n.lastMessageAt) {
+        return false;
       }
-    });
+    }
+    return true;
   }
 
   /**
-   * Load unread message count from appropriate service
+   * Play notification sound for new messages
    */
-  private loadUnreadMessageCount(): void {
-    if (this.isClientUser) {
-      // For clients, get unread count from dashboard or calculate from threads
-      this.clientPortalService.getMessageThreads()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (threads) => {
-            this.unreadMessageCount = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            // Silently fail
-          }
-        });
-    } else {
-      // For attorneys
-      this.messagingService.getUnreadCount()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (count) => {
-            this.unreadMessageCount = count;
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            // Silently fail
-          }
-        });
+  private playMessageNotificationSound(): void {
+    try {
+      const audioUrl = 'assets/sounds/notification.mp3';
+      const audio = new Audio(audioUrl);
+      if (audio) {
+        audio.volume = 0.3;
+        audio.addEventListener('error', () => {});
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
+      }
+    } catch (error) {
+      // Silently fail
     }
   }
 
   /**
-   * Load message threads for dropdown
+   * Trigger visual notification for new message (e.g., pulse animation)
    */
-  private loadMessageThreads(): void {
+  private triggerMessageNotification(): void {
+    // Force change detection to ensure badge updates
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Load client message threads (for client users only)
+   * Attorneys use the centralized MessagingStateService
+   */
+  private loadClientMessageThreads(): void {
     this.loadingMessages = true;
-
-    if (this.isClientUser) {
-      // For clients
-      this.clientPortalService.getMessageThreads()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (threads) => {
-            this.clientMessageThreads = threads
-              .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
-              .slice(0, 5);
-            this.loadingMessages = false;
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.loadingMessages = false;
-            this.cdr.detectChanges();
-          }
-        });
-    } else {
-      // For attorneys
-      this.messagingService.getThreads()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (threads) => {
-            this.messageThreads = threads
-              .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
-              .slice(0, 5);
-            this.loadingMessages = false;
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.loadingMessages = false;
-            this.cdr.detectChanges();
-          }
-        });
-    }
-  }
-
-  /**
-   * Initialize WebSocket for real-time message notifications
-   */
-  private initMessageWebSocket(): void {
-    const token = localStorage.getItem(Key.TOKEN);
-    if (token) {
-      this.webSocketService.connect(token);
-
-      this.webSocketService.getMessages()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe(msg => {
-          if (msg.type === 'notification' && msg.data?.type === 'NEW_MESSAGE') {
-            // Increment unread count when new message arrives
-            this.unreadMessageCount++;
-            // Refresh threads to show the new message
-            this.loadMessageThreads();
-            this.cdr.detectChanges();
-          }
-        });
-    }
+    this.clientPortalService.getMessageThreads()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (threads) => {
+          this.clientMessageThreads = threads
+            .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
+            .slice(0, 5);
+          // Also update unread count for clients
+          this.unreadMessageCount = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
+          this.loadingMessages = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.loadingMessages = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   /**
@@ -1228,8 +1307,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
    */
   onMessageDropdownToggle(isOpen: boolean): void {
     if (isOpen) {
-      // Refresh threads when dropdown opens
-      this.loadMessageThreads();
+      // Force refresh threads when dropdown opens (bypasses debounce)
+      // This ensures the dropdown always shows the latest data
+      this.messagingStateService.refreshThreads(true);
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     }
   }
 
@@ -1296,10 +1378,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get display threads based on user type
+   * Get display threads - uses centralized state service for both clients and attorneys
    */
   getDisplayThreads(): any[] {
-    return this.isClientUser ? this.clientMessageThreads : this.messageThreads;
+    return this.messageThreads;
   }
 
   /**
@@ -1318,12 +1400,46 @@ export class TopbarComponent implements OnInit, OnDestroy {
    */
   getThreadDisplayName(thread: any): string {
     if (this.isClientUser) {
-      // For clients, show "Attorney" or the attorney name
-      return thread.lastSenderName || 'Attorney';
+      // For clients, show attorney name
+      return thread.attorneyName || 'Your Attorney';
     } else {
       // For attorneys, show client name
       return thread.clientName || 'Client';
     }
+  }
+
+  /**
+   * Check if the last message in the thread was sent by the current user
+   * IMPORTANT: For multi-attorney threads, MUST compare lastSenderId
+   */
+  isLastMessageByMe(thread: any): boolean {
+    if (!thread) return false;
+
+    // Primary check: compare lastSenderId with current user
+    // This is critical for multi-attorney threads
+    const currentUserId = this.userService.getCurrentUserId();
+    if (thread.lastSenderId && currentUserId) {
+      return thread.lastSenderId == currentUserId;
+    }
+
+    // For clients, senderType check is sufficient
+    if (this.isClientUser && thread.lastSenderType) {
+      return thread.lastSenderType === 'CLIENT';
+    }
+
+    // For attorneys without lastSenderId, default to false
+    // This avoids showing "You" incorrectly for other attorneys' messages
+    return false;
+  }
+
+  /**
+   * Get the display name for the last message sender
+   */
+  getLastSenderDisplay(thread: any): string {
+    if (this.isLastMessageByMe(thread)) {
+      return 'You';
+    }
+    return thread.lastSenderName || (this.isClientUser ? 'Attorney' : 'Client');
   }
 
   // ==========================================

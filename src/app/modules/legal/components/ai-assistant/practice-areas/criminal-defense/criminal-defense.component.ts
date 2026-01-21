@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
@@ -25,7 +25,7 @@ interface MotionTemplate {
 @Component({
   selector: 'app-criminal-defense',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, HttpClientModule, AiResponseFormatterPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, AiResponseFormatterPipe],
   templateUrl: './criminal-defense.component.html',
   styleUrls: ['./criminal-defense.component.scss']
 })

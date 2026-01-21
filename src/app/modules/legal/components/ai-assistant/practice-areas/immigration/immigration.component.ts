@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
@@ -59,7 +59,7 @@ interface CaseTimeline {
 @Component({
   selector: 'app-immigration',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, HttpClientModule, AiResponseFormatterPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, AiResponseFormatterPipe],
   templateUrl: './immigration.component.html',
   styleUrls: ['./immigration.component.scss']
 })

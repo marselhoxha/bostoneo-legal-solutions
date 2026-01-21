@@ -14,6 +14,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NotificationService } from '../../../../service/notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
 import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
+import { Key } from '../../../../enum/key.enum';
 
 interface Client {
   id: number;
@@ -169,8 +170,8 @@ export class ExpenseFormComponent implements OnInit {
 
   private loadInvoicesDirect() {
     console.log('Loading invoices directly via HTTP');
-    
-    const token = localStorage.getItem('token');
+
+    const token = localStorage.getItem(Key.TOKEN);
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`

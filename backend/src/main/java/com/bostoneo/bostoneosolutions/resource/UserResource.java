@@ -1,17 +1,20 @@
 package com.bostoneo.bostoneosolutions.resource;
 
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.enumeration.EventType;
 import com.bostoneo.bostoneosolutions.event.NewUserEvent;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.form.*;
+import com.bostoneo.bostoneosolutions.model.Client;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.model.Permission;
 import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.service.EventService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.service.UserService;
@@ -67,6 +70,7 @@ public class UserResource {
     private final HttpServletRequest request;
     private final HttpServletResponse response;
     private final ApplicationEventPublisher publisher;
+    private final ClientRepository clientRepository;
 
     @PostMapping("/login")
     @AuditLog(action = "LOGIN", entityType = "USER", description = "User login attempt")
@@ -252,6 +256,14 @@ public class UserResource {
     public ResponseEntity<HttpResponse> updateProfileImage(Authentication authentication, @RequestParam("image") MultipartFile image) throws InterruptedException {
         UserDTO user = getAuthenticatedUser(authentication);
         userService.updateImage(user, image);
+
+        // Sync Client imageUrl if user is a client
+        Client client = clientRepository.findByUserId(user.getId());
+        if (client != null) {
+            client.setImageUrl(user.getImageUrl());
+            clientRepository.save(client);
+        }
+
         publisher.publishEvent(new NewUserEvent(user.getEmail(), PROFILE_PICTURE_UPDATE));
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
@@ -271,41 +283,83 @@ public class UserResource {
     @GetMapping("/refresh/token")
     public ResponseEntity<HttpResponse> refreshToken(HttpServletRequest request) {
         log.info("Token refresh request received");
-        log.info("Authorization header: {}", request.getHeader(AUTHORIZATION));
-        
-        if(isHeaderAndTokenValid(request)) {
-            String token = request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length());
-            log.info("Extracted token for refresh: {}", token != null ? "present" : "null");
-            UserDTO user = userService.getUserById(tokenProvider.getSubject(token, request));
-            log.info("User found for refresh: {}", user != null ? user.getEmail() : "null");
+
+        try {
+            String authHeader = request.getHeader(AUTHORIZATION);
+            if (authHeader == null || !authHeader.startsWith(TOKEN_PREFIX)) {
+                log.warn("Refresh token missing or invalid format");
+                return ResponseEntity.status(UNAUTHORIZED).body(
+                        HttpResponse.builder()
+                                .timeStamp(now().toString())
+                                .reason("Refresh token missing or invalid")
+                                .status(UNAUTHORIZED)
+                                .statusCode(UNAUTHORIZED.value())
+                                .build());
+            }
+
+            String token = authHeader.substring(TOKEN_PREFIX.length());
+            Long userId = tokenProvider.getSubject(token, request);
+
+            if (userId == null || !tokenProvider.isTokenValid(userId, token)) {
+                log.warn("Refresh token validation failed");
+                return ResponseEntity.status(UNAUTHORIZED).body(
+                        HttpResponse.builder()
+                                .timeStamp(now().toString())
+                                .reason("Refresh token expired or invalid")
+                                .status(UNAUTHORIZED)
+                                .statusCode(UNAUTHORIZED.value())
+                                .build());
+            }
+
+            UserDTO user = userService.getUserById(userId);
+            log.info("Token refresh successful for user: {}", user != null ? user.getEmail() : "unknown");
+
+            // Generate new tokens
+            String newAccessToken = tokenProvider.createAccessToken(getUserPrincipal(user));
+            String newRefreshToken = tokenProvider.createRefreshToken(getUserPrincipal(user));
+
             return ResponseEntity.ok().body(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .data(of("user", user, "access_token", tokenProvider.createAccessToken(getUserPrincipal(user))
-                                    , "refresh_token", token))
+                            .data(of("user", user, "access_token", newAccessToken, "refresh_token", newRefreshToken))
                             .message("Token refreshed")
                             .status(OK)
                             .statusCode(OK.value())
                             .build());
-        } else {
-            return ResponseEntity.badRequest().body(
+
+        } catch (TokenExpiredException e) {
+            log.warn("Refresh token expired: {}", e.getMessage());
+            return ResponseEntity.status(UNAUTHORIZED).body(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .reason("Refresh Token missing or invalid")
-                            .developerMessage("Refresh Token missing or invalid")
-                            .status(BAD_REQUEST)
-                            .statusCode(BAD_REQUEST.value())
+                            .reason("Session expired. Please log in again.")
+                            .status(UNAUTHORIZED)
+                            .statusCode(UNAUTHORIZED.value())
+                            .build());
+        } catch (Exception e) {
+            log.error("Error during token refresh: {}", e.getMessage());
+            return ResponseEntity.status(UNAUTHORIZED).body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .reason("Token refresh failed")
+                            .status(UNAUTHORIZED)
+                            .statusCode(UNAUTHORIZED.value())
                             .build());
         }
     }
 
     private boolean isHeaderAndTokenValid(HttpServletRequest request) {
-        return  request.getHeader(AUTHORIZATION) != null
-                &&  request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
-                && tokenProvider.isTokenValid(
-                tokenProvider.getSubject(request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length()), request),
-                request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length())
-        );
+        try {
+            return request.getHeader(AUTHORIZATION) != null
+                    && request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
+                    && tokenProvider.isTokenValid(
+                    tokenProvider.getSubject(request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length()), request),
+                    request.getHeader(AUTHORIZATION).substring(TOKEN_PREFIX.length())
+            );
+        } catch (Exception e) {
+            log.warn("Token validation failed: {}", e.getMessage());
+            return false;
+        }
     }
 
     @RequestMapping("/error")

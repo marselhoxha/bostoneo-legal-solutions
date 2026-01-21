@@ -25,6 +25,8 @@ import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.repository.MessageThreadRepository;
 import com.bostoneo.bostoneosolutions.repository.MessageRepository;
+import com.bostoneo.bostoneosolutions.repository.ThreadAttorneyStatusRepository;
+import com.bostoneo.bostoneosolutions.model.ThreadAttorneyStatus;
 import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import com.bostoneo.bostoneosolutions.service.ClientPortalService;
 import com.bostoneo.bostoneosolutions.service.FileManagerService;
@@ -73,6 +75,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     private final MessageThreadRepository messageThreadRepository;
     private final MessageRepository messageRepository;
     private final AuthenticatedWebSocketHandler webSocketHandler;
+    private final ThreadAttorneyStatusRepository threadAttorneyStatusRepository;
 
     // =====================================================
     // CLIENT PROFILE
@@ -790,11 +793,42 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         }
 
         // Mark messages from attorney as read
-        messageRepository.markAsRead(threadId, Message.SenderType.ATTORNEY, LocalDateTime.now());
+        LocalDateTime readAt = LocalDateTime.now();
+        int markedCount = messageRepository.markAsRead(threadId, Message.SenderType.ATTORNEY, readAt);
         thread.setUnreadByClient(0);
         messageThreadRepository.save(thread);
 
+        // Notify ALL attorneys assigned to this case via WebSocket that their messages have been read
+        if (markedCount > 0 && thread.getCaseId() != null) {
+            try {
+                Map<String, Object> wsMessage = new HashMap<>();
+                wsMessage.put("type", "MESSAGE_READ");
+                wsMessage.put("threadId", threadId);
+                wsMessage.put("readAt", readAt.toString());
+                wsMessage.put("readByClientId", client.getId());
+                wsMessage.put("readByClientName", client.getName());
+
+                List<Long> attorneyUserIds = getAssignedAttorneyUserIds(thread.getCaseId());
+                for (Long attorneyUserId : attorneyUserIds) {
+                    try {
+                        webSocketHandler.sendNotificationToUser(attorneyUserId.toString(), wsMessage);
+                    } catch (Exception e) {
+                        log.warn("Failed to send read receipt to attorney {}: {}", attorneyUserId, e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send read receipt notification: {}", e.getMessage());
+            }
+        }
+
         List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+
+        // Debug: Log read status of messages
+        for (Message msg : messages) {
+            log.debug("ClientPortal - Message {} (type: {}, senderId: {}) - isRead: {}, readAt: {}",
+                msg.getId(), msg.getSenderType(), msg.getSenderId(), msg.getIsRead(), msg.getReadAt());
+        }
+
         return messages.stream().map(this::mapToMessageDTO).collect(Collectors.toList());
     }
 
@@ -818,11 +852,15 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .build();
         message = messageRepository.save(message);
 
-        // Update thread
+        // Update thread (keep legacy field for backwards compatibility)
         thread.setLastMessageAt(message.getCreatedAt());
         thread.setLastMessageBy("CLIENT");
         thread.setUnreadByAttorney(thread.getUnreadByAttorney() + 1);
         messageThreadRepository.save(thread);
+
+        // CRITICAL FIX: Increment unread count for ALL attorneys assigned to this case/thread
+        // This ensures each attorney gets their own notification, not a shared one
+        incrementUnreadForAllAttorneys(thread);
 
         // Notify attorney
         notifyAttorneyOfNewMessage(thread, client, content);
@@ -832,6 +870,36 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
         log.info("Client {} sent message in thread {}", client.getName(), threadId);
         return mapToMessageDTO(message);
+    }
+
+    /**
+     * Increment unread count for ALL attorneys associated with a thread.
+     * This includes the thread owner and all attorneys assigned to the case.
+     */
+    private void incrementUnreadForAllAttorneys(MessageThread thread) {
+        // Get all attorney user IDs for this thread
+        List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread);
+
+        for (Long attorneyUserId : attorneyUserIds) {
+            ThreadAttorneyStatus status = threadAttorneyStatusRepository
+                    .findByThreadIdAndAttorneyUserId(thread.getId(), attorneyUserId)
+                    .orElse(null);
+
+            if (status != null) {
+                status.incrementUnread();
+                threadAttorneyStatusRepository.save(status);
+            } else {
+                // Create new status record with unread=1
+                status = ThreadAttorneyStatus.builder()
+                        .threadId(thread.getId())
+                        .attorneyUserId(attorneyUserId)
+                        .unreadCount(1)
+                        .build();
+                threadAttorneyStatusRepository.save(status);
+            }
+        }
+        log.debug("Incremented unread count for {} attorneys on thread {}",
+                attorneyUserIds.size(), thread.getId());
     }
 
     @Override
@@ -894,6 +962,26 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         return mapToThreadDTO(thread, client.getName());
     }
 
+    @Override
+    public void deleteThread(Long userId, Long threadId) {
+        Client client = getClientByUserId(userId);
+
+        MessageThread thread = messageThreadRepository.findById(threadId)
+                .orElseThrow(() -> new ApiException("Thread not found"));
+
+        if (!thread.getClientId().equals(client.getId())) {
+            throw new ApiException("You do not have access to this thread");
+        }
+
+        // Delete all messages in the thread first (due to FK constraint)
+        messageRepository.deleteByThreadId(threadId);
+
+        // Delete the thread
+        messageThreadRepository.delete(thread);
+
+        log.info("Client {} deleted message thread {}", client.getName(), threadId);
+    }
+
     private ClientPortalMessageThreadDTO mapToThreadDTO(MessageThread thread, String clientName) {
         String caseNumber = null;
         if (thread.getCaseId() != null) {
@@ -903,67 +991,143 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             }
         }
 
+        // Get attorney count, name, and image for client view
+        // If multiple attorneys assigned, show "Your Legal Team"
+        String attorneyName = "Your Legal Team";
+        String attorneyImageUrl = null;
+        int attorneyCount = 0;
+        if (thread.getCaseId() != null) {
+            List<Long> attorneyUserIds = getAssignedAttorneyUserIds(thread.getCaseId());
+            attorneyCount = attorneyUserIds.size();
+            if (attorneyCount == 1) {
+                // Single attorney - show their name and image
+                User attorney = userRepository.get(attorneyUserIds.get(0));
+                if (attorney != null) {
+                    attorneyName = attorney.getFirstName() + " " + attorney.getLastName();
+                    // Ensure empty strings are treated as null
+                    String imgUrl = attorney.getImageUrl();
+                    attorneyImageUrl = (imgUrl != null && !imgUrl.trim().isEmpty()) ? imgUrl : null;
+                }
+            }
+            // If count > 1 or 0, keep "Your Legal Team" with no specific image
+        } else if (thread.getAttorneyId() != null) {
+            // Fallback to thread owner if no case
+            User attorney = userRepository.get(thread.getAttorneyId());
+            if (attorney != null) {
+                attorneyName = attorney.getFirstName() + " " + attorney.getLastName();
+                // Ensure empty strings are treated as null
+                String imgUrl = attorney.getImageUrl();
+                attorneyImageUrl = (imgUrl != null && !imgUrl.trim().isEmpty()) ? imgUrl : null;
+                attorneyCount = 1;
+            }
+        }
+
         // Get last message for preview
         List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
         String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
-        String lastSenderName = messages.isEmpty() ? "" :
-                (messages.get(0).getSenderType() == Message.SenderType.CLIENT ? clientName : "Attorney");
+        Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
+        String lastSenderType = messages.isEmpty() ? "" : messages.get(0).getSenderType().name();
+        String lastSenderName = "";
+        if (!messages.isEmpty()) {
+            if (messages.get(0).getSenderType() == Message.SenderType.CLIENT) {
+                lastSenderName = clientName;
+            } else {
+                // Get the actual attorney name who sent the message
+                User sender = userRepository.get(messages.get(0).getSenderId());
+                lastSenderName = sender != null ? (sender.getFirstName() + " " + sender.getLastName()) : attorneyName;
+            }
+        }
 
         return ClientPortalMessageThreadDTO.builder()
                 .id(thread.getId())
                 .caseId(thread.getCaseId())
                 .caseNumber(caseNumber)
                 .subject(thread.getSubject())
+                .channel(thread.getChannel())
                 .lastMessage(lastMessage.length() > 100 ? lastMessage.substring(0, 100) + "..." : lastMessage)
+                .lastSenderId(lastSenderId)
                 .lastSenderName(lastSenderName)
+                .lastSenderType(lastSenderType)
                 .lastMessageAt(thread.getLastMessageAt())
                 .unreadCount(thread.getUnreadByClient())
                 .totalMessages(messages.size())
                 .status(thread.getStatus().name())
+                .clientName(clientName)
+                .attorneyName(attorneyName)
+                .attorneyImageUrl(attorneyImageUrl)
+                .attorneyCount(attorneyCount)
                 .build();
     }
 
     private ClientPortalMessageDTO mapToMessageDTO(Message message) {
         String senderName = "Unknown";
+        String senderImageUrl = null;
+
         if (message.getSenderType() == Message.SenderType.CLIENT) {
             Client client = clientRepository.findByUserId(message.getSenderId());
-            if (client != null) senderName = client.getName();
+            if (client != null) {
+                senderName = client.getName();
+                // Get client image - try Client first, then fallback to User
+                senderImageUrl = client.getImageUrl();
+                if (senderImageUrl == null || senderImageUrl.trim().isEmpty()) {
+                    User clientUser = userRepository.get(message.getSenderId());
+                    if (clientUser != null) {
+                        senderImageUrl = clientUser.getImageUrl();
+                    }
+                }
+            }
         } else {
             User user = userRepository.get(message.getSenderId());
-            if (user != null) senderName = user.getFirstName() + " " + user.getLastName();
+            if (user != null) {
+                senderName = user.getFirstName() + " " + user.getLastName();
+                String imgUrl = user.getImageUrl();
+                senderImageUrl = (imgUrl != null && !imgUrl.trim().isEmpty()) ? imgUrl : null;
+            }
         }
 
         return ClientPortalMessageDTO.builder()
                 .id(message.getId())
                 .threadId(message.getThreadId())
+                .senderId(message.getSenderId())
                 .senderName(senderName)
+                .senderImageUrl(senderImageUrl)
                 .senderType(message.getSenderType().name())
+                .channel(message.getChannel())
                 .content(message.getContent())
                 .sentAt(message.getCreatedAt())
-                .isRead(message.getIsRead())
+                .isRead(Boolean.TRUE.equals(message.getIsRead()))
+                .readAt(message.getReadAt())
                 .hasAttachment(Boolean.TRUE.equals(message.getHasAttachment()))
                 .build();
     }
 
     private void notifyAttorneyOfNewMessage(MessageThread thread, Client client, String messagePreview) {
-        if (thread.getAttorneyId() == null) return;
+        if (thread.getCaseId() == null) return;
 
         try {
             String preview = messagePreview.length() > 50 ? messagePreview.substring(0, 50) + "..." : messagePreview;
 
-            Map<String, Object> notificationData = new HashMap<>();
-            notificationData.put("userId", thread.getAttorneyId());
-            notificationData.put("title", "New Message from " + client.getName());
-            notificationData.put("message", preview);
-            notificationData.put("type", "CLIENT_MESSAGE");
-            notificationData.put("priority", "NORMAL");
-            notificationData.put("triggeredByUserId", client.getUserId());
-            notificationData.put("triggeredByName", client.getName());
-            notificationData.put("entityId", thread.getId());
-            notificationData.put("entityType", "MESSAGE_THREAD");
-            notificationData.put("url", "/messages?threadId=" + thread.getId());
+            // Notify ALL attorneys assigned to this case
+            List<Long> attorneyUserIds = getAssignedAttorneyUserIds(thread.getCaseId());
+            for (Long attorneyUserId : attorneyUserIds) {
+                try {
+                    Map<String, Object> notificationData = new HashMap<>();
+                    notificationData.put("userId", attorneyUserId);
+                    notificationData.put("title", "New Message from " + client.getName());
+                    notificationData.put("message", preview);
+                    notificationData.put("type", "CLIENT_MESSAGE");
+                    notificationData.put("priority", "NORMAL");
+                    notificationData.put("triggeredByUserId", client.getUserId());
+                    notificationData.put("triggeredByName", client.getName());
+                    notificationData.put("entityId", thread.getId());
+                    notificationData.put("entityType", "MESSAGE_THREAD");
+                    notificationData.put("url", "/messages?threadId=" + thread.getId());
 
-            notificationService.createUserNotification(notificationData);
+                    notificationService.createUserNotification(notificationData);
+                } catch (Exception e) {
+                    log.warn("Failed to notify attorney {}: {}", attorneyUserId, e.getMessage());
+                }
+            }
         } catch (Exception e) {
             log.error("Failed to send message notification: {}", e.getMessage());
         }
@@ -1176,15 +1340,24 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 )
                 : null;
 
-        // Get lead attorney name
+        // Get all assigned attorneys
         String attorneyName = null;
+        List<String> assignedAttorneys = new ArrayList<>();
         try {
             List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(legalCase.getId());
+            String leadAttorneyName = null;
             for (CaseAssignment assignment : assignments) {
-                if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
-                    attorneyName = assignment.getAssignedTo().getFirstName() + " " + assignment.getAssignedTo().getLastName();
-                    break;
+                String fullName = assignment.getAssignedTo().getFirstName() + " " + assignment.getAssignedTo().getLastName();
+                assignedAttorneys.add(fullName);
+                if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY && leadAttorneyName == null) {
+                    leadAttorneyName = fullName;
                 }
+            }
+            // Set display name: single attorney shows their name, multiple shows "Your Legal Team"
+            if (assignedAttorneys.size() == 1) {
+                attorneyName = assignedAttorneys.get(0);
+            } else if (assignedAttorneys.size() > 1) {
+                attorneyName = leadAttorneyName != null ? leadAttorneyName : "Your Legal Team";
             }
         } catch (Exception e) {
             log.warn("Could not get attorney for case {}: {}", legalCase.getId(), e.getMessage());
@@ -1207,6 +1380,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .status(legalCase.getStatus() != null ? legalCase.getStatus().name() : null)
                 .description(legalCase.getDescription())
                 .attorneyName(attorneyName)
+                .assignedAttorneys(assignedAttorneys)
                 .openDate(openDate)
                 .lastUpdated(lastUpdated)
                 .documentCount(documentCount)
@@ -1216,28 +1390,103 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
     private void sendWebSocketNotification(MessageThread thread, Message message, String recipientType) {
         try {
-            Long recipientUserId = null;
-            if ("ATTORNEY".equals(recipientType)) {
-                recipientUserId = thread.getAttorneyId();
+            // Get sender info for the notification
+            String senderName = "Unknown";
+            String senderImageUrl = null;
+            if (message.getSenderType() == Message.SenderType.CLIENT) {
+                Client client = clientRepository.findByUserId(message.getSenderId());
+                if (client != null) {
+                    senderName = client.getName();
+                    senderImageUrl = client.getImageUrl();
+                    // Fallback to user image if client image is empty
+                    if (senderImageUrl == null || senderImageUrl.isEmpty()) {
+                        User clientUser = userRepository.get(message.getSenderId());
+                        if (clientUser != null) senderImageUrl = clientUser.getImageUrl();
+                    }
+                }
             } else {
-                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
-                if (client != null) recipientUserId = client.getUserId();
+                User user = userRepository.get(message.getSenderId());
+                if (user != null) {
+                    senderName = user.getFirstName() + " " + user.getLastName();
+                    senderImageUrl = user.getImageUrl();
+                }
             }
-
-            if (recipientUserId == null) return;
 
             Map<String, Object> wsMessage = new HashMap<>();
             wsMessage.put("type", "NEW_MESSAGE");
             wsMessage.put("threadId", thread.getId());
             wsMessage.put("messageId", message.getId());
             wsMessage.put("content", message.getContent());
+            wsMessage.put("senderId", message.getSenderId());
             wsMessage.put("senderType", message.getSenderType().name());
+            wsMessage.put("senderName", senderName);
+            wsMessage.put("senderImageUrl", senderImageUrl);
             wsMessage.put("sentAt", message.getCreatedAt().toString());
 
-            webSocketHandler.sendNotificationToUser(recipientUserId.toString(), wsMessage);
-            log.debug("WebSocket notification sent to user {}", recipientUserId);
+            if ("ATTORNEY".equals(recipientType)) {
+                // Notify ALL attorneys (thread owner + case assignments)
+                List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread);
+                for (Long attorneyUserId : attorneyUserIds) {
+                    try {
+                        webSocketHandler.sendNotificationToUser(attorneyUserId.toString(), wsMessage);
+                        log.debug("WebSocket notification sent to attorney user {}", attorneyUserId);
+                    } catch (Exception e) {
+                        log.warn("Failed to send WebSocket to attorney {}: {}", attorneyUserId, e.getMessage());
+                    }
+                }
+            } else {
+                // Notify client
+                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+                if (client != null && client.getUserId() != null) {
+                    webSocketHandler.sendNotificationToUser(client.getUserId().toString(), wsMessage);
+                    log.debug("WebSocket notification sent to client user {}", client.getUserId());
+                }
+            }
         } catch (Exception e) {
             log.error("Failed to send WebSocket notification: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Get all attorney user IDs assigned to a case.
+     * Used for notifications and display purposes.
+     */
+    private List<Long> getAssignedAttorneyUserIds(Long caseId) {
+        List<Long> attorneyUserIds = new ArrayList<>();
+        if (caseId == null) return attorneyUserIds;
+
+        try {
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+            for (CaseAssignment assignment : assignments) {
+                if (assignment.getAssignedTo() != null) {
+                    attorneyUserIds.add(assignment.getAssignedTo().getId());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get assigned attorneys for case {}: {}", caseId, e.getMessage());
+        }
+
+        return attorneyUserIds;
+    }
+
+    /**
+     * Get all attorney user IDs that should be notified for a thread.
+     * Includes both case assignments AND the thread owner.
+     * Used specifically for WebSocket message notifications.
+     */
+    private List<Long> getAttorneyUserIdsForThread(MessageThread thread) {
+        java.util.Set<Long> attorneyUserIds = new java.util.HashSet<>();
+
+        // Always include the thread owner
+        if (thread.getAttorneyId() != null) {
+            attorneyUserIds.add(thread.getAttorneyId());
+        }
+
+        // Include all attorneys assigned to the case
+        if (thread.getCaseId() != null) {
+            attorneyUserIds.addAll(getAssignedAttorneyUserIds(thread.getCaseId()));
+        }
+
+        return new ArrayList<>(attorneyUserIds);
     }
 }

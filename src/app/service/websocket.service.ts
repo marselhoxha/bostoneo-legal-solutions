@@ -49,6 +49,7 @@ export class WebSocketService implements OnDestroy {
       this.socket.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
+          console.log('[WebSocket] Message received:', message.type, message.data?.type);
           this.messageSubject.next(message);
         } catch (e) {
           console.error('Failed to parse WebSocket message:', e);

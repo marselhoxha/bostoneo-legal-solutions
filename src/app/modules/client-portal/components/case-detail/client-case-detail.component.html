@@ -73,7 +73,12 @@
                   <i class="ri-folder-2-line"></i>
                   <span>{{caseData.type}}</span>
                 </span>
-                <span class="meta-item" *ngIf="caseData.attorneyName">
+                <span class="meta-item" *ngIf="caseData.assignedAttorneys?.length">
+                  <i class="ri-user-star-line"></i>
+                  <span *ngIf="caseData.assignedAttorneys.length === 1">{{caseData.assignedAttorneys[0]}}</span>
+                  <span *ngIf="caseData.assignedAttorneys.length > 1">Your Legal Team ({{caseData.assignedAttorneys.length}})</span>
+                </span>
+                <span class="meta-item" *ngIf="!caseData.assignedAttorneys?.length && caseData.attorneyName">
                   <i class="ri-user-star-line"></i>
                   <span>{{caseData.attorneyName}}</span>
                 </span>
@@ -124,8 +129,11 @@
           <i class="ri-user-star-line"></i>
         </div>
         <div class="info-card-content">
-          <span class="info-card-label">Lead Attorney</span>
-          <span class="info-card-value">{{caseData.attorneyName || 'Not Assigned'}}</span>
+          <span class="info-card-label" *ngIf="!caseData.assignedAttorneys?.length || caseData.assignedAttorneys.length <= 1">Lead Attorney</span>
+          <span class="info-card-label" *ngIf="caseData.assignedAttorneys?.length > 1">Your Legal Team</span>
+          <span class="info-card-value" *ngIf="!caseData.assignedAttorneys?.length">{{caseData.attorneyName || 'Not Assigned'}}</span>
+          <span class="info-card-value" *ngIf="caseData.assignedAttorneys?.length === 1">{{caseData.assignedAttorneys[0]}}</span>
+          <span class="info-card-value" *ngIf="caseData.assignedAttorneys?.length > 1" [title]="caseData.assignedAttorneys.join(', ')">{{caseData.assignedAttorneys.join(', ')}}</span>
         </div>
       </div>
     </div>
@@ -214,8 +222,10 @@
                     </span>
                   </div>
                   <div class="detail-item">
-                    <span class="detail-label">Assigned Attorney</span>
-                    <span class="detail-value">{{caseData.attorneyName || '-'}}</span>
+                    <span class="detail-label" *ngIf="!caseData.assignedAttorneys?.length || caseData.assignedAttorneys.length <= 1">Assigned Attorney</span>
+                    <span class="detail-label" *ngIf="caseData.assignedAttorneys?.length > 1">Assigned Attorneys</span>
+                    <span class="detail-value" *ngIf="!caseData.assignedAttorneys?.length">{{caseData.attorneyName || '-'}}</span>
+                    <span class="detail-value" *ngIf="caseData.assignedAttorneys?.length">{{caseData.assignedAttorneys.join(', ')}}</span>
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">Date Opened</span>

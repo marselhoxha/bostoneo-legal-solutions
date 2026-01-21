@@ -11,8 +11,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -34,9 +32,14 @@ public class AiBriefingController {
     /**
      * Get personalized AI briefing for the current user.
      * Accepts context data from frontend to generate relevant briefing.
+     *
+     * Note: Changed from CompletableFuture to synchronous to fix Spring Security
+     * context propagation issue. The async CompletableFuture was causing the
+     * SecurityContext to be lost when the response was processed on a different thread,
+     * resulting in "anonymousUser" authorization errors.
      */
     @PostMapping
-    public CompletableFuture<ResponseEntity<HttpResponse>> getBriefing(
+    public ResponseEntity<HttpResponse> getBriefing(
             @AuthenticationPrincipal UserDTO userDetails,
             @RequestBody BriefingRequest request) {
 
@@ -45,30 +48,21 @@ public class AiBriefingController {
         // Get full user details
         UserDTO user = userService.getUserByEmail(userDetails.getEmail());
 
-        return aiBriefingService.generateBriefing(
-                user,
-                request.todayEventsCount(),
-                request.urgentItemsCount(),
-                request.activeCasesCount(),
-                request.nextEventTitle(),
-                request.nextEventTime(),
-                request.hasCourtAppearance(),
-                request.courtCaseName(),
-                request.courtTime(),
-                request.recentTeamActivity()
-        ).handle((briefing, ex) -> {
-            if (ex != null) {
-                log.error("Error generating briefing: {}", ex.getMessage());
-                return ResponseEntity.ok(
-                        HttpResponse.builder()
-                                .timeStamp(now().toString())
-                                .data(of("briefing", "Your schedule is ready for review."))
-                                .message("Fallback briefing returned")
-                                .status(OK)
-                                .statusCode(OK.value())
-                                .build()
-                );
-            }
+        try {
+            // Wait for the async operation to complete synchronously
+            String briefing = aiBriefingService.generateBriefing(
+                    user,
+                    request.todayEventsCount(),
+                    request.urgentItemsCount(),
+                    request.activeCasesCount(),
+                    request.nextEventTitle(),
+                    request.nextEventTime(),
+                    request.hasCourtAppearance(),
+                    request.courtCaseName(),
+                    request.courtTime(),
+                    request.recentTeamActivity()
+            ).get(); // Block until complete
+
             log.info("AI briefing generated successfully for user: {}", user.getEmail());
             return ResponseEntity.ok(
                     HttpResponse.builder()
@@ -79,7 +73,18 @@ public class AiBriefingController {
                             .statusCode(OK.value())
                             .build()
             );
-        });
+        } catch (Exception ex) {
+            log.error("Error generating briefing: {}", ex.getMessage());
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(of("briefing", "Your schedule is ready for review."))
+                            .message("Fallback briefing returned")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build()
+            );
+        }
     }
 
     /**

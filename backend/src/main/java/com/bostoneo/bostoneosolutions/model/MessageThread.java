@@ -36,6 +36,10 @@ public class MessageThread {
     @Column(name = "subject", nullable = false)
     private String subject;
 
+    @Column(name = "channel", length = 20)
+    @Builder.Default
+    private String channel = "PORTAL";
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private ThreadStatus status = ThreadStatus.OPEN;

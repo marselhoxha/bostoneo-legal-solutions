@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+// HttpClientModule removed - must only be in AppModule for interceptors to work
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ClientPortalRoutingModule } from './client-portal-routing.module';
@@ -10,7 +10,6 @@ import { ClientDashboardComponent } from './components/dashboard/client-dashboar
 import { ClientCasesComponent } from './components/cases/client-cases.component';
 import { ClientDocumentsComponent } from './components/documents/client-documents.component';
 import { ClientAppointmentsComponent } from './components/appointments/client-appointments.component';
-import { ClientMessagesComponent } from './components/messages/client-messages.component';
 import { ClientInvoicesComponent } from './components/invoices/client-invoices.component';
 import { ClientProfileComponent } from './components/profile/client-profile.component';
 
@@ -18,7 +17,6 @@ import { ClientProfileComponent } from './components/profile/client-profile.comp
   declarations: [],
   imports: [
     CommonModule,
-    HttpClientModule,
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
@@ -28,7 +26,7 @@ import { ClientProfileComponent } from './components/profile/client-profile.comp
     ClientCasesComponent,
     ClientDocumentsComponent,
     ClientAppointmentsComponent,
-    ClientMessagesComponent,
+    // ClientMessagesComponent removed - using unified MessagesComponent loaded via router
     ClientInvoicesComponent,
     ClientProfileComponent
   ],

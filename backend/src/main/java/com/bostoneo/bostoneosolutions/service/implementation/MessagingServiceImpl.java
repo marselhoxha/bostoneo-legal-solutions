@@ -2,11 +2,17 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.dto.ClientPortalMessageDTO;
 import com.bostoneo.bostoneosolutions.dto.ClientPortalMessageThreadDTO;
+import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.ThreadAttorneyStatus;
 import com.bostoneo.bostoneosolutions.repository.*;
+import com.bostoneo.bostoneosolutions.repository.ThreadAttorneyStatusRepository;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.service.MessagingService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.service.TwilioService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,11 +38,56 @@ public class MessagingServiceImpl implements MessagingService {
     private final UserRepository<User> userRepository;
     private final NotificationService notificationService;
     private final AuthenticatedWebSocketHandler webSocketHandler;
+    private final TwilioService twilioService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
+    private final ThreadAttorneyStatusRepository threadAttorneyStatusRepository;
 
     @Override
     public List<ClientPortalMessageThreadDTO> getThreadsForAttorney(Long userId) {
-        List<MessageThread> threads = threadRepository.findByAttorneyIdOrderByLastMessageAtDesc(userId);
-        return threads.stream().map(this::mapToThreadDTO).collect(Collectors.toList());
+        // Get threads directly assigned to this attorney
+        List<MessageThread> ownThreads = threadRepository.findByAttorneyIdOrderByLastMessageAtDesc(userId);
+
+        // Get case IDs where this attorney is assigned
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserId(userId);
+        List<Long> assignedCaseIds = assignments.stream()
+                .map(a -> a.getLegalCase().getId())
+                .collect(Collectors.toList());
+
+        // Get threads for all assigned cases (even if not directly owned by this attorney)
+        List<MessageThread> caseThreads = assignedCaseIds.isEmpty() ?
+                List.of() : threadRepository.findByCaseIdInOrderByLastMessageAtDesc(assignedCaseIds);
+
+        // Merge and deduplicate threads (own threads first, then case threads)
+        java.util.Set<Long> seenIds = new java.util.HashSet<>();
+        List<MessageThread> allThreads = new java.util.ArrayList<>();
+
+        for (MessageThread thread : ownThreads) {
+            if (seenIds.add(thread.getId())) {
+                allThreads.add(thread);
+                // Ensure attorney has a status record for this thread
+                ensureAttorneyStatusExists(thread.getId(), userId);
+            }
+        }
+        for (MessageThread thread : caseThreads) {
+            if (seenIds.add(thread.getId())) {
+                allThreads.add(thread);
+                // Ensure attorney has a status record for this thread
+                ensureAttorneyStatusExists(thread.getId(), userId);
+            }
+        }
+
+        // Sort by lastMessageAt descending
+        allThreads.sort((a, b) -> {
+            if (a.getLastMessageAt() == null && b.getLastMessageAt() == null) return 0;
+            if (a.getLastMessageAt() == null) return 1;
+            if (b.getLastMessageAt() == null) return -1;
+            return b.getLastMessageAt().compareTo(a.getLastMessageAt());
+        });
+
+        // Use per-attorney unread counts (pass userId to get attorney-specific counts)
+        return allThreads.stream()
+                .map(thread -> mapToThreadDTOForAttorney(thread, userId))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -50,13 +101,165 @@ public class MessagingServiceImpl implements MessagingService {
         MessageThread thread = threadRepository.findById(threadId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
-        // Mark client messages as read
-        messageRepository.markAsRead(threadId, Message.SenderType.CLIENT, LocalDateTime.now());
-        thread.setUnreadByAttorney(0);
-        threadRepository.save(thread);
+        // Mark client messages as read (for message-level tracking)
+        LocalDateTime readAt = LocalDateTime.now();
+        int markedCount = messageRepository.markAsRead(threadId, Message.SenderType.CLIENT, readAt);
+
+        // CRITICAL FIX: Mark as read ONLY for THIS attorney, not all attorneys
+        // This uses the per-attorney status table instead of the shared thread field
+        markThreadAsReadForAttorney(threadId, userId, readAt);
+
+        // Notify client via WebSocket that attorney has read their messages
+        if (markedCount > 0) {
+            sendReadReceiptToClient(thread, userId, readAt);
+        }
 
         List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+
+        // Debug: Log read status of messages
+        for (Message msg : messages) {
+            log.debug("Message {} (type: {}, senderId: {}) - isRead: {}, readAt: {}",
+                msg.getId(), msg.getSenderType(), msg.getSenderId(), msg.getIsRead(), msg.getReadAt());
+        }
+
         return messages.stream().map(this::mapToMessageDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Mark thread as read for a specific attorney only.
+     * This does NOT affect other attorneys' unread counts.
+     */
+    private void markThreadAsReadForAttorney(Long threadId, Long attorneyUserId, LocalDateTime readAt) {
+        ThreadAttorneyStatus status = threadAttorneyStatusRepository
+                .findByThreadIdAndAttorneyUserId(threadId, attorneyUserId)
+                .orElse(null);
+
+        if (status != null) {
+            status.markAsRead();
+            threadAttorneyStatusRepository.save(status);
+            log.debug("Marked thread {} as read for attorney {} (was {} unread)",
+                    threadId, attorneyUserId, status.getUnreadCount());
+        } else {
+            // Create new status record marked as read
+            status = ThreadAttorneyStatus.builder()
+                    .threadId(threadId)
+                    .attorneyUserId(attorneyUserId)
+                    .unreadCount(0)
+                    .lastReadAt(readAt)
+                    .build();
+            threadAttorneyStatusRepository.save(status);
+            log.debug("Created new read status for thread {} attorney {}", threadId, attorneyUserId);
+        }
+    }
+
+    /**
+     * Ensure an attorney has a status record for a thread.
+     * Creates one with the current thread's unread count if it doesn't exist.
+     */
+    private void ensureAttorneyStatusExists(Long threadId, Long attorneyUserId) {
+        if (!threadAttorneyStatusRepository.existsByThreadIdAndAttorneyUserId(threadId, attorneyUserId)) {
+            MessageThread thread = threadRepository.findById(threadId).orElse(null);
+            int initialUnread = thread != null && thread.getUnreadByAttorney() != null
+                    ? thread.getUnreadByAttorney() : 0;
+
+            ThreadAttorneyStatus status = ThreadAttorneyStatus.builder()
+                    .threadId(threadId)
+                    .attorneyUserId(attorneyUserId)
+                    .unreadCount(initialUnread)
+                    .build();
+            threadAttorneyStatusRepository.save(status);
+            log.debug("Created initial status for thread {} attorney {} with {} unread",
+                    threadId, attorneyUserId, initialUnread);
+        }
+    }
+
+    /**
+     * Increment unread count for OTHER attorneys on a thread (excludes the sender).
+     * This ensures each attorney has their own unread count when one attorney sends a message.
+     */
+    private void incrementUnreadForOtherAttorneys(MessageThread thread, Long senderUserId) {
+        // Get all attorney user IDs for this thread
+        List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread);
+
+        for (Long attorneyUserId : attorneyUserIds) {
+            // Skip the sender - they shouldn't get an unread count for their own message
+            if (attorneyUserId.equals(senderUserId)) {
+                continue;
+            }
+
+            ThreadAttorneyStatus status = threadAttorneyStatusRepository
+                    .findByThreadIdAndAttorneyUserId(thread.getId(), attorneyUserId)
+                    .orElse(null);
+
+            if (status != null) {
+                status.incrementUnread();
+                threadAttorneyStatusRepository.save(status);
+                log.debug("Incremented unread for thread {} attorney {} (now {})",
+                        thread.getId(), attorneyUserId, status.getUnreadCount());
+            } else {
+                // Create new status record with unread count of 1
+                status = ThreadAttorneyStatus.builder()
+                        .threadId(thread.getId())
+                        .attorneyUserId(attorneyUserId)
+                        .unreadCount(1)
+                        .build();
+                threadAttorneyStatusRepository.save(status);
+                log.debug("Created status for thread {} attorney {} with 1 unread",
+                        thread.getId(), attorneyUserId);
+            }
+        }
+    }
+
+    /**
+     * Get all attorney user IDs for a thread (thread owner + case assignments).
+     */
+    private List<Long> getAttorneyUserIdsForThread(MessageThread thread) {
+        List<Long> attorneyUserIds = new java.util.ArrayList<>();
+
+        // 1. Thread owner (attorney_id)
+        if (thread.getAttorneyId() != null) {
+            attorneyUserIds.add(thread.getAttorneyId());
+        }
+
+        // 2. Case-assigned attorneys
+        if (thread.getCaseId() != null) {
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(thread.getCaseId());
+            for (CaseAssignment assignment : assignments) {
+                if (assignment.getAssignedTo() != null) {
+                    Long userId = assignment.getAssignedTo().getId();
+                    if (!attorneyUserIds.contains(userId)) {
+                        attorneyUserIds.add(userId);
+                    }
+                }
+            }
+        }
+
+        return attorneyUserIds;
+    }
+
+    /**
+     * Send read receipt WebSocket notification to client when attorney reads their messages
+     */
+    private void sendReadReceiptToClient(MessageThread thread, Long attorneyUserId, LocalDateTime readAt) {
+        try {
+            Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+            if (client == null || client.getUserId() == null) return;
+
+            User attorney = userRepository.get(attorneyUserId);
+            String attorneyName = attorney != null ? (attorney.getFirstName() + " " + attorney.getLastName()) : "Your Attorney";
+
+            Map<String, Object> wsMessage = new HashMap<>();
+            wsMessage.put("type", "MESSAGE_READ");
+            wsMessage.put("threadId", thread.getId());
+            wsMessage.put("readAt", readAt.toString());
+            wsMessage.put("readByAttorneyId", attorneyUserId);
+            wsMessage.put("readByAttorneyName", attorneyName);
+
+            webSocketHandler.sendNotificationToUser(client.getUserId().toString(), wsMessage);
+            log.debug("Read receipt sent to client user {} for thread {}", client.getUserId(), thread.getId());
+        } catch (Exception e) {
+            log.warn("Failed to send read receipt to client: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -79,20 +282,98 @@ public class MessagingServiceImpl implements MessagingService {
         thread.setUnreadByClient(thread.getUnreadByClient() + 1);
         threadRepository.save(thread);
 
+        // CRITICAL: Increment unread count for OTHER attorneys (not the sender)
+        // This ensures each attorney has their own unread count in the database
+        incrementUnreadForOtherAttorneys(thread, userId);
+
         // Notify client
         notifyClientOfReply(thread, userId, content);
 
         // Send WebSocket notification for real-time update
         sendWebSocketNotification(thread, message, "CLIENT");
 
+        // Notify other attorneys on the case (for multi-attorney collaboration)
+        notifyOtherAttorneys(thread, message, userId);
+
         log.info("Attorney {} replied to thread {}", userId, threadId);
         return mapToMessageDTO(message);
     }
 
     @Override
+    public ClientPortalMessageDTO sendSmsReply(Long userId, Long threadId, String content, String toPhone) {
+        MessageThread thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new ApiException("Thread not found"));
+
+        // Send the SMS via Twilio
+        SmsResponseDTO smsResponse = twilioService.sendSms(toPhone, content);
+        if (!smsResponse.isSuccess()) {
+            log.error("Failed to send SMS to {}: {}", toPhone, smsResponse.getErrorMessage());
+            throw new ApiException("Failed to send SMS: " + smsResponse.getErrorMessage());
+        }
+
+        // Create message record with SMS channel
+        Message message = Message.builder()
+                .threadId(threadId)
+                .senderId(userId)
+                .senderType(Message.SenderType.ATTORNEY)
+                .channel("SMS")
+                .content(content)
+                .isRead(false)
+                .build();
+        message = messageRepository.save(message);
+
+        // Update thread
+        thread.setLastMessageAt(message.getCreatedAt());
+        thread.setLastMessageBy("ATTORNEY");
+        thread.setChannel("SMS");
+        thread.setUnreadByClient(thread.getUnreadByClient() + 1);
+        threadRepository.save(thread);
+
+        // CRITICAL: Increment unread count for OTHER attorneys (not the sender)
+        incrementUnreadForOtherAttorneys(thread, userId);
+
+        // Notify other attorneys on the case (for multi-attorney collaboration)
+        notifyOtherAttorneys(thread, message, userId);
+
+        log.info("Attorney {} sent SMS reply to thread {} (to: {})", userId, threadId, maskPhone(toPhone));
+        return mapToMessageDTO(message);
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 4) return "****";
+        return "***" + phone.substring(phone.length() - 4);
+    }
+
+    @Override
     public int getUnreadCount(Long userId) {
-        Integer count = threadRepository.countUnreadByAttorney(userId);
-        return count != null ? count : 0;
+        // Use per-attorney unread tracking for accurate counts
+        // This ensures each attorney has their own unread count
+        Integer perAttorneyCount = threadAttorneyStatusRepository.getTotalUnreadCountForAttorney(userId);
+        if (perAttorneyCount != null && perAttorneyCount > 0) {
+            return perAttorneyCount;
+        }
+
+        // Fallback to legacy behavior for backwards compatibility
+        // (in case status records haven't been created yet)
+        Integer directCount = threadRepository.countUnreadByAttorney(userId);
+        int total = directCount != null ? directCount : 0;
+
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserId(userId);
+        List<Long> assignedCaseIds = assignments.stream()
+                .map(a -> a.getLegalCase().getId())
+                .collect(Collectors.toList());
+
+        if (!assignedCaseIds.isEmpty()) {
+            List<MessageThread> caseThreads = threadRepository.findByCaseIdInOrderByLastMessageAtDesc(assignedCaseIds);
+            for (MessageThread thread : caseThreads) {
+                if (thread.getAttorneyId() != null && thread.getAttorneyId().equals(userId)) {
+                    continue;
+                }
+                total += thread.getUnreadByAttorney() != null ? thread.getUnreadByAttorney() : 0;
+            }
+        }
+
+        return total;
     }
 
     @Override
@@ -101,6 +382,17 @@ public class MessagingServiceImpl implements MessagingService {
                 .orElseThrow(() -> new ApiException("Thread not found"));
         thread.setStatus(MessageThread.ThreadStatus.CLOSED);
         threadRepository.save(thread);
+    }
+
+    @Override
+    @Transactional
+    public void deleteThread(Long threadId) {
+        MessageThread thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new ApiException("Thread not found"));
+        // Delete all messages in the thread first
+        messageRepository.deleteByThreadId(threadId);
+        // Then delete the thread
+        threadRepository.delete(thread);
     }
 
     @Override
@@ -147,6 +439,9 @@ public class MessagingServiceImpl implements MessagingService {
         // Send WebSocket notification for real-time update
         sendWebSocketNotification(thread, message, "CLIENT");
 
+        // Notify other attorneys on the case (for multi-attorney collaboration)
+        notifyOtherAttorneys(thread, message, attorneyId);
+
         log.info("Attorney {} started new thread with client {}", attorneyId, clientId);
         return mapToThreadDTO(thread);
     }
@@ -168,47 +463,207 @@ public class MessagingServiceImpl implements MessagingService {
         }
 
         String clientName = "Unknown";
+        String clientPhone = null;
+        String clientEmail = null;
+        String clientImageUrl = null;
         Client client = clientRepository.findById(thread.getClientId()).orElse(null);
-        if (client != null) clientName = client.getName();
+        if (client != null) {
+            clientName = client.getName();
+            clientPhone = client.getPhone();
+            clientEmail = client.getEmail();
+            clientImageUrl = client.getImageUrl();
+            // Fallback to User's imageUrl if Client's is empty
+            if ((clientImageUrl == null || clientImageUrl.isEmpty()) && client.getUserId() != null) {
+                User clientUser = userRepository.get(client.getUserId());
+                if (clientUser != null) {
+                    clientImageUrl = clientUser.getImageUrl();
+                }
+            }
+        }
+
+        // Get attorney info
+        String attorneyName = null;
+        String attorneyImageUrl = null;
+        if (thread.getAttorneyId() != null) {
+            User attorney = userRepository.get(thread.getAttorneyId());
+            if (attorney != null) {
+                attorneyName = attorney.getFirstName() + " " + attorney.getLastName();
+                attorneyImageUrl = attorney.getImageUrl();
+            }
+        }
 
         List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
         String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
-        String lastSenderName = messages.isEmpty() ? "" :
-                (messages.get(0).getSenderType() == Message.SenderType.CLIENT ? clientName : "You");
+        Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
+        String lastSenderType = messages.isEmpty() ? null : messages.get(0).getSenderType().name();
+
+        // Get the actual sender name (not hardcoded "You" - frontend handles that)
+        String lastSenderName = "";
+        if (!messages.isEmpty()) {
+            Message lastMsg = messages.get(0);
+            if (lastMsg.getSenderType() == Message.SenderType.CLIENT) {
+                lastSenderName = clientName;
+            } else {
+                // Get attorney name from senderId
+                User sender = userRepository.get(lastMsg.getSenderId());
+                lastSenderName = sender != null ? (sender.getFirstName() + " " + sender.getLastName()) : "Attorney";
+            }
+        }
 
         return ClientPortalMessageThreadDTO.builder()
                 .id(thread.getId())
                 .caseId(thread.getCaseId())
                 .caseNumber(caseNumber)
                 .subject(thread.getSubject())
+                .channel(thread.getChannel())
                 .lastMessage(lastMessage.length() > 100 ? lastMessage.substring(0, 100) + "..." : lastMessage)
+                .lastSenderId(lastSenderId)
                 .lastSenderName(lastSenderName)
+                .lastSenderType(lastSenderType)
                 .lastMessageAt(thread.getLastMessageAt())
                 .unreadCount(thread.getUnreadByAttorney())
                 .totalMessages(messages.size())
                 .status(thread.getStatus().name())
                 .clientName(clientName)
+                .clientPhone(clientPhone)
+                .clientEmail(clientEmail)
+                .clientImageUrl(clientImageUrl)
+                .attorneyName(attorneyName)
+                .attorneyImageUrl(attorneyImageUrl)
                 .build();
+    }
+
+    /**
+     * Map thread to DTO with PER-ATTORNEY unread count.
+     * This is the key fix for multi-attorney messaging:
+     * Each attorney sees their own unread count, not a shared one.
+     */
+    private ClientPortalMessageThreadDTO mapToThreadDTOForAttorney(MessageThread thread, Long attorneyUserId) {
+        String caseNumber = null;
+        if (thread.getCaseId() != null) {
+            LegalCase legalCase = caseRepository.findById(thread.getCaseId()).orElse(null);
+            if (legalCase != null) caseNumber = legalCase.getCaseNumber();
+        }
+
+        String clientName = "Unknown";
+        String clientPhone = null;
+        String clientEmail = null;
+        String clientImageUrl = null;
+        Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+        if (client != null) {
+            clientName = client.getName();
+            clientPhone = client.getPhone();
+            clientEmail = client.getEmail();
+            clientImageUrl = client.getImageUrl();
+            if ((clientImageUrl == null || clientImageUrl.isEmpty()) && client.getUserId() != null) {
+                User clientUser = userRepository.get(client.getUserId());
+                if (clientUser != null) {
+                    clientImageUrl = clientUser.getImageUrl();
+                }
+            }
+        }
+
+        String attorneyName = null;
+        String attorneyImageUrl = null;
+        if (thread.getAttorneyId() != null) {
+            User attorney = userRepository.get(thread.getAttorneyId());
+            if (attorney != null) {
+                attorneyName = attorney.getFirstName() + " " + attorney.getLastName();
+                attorneyImageUrl = attorney.getImageUrl();
+            }
+        }
+
+        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
+        String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
+        Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
+        String lastSenderType = messages.isEmpty() ? null : messages.get(0).getSenderType().name();
+
+        String lastSenderName = "";
+        if (!messages.isEmpty()) {
+            Message lastMsg = messages.get(0);
+            if (lastMsg.getSenderType() == Message.SenderType.CLIENT) {
+                lastSenderName = clientName;
+            } else {
+                User sender = userRepository.get(lastMsg.getSenderId());
+                lastSenderName = sender != null ? (sender.getFirstName() + " " + sender.getLastName()) : "Attorney";
+            }
+        }
+
+        // CRITICAL: Get PER-ATTORNEY unread count instead of shared count
+        int unreadCount = getUnreadCountForAttorney(thread.getId(), attorneyUserId, thread.getUnreadByAttorney());
+
+        return ClientPortalMessageThreadDTO.builder()
+                .id(thread.getId())
+                .caseId(thread.getCaseId())
+                .caseNumber(caseNumber)
+                .subject(thread.getSubject())
+                .channel(thread.getChannel())
+                .lastMessage(lastMessage.length() > 100 ? lastMessage.substring(0, 100) + "..." : lastMessage)
+                .lastSenderId(lastSenderId)
+                .lastSenderName(lastSenderName)
+                .lastSenderType(lastSenderType)
+                .lastMessageAt(thread.getLastMessageAt())
+                .unreadCount(unreadCount)  // Per-attorney count!
+                .totalMessages(messages.size())
+                .status(thread.getStatus().name())
+                .clientName(clientName)
+                .clientPhone(clientPhone)
+                .clientEmail(clientEmail)
+                .clientImageUrl(clientImageUrl)
+                .attorneyName(attorneyName)
+                .attorneyImageUrl(attorneyImageUrl)
+                .build();
+    }
+
+    /**
+     * Get unread count for a specific attorney on a thread.
+     * Falls back to shared count if no per-attorney record exists.
+     */
+    private int getUnreadCountForAttorney(Long threadId, Long attorneyUserId, Integer fallbackCount) {
+        return threadAttorneyStatusRepository
+                .findByThreadIdAndAttorneyUserId(threadId, attorneyUserId)
+                .map(ThreadAttorneyStatus::getUnreadCount)
+                .orElse(fallbackCount != null ? fallbackCount : 0);
     }
 
     private ClientPortalMessageDTO mapToMessageDTO(Message message) {
         String senderName = "Unknown";
+        String senderImageUrl = null;
+
         if (message.getSenderType() == Message.SenderType.CLIENT) {
             Client client = clientRepository.findByUserId(message.getSenderId());
-            if (client != null) senderName = client.getName();
+            if (client != null) {
+                senderName = client.getName();
+                // Get client image - try Client first, then fallback to User
+                senderImageUrl = client.getImageUrl();
+                if (senderImageUrl == null || senderImageUrl.trim().isEmpty()) {
+                    User clientUser = userRepository.get(message.getSenderId());
+                    if (clientUser != null) {
+                        senderImageUrl = clientUser.getImageUrl();
+                    }
+                }
+            }
         } else {
             User user = userRepository.get(message.getSenderId());
-            if (user != null) senderName = user.getFirstName() + " " + user.getLastName();
+            if (user != null) {
+                senderName = user.getFirstName() + " " + user.getLastName();
+                String imgUrl = user.getImageUrl();
+                senderImageUrl = (imgUrl != null && !imgUrl.trim().isEmpty()) ? imgUrl : null;
+            }
         }
 
         return ClientPortalMessageDTO.builder()
                 .id(message.getId())
                 .threadId(message.getThreadId())
+                .senderId(message.getSenderId())
                 .senderName(senderName)
+                .senderImageUrl(senderImageUrl)
                 .senderType(message.getSenderType().name())
+                .channel(message.getChannel())
                 .content(message.getContent())
                 .sentAt(message.getCreatedAt())
-                .isRead(message.getIsRead())
+                .isRead(Boolean.TRUE.equals(message.getIsRead()))
+                .readAt(message.getReadAt())
                 .hasAttachment(Boolean.TRUE.equals(message.getHasAttachment()))
                 .build();
     }
@@ -242,28 +697,110 @@ public class MessagingServiceImpl implements MessagingService {
 
     private void sendWebSocketNotification(MessageThread thread, Message message, String recipientType) {
         try {
-            Long recipientUserId = null;
-            if ("CLIENT".equals(recipientType)) {
-                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
-                if (client != null) recipientUserId = client.getUserId();
+            // Get sender name for the notification
+            String senderName = "Unknown";
+            if (message.getSenderType() == Message.SenderType.CLIENT) {
+                Client client = clientRepository.findByUserId(message.getSenderId());
+                if (client != null) senderName = client.getName();
             } else {
-                recipientUserId = thread.getAttorneyId();
+                User user = userRepository.get(message.getSenderId());
+                if (user != null) senderName = user.getFirstName() + " " + user.getLastName();
             }
-
-            if (recipientUserId == null) return;
 
             Map<String, Object> wsMessage = new HashMap<>();
             wsMessage.put("type", "NEW_MESSAGE");
             wsMessage.put("threadId", thread.getId());
             wsMessage.put("messageId", message.getId());
             wsMessage.put("content", message.getContent());
+            wsMessage.put("senderId", message.getSenderId());
             wsMessage.put("senderType", message.getSenderType().name());
+            wsMessage.put("senderName", senderName);
             wsMessage.put("sentAt", message.getCreatedAt().toString());
 
-            webSocketHandler.sendNotificationToUser(recipientUserId.toString(), wsMessage);
-            log.debug("WebSocket notification sent to user {}", recipientUserId);
+            if ("CLIENT".equals(recipientType)) {
+                // Notify client
+                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+                if (client != null && client.getUserId() != null) {
+                    webSocketHandler.sendNotificationToUser(client.getUserId().toString(), wsMessage);
+                    log.debug("WebSocket notification sent to client user {}", client.getUserId());
+                }
+            } else {
+                // Attorney sent message - client was already notified above
+                // No additional action needed here
+                log.debug("WebSocket notification handled for thread {}", thread.getId());
+            }
         } catch (Exception e) {
             log.error("Failed to send WebSocket notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Notify all OTHER attorneys assigned to the case when a message is sent.
+     * This ensures team collaboration in multi-attorney threads.
+     * Also notifies the thread owner even if not in case assignments.
+     */
+    private void notifyOtherAttorneys(MessageThread thread, Message message, Long senderUserId) {
+        try {
+            // Build the WebSocket message
+            String senderName = "Unknown";
+            String senderImageUrl = null;
+            User sender = userRepository.get(senderUserId);
+            if (sender != null) {
+                senderName = sender.getFirstName() + " " + sender.getLastName();
+                senderImageUrl = sender.getImageUrl();
+            }
+
+            Map<String, Object> wsMessage = new HashMap<>();
+            wsMessage.put("type", "NEW_MESSAGE");
+            wsMessage.put("threadId", thread.getId());
+            wsMessage.put("messageId", message.getId());
+            wsMessage.put("content", message.getContent());
+            wsMessage.put("senderId", message.getSenderId());
+            wsMessage.put("senderType", message.getSenderType().name());
+            wsMessage.put("senderName", senderName);
+            wsMessage.put("senderImageUrl", senderImageUrl);
+            wsMessage.put("sentAt", message.getCreatedAt().toString());
+
+            // Collect all attorney user IDs to notify (using Set to avoid duplicates)
+            java.util.Set<Long> attorneyUserIds = new java.util.HashSet<>();
+
+            // Always include the thread owner (if not the sender)
+            if (thread.getAttorneyId() != null && !thread.getAttorneyId().equals(senderUserId)) {
+                attorneyUserIds.add(thread.getAttorneyId());
+            }
+
+            // Include all attorneys assigned to the case (if case exists)
+            if (thread.getCaseId() != null) {
+                List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(thread.getCaseId());
+                for (CaseAssignment assignment : assignments) {
+                    if (assignment.getAssignedTo() != null) {
+                        Long attorneyUserId = assignment.getAssignedTo().getId();
+                        // Don't add the sender
+                        if (!attorneyUserId.equals(senderUserId)) {
+                            attorneyUserIds.add(attorneyUserId);
+                        }
+                    }
+                }
+            }
+
+            // Notify each attorney
+            int notifiedCount = 0;
+            for (Long attorneyUserId : attorneyUserIds) {
+                try {
+                    webSocketHandler.sendNotificationToUser(attorneyUserId.toString(), wsMessage);
+                    notifiedCount++;
+                    log.debug("WebSocket notification sent to attorney user {} for thread {}", attorneyUserId, thread.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to send WebSocket notification to attorney {}: {}", attorneyUserId, e.getMessage());
+                }
+            }
+
+            if (notifiedCount > 0) {
+                log.info("Notified {} other attorney(s) of new message in thread {} from user {}",
+                         notifiedCount, thread.getId(), senderUserId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to notify other attorneys for thread {}: {}", thread.getId(), e.getMessage());
         }
     }
 }

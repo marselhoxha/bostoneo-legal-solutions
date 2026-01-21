@@ -16,8 +16,9 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
     Optional<LegalCase> findByCaseNumber(String caseNumber);
     
     Page<LegalCase> findByTitleContainingIgnoreCase(String title, Pageable pageable);
-    
-    Page<LegalCase> findByClientNameContainingIgnoreCase(String clientName, Pageable pageable);
+
+    @Query("SELECT c FROM LegalCase c WHERE LOWER(c.clientName) LIKE LOWER(CONCAT('%', :clientName, '%'))")
+    Page<LegalCase> findByClientNameContainingIgnoreCase(@Param("clientName") String clientName, Pageable pageable);
     
     Page<LegalCase> findByStatus(CaseStatus status, Pageable pageable);
     

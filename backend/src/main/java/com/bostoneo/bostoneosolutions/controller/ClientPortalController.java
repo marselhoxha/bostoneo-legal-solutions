@@ -356,6 +356,22 @@ public class ClientPortalController {
                         .build());
     }
 
+    @DeleteMapping("/messages/{threadId}")
+    public ResponseEntity<HttpResponse> deleteThread(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long threadId) {
+        log.info("Client {} deleting message thread {}", userId, threadId);
+        clientPortalService.deleteThread(userId, threadId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("Message thread deleted successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     // =====================================================
     // INVOICES
     // =====================================================

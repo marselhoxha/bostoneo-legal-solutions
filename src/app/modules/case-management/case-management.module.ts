@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { HttpClientModule } from '@angular/common/http';
+// HttpClientModule removed - must only be in AppModule for interceptors to work
 import { DndModule } from 'ngx-drag-drop';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SharedModule } from '../../shared/shared.module';
@@ -32,7 +32,6 @@ import { CaseManagementRoutingModule } from './case-management-routing.module';
     ReactiveFormsModule,
     FormsModule,
     RouterModule,
-    HttpClientModule,
     DndModule,
     NgbModule,
     SharedModule,

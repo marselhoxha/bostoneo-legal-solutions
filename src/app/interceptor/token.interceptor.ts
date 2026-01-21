@@ -4,21 +4,41 @@ import {
   HttpHandler,
   HttpEvent,
   HttpInterceptor,
-  HttpResponse,
   HttpErrorResponse
 } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { Key } from '../enum/key.enum';
-import { catchError, switchMap } from 'rxjs/operators';
+import { catchError, filter, switchMap, take, timeout } from 'rxjs/operators';
 import { UserService } from '../service/user.service';
 import { CustomHttpResponse, Profile } from '../interface/appstates';
+import { Router } from '@angular/router';
+
+interface RefreshState {
+  inProgress: boolean;
+  token: string | null;
+  failed: boolean;
+}
 
 @Injectable()
 export class TokenInterceptor implements HttpInterceptor {
-  private isTokenRefreshing: boolean = false;
-  private refreshTokenSubject: BehaviorSubject<CustomHttpResponse<Profile>> = new BehaviorSubject(null);
+  private refreshState$ = new BehaviorSubject<RefreshState>({
+    inProgress: false,
+    token: null,
+    failed: false
+  });
 
-  constructor(private userService: UserService) {}
+  private readonly REFRESH_TIMEOUT = 10000;
+
+  constructor(
+    private userService: UserService,
+    private router: Router
+  ) {
+    // Subscribe to login success events to reset state
+    this.userService.loginSuccess$.subscribe(() => {
+      console.log('[TokenInterceptor] Login success detected, resetting state');
+      this.resetState();
+    });
+  }
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     // Skip token injection for public endpoints
@@ -26,95 +46,147 @@ export class TokenInterceptor implements HttpInterceptor {
       return next.handle(request);
     }
 
+    // CRITICAL: Check for valid token FIRST before checking failed state
+    // This handles the race condition where setUserData triggers requests
+    // before loginSuccessSubject subscription resets the state
     const token = localStorage.getItem(Key.TOKEN);
-    
-    // If no token exists, don't add Authorization header (let the request fail naturally)
-    if (!token || token.trim() === '') {
-      return next.handle(request);
-    }
 
-    const modifiedRequest = this.addAuthorizationTokenHeader(request, token);
-    
-    return next.handle(modifiedRequest)
-      .pipe(
-        catchError((err) => {
-          if (err instanceof HttpErrorResponse) {
-            if (err.status === 401 || err.status === 403) {
-              return this.handleRefreshToken(request, next);
-            } else {
-              return throwError(() => err);
-            }
+    if (token && token.trim() !== '' && this.isValidTokenFormat(token)) {
+      // We have a valid token - reset failed state if it was set and proceed
+      const currentState = this.refreshState$.getValue();
+      if (currentState.failed) {
+        console.log('[TokenInterceptor] Valid token found, auto-resetting failed state');
+        this.resetState();
+      }
+
+      // If refresh is in progress, wait for it (but we already have a valid token so this is rare)
+      if (currentState.inProgress) {
+        return this.waitForTokenRefresh(request, next);
+      }
+
+      // Proceed with the request using the valid token
+      return next.handle(this.addAuthorizationHeader(request, token)).pipe(
+        catchError((error) => {
+          if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
+            return this.handleAuthError(request, next);
           }
-          return throwError(() => err);
+          return throwError(() => error);
         })
       );
+    }
+
+    // No valid token - now check states
+    const currentState = this.refreshState$.getValue();
+
+    if (currentState.failed) {
+      console.warn('[TokenInterceptor] No token and session failed, blocking request:', request.url);
+      if (!this.router.url.includes('/login')) {
+        this.userService.handleSessionExpired();
+      }
+      return throwError(() => new Error('Session expired'));
+    }
+
+    if (currentState.inProgress) {
+      console.log('[TokenInterceptor] No token but refresh in progress, waiting:', request.url);
+      return this.waitForTokenRefresh(request, next);
+    }
+
+    // No token and no refresh in progress - fail the request
+    console.warn('[TokenInterceptor] No authentication token available:', request.url);
+    return throwError(() => new Error('Not authenticated'));
   }
 
-  private handleRefreshToken(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    if(!this.isTokenRefreshing) {
-      this.isTokenRefreshing = true;
-      this.refreshTokenSubject.next(null);
-      return this.userService.refreshToken$().pipe(
-        switchMap((response) => {
-          this.isTokenRefreshing = false;
+  private waitForTokenRefresh(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    return this.refreshState$.pipe(
+      filter(state => !state.inProgress),
+      take(1),
+      timeout(this.REFRESH_TIMEOUT),
+      switchMap((state) => {
+        if (state.failed || !state.token) {
+          // Try localStorage as fallback - token might have been saved
+          const fallbackToken = localStorage.getItem(Key.TOKEN);
+          if (fallbackToken && this.isValidTokenFormat(fallbackToken)) {
+            return next.handle(this.addAuthorizationHeader(request, fallbackToken));
+          }
+          console.warn('[TokenInterceptor] Token refresh failed, blocking request:', request.url);
+          return throwError(() => new Error('Session expired'));
+        }
+        return next.handle(this.addAuthorizationHeader(request, state.token));
+      }),
+      catchError((error) => {
+        console.warn('[TokenInterceptor] Error waiting for token refresh:', error?.message || error);
+        return throwError(() => new Error('Session expired'));
+      })
+    );
+  }
 
-          // Check if refresh was successful
-          if (!response || !response.data || !response.data.access_token) {
-            console.warn('Token refresh failed - session expired');
-            this.refreshTokenSubject.next(null);
-            // Show notification and redirect to login
+  private handleAuthError(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    const currentState = this.refreshState$.getValue();
+
+    if (currentState.failed) {
+      return throwError(() => new Error('Session expired'));
+    }
+
+    const refreshToken = localStorage.getItem(Key.REFRESH_TOKEN);
+    if (!refreshToken) {
+      console.warn('[TokenInterceptor] No refresh token available');
+      this.refreshState$.next({ inProgress: false, token: null, failed: true });
+      this.userService.handleSessionExpired();
+      return throwError(() => new Error('No refresh token'));
+    }
+
+    if (!currentState.inProgress) {
+      console.log('[TokenInterceptor] Starting token refresh');
+      this.refreshState$.next({ inProgress: true, token: null, failed: false });
+
+      return this.userService.refreshToken$().pipe(
+        switchMap((response: CustomHttpResponse<Profile>) => {
+          if (!response?.data?.access_token) {
+            console.warn('[TokenInterceptor] Token refresh failed - no access token');
+            this.refreshState$.next({ inProgress: false, token: null, failed: true });
             this.userService.handleSessionExpired();
             return throwError(() => new Error('Session expired'));
           }
 
-          this.refreshTokenSubject.next(response);
-          return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
+          const newToken = response.data.access_token;
+          console.log('[TokenInterceptor] Token refresh successful');
+          this.refreshState$.next({ inProgress: false, token: newToken, failed: false });
+          return next.handle(this.addAuthorizationHeader(request, newToken));
         }),
         catchError((error) => {
-          console.warn('Token refresh failed - session expired');
-          this.isTokenRefreshing = false;
-          this.refreshTokenSubject.next(null);
-          // Show notification and redirect to login
+          console.warn('[TokenInterceptor] Token refresh error:', error?.message || error);
+          this.refreshState$.next({ inProgress: false, token: null, failed: true });
           this.userService.handleSessionExpired();
           return throwError(() => new Error('Session expired'));
         })
       );
     } else {
-      return this.refreshTokenSubject.pipe(
-        switchMap((response) => {
-          // Check if we have a valid response
-          if (!response || !response.data || !response.data.access_token) {
-            console.warn('No valid refresh token - session expired');
-            return throwError(() => new Error('Session expired'));
-          }
-          return next.handle(this.addAuthorizationTokenHeader(request, response.data.access_token))
-        })
-      );
+      return this.waitForTokenRefresh(request, next);
     }
   }
 
-  private addAuthorizationTokenHeader(request: HttpRequest<unknown>, token: string): HttpRequest<any> {
-    // Validate token format before adding to header
-    if (!token || token.trim() === '') {
-      return request;
-    }
-    
-    // Remove any potential whitespace
-    token = token.trim();
-    
-    // Check if token has basic JWT format (3 parts separated by dots)
-    const tokenParts = token.split('.');
-    if (tokenParts.length !== 3) {
-      console.error('Invalid JWT token format - expected 3 parts, got:', tokenParts.length);
-      return request;
-    }
-    
-    return request.clone({ setHeaders: { Authorization: `Bearer ${token}` }});
+  private addAuthorizationHeader(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
+    return request.clone({
+      setHeaders: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  private isValidTokenFormat(token: string): boolean {
+    if (!token || token.trim() === '') return false;
+    const parts = token.trim().split('.');
+    return parts.length === 3;
   }
 
   private isPublicEndpoint(url: string): boolean {
-    // Note: refresh/token endpoint needs authentication, so don't treat it as public
-    return url.includes('verify') || url.includes('login') || url.includes('register') 
-            || url.includes('resetpassword');
+    return url.includes('verify') ||
+           url.includes('login') ||
+           url.includes('register') ||
+           url.includes('resetpassword') ||
+           url.includes('/webhook/') ||
+           url.includes('refresh/token');
+  }
+
+  public resetState(): void {
+    this.refreshState$.next({ inProgress: false, token: null, failed: false });
   }
 }

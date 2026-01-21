@@ -110,6 +110,38 @@ public class MessagingController {
     }
 
     /**
+     * Send a reply via SMS to the client's phone.
+     * This will send an actual SMS and also store the message in the thread.
+     */
+    @PostMapping("/threads/{threadId}/reply-sms")
+    public ResponseEntity<HttpResponse> sendSmsReply(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long threadId,
+            @RequestBody Map<String, String> request) {
+        String content = request.get("content");
+        String toPhone = request.get("toPhone");
+
+        if (content == null || content.isEmpty()) {
+            throw new IllegalArgumentException("Message content is required");
+        }
+        if (toPhone == null || toPhone.isEmpty()) {
+            throw new IllegalArgumentException("Phone number is required");
+        }
+
+        log.info("User {} sending SMS reply to thread {}", userId, threadId);
+        ClientPortalMessageDTO message = messagingService.sendSmsReply(userId, threadId, content, toPhone);
+
+        return ResponseEntity.status(CREATED)
+                .body(HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(Map.of("message", message))
+                        .message("SMS reply sent successfully")
+                        .status(CREATED)
+                        .statusCode(CREATED.value())
+                        .build());
+    }
+
+    /**
      * Get unread message count for attorney
      */
     @GetMapping("/unread-count")
@@ -140,6 +172,25 @@ public class MessagingController {
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .message("Thread closed")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * Delete a thread and all its messages
+     */
+    @DeleteMapping("/threads/{threadId}")
+    public ResponseEntity<HttpResponse> deleteThread(
+            @AuthenticationPrincipal(expression = "id") Long userId,
+            @PathVariable Long threadId) {
+        log.info("User {} deleting thread {}", userId, threadId);
+        messagingService.deleteThread(threadId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("Thread deleted")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());

@@ -2,11 +2,13 @@ package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.config.TwilioConfig;
 import com.bostoneo.bostoneosolutions.dto.CommunicationLogDTO;
+import com.bostoneo.bostoneosolutions.dto.IncomingSmsDTO;
 import com.bostoneo.bostoneosolutions.dto.SmsRequestDTO;
 import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.model.CommunicationLog;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.service.CommunicationLogService;
+import com.bostoneo.bostoneosolutions.service.IncomingSmsService;
 import com.bostoneo.bostoneosolutions.service.TwilioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -35,6 +38,7 @@ public class CommunicationController {
 
     private final TwilioService twilioService;
     private final CommunicationLogService communicationLogService;
+    private final IncomingSmsService incomingSmsService;
     private final TwilioConfig twilioConfig;
 
     /**
@@ -287,6 +291,81 @@ public class CommunicationController {
     }
 
     /**
+     * Twilio webhook for incoming SMS messages.
+     * This endpoint receives SMS from clients when they reply to our messages.
+     * Twilio sends form-urlencoded POST requests.
+     */
+    @PostMapping(value = "/webhook/incoming", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<String> handleIncomingSms(
+            @RequestParam("MessageSid") String messageSid,
+            @RequestParam("AccountSid") String accountSid,
+            @RequestParam("From") String from,
+            @RequestParam("To") String to,
+            @RequestParam("Body") String body,
+            @RequestParam(value = "SmsSid", required = false) String smsSid,
+            @RequestParam(value = "MessagingServiceSid", required = false) String messagingServiceSid,
+            @RequestParam(value = "FromCity", required = false) String fromCity,
+            @RequestParam(value = "FromState", required = false) String fromState,
+            @RequestParam(value = "FromZip", required = false) String fromZip,
+            @RequestParam(value = "FromCountry", required = false) String fromCountry,
+            @RequestParam(value = "ToCity", required = false) String toCity,
+            @RequestParam(value = "ToState", required = false) String toState,
+            @RequestParam(value = "ToZip", required = false) String toZip,
+            @RequestParam(value = "ToCountry", required = false) String toCountry,
+            @RequestParam(value = "NumMedia", required = false) Integer numMedia,
+            @RequestParam(value = "NumSegments", required = false) Integer numSegments,
+            @RequestParam(value = "MediaContentType0", required = false) String mediaContentType0,
+            @RequestParam(value = "MediaUrl0", required = false) String mediaUrl0,
+            @RequestParam(value = "ApiVersion", required = false) String apiVersion) {
+
+        log.info("Incoming SMS webhook received. From: {}, MessageSid: {}", maskPhone(from), messageSid);
+
+        try {
+            // Build the DTO from webhook parameters
+            IncomingSmsDTO incomingSms = IncomingSmsDTO.builder()
+                    .messageSid(messageSid)
+                    .smsSid(smsSid)
+                    .accountSid(accountSid)
+                    .messagingServiceSid(messagingServiceSid)
+                    .from(from)
+                    .fromCity(fromCity)
+                    .fromState(fromState)
+                    .fromZip(fromZip)
+                    .fromCountry(fromCountry)
+                    .to(to)
+                    .toCity(toCity)
+                    .toState(toState)
+                    .toZip(toZip)
+                    .toCountry(toCountry)
+                    .body(body)
+                    .numMedia(numMedia)
+                    .numSegments(numSegments)
+                    .mediaContentType0(mediaContentType0)
+                    .mediaUrl0(mediaUrl0)
+                    .apiVersion(apiVersion)
+                    .build();
+
+            // Process the incoming SMS
+            CommunicationLog commLog = incomingSmsService.processIncomingSms(incomingSms);
+            log.info("Incoming SMS processed successfully. CommLog ID: {}", commLog.getId());
+
+            // Return TwiML response (empty response means no auto-reply)
+            String twimlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .body(twimlResponse);
+
+        } catch (Exception e) {
+            log.error("Error processing incoming SMS: {}", e.getMessage());
+            // Still return OK to Twilio to prevent retries
+            String twimlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .body(twimlResponse);
+        }
+    }
+
+    /**
      * Twilio webhook for status updates
      */
     @PostMapping("/webhook/status")
@@ -301,6 +380,81 @@ public class CommunicationController {
         communicationLogService.updateStatus(messageSid, messageStatus.toUpperCase(), errorCode, errorMessage);
 
         return ResponseEntity.ok("OK");
+    }
+
+    /**
+     * TEST ENDPOINT: Simulate an incoming SMS for development/testing.
+     * This allows testing the two-way SMS flow without needing actual Twilio or ngrok.
+     *
+     * Usage: POST /api/communications/test/simulate-incoming-sms
+     * Body: { "fromPhone": "+15551234567", "message": "Test message from client" }
+     */
+    @PostMapping("/test/simulate-incoming-sms")
+    public ResponseEntity<HttpResponse> simulateIncomingSms(
+            @RequestBody Map<String, String> request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String fromPhone = request.get("fromPhone");
+        String message = request.get("message");
+
+        if (fromPhone == null || fromPhone.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("fromPhone is required")
+                            .status(HttpStatus.BAD_REQUEST)
+                            .statusCode(HttpStatus.BAD_REQUEST.value())
+                            .build()
+            );
+        }
+
+        if (message == null || message.isEmpty()) {
+            message = "Test SMS message";
+        }
+
+        log.info("Simulating incoming SMS from: {}", maskPhone(fromPhone));
+
+        try {
+            // Build a simulated IncomingSmsDTO
+            IncomingSmsDTO simulatedSms = IncomingSmsDTO.builder()
+                    .messageSid("SIM_" + System.currentTimeMillis())
+                    .accountSid("TEST_ACCOUNT")
+                    .from(fromPhone)
+                    .to(twilioConfig.getPhoneNumber() != null ? twilioConfig.getPhoneNumber() : "+15551234567")
+                    .body(message)
+                    .fromCity("Test City")
+                    .fromState("MA")
+                    .build();
+
+            // Process the simulated SMS
+            CommunicationLog commLog = incomingSmsService.processIncomingSms(simulatedSms);
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of(
+                                    "communicationLogId", commLog.getId(),
+                                    "clientId", commLog.getClientId() != null ? commLog.getClientId() : "UNMATCHED",
+                                    "status", commLog.getStatus(),
+                                    "message", "Simulated SMS processed successfully"
+                            ))
+                            .message("Simulated incoming SMS processed")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.error("Error simulating incoming SMS: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Error processing simulated SMS: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build()
+            );
+        }
     }
 
     private String maskPhone(String phone) {

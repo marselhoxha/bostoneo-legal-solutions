@@ -82,6 +82,9 @@ public class EnhancedSecurityConfig {
             // Note: All /api/** endpoints use JWT tokens which provide CSRF protection
             // Disabling CSRF for stateless API is acceptable when using Bearer tokens
             .ignoringRequestMatchers("/api/**")
+            // Legacy endpoints that also use JWT auth (not under /api/)
+            .ignoringRequestMatchers("/client/**", "/user/**", "/invoice/**", "/customer/**")
+            .ignoringRequestMatchers("/legal/**", "/legal-case/**", "/analytics/**")
         );
         
         // CORS Configuration
@@ -113,6 +116,10 @@ public class EnhancedSecurityConfig {
             .requestMatchers("/ws/**").permitAll()  // WebSocket has its own token validation
             .requestMatchers("/actuator/health").permitAll()  // Health check for load balancers
             .requestMatchers("/api/public/**").permitAll()  // Explicitly public endpoints only
+            // Static resources and error pages
+            .requestMatchers("/error", "/error/**").permitAll()
+            .requestMatchers("/favicon.ico").permitAll()
+            .requestMatchers("/static/**", "/assets/**", "/css/**", "/js/**", "/images/**").permitAll()
             // All other requests require authentication
             .anyRequest().authenticated()
         );

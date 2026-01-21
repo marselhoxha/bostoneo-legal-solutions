@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, Observable, tap, throwError, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { AccountType, CustomHttpResponse, Profile } from '../interface/appstates';
@@ -19,6 +19,10 @@ export class UserService {
   private userDataSubject = new BehaviorSubject<User | null>(null);
   userData$ = this.userDataSubject.asObservable();
   private currentUser: User | null = null;
+
+  // Subject to notify when login is successful - used by TokenInterceptor to reset state
+  private loginSuccessSubject = new Subject<void>();
+  loginSuccess$ = this.loginSuccessSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -89,8 +93,17 @@ export class UserService {
       .pipe(
         tap(response => {
           if (response && response.data) {
+            // 1. First save tokens to localStorage
             localStorage.setItem(Key.TOKEN, response.data.access_token);
             localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
+
+            // 2. Emit loginSuccess to reset interceptor state BEFORE setUserData
+            // This ensures the interceptor is ready before any subscribers make requests
+            if (response.data.access_token) {
+              this.loginSuccessSubject.next();
+            }
+
+            // 3. Finally set user data (this triggers subscribers that may make HTTP requests)
             this.setUserData(response.data.user);
           }
         }),
@@ -117,7 +130,15 @@ export class UserService {
     this.http.get<CustomHttpResponse<Profile>>
       (`${this.server}/user/verify/code/${email}/${code}`)
       .pipe(
-        tap(console.log),
+        tap(response => {
+          if (response && response.data && response.data.access_token) {
+            localStorage.setItem(Key.TOKEN, response.data.access_token);
+            localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
+            this.setUserData(response.data.user);
+            // Notify interceptor that login was successful
+            this.loginSuccessSubject.next();
+          }
+        }),
         catchError(this.handleError)
       );
 
@@ -162,14 +183,57 @@ export class UserService {
       (`${this.server}/user/refresh/token`, { headers: { Authorization: `Bearer ${localStorage.getItem(Key.REFRESH_TOKEN)}` } })
       .pipe(
         tap(response => {
-          console.log(response);
-          localStorage.removeItem(Key.TOKEN);
-          localStorage.removeItem(Key.REFRESH_TOKEN);
-          localStorage.setItem(Key.TOKEN, response.data.access_token);
-          localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
+          if (response?.data?.access_token && response?.data?.refresh_token) {
+            // Set new tokens atomically to avoid race conditions
+            localStorage.setItem(Key.TOKEN, response.data.access_token);
+            localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
+            // Also update user data if available
+            if (response.data.user) {
+              this.setUserData(response.data.user);
+            }
+          }
         }),
         catchError(this.handleError)
       );
+
+  /**
+   * Check if the current token is about to expire (within threshold)
+   * @param thresholdMinutes Minutes before expiration to consider as "about to expire"
+   */
+  isTokenAboutToExpire(thresholdMinutes: number = 5): boolean {
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return true;
+
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) return true;
+
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const thresholdMs = thresholdMinutes * 60 * 1000;
+      const now = Date.now();
+
+      // Token is "about to expire" if it expires within the threshold
+      return expirationTime - now < thresholdMs;
+    } catch (error) {
+      console.warn('Error checking token expiration:', error);
+      return true; // Assume expired on error
+    }
+  }
+
+  /**
+   * Proactively refresh token if it's about to expire
+   * Call this periodically or before important operations
+   */
+  proactiveTokenRefresh(): void {
+    if (this.isAuthenticated() && this.isTokenAboutToExpire(5)) {
+      console.log('Token about to expire, refreshing proactively...');
+      this.refreshToken$().subscribe({
+        next: () => console.log('Proactive token refresh successful'),
+        error: (err) => console.warn('Proactive token refresh failed:', err)
+      });
+    }
+  }
 
   updatePassword$ = (form: { currentPassword: string, newPassword: string, confirmNewPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
     this.http.patch<CustomHttpResponse<Profile>>

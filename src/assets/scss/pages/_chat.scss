@@ -615,21 +615,8 @@
         }
     }
 
-    .chat-leftsidebar {
-        height: calc(100vh - #{$header-height} - #{$footer-height} - 54px);
-
-        @media (max-width: 991.98px) {
-            height: calc(100vh - #{$header-height} - #{$footer-height} - 8px);
-        }
-    }
-
-    .chat-room-list {
-        height: calc(100vh - 352px);
-
-        @media (max-width: 991.98px) {
-            height: calc(100vh - 265px);
-        }
-    }
+    // Height is now handled by component styles using flexbox
+    // .chat-leftsidebar and .chat-room-list use flex: 1 and height: 100%
 
     .chat-conversation {
         height: calc(100vh - 343px);

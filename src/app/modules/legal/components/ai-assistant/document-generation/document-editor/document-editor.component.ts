@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { AIDocumentService, DocumentGenerationRequest } from '../../services/ai-document.service';
+import { Key } from '../../../../../../enum/key.enum';
 
 @Component({
   selector: 'app-document-editor',
@@ -713,9 +714,9 @@ Generated Date: [CURRENT_DATE]`;
 
   loadAvailableCases(): void {
     console.log('🔄 Loading cases from backend...');
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem(Key.TOKEN);
     console.log('🔑 Auth token:', token ? 'Present' : 'Missing');
-    
+
     fetch('http://localhost:8085/legal-case/list?page=0&size=20', {
       method: 'GET',
       headers: {
@@ -761,20 +762,20 @@ Generated Date: [CURRENT_DATE]`;
   }
 
   private getValidAuthToken(): string | null {
-    const token = localStorage.getItem('access_token');
-    
+    const token = localStorage.getItem(Key.TOKEN);
+
     // Check if token exists and is not a string representation of null/undefined
     if (!token || token === 'null' || token === 'undefined' || token.length < 20) {
       console.warn('⚠️ Invalid or missing authentication token');
       return null;
     }
-    
+
     // Basic JWT format check (should have 3 parts separated by dots)
     if (token.split('.').length !== 3) {
       console.warn('⚠️ Token does not appear to be a valid JWT format');
       return null;
     }
-    
+
     return token;
   }
 

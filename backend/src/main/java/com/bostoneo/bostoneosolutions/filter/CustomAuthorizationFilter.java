@@ -35,34 +35,30 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
-            
+            String requestURI = request.getRequestURI();
             String token = getToken(request);
-            
+
             if (token == null) {
-                log.warn("- No valid token found, clearing security context");
+                // Log which request came without a token (helps debug anonymousUser issues)
+                log.debug("Request without token: {} {} - will be handled by Spring Security rules",
+                    request.getMethod(), maskPath(requestURI));
                 SecurityContextHolder.clearContext();
                 filterChain.doFilter(request, response);
                 return;
             }
-            
+
             Long userId = getUserId(request);
-            
+
             boolean isTokenValid = tokenProvider.isTokenValid(userId, token);
-            
+
             if (isTokenValid){
                 List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
-                
-                
-                // Log billing-specific authorities
-                boolean hasBillingView = authorities.stream().anyMatch(a -> a.getAuthority().equals("BILLING:VIEW"));
-                boolean hasBillingEdit = authorities.stream().anyMatch(a -> a.getAuthority().equals("BILLING:EDIT"));
-                
+
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                
-                
-            } else { 
-                log.warn("- Token invalid, clearing SecurityContext");
+
+            } else {
+                log.warn("Token invalid for user {}, clearing SecurityContext", userId);
                 SecurityContextHolder.clearContext();
             }
             filterChain.doFilter(request, response);
@@ -98,17 +94,14 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        // Skip WebSocket upgrade requests
+        // Skip WebSocket upgrade requests (WebSocket has its own token validation)
         String upgrade = request.getHeader("Upgrade");
         if ("websocket".equalsIgnoreCase(upgrade) || request.getRequestURI().startsWith("/ws")) {
             return true;
         }
-        
-        // Skip CRM endpoints - they are handled by Spring Security permitAll()
-        if (request.getRequestURI().startsWith("/api/crm/")) {
-            return true;
-        }
-        
+
+        // Only skip for requests without Authorization header, OPTIONS, or public routes
+        // All authenticated endpoints (including /api/crm/) must go through the filter
         return request.getHeader(AUTHORIZATION) == null || !request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
             || request.getMethod().equalsIgnoreCase(HTTP_OPTIONS_METHOD) || asList(PUBLIC_ROUTES).contains(request.getRequestURI());
     }

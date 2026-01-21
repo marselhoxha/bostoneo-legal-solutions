@@ -107,12 +107,24 @@ export class DeadlineAlertService {
       // Get tasks from the task management API
       this.http.get<any>(`${this.API_URL}/legal/tasks?status=TODO,IN_PROGRESS&size=1000`).subscribe({
         next: (response) => {
-          const tasks = response.data?.content || response.data || response || [];
+          // Handle various response formats and ensure we always return an array
+          let tasks: Task[] = [];
+          if (Array.isArray(response)) {
+            tasks = response;
+          } else if (response?.data?.content && Array.isArray(response.data.content)) {
+            tasks = response.data.content;
+          } else if (response?.data && Array.isArray(response.data)) {
+            tasks = response.data;
+          } else if (response?.content && Array.isArray(response.content)) {
+            tasks = response.content;
+          }
           observer.next(tasks);
           observer.complete();
         },
         error: (error) => {
-          observer.error(error);
+          console.error('Error fetching tasks for deadline check:', error);
+          observer.next([]); // Return empty array on error instead of failing
+          observer.complete();
         }
       });
     });

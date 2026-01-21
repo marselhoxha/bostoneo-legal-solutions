@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+// HttpClientModule removed - must only be in AppModule for interceptors to work
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
@@ -16,7 +16,6 @@ import { CaseCreateComponent } from './components/case/case-create/case-create.c
   ],
   imports: [
     CommonModule,
-    HttpClientModule,
     RouterModule,
     FormsModule,
     ReactiveFormsModule,

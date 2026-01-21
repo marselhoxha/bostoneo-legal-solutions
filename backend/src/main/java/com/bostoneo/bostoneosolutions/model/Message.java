@@ -34,10 +34,15 @@ public class Message {
     @Column(name = "sender_type", nullable = false)
     private SenderType senderType;
 
+    @Column(name = "channel", length = 20)
+    @Builder.Default
+    private String channel = "PORTAL";
+
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "is_read")
+    @Column(name = "is_read", nullable = false)
+    @Builder.Default
     private Boolean isRead = false;
 
     @Column(name = "read_at")

@@ -5,7 +5,6 @@ import { ClientDashboardComponent } from './components/dashboard/client-dashboar
 import { ClientCasesComponent } from './components/cases/client-cases.component';
 import { ClientDocumentsComponent } from './components/documents/client-documents.component';
 import { ClientAppointmentsComponent } from './components/appointments/client-appointments.component';
-import { ClientMessagesComponent } from './components/messages/client-messages.component';
 import { ClientInvoicesComponent } from './components/invoices/client-invoices.component';
 import { ClientProfileComponent } from './components/profile/client-profile.component';
 import { ClientCaseDetailComponent } from './components/case-detail/client-case-detail.component';
@@ -48,7 +47,7 @@ const routes: Routes = [
       },
       {
         path: 'messages',
-        component: ClientMessagesComponent,
+        loadComponent: () => import('../../component/messages/messages.component').then(m => m.MessagesComponent),
         data: { title: 'Messages' }
       },
       {

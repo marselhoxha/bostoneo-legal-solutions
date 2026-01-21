@@ -18,9 +18,17 @@ public interface MessagingService {
 
     ClientPortalMessageDTO sendReply(Long userId, Long threadId, String content);
 
+    /**
+     * Send a reply via SMS to the client's phone.
+     * This will also store the message in the thread.
+     */
+    ClientPortalMessageDTO sendSmsReply(Long userId, Long threadId, String content, String toPhone);
+
     int getUnreadCount(Long userId);
 
     void closeThread(Long threadId);
+
+    void deleteThread(Long threadId);
 
     ClientPortalMessageThreadDTO startThreadWithClient(Long attorneyId, Long clientId, Long caseId, String subject, String initialMessage);
 

@@ -26,4 +26,7 @@ public interface MessageThreadRepository extends ListCrudRepository<MessageThrea
 
     @Query("SELECT SUM(t.unreadByClient) FROM MessageThread t WHERE t.clientId = :clientId")
     Integer countUnreadByClient(@Param("clientId") Long clientId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.caseId IN :caseIds ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
+    List<MessageThread> findByCaseIdInOrderByLastMessageAtDesc(@Param("caseIds") List<Long> caseIds);
 }
