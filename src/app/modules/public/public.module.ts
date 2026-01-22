@@ -7,6 +7,9 @@ import { RouterModule } from '@angular/router';
 import { IntakeFormComponent } from './components/intake-form/intake-form.component';
 import { IntakeFormListComponent } from './components/intake-form-list/intake-form-list.component';
 import { SuccessPageComponent } from './components/success-page/success-page.component';
+import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
+import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
+import { SmsComplianceComponent } from './components/sms-compliance/sms-compliance.component';
 
 // Services
 import { IntakeFormService } from './services/intake-form.service';
@@ -18,7 +21,10 @@ import { PublicRoutingModule } from './public-routing.module';
   declarations: [
     IntakeFormComponent,
     IntakeFormListComponent,
-    SuccessPageComponent
+    SuccessPageComponent,
+    PrivacyPolicyComponent,
+    TermsOfServiceComponent,
+    SmsComplianceComponent
   ],
   imports: [
     CommonModule,

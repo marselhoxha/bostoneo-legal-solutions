@@ -1,0 +1,196 @@
+.legal-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.legal-page-content {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 48px;
+
+  @media (max-width: 768px) {
+    padding: 24px 20px;
+  }
+}
+
+.legal-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e9ecef;
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+
+    @media (max-width: 768px) {
+      font-size: 1.75rem;
+    }
+  }
+
+  .last-updated {
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+}
+
+.legal-section {
+  margin-bottom: 32px;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+
+    @media (max-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #343a40;
+    margin: 20px 0 12px;
+  }
+
+  p {
+    color: #495057;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  ul {
+    margin: 12px 0 16px 20px;
+    color: #495057;
+
+    li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+  }
+}
+
+// Critical SMS Section Styling
+.sms-section {
+  background: #f8f9ff;
+  border: 2px solid #4361ee;
+  border-radius: 12px;
+  padding: 32px;
+  margin: 40px 0;
+
+  h2 {
+    color: #4361ee;
+    border-bottom-color: #4361ee;
+  }
+}
+
+.highlight-box {
+  background: #fff;
+  border-left: 4px solid #4361ee;
+  padding: 20px 24px;
+  margin: 20px 0;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  h3 {
+    margin-top: 0;
+    color: #4361ee;
+  }
+
+  p {
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &.important {
+    background: #fff5f5;
+    border-left-color: #dc3545;
+
+    h3 {
+      color: #dc3545;
+    }
+
+    strong {
+      color: #dc3545;
+    }
+  }
+}
+
+.contact-info {
+  background: #f8f9fa;
+  padding: 20px 24px;
+  border-radius: 8px;
+  margin: 16px 0;
+
+  p {
+    margin-bottom: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.legal-footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 2px solid #e9ecef;
+  text-align: center;
+
+  p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+
+  .legal-links {
+    a {
+      color: #4361ee;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .legal-page-wrapper {
+    background: #fff;
+    padding: 0;
+  }
+
+  .legal-page-content {
+    box-shadow: none;
+    padding: 20px;
+  }
+
+  .sms-section {
+    border: 1px solid #000;
+    background: #f5f5f5;
+  }
+
+  .highlight-box {
+    border: 1px solid #000;
+    background: #f5f5f5;
+  }
+}

@@ -125,12 +125,10 @@ export class MessagingStateService implements OnDestroy {
    * Handle incoming WebSocket messages
    */
   private handleWebSocketMessage(msg: WebSocketMessage): void {
-    console.log('[MessagingState] WebSocket message received:', msg.type, msg.data?.type);
     // Use NgZone.run to ensure Angular change detection runs for WebSocket messages
     this.ngZone.run(() => {
       if (msg.type === 'notification') {
         if (msg.data?.type === 'NEW_MESSAGE') {
-          console.log('[MessagingState] Processing NEW_MESSAGE:', msg.data);
           this.handleNewMessage(msg.data);
         } else if (msg.data?.type === 'MESSAGE_READ') {
           this.handleMessageRead(msg.data);
@@ -148,7 +146,6 @@ export class MessagingStateService implements OnDestroy {
 
     // Skip if we've already processed this message (prevents duplicate counting)
     if (this.processedMessageKeys.has(dedupKey)) {
-      console.debug('Skipping duplicate message notification:', dedupKey);
       return;
     }
 
@@ -161,7 +158,6 @@ export class MessagingStateService implements OnDestroy {
 
     // Find existing thread
     let thread = currentThreads.find(t => t.id == threadId);
-    console.log('[MessagingState] Thread lookup:', { threadId, found: !!thread, totalThreads: currentThreads.length });
 
     // Determine if this message is from the current user
     // IMPORTANT: Must handle multiple scenarios:
@@ -214,14 +210,6 @@ export class MessagingStateService implements OnDestroy {
 
     let updatedThreads = currentThreads;
 
-    console.log('[MessagingState] Sender check:', {
-      notificationSenderId,
-      currentUserId,
-      isMyMessage,
-      currentlyViewedThreadId: this.currentlyViewedThreadId,
-      threadId
-    });
-
     if (thread) {
       // Update existing thread with lastSenderId for proper "You" display
       // Don't increment unread if:
@@ -230,7 +218,6 @@ export class MessagingStateService implements OnDestroy {
       // Use == for type coercion since threadId might be string from JSON
       const isViewingThisThread = this.currentlyViewedThreadId == threadId;
       const shouldIncrementUnread = !isMyMessage && !isViewingThisThread;
-      console.log('[MessagingState] shouldIncrementUnread:', shouldIncrementUnread, 'isViewingThisThread:', isViewingThisThread);
 
       thread = {
         ...thread,
@@ -271,10 +258,7 @@ export class MessagingStateService implements OnDestroy {
     // Always update if it's not our own message
     if (!isMyMessage) {
       const totalUnread = updatedThreads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
-      console.log('[MessagingState] Emitting unread count:', totalUnread, 'threads:', updatedThreads.map(t => ({ id: t.id, unread: t.unreadCount })));
       this.unreadCountSubject.next(totalUnread);
-    } else {
-      console.log('[MessagingState] NOT emitting unread count - isMyMessage:', isMyMessage);
     }
 
     // Generate a temporary negative ID if messageId is undefined
@@ -413,12 +397,10 @@ export class MessagingStateService implements OnDestroy {
         let unreadCount = thread.unreadCount; // Default: use server's count
         let lastMessage = thread.lastMessage;
         let lastMessageAt = thread.lastMessageAt;
-        let source = 'server';
 
         if (isCurrentlyViewing) {
           // Currently viewing - unread is 0, but preserve lastMessage from WebSocket if available
           unreadCount = 0;
-          source = 'viewing';
           if (isWsUpdateGrace && wsUpdate) {
             // Even when viewing, use the most recent message content
             lastMessage = wsUpdate.lastMessage || lastMessage;
@@ -429,14 +411,10 @@ export class MessagingStateService implements OnDestroy {
           unreadCount = Math.max(wsUpdate.unreadCount, thread.unreadCount);
           lastMessage = wsUpdate.lastMessage || lastMessage;
           lastMessageAt = wsUpdate.lastMessageAt || lastMessageAt;
-          source = 'websocket';
         } else if (isMarkedAsReadGrace) {
           // Recently marked as read - preserve local unread (0)
           unreadCount = localState.unreadCount;
-          source = 'marked-read';
         }
-
-        console.log(`[Merge] Thread ${thread.id}: server=${thread.unreadCount}, local=${localState.unreadCount}, ws=${wsUpdate?.unreadCount}, final=${unreadCount} (${source})`);
 
         return {
           ...thread,

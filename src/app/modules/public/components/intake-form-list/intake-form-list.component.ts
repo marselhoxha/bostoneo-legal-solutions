@@ -184,7 +184,7 @@ export class IntakeFormListComponent implements OnInit {
 
     fields.forEach(field => {
       const validators = field.required ? [Validators.required] : [];
-      
+
       // Add specific validators
       if (field.type === 'email') {
         validators.push(Validators.email);
@@ -192,6 +192,9 @@ export class IntakeFormListComponent implements OnInit {
 
       formControls[field.name] = ['', validators];
     });
+
+    // Add SMS consent control (MUST default to false - unchecked for A2P 10DLC compliance)
+    formControls['smsConsent'] = [false];
 
     this.intakeForm = this.formBuilder.group(formControls);
   }

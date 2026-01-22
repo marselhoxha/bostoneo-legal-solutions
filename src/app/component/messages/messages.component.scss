@@ -2067,9 +2067,31 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--msg-space-4);
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: var(--msg-space-2);
+
+  // Custom scrollbar for quick replies
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--msg-border);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--msg-text-muted);
+  }
 
   @media (max-width: 575.98px) {
     grid-template-columns: 1fr;
+    max-height: 250px;
   }
 }
 

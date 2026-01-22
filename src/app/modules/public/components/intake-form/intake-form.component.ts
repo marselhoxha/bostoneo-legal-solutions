@@ -182,7 +182,7 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
 
     // Build FormGroup
     const formControls: { [key: string]: any } = {};
-    
+
     this.formFields.forEach(field => {
       const validators = [];
       if (field.required) {
@@ -191,9 +191,12 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
       if (field.type === 'email') {
         validators.push(Validators.email);
       }
-      
+
       formControls[field.name] = [field.defaultValue || '', validators];
     });
+
+    // Add SMS consent control (MUST default to false - unchecked for A2P 10DLC compliance)
+    formControls['smsConsent'] = [false];
 
     this.submissionForm = this.fb.group(formControls);
     

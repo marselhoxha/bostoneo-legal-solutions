@@ -1,0 +1,149 @@
+.compliance-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.compliance-content {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 48px;
+
+  @media (max-width: 768px) {
+    padding: 24px 20px;
+  }
+}
+
+.compliance-header {
+  h1 {
+    color: #1a1a2e;
+  }
+}
+
+// Step indicators
+.step-number {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  background: linear-gradient(135deg, #4361ee 0%, #3a56d4 100%);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.step-item {
+  position: relative;
+
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 44px;
+    width: 2px;
+    height: calc(100% - 20px);
+    background: #e9ecef;
+  }
+}
+
+// Consent demo box
+.consent-demo {
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6 !important;
+}
+
+// Message samples
+.message-sample {
+  background: #fff;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.message-bubble {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: -8px;
+    border-width: 0 8px 8px 8px;
+    border-style: solid;
+    border-color: transparent transparent #f8f9fa transparent;
+  }
+}
+
+// Icon circles
+.icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.25rem;
+  }
+}
+
+// Important notice
+.important-notice {
+  border-radius: 0 8px 8px 0;
+}
+
+// Opt-out methods
+.opt-out-method {
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+}
+
+// Print styles
+@media print {
+  .compliance-page-wrapper {
+    background: #fff;
+    padding: 20px;
+  }
+
+  .compliance-content {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .card {
+    break-inside: avoid;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+  }
+
+  .card-header {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+  }
+}

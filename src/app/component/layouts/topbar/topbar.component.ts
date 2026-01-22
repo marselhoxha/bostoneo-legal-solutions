@@ -1144,13 +1144,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.messagingStateService.unreadCount$
       .pipe(takeUntil(this.destroy$))
       .subscribe(count => {
-        console.log('[Topbar] unreadCount$ received:', count, 'current:', this.unreadMessageCount);
         if (this.unreadMessageCount === count) {
-          console.log('[Topbar] Skipping - count unchanged');
           return; // Skip if unchanged
         }
         this.unreadMessageCount = count;
-        console.log('[Topbar] Updated unreadMessageCount to:', this.unreadMessageCount);
         // CRITICAL: For unread count badge, we need detectChanges to ensure immediate update
         // This is necessary because OnPush change detection may not catch BehaviorSubject emissions
         this.cdr.markForCheck();
@@ -1176,16 +1173,12 @@ export class TopbarComponent implements OnInit, OnDestroy {
           })
           .slice(0, 5);
 
-        const isEqual = this.areMessageThreadsEqual(this.messageThreads, newThreads);
-        console.log('[Topbar] threads$ received:', newThreads.map(t => ({ id: t.id, unread: t.unreadCount, lastMsg: t.lastMessage?.substring(0, 20) })), 'isEqual:', isEqual);
-
         // Skip update if data is the same (prevents flickering)
-        if (isEqual) {
+        if (this.areMessageThreadsEqual(this.messageThreads, newThreads)) {
           return;
         }
 
         this.messageThreads = newThreads;
-        console.log('[Topbar] Updated messageThreads');
         // For threads update, also need detectChanges to ensure dropdown updates
         this.cdr.markForCheck();
         this.cdr.detectChanges();

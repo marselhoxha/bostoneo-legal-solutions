@@ -1142,6 +1142,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
   useQuickReply(text: string): void {
     this.replyContent = text;
     this.showQuickReplies = false;
+    // Trigger change detection to ensure the value is bound before user clicks send
+    this.cdr.detectChanges();
+    // Focus the input so user can edit or just press Enter to send
     this.messageInput?.nativeElement?.focus();
   }
 
