@@ -80,42 +80,23 @@ export class ExpenseFormComponent implements OnInit {
     if (id) {
       this.isEditMode = true;
       this.expenseId = +id;
-      console.log(`Edit mode detected for expense ID: ${this.expenseId}`);
-      
+
       // In edit mode, first load the expense data and store it
       this.loading = true;
       this.expensesService.getExpense(this.expenseId)
         .subscribe({
           next: (response) => {
-            // Log the complete raw response
-            console.log('EXPENSE API RESPONSE:', JSON.stringify(response, null, 2));
-            
             // Extract the expense data from the response
             const expense = response.data;
-            console.log('Extracted expense data:', JSON.stringify(expense, null, 2));
-            
-            // Detailed property logging for debugging
-            console.log('EXPENSE PROPERTIES DUMP:');
-            console.log('- expense.id:', expense.id, typeof expense.id);
-            console.log('- expense.amount:', expense.amount, typeof expense.amount);
-            console.log('- expense.vendor:', expense.vendor, typeof expense.vendor);
-            console.log('- expense.vendorId:', expense.vendorId, typeof expense.vendorId);
-            console.log('- expense.client:', expense.client, typeof expense.client);
-            console.log('- expense.clientId:', expense.clientId, typeof expense.clientId);
-            console.log('- expense.category:', expense.category, typeof expense.category);
-            console.log('- expense.categoryId:', expense.categoryId, typeof expense.categoryId);
-            console.log('- expense.invoice:', expense.invoice, typeof expense.invoice);
-            console.log('- expense.invoiceId:', expense.invoiceId, typeof expense.invoiceId);
-            console.log('- expense.legalCaseId:', expense.legalCaseId, typeof expense.legalCaseId);
-            
+
             // Store the expense data to apply after dropdown options are loaded
             this.pendingExpenseData = expense;
-            
+
             // Now load all the dropdown data
             this.loadInitialData();
           },
           error: (error) => {
-            console.error('Error directly loading expense:', error);
+            console.error('Error loading expense:', error);
             this.error = 'Failed to load expense data for editing.';
             this.loading = false;
           }
@@ -127,26 +108,19 @@ export class ExpenseFormComponent implements OnInit {
   }
 
   private loadInvoices() {
-    console.log('Loading invoices separately');
-    
     // Use the InvoiceService to fetch invoices
     return this.invoiceService.getInvoices(0, 100).pipe(
       tap(response => {
-        console.log('Raw invoices response:', JSON.stringify(response));
-        
         // Cast to any to avoid TypeScript errors
         const data = response?.data as any;
-        
+
         // Try different paths to find the invoice array
         if (data?.content && Array.isArray(data.content)) {
           this.invoices = data.content;
-          console.log(`Loaded ${this.invoices.length} invoices from content`, this.invoices);
         } else if (data?.page?.content && Array.isArray(data.page.content)) {
           this.invoices = data.page.content;
-          console.log(`Loaded ${this.invoices.length} invoices from page.content`, this.invoices);
         } else if (Array.isArray(data)) {
           this.invoices = data;
-          console.log(`Loaded ${this.invoices.length} invoices from data array`, this.invoices);
         } else {
           console.error('No valid invoice array found in data:', data);
           // Create a fallback invoice for testing
@@ -154,7 +128,6 @@ export class ExpenseFormComponent implements OnInit {
             { id: 999, invoiceNumber: 'TEST-001' },
             { id: 998, invoiceNumber: 'TEST-002' }
           ];
-          console.log('Using fallback test invoices:', this.invoices);
         }
       }),
       catchError(error => {
@@ -169,32 +142,24 @@ export class ExpenseFormComponent implements OnInit {
   }
 
   private loadInvoicesDirect() {
-    console.log('Loading invoices directly via HTTP');
-
     const token = localStorage.getItem(Key.TOKEN);
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
-    
+
     return this.http.get('http://localhost:8085/client/invoice/list?page=0&size=100', { headers }).pipe(
       tap((response: any) => {
-        console.log('Direct invoice API response:', JSON.stringify(response));
-        
         const data = response?.data as any;
-        
+
         if (data?.page?.content && Array.isArray(data.page.content)) {
           this.invoices = data.page.content;
-          console.log('Invoices loaded from direct API call (page.content):', this.invoices);
         } else if (data?.content && Array.isArray(data.content)) {
           this.invoices = data.content;
-          console.log('Invoices loaded from direct API call (content):', this.invoices);
         } else if (Array.isArray(data)) {
           this.invoices = data;
-          console.log('Invoices loaded from direct API call (data array):', this.invoices);
         } else {
           console.warn('Could not extract invoices from response, using test data');
-          console.log('Response structure:', data);
           this.invoices = [
             { id: 1001, invoiceNumber: 'INV-TEST-1001' },
             { id: 1002, invoiceNumber: 'INV-TEST-1002' },
@@ -216,22 +181,7 @@ export class ExpenseFormComponent implements OnInit {
   // Modified to better handle the extraction of IDs from expense data
   private applyPendingExpenseData(): void {
     if (!this.pendingExpenseData) return;
-    
-    console.log('Applying pending expense data to form - RAW DATA:', JSON.stringify(this.pendingExpenseData, null, 2));
-    
-    // Log what dropdown options we have available
-    console.log('Available vendors:', this.vendors.map(v => `${v.id}: ${v.name}`));
-    console.log('Available clients:', this.clients.map(c => `${c.id}: ${c.name}`));
-    console.log('Available categories:', this.categories.map(c => `${c.id}: ${c.name}`));
-    console.log('Available invoices:', this.invoices.map(i => `${i.id}: ${i.invoiceNumber || i.id}`));
-    console.log('Available legal cases:', this.legalCases.map(l => `${l.id}: ${l.caseNumber || l.id}`));
-    
-    // Print all properties of the expense for debugging
-    console.log('EXPENSE DATA PROPERTIES:');
-    Object.keys(this.pendingExpenseData).forEach(key => {
-      console.log(`- ${key}:`, this.pendingExpenseData[key]);
-    });
-    
+
     // Format date properly
     let expenseDate: string;
     if (this.pendingExpenseData.date) {
@@ -240,86 +190,41 @@ export class ExpenseFormComponent implements OnInit {
     } else {
       expenseDate = new Date().toISOString().split('T')[0];
     }
-    
+
     // Collect all relationship IDs
     let vendorId = '';
     let clientId = '';
     let categoryId = '';
     let invoiceId = '';
     let legalCaseId = '';
-    
-    // In the backend, relationships are likely stored as embedded objects
-    // Extract them from the expense data
-    
-    // Try to extract vendor information - it could be a nested object
-    if (this.pendingExpenseData.vendor) {
-      console.log('Found vendor object:', this.pendingExpenseData.vendor);
-      if (this.pendingExpenseData.vendor.id) {
-        vendorId = this.pendingExpenseData.vendor.id.toString();
-        console.log('Extracted vendorId from vendor object:', vendorId);
-      }
+
+    // Extract vendor information from nested object
+    if (this.pendingExpenseData.vendor?.id) {
+      vendorId = this.pendingExpenseData.vendor.id.toString();
     }
-    
-    // Try to extract client information
-    if (this.pendingExpenseData.client) {
-      console.log('Found client object:', this.pendingExpenseData.client);
-      if (this.pendingExpenseData.client.id) {
-        clientId = this.pendingExpenseData.client.id.toString();
-        console.log('Extracted clientId from client object:', clientId);
-      }
+
+    // Extract client information
+    if (this.pendingExpenseData.client?.id) {
+      clientId = this.pendingExpenseData.client.id.toString();
     }
-    
-    // Try to extract category information
-    if (this.pendingExpenseData.category) {
-      console.log('Found category object:', this.pendingExpenseData.category);
-      if (this.pendingExpenseData.category.id) {
-        categoryId = this.pendingExpenseData.category.id.toString();
-        console.log('Extracted categoryId from category object:', categoryId);
-      }
+
+    // Extract category information
+    if (this.pendingExpenseData.category?.id) {
+      categoryId = this.pendingExpenseData.category.id.toString();
     }
-    
-    // Try to extract invoice information
-    if (this.pendingExpenseData.invoice) {
-      console.log('Found invoice object:', this.pendingExpenseData.invoice);
-      if (this.pendingExpenseData.invoice.id) {
-        invoiceId = this.pendingExpenseData.invoice.id.toString();
-        console.log('Extracted invoiceId from invoice object:', invoiceId);
-      }
+
+    // Extract invoice information
+    if (this.pendingExpenseData.invoice?.id) {
+      invoiceId = this.pendingExpenseData.invoice.id.toString();
     }
-    
-    // Try to get legalCaseId
+
+    // Extract legalCaseId
     if (this.pendingExpenseData.legalCaseId) {
       legalCaseId = this.pendingExpenseData.legalCaseId.toString();
-      console.log('Extracted legalCaseId:', legalCaseId);
-    } else if (this.pendingExpenseData.legalCase && this.pendingExpenseData.legalCase.id) {
+    } else if (this.pendingExpenseData.legalCase?.id) {
       legalCaseId = this.pendingExpenseData.legalCase.id.toString();
-      console.log('Extracted legalCaseId from legalCase object:', legalCaseId);
     }
-    
-    // Check if we have valid IDs that match our available options
-    const validVendor = vendorId && this.vendors.some(v => v.id.toString() === vendorId);
-    const validClient = clientId && this.clients.some(c => c.id.toString() === clientId);
-    const validCategory = categoryId && this.categories.some(c => c.id.toString() === categoryId);
-    
-    console.log('Validation checks:', {
-      validVendor,
-      validClient, 
-      validCategory,
-      vendorId,
-      clientId,
-      categoryId
-    });
-    
-    if (!validVendor) {
-      console.warn(`Vendor ID ${vendorId} is not in the available vendors list.`);
-    }
-    if (!validClient) {
-      console.warn(`Client ID ${clientId} is not in the available clients list.`);
-    }
-    if (!validCategory) {
-      console.warn(`Category ID ${categoryId} is not in the available categories list.`);
-    }
-    
+
     // Set form values with what we were able to extract
     const formValues = {
       amount: this.pendingExpenseData.amount,
@@ -333,13 +238,10 @@ export class ExpenseFormComponent implements OnInit {
       invoiceId: invoiceId,
       legalCaseId: legalCaseId
     };
-    
-    console.log('Form values to apply:', formValues);
-    
+
     // Patching the form values
     this.expenseForm.patchValue(formValues);
-    console.log('Form values after patch:', this.expenseForm.value);
-    
+
     // Clear the pending data
     this.pendingExpenseData = null;
     this.loading = false;
@@ -350,7 +252,6 @@ export class ExpenseFormComponent implements OnInit {
   private loadInitialData(): void {
     this.loading = true;
     this.error = null;
-    console.log('loadInitialData started, loading = true');
     this.changeDetectorRef.detectChanges();
 
     // First load the main data without invoices
@@ -362,72 +263,58 @@ export class ExpenseFormComponent implements OnInit {
     })
     .subscribe({
       next: (results) => {
-        console.log('Main data loaded:', results);
-        
         // Process vendors
         if (results.vendors?.data) {
           this.vendors = results.vendors.data;
-          console.log('Loaded vendors:', this.vendors);
         }
-        
+
         // Process clients
         if (results.clients?.data) {
           this.clients = results.clients.data;
-          console.log('Loaded clients:', this.clients);
         }
-        
+
         // Process categories
         if (results.categories) {
           this.categories = results.categories;
-          console.log('Loaded categories:', this.categories);
         }
-        
+
         // Process legal cases
         if (results.legalCases?.data?.page?.content) {
           this.legalCases = results.legalCases.data.page.content;
-          console.log('Loaded legal cases:', this.legalCases);
         }
-        
+
         // Try to load all invoices using the new method that supports size parameter
         this.clientService.allInvoices$(0, 100).subscribe({
           next: (response) => {
-            console.log('All invoices response:', response);
-            
             // Cast to any to avoid TypeScript errors with accessing potential properties
             const data = response?.data as any;
-            
+
             // Try different paths to find invoices
             if (data?.page?.content && Array.isArray(data.page.content)) {
               this.invoices = data.page.content;
-              console.log(`Loaded ${this.invoices.length} invoices from page.content`, this.invoices);
             } else if (data?.content && Array.isArray(data.content)) {
               this.invoices = data.content;
-              console.log(`Loaded ${this.invoices.length} invoices from content`, this.invoices);
             } else if (Array.isArray(data)) {
               this.invoices = data;
-              console.log(`Loaded ${this.invoices.length} invoices from data array`, this.invoices);
             } else {
               console.warn("Could not find invoices in the expected response structure");
-              console.log("Response data structure:", data);
-              
               // If no invoices found in allInvoices response, try direct method
               this.loadInvoicesDirect().subscribe();
             }
-            
+
             // Now that all dropdowns are loaded, apply pending expense data if in edit mode
             if (this.pendingExpenseData) {
               this.applyPendingExpenseData();
-        } else {
-          this.loading = false;
-          this.changeDetectorRef.detectChanges();
-        }
+            } else {
+              this.loading = false;
+              this.changeDetectorRef.detectChanges();
+            }
           },
           error: (error) => {
             console.error('Error loading all invoices:', error);
             // Fall back to direct HTTP method
             this.loadInvoicesDirect().subscribe({
               next: () => {
-                // Now that all dropdowns are loaded, apply pending expense data if in edit mode
                 if (this.pendingExpenseData) {
                   this.applyPendingExpenseData();
                 } else {
@@ -440,7 +327,6 @@ export class ExpenseFormComponent implements OnInit {
                 // Fall back to original method as last resort
                 this.loadInvoices().subscribe({
                   next: () => {
-                    // Now that all dropdowns are loaded, apply pending expense data if in edit mode
                     if (this.pendingExpenseData) {
                       this.applyPendingExpenseData();
                     } else {
@@ -466,11 +352,10 @@ export class ExpenseFormComponent implements OnInit {
       error: (error) => {
         console.error('Error loading initial data:', error);
         this.error = 'Failed to load required data. Please try again.';
-        console.log('Error in loadInitialData, setting loading = false');
         this.loading = false;
-          this.changeDetectorRef.detectChanges();
-        }
-      });
+        this.changeDetectorRef.detectChanges();
+      }
+    });
   }
 
   onFileSelected(event: Event): void {
@@ -626,38 +511,27 @@ export class ExpenseFormComponent implements OnInit {
       this.expensesService.getExpense(this.expenseId).subscribe({
         next: (response: CustomHttpResponse<Expense>) => {
           const expense = response.data;
-          console.log('Raw expense data from API:', expense);
-          
+
           // Convert relevant IDs to strings for form comparison
           const vendorId = expense.vendor?.id?.toString() || '';
           const clientId = expense.client?.id?.toString() || '';
           const categoryId = expense.category?.id?.toString() || '';
           const invoiceId = expense.invoice?.id?.toString() || '';
           const legalCaseId = expense.legalCaseId?.toString() || '';
-          
-          console.log('Extracted IDs:', {
-            vendorId,
-            clientId,
-            categoryId,
-            invoiceId,
-            legalCaseId
-          });
-          
+
           const formValues = {
             date: expense.date ? new Date(expense.date) : null,
             amount: expense.amount || '',
             description: expense.description || '',
             tax: expense.tax || 0,
             vendorId,
-            clientId, 
+            clientId,
             categoryId,
             invoiceId,
             legalCaseId
           };
-          
-          console.log('Setting form values:', formValues);
+
           this.expenseForm.patchValue(formValues);
-          
           this.loading = false;
         },
         error: (error: HttpErrorResponse) => {
@@ -690,7 +564,6 @@ export class ExpenseFormComponent implements OnInit {
     this.expensesService.getVendors().subscribe({
       next: (response: CustomHttpResponse<Vendor[]>) => {
         this.vendors = response.data || [];
-        console.log('Loaded vendors:', this.vendors.map(v => ({id: v.id, name: v.name})));
       },
       error: (error: HttpErrorResponse) => {
         console.error('Error loading vendors:', error);

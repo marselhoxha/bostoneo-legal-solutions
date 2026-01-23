@@ -114,7 +114,6 @@ export class UserService {
     this.http.post<CustomHttpResponse<Profile>>
       (`${this.server}/user/register`, user)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -122,7 +121,6 @@ export class UserService {
     this.http.get<CustomHttpResponse<Profile>>
       (`${this.server}/user/resetpassword/${email}`)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -146,7 +144,6 @@ export class UserService {
     this.http.get<CustomHttpResponse<Profile>>
       (`${this.server}/user/verify/${type}/${key}`)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -154,7 +151,6 @@ export class UserService {
     this.http.put<CustomHttpResponse<Profile>>
       (`${this.server}/user/new/password`, form)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -174,7 +170,6 @@ export class UserService {
     this.http.patch<CustomHttpResponse<Profile>>
       (`${this.server}/user/update`, user)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -227,9 +222,7 @@ export class UserService {
    */
   proactiveTokenRefresh(): void {
     if (this.isAuthenticated() && this.isTokenAboutToExpire(5)) {
-      console.log('Token about to expire, refreshing proactively...');
       this.refreshToken$().subscribe({
-        next: () => console.log('Proactive token refresh successful'),
         error: (err) => console.warn('Proactive token refresh failed:', err)
       });
     }
@@ -239,20 +232,15 @@ export class UserService {
     this.http.patch<CustomHttpResponse<Profile>>
       (`${this.server}/user/update/password`, form)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
   updateRoles$ = (roleName: string) => <Observable<CustomHttpResponse<Profile>>>
     this.http.patch<CustomHttpResponse<Profile>>(`${this.server}/user/update/role/${roleName}`, {})
       .pipe(
-        tap(response => {
-          console.log('Roles updated', response);
-
+        tap(() => {
           // Force a token refresh after the role is updated
-          this.refreshToken$().subscribe(() => {
-            console.log('Token refreshed after role change');
-          });
+          this.refreshToken$().subscribe();
         }),
         catchError(this.handleError)
       );
@@ -262,7 +250,6 @@ export class UserService {
     this.http.patch<CustomHttpResponse<Profile>>
       (`${this.server}/user/update/settings`, settings)
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -270,7 +257,6 @@ export class UserService {
     this.http.patch<CustomHttpResponse<Profile>>
       (`${this.server}/user/togglemfa`, {})
       .pipe(
-        tap(console.log),
         catchError(this.handleError)
       );
 
@@ -361,9 +347,6 @@ export class UserService {
   deleteUser(userId: number): Observable<CustomHttpResponse<any>> {
     return this.http.delete<CustomHttpResponse<any>>(`${this.server}/user/delete/${userId}`)
       .pipe(
-        tap(response => {
-          console.log('User deleted:', response);
-        }),
         catchError(this.handleError)
       );
   }
@@ -421,7 +404,6 @@ export class UserService {
 
   // Clear invalid or expired tokens
   private clearInvalidToken(): void {
-    console.log('Clearing invalid JWT tokens from localStorage');
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
     this.clearUserCache();

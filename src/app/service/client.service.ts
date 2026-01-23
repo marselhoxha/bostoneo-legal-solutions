@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpEvent, HttpHeaders } from '@angular/common/http';
-import { catchError, Observable, tap, throwError } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { CustomHttpResponse, ClientState, Page, Profile } from '../interface/appstates';
 import { User } from '../interface/user';
 import { Key } from '../enum/key.enum';
@@ -19,7 +19,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Page<Client> & User & Stats>>
             (`${this.server}/client?page=${page}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -27,7 +26,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Page<Client> & User & Stats>>
             (`${this.server}/client?page=0&size=1000`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -35,7 +33,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Client[] & User>>
             (`${this.server}/client/with-unbilled-time-entries`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -43,7 +40,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<ClientState>>
             (`${this.server}/client/get/${clientId}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -51,7 +47,6 @@ export class ClientService {
         this.http.put<CustomHttpResponse<ClientState>>
             (`${this.server}/client/update`, client)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -59,7 +54,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Page<Client> & User>>
             (`${this.server}/client/search?name=${name}&page=${page}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -67,7 +61,6 @@ export class ClientService {
         this.http.post<CustomHttpResponse<Client & User>>
             (`${this.server}/client/save`, client)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -75,7 +68,6 @@ export class ClientService {
         this.http.delete<void>(`${this.server}/client/delete/${clientId}`, {
         })
             .pipe(
-                tap(() => console.log(`Client ${clientId} deleted`)),
                 catchError(this.handleError)
             );
                 
@@ -84,7 +76,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Client[] & User>>
             (`${this.server}/client/invoice/new`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -92,7 +83,6 @@ export class ClientService {
         this.http.post<CustomHttpResponse<Client[] & User>>
             (`${this.server}/client/invoice/addtoclient/${clientId}`, invoice)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -100,7 +90,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Page<Invoice> & User>>
             (`${this.server}/client/invoice/list?page=${page}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -108,7 +97,6 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Page<Invoice> & User>>
             (`${this.server}/client/invoice/list?page=${page}&size=${size}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
@@ -116,14 +104,12 @@ export class ClientService {
         this.http.get<CustomHttpResponse<Client & Invoice & User>>
             (`${this.server}/client/invoice/get/${invoiceId}`)
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
 
-     deleteInvoice$ = (invoiceId: number): Observable<void> => 
+     deleteInvoice$ = (invoiceId: number): Observable<void> =>
                 this.http.delete<void>(`${this.server}/client/invoice/get/${invoiceId}`)
                   .pipe(
-                    tap(() => console.log(`Invoice ${invoiceId} deleted`)),
                     catchError(this.handleError)
                   );
                   
@@ -132,7 +118,6 @@ export class ClientService {
         this.http.get
             (`${this.server}/client/download/report`, {reportProgress: true, observe: 'events', responseType: 'blob'})
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             );
             
@@ -140,19 +125,16 @@ export class ClientService {
         this.http.get
             (`${this.server}/client/invoice/download/invoice-report`, { reportProgress: true, observe: 'events', responseType: 'blob' })
             .pipe(
-                tap(console.log),
                 catchError(this.handleError)
             ); 
 
     private handleError(error: HttpErrorResponse): Observable<never> {
-        console.log(error);
         let errorMessage: string;
         if (error.error instanceof ErrorEvent) {
             errorMessage = `A client error occurred - ${error.error.message}`;
         } else {
             if (error.error.reason) {
                 errorMessage = error.error.reason;
-                console.log(errorMessage);
             } else {
                 errorMessage = `An error occurred - Error status ${error.status}`;
             }

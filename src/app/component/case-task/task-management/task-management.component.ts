@@ -127,11 +127,9 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   ngOnInit(): void {
-    console.log('🎬 TaskManagementComponent - ngOnInit started');
-    
     // Initialize loading state
     this.loading.tasks = true;
-    
+
     this.breadCrumbItems = [
       { label: 'Tasks' },
       { label: 'Kanban Board', active: true }
@@ -141,7 +139,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.userService.userData$
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
-        console.log('👤 Current user received:', user);
         if (user) {
           this.currentUser = user;
         }
@@ -149,27 +146,23 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
 
     // Determine context mode from route
     const caseId = this.route.snapshot.params['caseId'];
-    
+
     if (caseId) {
       // Case-specific mode
       this.caseMode = true;
       this.currentCaseId = +caseId;
-      console.log('📁 Case-specific mode - caseId:', this.currentCaseId);
       this.initializeCaseMode(this.currentCaseId);
     } else {
       // All tasks mode
       this.caseMode = false;
-      console.log('📂 All tasks mode');
       this.initializeAllTasksMode();
     }
-    
+
     // Subscribe to context updates
     this.subscribeToContextUpdates();
-    
+
     // Subscribe to WebSocket updates for real-time changes
     this.subscribeToWebSocketUpdates();
-    
-    console.log('🎬 TaskManagementComponent - ngOnInit completed');
   }
 
   ngAfterViewInit(): void {
@@ -205,89 +198,44 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Load tasks for a specific case
    */
   private loadTasksForCase(caseId: number): void {
-    console.log('🚀 TaskManagementComponent - loadTasksForCase called with caseId:', caseId);
     this.loading.tasks = true;
     this.cdr.detectChanges(); // Ensure loading state is visible
-    
-    console.log('📡 Making API call to get tasks for case:', caseId);
+
     this.caseTaskService.getTasksByCaseId(caseId).subscribe({
       next: (response) => {
-        console.log('✅ TaskManagementComponent - API Response received:', response);
-        console.log('📑 Response structure analysis:');
-        console.log('  - response:', !!response);
-        console.log('  - response.data:', !!response.data);
-        console.log('  - response.data.tasks:', !!response.data?.tasks);
-        console.log('  - response.data.tasks.content:', !!response.data?.tasks?.content);
-        console.log('  - response.data.content:', !!response.data?.content);
-        
         // Handle paginated response
         if (response?.data?.tasks?.content) {
-          console.log('📝 Using response.data.tasks.content - found', response.data.tasks.content.length, 'tasks');
           this.allTasks = response.data.tasks.content || [];
         } else if (response?.data?.content) {
-          console.log('📝 Using response.data.content - found', response.data.content.length, 'tasks');
           this.allTasks = response.data.content || [];
         } else if (response?.data && Array.isArray(response.data)) {
-          console.log('📝 Using response.data array - found', response.data.length, 'tasks');
           this.allTasks = response.data || [];
         } else if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
-          console.log('📝 Using response.data.tasks array - found', response.data.tasks.length, 'tasks');
           this.allTasks = response.data.tasks || [];
         } else {
-          console.warn('⚠️ No recognizable task data structure found in response');
-          console.log('📋 Full response data:', JSON.stringify(response?.data, null, 2));
+          console.warn('No recognizable task data structure found in response');
           this.allTasks = [];
         }
-        
-        console.log('📋 All tasks after processing:', this.allTasks);
-        console.log('📑 Total tasks loaded:', this.allTasks.length);
-        
+
         this.filterTasksByStatus();
         this.loading.tasks = false;
-        
-        console.log('🎯 Tasks after filtering by status:');
-        console.log('  - unassignedTasks:', this.unassignedTasks.length);
-        console.log('  - todoTasks:', this.todoTasks.length);
-        console.log('  - inprogressTasks:', this.inprogressTasks.length);
-        console.log('  - reviewsTasks:', this.reviewsTasks.length);
-        console.log('  - completedTasks:', this.completedTasks.length);
-        
+
         // Force change detection to update the UI
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ TaskManagementComponent - Error loading tasks:', error);
-        console.error('📑 Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error,
-          url: error.url
-        });
-        
-        // Check if it's a token/auth issue
-        const token = localStorage.getItem('[KEY] TOKEN');
-        console.log('🔐 Token check:', {
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-          tokenPreview: token ? token.substring(0, 50) + '...' : 'No token'
-        });
-        
+        console.error('Error loading tasks:', error);
+
         // More specific error messages
         if (error.status === 401) {
-          console.error('🚫 Authentication required - redirecting to login might be needed');
           this.notificationService.onError('Authentication required. Please log in.');
         } else if (error.status === 403) {
-          console.error('🚫 Permission denied for viewing tasks');
           this.notificationService.onError('You do not have permission to view these tasks.');
         } else if (error.status === 404) {
-          console.error('🚫 Case not found');
           this.notificationService.onError('Case not found.');
         } else if (error.status === 0) {
-          console.error('🌐 Network error - backend might be down');
           this.notificationService.onError('Network error. Please check if the backend is running.');
         } else {
-          console.error('🚫 General error loading tasks');
           this.notificationService.onError('Error loading tasks. Please try again.');
         }
         
@@ -307,86 +255,42 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Load all tasks across all cases
    */
   private loadAllTasks(): void {
-    console.log('🚀 TaskManagementComponent - loadAllTasks called');
     this.loading.tasks = true;
     this.cdr.detectChanges(); // Ensure loading state is visible
-    
-    console.log('📡 Making API call to get all tasks');
+
     this.caseTaskService.getAllTasks().subscribe({
       next: (response) => {
-        console.log('✅ TaskManagementComponent - API Response received for all tasks:', response);
-        console.log('📑 Response structure analysis:');
-        console.log('  - response:', !!response);
-        console.log('  - response.data:', !!response.data);
-        console.log('  - response.data.tasks:', !!response.data?.tasks);
-        console.log('  - response.data.tasks.content:', !!response.data?.tasks?.content);
-        console.log('  - response.data.content:', !!response.data?.content);
-        
         // Handle paginated response
         if (response?.data?.tasks?.content) {
-          console.log('📝 Using response.data.tasks.content - found', response.data.tasks.content.length, 'tasks');
           this.allTasks = response.data.tasks.content || [];
         } else if (response?.data?.content) {
-          console.log('📝 Using response.data.content - found', response.data.content.length, 'tasks');
           this.allTasks = response.data.content || [];
         } else if (response?.data && Array.isArray(response.data)) {
-          console.log('📝 Using response.data array - found', response.data.length, 'tasks');
           this.allTasks = response.data || [];
         } else if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
-          console.log('📝 Using response.data.tasks array - found', response.data.tasks.length, 'tasks');
           this.allTasks = response.data.tasks || [];
         } else {
-          console.warn('⚠️ No recognizable task data structure found in response');
-          console.log('📋 Full response data:', JSON.stringify(response?.data, null, 2));
+          console.warn('No recognizable task data structure found in response');
           this.allTasks = [];
         }
-        
-        console.log('📋 All tasks after processing:', this.allTasks);
-        console.log('📑 Total tasks loaded:', this.allTasks.length);
-        
+
         this.filterTasksByStatus();
         this.loading.tasks = false;
-        
-        console.log('🎯 Tasks after filtering by status:');
-        console.log('  - unassignedTasks:', this.unassignedTasks.length);
-        console.log('  - todoTasks:', this.todoTasks.length);
-        console.log('  - inprogressTasks:', this.inprogressTasks.length);
-        console.log('  - reviewsTasks:', this.reviewsTasks.length);
-        console.log('  - completedTasks:', this.completedTasks.length);
-        
+
         // Force change detection to update the UI
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ TaskManagementComponent - Error loading all tasks:', error);
-        console.error('📑 Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error,
-          url: error.url
-        });
-        
-        // Check if it's a token/auth issue
-        const token = localStorage.getItem('[KEY] TOKEN');
-        console.log('🔐 Token check:', {
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-          tokenPreview: token ? token.substring(0, 50) + '...' : 'No token'
-        });
-        
+        console.error('Error loading all tasks:', error);
+
         // More specific error messages
         if (error.status === 401) {
-          console.error('🚫 Authentication required');
           this.notificationService.onError('Authentication required. Please log in.');
         } else if (error.status === 403) {
-          console.error('🚫 Permission denied for viewing tasks');
           this.notificationService.onError('You do not have permission to view tasks.');
         } else if (error.status === 0) {
-          console.error('🌐 Network error - backend might be down');
           this.notificationService.onError('Network error. Please check if the backend is running.');
         } else {
-          console.error('🚫 General error loading tasks');
           this.notificationService.onError('Error loading tasks. Please try again.');
         }
         
@@ -406,38 +310,32 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Initialize case-specific mode with context
    */
   private initializeCaseMode(caseId: number): void {
-    console.log('🎯 TaskManagementComponent - Initializing case mode for:', caseId);
-    
     // Check if case context already exists
     const currentCase = this.caseContextService.getCurrentCaseSnapshot();
-    
+
     if (currentCase && currentCase.id === caseId) {
-      console.log('✅ TaskManagementComponent - Using existing context');
       this.loadFromContext();
       return;
     }
-    
+
     // Load case context if not available
     this.caseContextService.syncWithBackend(caseId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          console.log('✅ TaskManagementComponent - Context loaded from backend');
           this.loadFromContext();
         },
         error: (error) => {
-          console.error('❌ TaskManagementComponent - Failed to load context:', error);
+          console.error('Failed to load context:', error);
           this.handleContextLoadError(error);
         }
       });
   }
-  
+
   /**
    * Initialize all tasks mode
    */
   private initializeAllTasksMode(): void {
-    console.log('🌍 TaskManagementComponent - Initializing all tasks mode');
-    
     // Clear any existing case context
     this.currentCase = null;
     this.availableAssignees = [];
@@ -544,8 +442,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Handle context notifications
    */
   private handleContextNotification(notification: any): void {
-    console.log('📢 TaskManagementComponent - Received notification:', notification);
-    
     switch (notification.type) {
       case 'TASK_ASSIGNED':
       case 'TASK_REASSIGNED':
@@ -586,7 +482,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    */
   private updateTaskPermissions(): void {
     // This will be expanded when we implement role-based permissions
-    console.log('👮 TaskManagementComponent - User role in case:', this.userCaseRole);
   }
   
   /**
@@ -612,30 +507,19 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Load users
    */
   private loadUsers(): void {
-    console.log('🔄 Loading users for task assignment...');
     this.userService.getUsers().subscribe({
       next: (response) => {
-        console.log('📥 Users API response:', response);
-
         // Handle multiple response structures from the backend
         let users: User[] = [];
 
         if (response?.data?.users && Array.isArray(response.data.users)) {
-          // Structure: { data: { users: [...] } }
           users = response.data.users;
-          console.log('📝 Found users in response.data.users:', users.length);
         } else if (response?.data?.content && Array.isArray(response.data.content)) {
-          // Paginated structure: { data: { content: [...] } }
           users = response.data.content;
-          console.log('📝 Found users in response.data.content:', users.length);
         } else if (response?.data && Array.isArray(response.data)) {
-          // Direct array: { data: [...] }
           users = response.data;
-          console.log('📝 Found users in response.data array:', users.length);
         } else if (Array.isArray(response)) {
-          // Direct response is array
           users = response;
-          console.log('📝 Found users in direct response array:', users.length);
         }
 
         // Map to ensure consistent User interface
@@ -653,12 +537,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
           permissions: user.permissions || ''
         } as User));
 
-        console.log('✅ Available users loaded:', this.availableUsers.length);
-        console.log('👥 Users:', this.availableUsers.map(u => `${u.firstName} ${u.lastName} (${u.roleName})`));
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading users:', error);
+        console.error('Error loading users:', error);
         this.availableUsers = [];
         this.cdr.detectChanges();
       }
@@ -671,37 +553,28 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
   private loadCases(): void {
     if (this.caseMode) return; // Don't load cases if we're in case-specific mode
 
-    console.log('🔄 Loading cases for task creation...');
     this.legalCaseService.getAllCases(0, 100).subscribe({
       next: (response) => {
-        console.log('📥 Cases API response:', response);
-
         let cases: any[] = [];
 
         // Handle multiple response structures
         if (response?.data?.cases && Array.isArray(response.data.cases)) {
           cases = response.data.cases;
-          console.log('📝 Found cases in response.data.cases:', cases.length);
         } else if (response?.data?.content && Array.isArray(response.data.content)) {
           cases = response.data.content;
-          console.log('📝 Found cases in response.data.content:', cases.length);
         } else if (response?.data && Array.isArray(response.data)) {
           cases = response.data;
-          console.log('📝 Found cases in response.data array:', cases.length);
         } else if (response?.content && Array.isArray(response.content)) {
           cases = response.content;
-          console.log('📝 Found cases in response.content:', cases.length);
         } else if (Array.isArray(response)) {
           cases = response;
-          console.log('📝 Found cases in direct response array:', cases.length);
         }
 
         this.availableCases = cases;
-        console.log('✅ Available cases loaded:', this.availableCases.length);
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading cases:', error);
+        console.error('Error loading cases:', error);
         this.availableCases = [];
         this.cdr.detectChanges();
       }
@@ -712,38 +585,11 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    * Filter tasks by status for Kanban columns
    */
   private filterTasksByStatus(): void {
-    console.log('🔍 FilterTasksByStatus called with allTasks:', this.allTasks);
-    console.log('📑 Total tasks to filter:', this.allTasks.length);
-    
-    // Log sample task data
-    if (this.allTasks.length > 0) {
-      console.log('📝 Sample task data:', {
-        firstTask: this.allTasks[0],
-        taskStatuses: this.allTasks.map(t => t.status),
-        taskAssignments: this.allTasks.map(t => ({ id: t.id, assignedToId: t.assignedToId }))
-      });
-    }
-    
     this.unassignedTasks = this.allTasks.filter(t => !t.assignedToId);
     this.todoTasks = this.allTasks.filter(t => t.status === TaskStatus.TODO && t.assignedToId);
     this.inprogressTasks = this.allTasks.filter(t => t.status === TaskStatus.IN_PROGRESS);
     this.reviewsTasks = this.allTasks.filter(t => t.status === TaskStatus.REVIEW);
     this.completedTasks = this.allTasks.filter(t => t.status === TaskStatus.COMPLETED);
-    
-    console.log('🎯 Filtering results:');
-    console.log('  - Unassigned tasks:', this.unassignedTasks.length, this.unassignedTasks);
-    console.log('  - TODO tasks:', this.todoTasks.length, this.todoTasks);
-    console.log('  - In Progress tasks:', this.inprogressTasks.length, this.inprogressTasks);
-    console.log('  - Review tasks:', this.reviewsTasks.length, this.reviewsTasks);
-    console.log('  - Completed tasks:', this.completedTasks.length, this.completedTasks);
-    
-    // Check TaskStatus enum values
-    console.log('🏷️ TaskStatus enum check:', {
-      TODO: TaskStatus.TODO,
-      IN_PROGRESS: TaskStatus.IN_PROGRESS,
-      REVIEW: TaskStatus.REVIEW,
-      COMPLETED: TaskStatus.COMPLETED
-    });
   }
 
   /**
@@ -910,13 +756,11 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
 
     // Load cases if not in case mode and cases not loaded
     if (!this.caseMode && this.availableCases.length === 0) {
-      console.log('⚠️ No cases loaded, fetching cases...');
       this.loadCases();
     }
 
     // Load users if not loaded
     if (this.availableUsers.length === 0) {
-      console.log('⚠️ No users loaded, fetching users...');
       this.forceLoadUsers();
     }
 
@@ -1119,16 +963,13 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
         next: async (response) => {
           const newTask = response.data.task;
           this.notificationService.onSuccess('Task created successfully');
-          
-          console.log('🔔 Task created, sending notifications...', newTask);
-          
+
           // ALWAYS trigger task creation notification to notify team members about new tasks
           if (newTask.id) {
             const caseName = this.currentCase?.title;
             const assigneeName = newTask.assignedToId ? this.getUserNameById(newTask.assignedToId) : 'Unassigned';
-            
+
             try {
-              console.log('🚀 Triggering task creation notification...');
               await this.notificationTrigger.triggerTaskCreated(
                 newTask.id,
                 newTask.title,
@@ -1137,19 +978,17 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
                 caseName,
                 newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined
               );
-              console.log('✅ Task creation notification sent successfully');
             } catch (error) {
-              console.error('❌ Failed to send task creation notification:', error);
+              console.error('Failed to send task creation notification:', error);
             }
           }
-          
+
           // Additionally, if task is assigned, send specific assignment notification
           if (newTask.id && newTask.assignedToId) {
             const caseName = this.currentCase?.title;
             const assigneeName = this.getUserNameById(newTask.assignedToId);
-            
+
             try {
-              console.log('🎯 Triggering task assignment notification...');
               await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
                 newTask.id,
                 newTask.title,
@@ -1160,9 +999,8 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
                 newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined,
                 newTask.priority
               );
-              console.log('✅ Task assignment notification sent successfully');
             } catch (error) {
-              console.error('❌ Failed to send task assignment notifications:', error);
+              console.error('Failed to send task assignment notifications:', error);
             }
           }
           
@@ -1317,15 +1155,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
             // Send personalized task assignment notification
             const assigneeName = this.getUserNameById(newTask.assignedToId!);
             const caseName = this.currentCase?.title;
-            
-            console.log('🔄 Task assignment changed, sending notification...', {
-              taskId: newTask.id,
-              taskTitle: newTask.title,
-              assignedUserId: newTask.assignedToId,
-              assigneeName,
-              caseName
-            });
-            
+
             try {
               await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
                 newTask.id!,
@@ -1337,9 +1167,8 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
                 newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined,
                 newTask.priority
               );
-              console.log('✅ Task assignment change notification sent successfully');
             } catch (error) {
-              console.error('❌ Failed to send personalized task assignment notification:', error);
+              console.error('Failed to send personalized task assignment notification:', error);
             }
             
             // Log assignment change
@@ -1806,10 +1635,9 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    */
   openAssignModal(task: CaseTask): void {
     if (!task) {
-      console.error('❌ Cannot open assign modal: task is null');
+      console.error('Cannot open assign modal: task is null');
       return;
     }
-    console.log('📋 Opening assign modal for task:', task.title);
     this.assigningTask = task;
     this.selectedAssigneeId = task.assignedToId || null;
     this.assigneeSearchTerm = '';
@@ -1817,11 +1645,8 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
 
     // Always reload users to ensure fresh data
     if (this.availableUsers.length === 0) {
-      console.log('⚠️ No users loaded, fetching users...');
       this.loadingUsers = true;
       this.forceLoadUsers();
-    } else {
-      console.log('✅ Users already loaded:', this.availableUsers.length);
     }
 
     this.cdr.detectChanges();
@@ -1832,12 +1657,9 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
    */
   forceLoadUsers(): void {
     this.loadingUsers = true;
-    console.log('🔄 Force loading users...');
 
     this.userService.getUsers().subscribe({
       next: (response) => {
-        console.log('📥 Force load users response:', response);
-
         let users: User[] = [];
 
         if (response?.data?.users && Array.isArray(response.data.users)) {
@@ -1864,12 +1686,11 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
           permissions: user.permissions || ''
         } as User));
 
-        console.log('✅ Force loaded users:', this.availableUsers.length);
         this.loadingUsers = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Force load users error:', error);
+        console.error('Force load users error:', error);
         this.loadingUsers = false;
         this.notificationService.onError('Failed to load team members');
         this.cdr.detectChanges();

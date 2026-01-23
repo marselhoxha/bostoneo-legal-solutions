@@ -175,13 +175,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Check authentication token
-    const token = localStorage.getItem(Key.TOKEN);
-    console.log('FileManager - Token from localStorage:', token ? 'Present (length: ' + token.length + ')' : 'Missing');
-    if (token) {
-      console.log('FileManager - Token preview:', token.substring(0, 50) + '...');
-    }
-    
     this.initializeData();
     this.setupSearchSubscription();
     this.setupCaseSearchSubscription();
@@ -240,11 +233,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: ([deletedResponse, stats]) => {
-        console.log('Deleted files response:', deletedResponse);
-        console.log('isDeletedView:', this.isDeletedView);
         this.deletedFiles = deletedResponse.content || [];
-        console.log('deletedFiles array:', this.deletedFiles);
-        console.log('deletedFiles length:', this.deletedFiles.length);
         this.totalFiles = deletedResponse.totalElements || 0;
         this.totalPages = deletedResponse.totalPages || 0;
         this.stats = stats;
@@ -1599,7 +1588,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   applyFileTypeFilter(type: string): void {
     // Implementation for file type filtering
-    console.log('Applying file type filter:', type);
     // This would typically filter the files array based on the selected type
     // For now, just refresh the current view
     this.loadCurrentFolderContents();
@@ -2141,7 +2129,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Permanently delete file with confirmation
    */
   permanentlyDeleteFile(fileId: number): void {
-    console.log('permanentlyDeleteFile called with fileId:', fileId);
     Swal.fire({
       title: 'Permanently Delete File?',
       text: 'This action cannot be undone. The file will be permanently removed from the system.',
@@ -2153,11 +2140,8 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       cancelButtonText: 'Cancel'
     }).then((result) => {
       if (result.isConfirmed) {
-        console.log('User confirmed, permanently deleting file:', fileId);
-        console.log('About to call fileManagerService.permanentlyDeleteFile');
         this.fileManagerService.permanentlyDeleteFile(fileId).subscribe({
           next: (response) => {
-            console.log('Permanent delete response:', response);
             this.loadDeletedFiles();
             Swal.fire({
               icon: 'success',
@@ -2217,9 +2201,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Bulk permanently delete selected files with confirmation
    */
   bulkPermanentlyDeleteFiles(): void {
-    console.log('bulkPermanentlyDeleteFiles called, selectedFiles:', this.selectedFiles);
     if (this.selectedFiles.length === 0) {
-      console.log('No files selected, returning early');
       return;
     }
 
@@ -2235,10 +2217,8 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     }).then((result) => {
       if (result.isConfirmed) {
         const selectedFileIds = [...this.selectedFiles]; // Save the IDs before clearing
-        console.log('Bulk permanently deleting files:', selectedFileIds);
         this.fileManagerService.bulkPermanentlyDeleteFiles(selectedFileIds).subscribe({
           next: (response) => {
-            console.log('Bulk permanent delete response:', response);
             this.selectedFiles = [];
             this.loadDeletedFiles();
             Swal.fire({
@@ -2300,7 +2280,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (folder) => {
-        console.log('Single folder created:', folder);
         this.refreshCurrentView();
       },
       error: (error) => {
@@ -2326,10 +2305,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   moveFilesToFolder(targetFolderId: number): void {
     if (this.selectedFiles.length === 0) return;
-    
-    // Implementation would depend on backend API
-    console.log(`Moving files ${this.selectedFiles} to folder ${targetFolderId}`);
-    
+
     // For now, just clear selection and refresh
     this.selectedFiles = [];
     this.loadCurrentFolderContents();
@@ -2340,13 +2316,11 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   copyFiles(): void {
     if (this.selectedFiles.length === 0) return;
-    
+
     this.clipboard = {
       items: [...this.selectedFiles],
       operation: 'copy'
     };
-    
-    console.log('Files copied to clipboard:', this.clipboard.items);
   }
 
   /**
@@ -2354,13 +2328,11 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   cutFiles(): void {
     if (this.selectedFiles.length === 0) return;
-    
+
     this.clipboard = {
       items: [...this.selectedFiles],
       operation: 'cut'
     };
-    
-    console.log('Files cut to clipboard:', this.clipboard.items);
   }
 
   /**
@@ -2667,10 +2639,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         this.showNotification('success', `Successfully created ${createdCount} of ${totalCount} folders`);
       }
       
-      console.log(`Template creation complete. Created ${createdCount} folders. Refreshing view...`);
-      console.log('Navigation state:', this.navigationState);
-      console.log('Parent ID:', parentId, 'Case ID:', caseId);
-      
       // Preserve/ensure navigation state if we have a case ID
       if (caseId) {
         this.navigationState.context = 'case';
@@ -2692,22 +2660,18 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       
       // Force refresh after a delay to ensure backend has committed changes
       setTimeout(() => {
-        console.log('Refreshing view after template creation...');
         this.refreshCurrentView();
         this.cdr.detectChanges();
-        
+
         // Double check after another delay
         setTimeout(() => {
-          console.log('Double-checking folder load...');
           if (this.folders.length === 0 && caseId) {
-            console.log('No folders loaded, forcing reload...');
             this.loadCaseFolders(caseId);
           }
         }, 1000);
       }, 500);
     }, () => {
       createdCount++;
-      console.log(`Progress: ${createdCount}/${totalCount} folders created`);
     });
   }
   
@@ -2728,16 +2692,12 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       ...(caseId && { caseId })
     };
     
-    console.log(`Creating folder: ${folderTemplate.name} with parentId: ${parentId}, caseId: ${caseId}`);
-    
     this.fileManagerService.createFolder(request).subscribe({
       next: (createdFolder) => {
-        console.log(`Successfully created folder: ${createdFolder.name} with id: ${createdFolder.id}`);
         if (onFolderCreated) onFolderCreated();
-        
+
         // Create subfolders first, then continue with siblings
         if (folderTemplate.subFolders?.length > 0) {
-          console.log(`Creating ${folderTemplate.subFolders.length} subfolders for ${createdFolder.name}`);
           this.createFoldersSequentially(folderTemplate.subFolders, 0, createdFolder.id, caseId, () => {
             this.createFoldersSequentially(folders, index + 1, parentId, caseId, onComplete, onFolderCreated);
           }, onFolderCreated);
@@ -2818,14 +2778,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   startUpload(): void {
     if (this.selectedUploadFiles.length === 0) return;
     
-    // Debug logging
-    console.log('Starting upload with case context:', {
-      caseId: this.navigationState.caseId,
-      caseName: this.navigationState.caseName,
-      context: this.navigationState.context,
-      folderId: this.currentFolder?.id
-    });
-    
     this.selectedUploadFiles.forEach((file, index) => {
       this.uploadProgress[index].status = 'uploading';
       
@@ -2837,13 +2789,11 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         'DRAFT'    // documentStatus
       ).subscribe({
         next: (response: any) => {
-          console.log('Upload response:', response);
           if (response.type === 'UploadProgress') {
             this.uploadProgress[index].progress = response.progress;
           } else if (response.success) {
             this.uploadProgress[index].progress = 100;
             this.uploadProgress[index].status = 'completed';
-            console.log('Upload completed, refreshing view immediately...');
             // Refresh immediately when we get successful response
             // Add small delay to ensure backend has processed
             setTimeout(() => {
@@ -2859,7 +2809,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         complete: () => {
           if (this.uploadProgress[index].status !== 'error') {
             this.uploadProgress[index].status = 'completed';
-            console.log('Upload complete handler called, refreshing view...');
             this.refreshCurrentView();
           }
         }
@@ -3042,19 +2991,17 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    */
   pasteFromClipboard(): void {
     if (this.clipboard.items.length === 0) return;
-    
+
     this.clipboard.items.forEach(item => {
       if (this.clipboard.operation === 'copy') {
         // Copy file/folder to current location
-        console.log('Copy operation:', item);
         // TODO: Implement actual copy API call
       } else if (this.clipboard.operation === 'cut') {
         // Move file/folder to current location
-        console.log('Move operation:', item);
         // TODO: Implement actual move API call
       }
     });
-    
+
     if (this.clipboard.operation === 'cut') {
       this.clipboard = { items: [], operation: null };
     }
@@ -3324,8 +3271,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     
     // Store what the user WANTS to happen
     const userWantsToStar = file.starred !== true; // If not starred, user wants to star it
-    console.log(`[STAR DEBUG] File ${file.id} - Current: ${file.starred}, User wants to star: ${userWantsToStar}`);
-    
+
     // Call backend to toggle star status (NO optimistic update)
     this.fileManagerService.toggleFileStar(file.id).pipe(
       takeUntil(this.destroy$),
@@ -3336,7 +3282,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       next: (updatedFile) => {
         // Backend has toggled the star - use its response as truth
         const backendStarred = updatedFile.starred === true;
-        console.log(`[STAR DEBUG] File ${file.id} - Backend returned starred: ${backendStarred}`);
         
         // Update ALL references to this file with backend state
         file.starred = backendStarred;
@@ -3683,22 +3628,16 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         file.caseName = selectedCase.title;
       }
     });
-    
-    console.log(`Assigned ${this.selectedFiles.length} files to case: ${selectedCase.title}`);
-    
-    // Show success message
-    const message = `Successfully assigned ${this.selectedFiles.length} file${this.selectedFiles.length === 1 ? '' : 's'} to ${selectedCase.caseNumber}`;
-    console.log(message);
-    
+
     // Clear selection
     this.clearSelection();
   }
-  
+
   bulkRemoveFromCase(): void {
     if (this.selectedFiles.length === 0) {
       return;
     }
-    
+
     // Remove case association from selected files
     this.files.forEach(file => {
       if (this.selectedFiles.includes(file.id)) {
@@ -3706,13 +3645,7 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         file.caseName = null;
       }
     });
-    
-    console.log(`Removed ${this.selectedFiles.length} files from case association`);
-    
-    // Show success message
-    const message = `Successfully removed ${this.selectedFiles.length} file${this.selectedFiles.length === 1 ? '' : 's'} from case`;
-    console.log(message);
-    
+
     // Clear selection
     this.clearSelection();
   }

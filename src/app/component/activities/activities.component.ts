@@ -65,24 +65,17 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    console.log('🚀 ActivitiesComponent initialized');
-    
     // Initialize component state
     this.initializeComponentState();
-    
+
     // Load initial data
     this.loadDataSimply();
-    
+
     // Detect dark mode
     this.detectDarkMode();
-    
-    // Set up any listeners or subscriptions here
-    console.log('✅ Component initialization completed');
   }
 
   private initializeComponentState(): void {
-    console.log('🔧 Initializing component state');
-    
     // Ensure clean initial state
     this.setLoading(false);
     this.activities = [];
@@ -91,59 +84,53 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.pageSize = 10;
     this.totalElements = 0;
     this.totalPages = 0;
-    
+
     // Clear filters
     this.selectedAction = '';
     this.selectedEntityType = '';
     this.selectedUser = '';
     this.searchTerm = '';
     this.dateRange = { start: null, end: null };
-    
+
     // Initialize stats with default values (not null)
     this.statistics = { activeUsersToday: 0 };
     this.activityCounts = { total: 0, today: 0, week: 0 };
     this.lastUpdated = new Date();
-    
-    console.log('✅ Component state initialized');
   }
 
   private loadDataSimply(): void {
-    console.log('📑 Loading data with simple approach');
-    
     // Load activities with proper error handling and loading state management
     this.setLoading(true);
-    
+
     // Safety timeout to ensure loading never gets stuck
     const loadingTimeout = setTimeout(() => {
       if (this.loading) {
-        console.warn('🚨 Loading timeout: Force resetting loading state');
+        console.warn('Loading timeout: Force resetting loading state');
         this.setLoading(false);
       }
-    }, 5000); // Reduced to 5 seconds for faster reset
-    
+    }, 5000);
+
     this.auditService.getActivitiesForPage$(50)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('📨 Response received in component');
           try {
             if (response?.data?.activities) {
               this.activities = this.transformActivities(response.data.activities);
               this.totalElements = response.data.totalCount || 0;
               this.applyFilters();
-              console.log(`✅ Loaded ${this.activities.length} activities`);
             } else {
-              console.warn('⚠️ No activities data in response:', response);
+              console.warn('No activities data in response:', response);
               this.activities = [];
               this.filteredActivities = [];
               this.totalElements = 0;
             }
-            
+
             // Force loading state reset here
             this.setLoading(false);
-            
+
           } catch (error) {
-            console.error('❌ Error processing activities data:', error);
+            console.error('Error processing activities data:', error);
             this.activities = [];
             this.filteredActivities = [];
             this.totalElements = 0;
@@ -151,7 +138,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         },
         error: (error) => {
-          console.error('❌ Error loading initial activities:', error);
+          console.error('Error loading initial activities:', error);
           this.activities = [];
           this.filteredActivities = [];
           this.totalElements = 0;
@@ -161,45 +148,42 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         complete: () => {
           this.setLoading(false);
           clearTimeout(loadingTimeout);
-          console.log('✅ Initial data loading completed');
-          
+
           // Additional safety check - force UI update
           setTimeout(() => {
             if (this.loading) {
-              console.warn('🚨 Loading still true after complete - forcing false');
+              console.warn('Loading still true after complete - forcing false');
               this.setLoading(false);
             }
           }, 100);
         }
       });
-    
+
     // Load statistics (no loading state - just load in background)
     this.auditService.getActivityStatistics$()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.statistics = response?.data?.statistics || { activeUsersToday: 0 };
-          console.log('📈 Statistics loaded:', this.statistics);
           this.changeDetectorRef.detectChanges();
         },
         error: (error) => {
-          console.error('❌ Error loading statistics:', error);
+          console.error('Error loading statistics:', error);
           this.statistics = { activeUsersToday: 0 };
           this.changeDetectorRef.detectChanges();
         }
       });
-    
+
     // Load activity counts (no loading state - just load in background)
     this.auditService.getActivityCounts$()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.activityCounts = response?.data || { total: 0, today: 0, week: 0 };
-          console.log('🔢 Activity counts loaded:', this.activityCounts);
           this.changeDetectorRef.detectChanges();
         },
         error: (error) => {
-          console.error('❌ Error loading activity counts:', error);
+          console.error('Error loading activity counts:', error);
           this.activityCounts = { total: 0, today: 0, week: 0 };
           this.changeDetectorRef.detectChanges();
         }
@@ -207,14 +191,11 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    console.log('🎨 ActivitiesComponent view initialized');
-    
     // Force change detection to ensure statistics are displayed immediately
     this.changeDetectorRef.detectChanges();
   }
 
   ngOnDestroy(): void {
-    console.log('🛑 ActivitiesComponent destroyed');
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -228,62 +209,37 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Redirect to simple loading method
   loadActivities(): void {
-    console.warn('🔄 Redirecting to simple loading method');
     this.loadDataSimply();
   }
 
   private transformActivities(activities: any[]): AuditActivity[] {
     if (!activities || !Array.isArray(activities)) {
-      console.warn('⚠️ Invalid activities data received:', activities);
+      console.warn('Invalid activities data received:', activities);
       return [];
     }
-    
+
     const now = new Date();
     const currentYear = now.getFullYear();
-    
+
     return activities.map((activity, index) => {
-      let originalTimestamp = activity.timestamp;
-      let timestamp = new Date(originalTimestamp);
-      
+      let timestamp = new Date(activity.timestamp);
+
       // Validate timestamp and check for future dates or wrong years
       if (isNaN(timestamp.getTime())) {
-        console.warn('⚠️ Invalid timestamp, using current time:', originalTimestamp);
         timestamp = new Date();
       } else if (timestamp > new Date()) {
         const futureMinutes = Math.floor((timestamp.getTime() - new Date().getTime()) / (1000 * 60));
-        
-        // Only log significant future timestamps (more than 30 minutes) to reduce noise
-        if (futureMinutes > 30) {
-          console.warn('🚨 Significant future timestamp detected:', {
-            activityId: activity.id,
-            futureByMinutes: futureMinutes,
-            description: activity.description?.substring(0, 50) + '...'
-          });
-        }
-        
+
         // Only correct significantly future timestamps (more than 15 minutes)
         if (futureMinutes > 15) {
-          // Estimate real timestamp based on activity order (newer activities first)
-          const estimatedMinutesAgo = index * 2; // 2 minutes between activities
+          const estimatedMinutesAgo = index * 2;
           timestamp = new Date(now.getTime() - (estimatedMinutesAgo * 60 * 1000));
         }
-        // For smaller future timestamps (1-15 minutes), leave them as-is
-        // The display logic will handle them gracefully
-      } else if (timestamp.getFullYear() !== currentYear) {
-        // Only log if the year is significantly off (not just next year)
-        if (Math.abs(timestamp.getFullYear() - currentYear) > 1) {
-          console.warn('🚨 Wrong year timestamp detected:', {
-            activityId: activity.id,
-            year: timestamp.getFullYear(),
-            currentYear: currentYear
-          });
-        }
-        
-        // Estimate real timestamp based on activity order (newer activities first)
-        const estimatedMinutesAgo = index * 5; // 5 minutes between activities
+      } else if (timestamp.getFullYear() !== currentYear && Math.abs(timestamp.getFullYear() - currentYear) > 1) {
+        const estimatedMinutesAgo = index * 5;
         timestamp = new Date(now.getTime() - (estimatedMinutesAgo * 60 * 1000));
       }
-      
+
       return {
         id: activity.id || `activity-${Date.now()}-${Math.random()}`,
         userId: activity.userId || 0,
@@ -313,23 +269,20 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   manualRefreshActivities(refreshAll: boolean = false): void {
     if (this.loading) {
-      console.log('⚠️ Already loading, skipping refresh');
       return;
     }
-    
-    console.log('🔄 Manual refresh triggered');
-    
+
     // Set loading state for refresh button spinner
     this.setLoading(true);
-    
+
     // Safety timeout to ensure loading state is reset
     const safetyTimeout = setTimeout(() => {
       if (this.loading) {
-        console.warn('🚨 Safety timeout: Resetting stuck loading state');
+        console.warn('Safety timeout: Resetting stuck loading state');
         this.setLoading(false);
       }
-    }, 8000); // 8 second safety timeout for manual refresh
-    
+    }, 8000);
+
     // Load activities directly without delay
     this.auditService.getActivitiesForPage$(50)
       .pipe(takeUntil(this.destroy$))
@@ -340,21 +293,20 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
               this.activities = this.transformActivities(response.data.activities);
               this.totalElements = response.data.totalCount || 0;
               this.applyFilters();
-              console.log(`🔄 Refresh completed: ${this.activities.length} activities loaded`);
             } else {
-              console.warn('⚠️ No activities data in refresh response');
+              console.warn('No activities data in refresh response');
               this.activities = [];
               this.filteredActivities = [];
             }
             this.lastUpdated = new Date();
           } catch (error) {
-            console.error('❌ Error processing refresh data:', error);
+            console.error('Error processing refresh data:', error);
             this.activities = [];
             this.filteredActivities = [];
           }
         },
         error: (error) => {
-          console.error('❌ Error during manual refresh:', error);
+          console.error('Error during manual refresh:', error);
           this.activities = [];
           this.filteredActivities = [];
           // Force reset loading state on error
@@ -364,7 +316,6 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         complete: () => {
           this.setLoading(false);
           clearTimeout(safetyTimeout);
-          console.log('✅ Manual refresh completed');
         }
       });
   }
@@ -403,11 +354,9 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.filteredActivities = filtered;
     this.totalPages = Math.ceil(this.filteredActivities.length / this.pageSize);
-    
+
     // Reset to first page when filters change
     this.currentPage = 0;
-    
-    console.log(`🔍 Applied filters: ${this.activities.length} → ${this.filteredActivities.length} activities`);
   }
 
   onFilterChange(): void {
@@ -514,16 +463,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const now = new Date();
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    // Only log significant time differences (more than 7 days) for debugging
-    if (Math.abs(diffInSeconds) > 604800) { // 7 days
-      console.log('🕐 Large time difference detected:', {
-        diffInSeconds: diffInSeconds,
-        days: Math.floor(Math.abs(diffInSeconds) / 86400),
-        isFuture: diffInSeconds < 0
-      });
-    }
-    
+
     // Handle future timestamps (likely due to server clock issues)
     if (diffInSeconds < 0) {
       const absDiff = Math.abs(diffInSeconds);
@@ -575,12 +515,10 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   exportActivities(): void {
     // TODO: Implement export functionality
-    console.log('Exporting activities...');
   }
 
   viewActivityDetails(activity: AuditActivity): void {
     // TODO: Open modal with detailed view
-    console.log('View details for:', activity);
   }
 
   trackByActivityId(index: number, activity: AuditActivity): string {
@@ -590,126 +528,21 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Make Math available in template
   Math = Math;
 
-  // Test method to verify timestamp functionality - can be called from console
+  // Debug methods - emptied for production
   testTimestamps(): void {
-    const now = new Date();
-    const testCases = [
-      new Date(now.getTime() - 5000), // 5 seconds ago
-      new Date(now.getTime() - 30000), // 30 seconds ago
-      new Date(now.getTime() - 120000), // 2 minutes ago
-      new Date(now.getTime() - 3600000), // 1 hour ago
-      new Date(now.getTime() - 86400000), // 1 day ago
-    ];
-    
-    testCases.forEach((testDate, index) => {
-      console.log(`Test ${index + 1}:`, {
-        timestamp: testDate,
-        result: this.getTimeAgo(testDate),
-        secondsAgo: Math.floor((now.getTime() - testDate.getTime()) / 1000)
-      });
-    });
+    // Debug function - removed for production
   }
 
-  /**
-   * Comprehensive timestamp debugging to identify exact discrepancies
-   */
   debugTimestamps(): void {
-    console.log('🔍 Starting comprehensive timestamp debugging...');
-    
-    const frontendNow = new Date();
-    console.log('🖥️ Frontend current time:', frontendNow.toString());
-    console.log('🖥️ Frontend timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-    console.log('🖥️ Frontend timestamp:', frontendNow.getTime());
-    
-    // Test the backend time endpoint
-    fetch('http://localhost:8080/api/audit/debug/time', {
-      headers: {
-        'Authorization': 'Bearer fake-token',
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('🚀 Backend time debug response:', data);
-      
-      if (data.data) {
-        const backendTime = new Date(data.data.serverLocalDateTime);
-        const backendTimestamp = data.data.serverTimestamp;
-        
-        console.log('📑 Time Comparison:');
-        console.log('  Frontend time:', frontendNow.toString());
-        console.log('  Backend time: ', backendTime.toString());
-        console.log('  Time difference (seconds):', Math.floor((frontendNow.getTime() - backendTime.getTime()) / 1000));
-        console.log('  Backend timezone:', data.data.serverTimezone);
-        console.log('  Backend EST time:', data.data.serverEST);
-        
-        // Test with recent activities
-        this.debugRecentActivities(frontendNow, backendTime);
-      }
-    })
-    .catch(error => {
-      console.error('❌ Failed to fetch backend time:', error);
-    });
+    // Debug function - removed for production
   }
 
   private debugRecentActivities(frontendNow: Date, backendTime: Date): void {
-    console.log('🔍 Debugging recent activities timestamps...');
-    
-    this.auditService.getActivitiesForPage$(5).subscribe({
-      next: (response) => {
-        if (response?.data?.activities) {
-          console.log('📋 Recent activities timestamp analysis:');
-          
-          response.data.activities.slice(0, 3).forEach((activity, index) => {
-            const activityTime = new Date(activity.timestamp);
-            const frontendDiff = Math.floor((frontendNow.getTime() - activityTime.getTime()) / 1000);
-            const backendDiff = Math.floor((backendTime.getTime() - activityTime.getTime()) / 1000);
-            
-            console.log(`  Activity ${index + 1}:`, {
-              id: activity.id,
-              description: activity.description,
-              originalTimestamp: activity.timestamp,
-              parsedTime: activityTime.toString(),
-              frontendDiffSeconds: frontendDiff,
-              backendDiffSeconds: backendDiff,
-              frontendTimeAgo: this.getTimeAgo(activityTime),
-              isFuture: frontendDiff < 0,
-              hoursOffset: Math.round(frontendDiff / 3600)
-            });
-          });
-        }
-      },
-      error: (error) => {
-        console.error('❌ Failed to fetch activities for debugging:', error);
-      }
-    });
+    // Debug function - removed for production
   }
 
-  /**
-   * Test the timestamp creation on backend
-   */
   testBackendTimestampCreation(): void {
-    console.log('🧪 Testing backend timestamp creation...');
-    
-    fetch('http://localhost:8080/api/audit/activities/test', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer fake-token',
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('✅ Test audit entries created:', data);
-      // Refresh activities after a short delay to see the new entries
-      setTimeout(() => {
-        this.manualRefreshActivities();
-        this.debugTimestamps();
-      }, 2000);
-    })
-    .catch(error => {
-      console.error('❌ Failed to create test audit entries:', error);
-    });
+    // Debug function - removed for production
   }
 
   /**
@@ -841,7 +674,6 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   loadMoreActivities(): void {
     // TODO: Implement pagination functionality
-    console.log('Loading more activities...');
     this.currentPage++;
     this.loadDataSimply();
   }
@@ -965,10 +797,9 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         this.selectedAction = 'DELETE';
         break;
       default:
-        console.warn('Unknown quick filter type:', filterType);
         return;
     }
-    
+
     this.onFilterChange();
   }
 
@@ -977,47 +808,28 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.dateRange = { start: null, end: null };
   }
 
-  // Debug method to check loading state
+  // Debug methods - emptied for production
   debugLoadingState(): void {
-    console.log('🔍 Current component state:', {
-      loading: this.loading,
-      activitiesLength: this.activities.length,
-      filteredActivitiesLength: this.filteredActivities.length,
-      totalElements: this.totalElements,
-      statistics: this.statistics,
-      activityCounts: this.activityCounts,
-      lastUpdated: this.lastUpdated
-    });
+    // Debug function - removed for production
   }
 
-  // Method to force reset all loading states (for debugging)
   resetLoadingStates(): void {
-    console.log('🔄 Forcing reset of all loading states');
     this.setLoading(false);
   }
 
-  // Enhanced method to force stop loading if stuck
   forceStopLoading(): void {
-    console.log('🛑 Force stopping loading state');
     this.setLoading(false);
   }
 
-  // Emergency reset method (can be called from console: component.emergencyReset())
   emergencyReset(): void {
-    console.log('🚨 Emergency reset triggered');
     this.setLoading(false);
     this.activities = [];
     this.filteredActivities = [];
     this.statistics = { activeUsersToday: 0 };
     this.activityCounts = { total: 0, today: 0, week: 0 };
-    console.log('✅ Emergency reset completed');
   }
 
-  // Clear all cache and force refresh (for testing clean audit system)
   clearCacheAndRefresh(): void {
-    console.log('🧹 Clearing cache and refreshing activities');
-    
-    // Clear all local data
     this.activities = [];
     this.filteredActivities = [];
     this.statistics = null;
@@ -1025,8 +837,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.currentPage = 0;
     this.totalElements = 0;
     this.totalPages = 0;
-    
-    // Clear any browser cache
+
     if ('caches' in window) {
       caches.keys().then(cacheNames => {
         cacheNames.forEach(cacheName => {
@@ -1034,141 +845,44 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       });
     }
-    
-    // Force reload data
+
     this.loadDataSimply();
-    
-    console.log('✅ Cache cleared and data refreshed');
   }
 
-  // Method to verify no VIEW activities exist
   verifyNoViewActivities(): void {
-    console.log('🔍 Verifying no VIEW activities exist');
-    
-    const viewActivities = this.activities.filter(activity => 
-      activity.action && activity.action.toUpperCase() === 'VIEW'
-    );
-    
-    if (viewActivities.length > 0) {
-      console.warn('⚠️ Found VIEW activities in frontend data:', viewActivities);
-    } else {
-      console.log('✅ No VIEW activities found - audit system clean!');
-    }
-    
-    // Log all unique actions for verification
-    const uniqueActions = [...new Set(this.activities.map(a => a.action))];
-    console.log('📑 Current audit actions in frontend:', uniqueActions);
+    // Debug function - removed for production
   }
 
-  // Comprehensive debug method for infinite loading issues
   debugInfiniteLoading(): void {
-    console.log('🐛 Debugging infinite loading issue');
-    console.log('====================================');
-    
-    // Check component state
-    console.log('📑 Component State:');
-    console.log('  - Loading:', this.loading);
-    console.log('  - Activities length:', this.activities.length);
-    console.log('  - Filtered activities length:', this.filteredActivities.length);
-    console.log('  - Total elements:', this.totalElements);
-    console.log('  - Current page:', this.currentPage);
-    console.log('  - Page size:', this.pageSize);
-    
-    // Check filters
-    console.log('🔍 Filters:');
-    console.log('  - Selected action:', this.selectedAction);
-    console.log('  - Selected entity type:', this.selectedEntityType);
-    console.log('  - Selected user:', this.selectedUser);
-    console.log('  - Search term:', this.searchTerm);
-    console.log('  - Date range:', this.dateRange);
-    
-    // Check statistics
-    console.log('📈 Statistics:');
-    console.log('  - Statistics:', this.statistics);
-    console.log('  - Activity counts:', this.activityCounts);
-    console.log('  - Last updated:', this.lastUpdated);
-    
-    // Test API call
-    console.log('🌐 Testing API call...');
-    this.auditService.getActivitiesForPage$(10)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('✅ API Response received:', response);
-          console.log('  - Response data:', response?.data);
-          console.log('  - Activities count:', response?.data?.activities?.length);
-        },
-        error: (error) => {
-          console.error('❌ API Error:', error);
-          console.log('  - Error status:', error?.status);
-          console.log('  - Error message:', error?.message);
-          console.log('  - Error details:', error);
-        },
-        complete: () => {
-          console.log('🔚 API call completed');
-        }
-      });
-    
-    console.log('====================================');
+    // Debug function - removed for production
   }
 
-  // Emergency fix for infinite loading
   emergencyStopLoading(): void {
-    console.log('🚨 EMERGENCY: Stopping infinite loading');
-    
-    // Force reset all loading states
     this.setLoading(false);
-    
-    // Set fallback data if activities are empty
     if (this.activities.length === 0) {
-      console.log('📝 Setting fallback message');
       this.activities = [];
       this.filteredActivities = [];
       this.totalElements = 0;
     }
-    
-    // Update last updated time
     this.lastUpdated = new Date();
-    
-    console.log('✅ Emergency stop completed');
-    console.log('Current state - Loading:', this.loading, 'Activities:', this.activities.length);
   }
 
-  // Quick fix method that can be called from console
   quickFix(): void {
-    console.log('🔧 Quick fix for infinite loading');
-    
-    // Immediately stop loading
     this.setLoading(false);
-    
-    // Force change detection
     if (this.activities.length > 0) {
       this.applyFilters();
     }
-    
-    console.log('✅ Quick fix applied - Loading:', this.loading);
   }
 
-  // Method to check current loading state
   checkLoadingState(): void {
-    console.log('🔍 Current Loading State Check:');
-    console.log('  - this.loading:', this.loading);
-    console.log('  - activities.length:', this.activities.length);
-    console.log('  - filteredActivities.length:', this.filteredActivities.length);
-    
     if (this.loading && this.activities.length > 0) {
-      console.warn('⚠️ ISSUE DETECTED: Loading is true but activities exist!');
-      console.log('🔧 Auto-fixing...');
       this.setLoading(false);
-      console.log('✅ Fixed - Loading state is now:', this.loading);
     }
   }
 
-  // Simple method to set loading state and force UI update
   private setLoading(state: boolean): void {
     this.loading = state;
     this.changeDetectorRef.detectChanges();
-    console.log('🔄 Loading set to:', state, '(with forced change detection)');
   }
 
   // Pagination helpers

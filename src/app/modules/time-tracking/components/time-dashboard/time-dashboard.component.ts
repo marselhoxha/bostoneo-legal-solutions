@@ -261,14 +261,11 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       // Enhanced authentication check
       const currentUserId = this.getCurrentUserId();
       if (!currentUserId) {
-        console.log('No user ID found, checking authentication...');
-        
         // Try to load user profile first
         if (this.userService.isAuthenticated()) {
           try {
             const profileResponse = await this.userService.profile$().toPromise();
             if (profileResponse?.data?.user?.id) {
-              console.log('User profile loaded successfully');
               // Continue with dashboard loading
             } else {
               this.error = 'Please log in to access time tracking';
@@ -309,7 +306,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.startTimerUpdates();
         this.loading = false;
         this.changeDetectorRef.detectChanges();
-        console.log('Dashboard initialization completed successfully');
       } catch (timeoutError) {
         console.error('Dashboard loading timeout or error:', timeoutError);
         this.error = 'Dashboard loading is taking too long. Please refresh the page.';
@@ -341,8 +337,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       // Fetch cases from the backend using the legal case service
       this.legalCaseService.getAllCases(0, pageSize).subscribe({
         next: (response) => {
-          console.log('Available cases from backend:', response);
-          
           // Handle the API response structure
           let cases = [];
           if (response && response.data && response.data.page && response.data.page.content) {
@@ -372,9 +366,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
               emergencyMultiplier: caseItem.emergencyMultiplier || 2.0
             }))
             .slice(0, this.showAllCases ? 50 : 12); // Limit based on view mode
-          
-          console.log('Filtered available cases with rates:', this.availableCases);
-          
+
           if (this.availableCases.length === 0) {
             this.error = 'No active legal cases found. Please contact your administrator to create cases.';
           }
@@ -419,16 +411,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         return reject('No user ID');
       }
 
-      console.log('=== DASHBOARD STATS DEBUG ===');
-      console.log('User ID:', userId);
-
       // First, get recent entries to find the most recent date with data
       this.timeTrackingService.getTimeEntriesByUser(userId, 0, 50).subscribe({
         next: (recentResponse) => {
           const recentEntries = recentResponse.content || [];
           
           if (recentEntries.length === 0) {
-            console.log('No time entries found for user');
             this.stats = {
               todayHours: 0,
               todayAmount: 0,
@@ -446,11 +434,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           
           // Use today's date if we have entries for today, otherwise use the most recent date
           const targetDate = allDates.includes(today) ? today : mostRecentDate;
-          
-          console.log('Available dates:', [...new Set(allDates)]);
-          console.log('Today date:', today);
-          console.log('Target date for stats:', targetDate);
-          console.log('Using today\'s date:', targetDate === today);
 
           // Calculate week range based on target date
           const targetDateObj = new Date(targetDate);
@@ -458,8 +441,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           startOfWeek.setDate(targetDateObj.getDate() - targetDateObj.getDay());
           const endOfWeek = new Date(targetDateObj);
           endOfWeek.setDate(targetDateObj.getDate() - targetDateObj.getDay() + 6);
-
-          console.log('Week range:', startOfWeek.toISOString().split('T')[0], 'to', endOfWeek.toISOString().split('T')[0]);
 
           this.loadStatsForDateRange(userId, targetDate, startOfWeek, endOfWeek, targetDate === today).then(resolve).catch(reject);
         },
@@ -491,10 +472,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           startOfWeek.toISOString().split('T')[0], 
           endOfWeek.toISOString().split('T')[0]).toPromise()
       ]).then(([targetDateResponse, weekResponse]) => {
-        console.log('=== API RESPONSES ===');
-        console.log('Target date response:', targetDateResponse);
-        console.log('Week response:', weekResponse);
-
         // Handle different response structures
         let targetDateData: any[] = [];
         let weekData: any[] = [];
@@ -526,33 +503,10 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           }
         }
 
-        console.log('=== EXTRACTED DATA ===');
-        console.log('Target date entries:', targetDateData.length, targetDateData);
-        console.log('Week entries:', weekData.length, weekData);
-        
-        // Debug: Show what dates we found vs what we were looking for
-        if (targetDateData.length > 0) {
-          console.log('Target date entries dates found:', targetDateData.map(e => e.date));
-        } else {
-          console.log('No entries found for target date:', targetDate);
-        }
-        
-        if (weekData.length > 0) {
-          console.log('Week entries dates found:', weekData.map(e => e.date));
-          console.log('Week entries date range:', weekData.reduce((acc, e) => {
-            if (!acc.min || e.date < acc.min) acc.min = e.date;
-            if (!acc.max || e.date > acc.max) acc.max = e.date;
-            return acc;
-          }, {min: null, max: null}));
-        } else {
-          console.log('No entries found for week range:', startOfWeek.toISOString().split('T')[0], 'to', endOfWeek.toISOString().split('T')[0]);
-        }
-
         // Calculate target date hours (all entries)
         const todayHours = targetDateData.reduce((sum: number, entry: any) => {
           const hours = Number(entry.hours) || 0;
           const normalizedHours = this.normalizeHoursValue(hours);
-          console.log(`Entry ${entry.id}: ${hours} hours → ${normalizedHours} normalized`);
           return sum + normalizedHours;
         }, 0);
 
@@ -560,16 +514,14 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         const todayAmount = targetDateData.reduce((sum: number, entry: any) => {
           // Only count billable entries for revenue
           if (!entry.billable) {
-            console.log(`Entry ${entry.id}: Non-billable, skipping revenue calculation`);
             return sum;
           }
-          
+
           const hours = Number(entry.hours) || 0;
           const rate = Number(entry.rate) || 0;
           const normalizedHours = this.normalizeHoursValue(hours);
           const entryAmount = normalizedHours * rate;
-          
-          console.log(`Entry ${entry.id}: ${normalizedHours}h × $${rate} = $${entryAmount} (billable: ${entry.billable})`);
+
           return sum + entryAmount;
         }, 0);
 
@@ -578,13 +530,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           const hours = Number(entry.hours) || 0;
           return sum + this.normalizeHoursValue(hours);
         }, 0);
-
-        console.log('=== CALCULATED STATS ===');
-        console.log('Target Date Hours:', todayHours);
-        console.log('Target Date Amount:', todayAmount);
-        console.log('Week Total:', weekTotal);
-        console.log('Active Timers:', this.timer.isRunning ? 1 : 0);
-        console.log('Is showing today\'s data:', isToday);
 
         this.stats = {
           todayHours,
@@ -597,22 +542,11 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         (this.stats as any).isShowingToday = isToday;
         (this.stats as any).displayDate = targetDate;
 
-        console.log('=== FINAL STATS OBJECT ===');
-        console.log('Stats:', this.stats);
-        console.log('=== END DASHBOARD STATS DEBUG ===');
-
         this.changeDetectorRef.detectChanges();
         resolve();
       }).catch(error => {
-        console.error('=== DASHBOARD STATS ERROR ===');
         console.error('Error loading dashboard stats:', error);
-        console.error('Error details:', {
-          status: error.status,
-          message: error.message,
-          error: error.error,
-          url: error.url
-        });
-        
+
         // Provide specific error message based on error type
         if (error.status === 401) {
           this.error = 'Authentication required. Please log in again.';
@@ -652,43 +586,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       // Increase to show more recent entries (last 20 entries to ensure we get all recent ones)
       this.timeTrackingService.getTimeEntriesByUser(userId, 0, 20).subscribe({
         next: (response) => {
-          console.log('=== RECENT ENTRIES RESPONSE DEBUG ===');
-          console.log('Full response:', response);
-          console.log('Response type:', typeof response);
-          console.log('Response keys:', Object.keys(response || {}));
           
           let entries = response.content || [];
           
           // Debug: Log original order
-          console.log('Original entries order:', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
           
           // Debug: Log sample entry data structure
-          if (entries.length > 0) {
-            console.log('=== SAMPLE ENTRY ANALYSIS ===');
-            const sampleEntry = entries[0];
-            console.log('Complete sample entry:', sampleEntry);
-            console.log('Entry keys:', Object.keys(sampleEntry));
-            console.log('Hours field details:', {
-              value: sampleEntry.hours,
-              type: typeof sampleEntry.hours,
-              isNumber: !isNaN(Number(sampleEntry.hours)),
-              parsed: Number(sampleEntry.hours)
-            });
-            console.log('Rate field details:', {
-              value: sampleEntry.rate,
-              type: typeof sampleEntry.rate,
-              isNumber: !isNaN(Number(sampleEntry.rate)),
-              parsed: Number(sampleEntry.rate)
-            });
-            console.log('Other potential amount fields:');
-            ['totalAmount', 'billedAmount', 'amount', 'billableAmount'].forEach(field => {
-              if (sampleEntry[field] !== undefined) {
-                console.log(`  ${field}:`, sampleEntry[field], '(type:', typeof sampleEntry[field], ')');
-              }
-            });
-            console.log('===========================');
-          }
-          
           // Enhanced sorting: prioritize by createdAt (most reliable), then by date, then by ID
           entries = entries.sort((a, b) => {
             // First priority: createdAt timestamp (most recent first)
@@ -710,25 +613,15 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             // Third priority: ID (higher ID usually means more recent)
             return b.id - a.id;
           });
-          
-          // Debug: Log sorted order
-          console.log('Sorted entries order:', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
-          
+
           // Take only the most recent 9 for display (but fetch 20 to ensure we get all recent ones)
           this.recentEntries = entries.slice(0, 9);
           this.lastUpdated = new Date(); // Update timestamp
-          console.log('Loaded recent entries (top 8 most recent):', this.recentEntries.length);
-          console.log('=== END RECENT ENTRIES DEBUG ===');
           this.changeDetectorRef.detectChanges();
           resolve();
         },
         error: (error) => {
           console.warn('Recent entries loading failed:', error);
-          console.error('Error details:', {
-            status: error.status,
-            message: error.message,
-            error: error.error
-          });
           this.recentEntries = [];
           this.changeDetectorRef.detectChanges();
           resolve(); // Don't fail the whole dashboard
@@ -755,7 +648,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.timerService.getActiveTimers(userId).subscribe({
         next: () => {
           // State is updated via the activeTimers$ subscription
-          console.log('[Dashboard] syncTimerState: fetch complete, state updated via subscription');
           this.changeDetectorRef.detectChanges();
           resolve();
         },
@@ -937,31 +829,22 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   startTimer(caseId: number, rate?: number, applyMultipliers?: boolean, isEmergency?: boolean): void {
     const userId = this.getCurrentUserId();
-    console.log('=== START TIMER DEBUG ===');
-    console.log('User ID:', userId);
-    console.log('Case ID:', caseId);
-    console.log('Selected Rate:', rate);
-    console.log('Apply Multipliers:', applyMultipliers);
-    console.log('Is Emergency:', isEmergency);
-    console.log('Is Processing:', this.isProcessing);
-    
+
     if (!userId) {
       console.error('No user ID found');
       this.error = 'Please log in to start tracking time';
       return;
     }
-    
+
     if (this.isProcessing) {
-      console.warn('Timer operation already in progress');
       return;
     }
 
     this.isProcessing = true;
     this.error = null;
-    
+
     const selectedCase = this.availableCases.find(c => c.id === caseId);
-    console.log('Selected case:', selectedCase);
-    
+
     const startRequest = {
       legalCaseId: caseId,
       description: `Working on ${selectedCase?.name || 'Legal Matter'}`,
@@ -969,16 +852,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       applyMultipliers: applyMultipliers !== false,
       isEmergency: isEmergency || false
     };
-    console.log('Timer start request:', startRequest);
     
     this.timerService.startTimer(userId, startRequest).pipe(
       timeout(15000), // 15 second timeout
       catchError(error => {
-        console.error('=== TIMER START ERROR ===');
-        console.error('Error type:', error.constructor.name);
-        console.error('Error message:', error.message);
-        console.error('Full error:', error);
-        
+        console.error('Timer start error:', error);
+
         if (error.name === 'TimeoutError') {
           this.error = 'Request timed out. Please check your connection and try again.';
         } else if (error.status === 401) {
@@ -992,17 +871,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         return of(null);
       }),
       finalize(() => {
-        console.log('Timer start operation completed, resetting isProcessing');
         this.isProcessing = false;
         this.changeDetectorRef.detectChanges(); // Force UI update
       })
     ).subscribe({
       next: (timer) => {
-        console.log('=== TIMER START RESPONSE ===');
-        console.log('Response received:', timer);
-        
         if (timer) {
-          console.log('Timer started successfully:', timer);
           this.activeTimer = timer;
           this.timer = {
             id: timer.id!,
@@ -1014,8 +888,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           };
           this.stats.activeTimers = 1;
           this.startTimerUpdates();
-          console.log('Timer state updated:', this.timer);
-          
+
           // Show success message with rate info
           Swal.fire({
             icon: 'success',
@@ -1031,13 +904,10 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             timer: 3000,
             showConfirmButton: false
           });
-        } else {
-          console.log('Timer response was null (error handled)');
         }
       },
       error: (error) => {
-        console.error('=== SUBSCRIPTION ERROR ===');
-        console.error('This should not happen due to catchError, but got:', error);
+        console.error('Timer start subscription error:', error);
         this.error = 'An unexpected error occurred. Please try again.';
       }
     });
@@ -1048,8 +918,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.isProcessing = true;
     const userId = this.getCurrentUserId();
-
-    console.log('[Dashboard] Pausing timer:', this.activeTimer.id);
 
     this.timerService.pauseTimer(userId!, this.activeTimer.id).pipe(
       timeout(10000),
@@ -1773,7 +1641,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   getEntryDuration(entry: TimeEntry): string {
     if (!entry.hours && entry.hours !== 0) return '0.0';
     const hours = this.normalizeToHours(entry);
-    console.log('getEntryDuration:', { originalHours: entry.hours, normalizedHours: hours });
     return hours.toFixed(1);
   }
 
@@ -1786,33 +1653,15 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   getEntryBillingAmount(entry: TimeEntry): number {
     if (!entry.hours && entry.hours !== 0) return 0;
     if (!entry.rate && entry.rate !== 0) return 0;
-    
+
     const hours = this.normalizeToHours(entry);
     const rate = this.parseRate(entry);
-    
-    console.log('getEntryBillingAmount DEBUG:', { 
-      entryId: entry.id,
-      originalHours: entry.hours, 
-      normalizedHours: hours, 
-      originalRate: entry.rate,
-      originalRateType: typeof entry.rate,
-      parsedRate: rate,
-      calculation: hours * rate,
-      rawEntry: entry
-    });
-    
+
     return hours * rate;
   }
 
   getEntryHourlyRate(entry: TimeEntry): string {
     const rate = this.parseRate(entry);
-    console.log('getEntryHourlyRate DEBUG:', { 
-      entryId: entry.id,
-      originalRate: entry.rate, 
-      originalRateType: typeof entry.rate,
-      parsedRate: rate,
-      rawEntry: entry
-    });
     return rate.toFixed(0);
   }
 
@@ -1860,37 +1709,12 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   // Method to normalize different time units to hours
   private normalizeToHours(entry: TimeEntry): number {
     const value = Number(entry.hours) || 0;
-    console.log('normalizeToHours input:', { entryId: entry.id, value, type: typeof entry.hours });
     return this.normalizeHoursValue(value);
   }
 
-  // Method to normalize numeric hour values - Temporarily disabled conversion
+  // Method to normalize numeric hour values
   private normalizeHoursValue(value: number): number {
-    // Temporarily disable automatic conversion to debug the issue
-    console.log('Using raw value without conversion:', value);
     return value;
-    
-    /* 
-    // Only convert if we're very confident about the units
-    
-    // If value is extremely large, it's definitely in seconds (> 3600 suggests more than 1 hour in seconds)
-    if (value >= 3600) {
-      console.log('Converting from seconds to hours:', value, '→', value / 3600);
-      return value / 3600; // Convert seconds to hours
-    }
-    
-    // If value is in a typical minutes range for work sessions (60-600 minutes = 1-10 hours)
-    // Only convert if it's clearly minutes (between 60 and 480 = 8 hours worth of minutes)
-    if (value >= 60 && value <= 480) {
-      console.log('Potentially converting from minutes to hours:', value, '→', value / 60);
-      // Ask user or provide option, for now let's be conservative
-      return value / 60; // Convert minutes to hours
-    }
-    
-    // For smaller values (< 60), assume they're already in hours
-    console.log('Assuming value is already in hours:', value);
-    return value;
-    */
   }
 
   // Enhanced duration formatting with hours and minutes

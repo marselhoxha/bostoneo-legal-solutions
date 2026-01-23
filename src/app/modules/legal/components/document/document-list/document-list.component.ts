@@ -118,8 +118,6 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    console.log('[DocumentList] Component initializing');
-    
     // Fetch users for caching
     this.fetchUsersForCache();
     
@@ -151,15 +149,12 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       });
       this.dropdownList = [];
-      console.log('[destroyDropdowns] Bootstrap dropdowns disposed');
     } catch (error) {
       console.error('[destroyDropdowns] Error disposing dropdowns:', error);
     }
   }
 
   ngAfterViewInit(): void {
-    console.log('[DocumentList] AfterViewInit - initializing UI components');
-    
     // Initialize modals
     setTimeout(() => {
       this.initializeModals();
@@ -176,16 +171,14 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private initializeModals(): void {
     try {
-      console.log('[DocumentList] Initializing modals');
       // Document preview modal
       if (this.documentPreviewModal) {
         this.previewModalInstance = new Modal(this.documentPreviewModal.nativeElement);
         this.documentPreviewModal.nativeElement.addEventListener('hidden.bs.modal', () => {
           this.revokePreviewUrl();
         });
-        console.log('[DocumentList] Preview modal initialized');
       }
-      
+
       // Version history modal
       if (this.versionHistoryModal) {
         this.versionHistoryModalInstance = new Modal(this.versionHistoryModal.nativeElement);
@@ -195,9 +188,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
             this.documentForVersionHistory.versions = null;
           }
         });
-        console.log('[DocumentList] Version history modal initialized');
       }
-      
+
       // Upload new version modal
       if (this.uploadVersionModal) {
         this.uploadVersionModalInstance = new Modal(this.uploadVersionModal.nativeElement);
@@ -206,11 +198,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           this.versionForm.reset();
           this.versionFile = null;
         });
-        console.log('[DocumentList] Upload version modal initialized');
       }
-      
-      console.log('All modals initialized successfully');
-      } catch (error) {
+    } catch (error) {
       console.error('Error initializing modals:', error);
     }
   }
@@ -239,28 +228,24 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    * This uses the standard Bootstrap approach
    */
   private initializeDropdowns(): void {
-    console.log('[DocumentList] Initializing dropdowns');
     try {
       // First, dispose any existing dropdowns
       this.destroyDropdowns();
-      
+
       // Find all dropdown toggle elements
       const dropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"]');
-      console.log(`[DocumentList] Found ${dropdownToggles.length} dropdown toggles`);
-      
+
       // Initialize each dropdown with Bootstrap's API
       dropdownToggles.forEach(element => {
         try {
           const dropdown = new Dropdown(element);
           this.dropdownList.push(dropdown);
         } catch (error) {
-          console.error('[DocumentList] Error initializing dropdown:', error);
+          console.error('Error initializing dropdown:', error);
         }
       });
-      
-      console.log('[DocumentList] Successfully initialized dropdowns');
     } catch (error) {
-      console.error('[DocumentList] Error initializing dropdowns:', error);
+      console.error('Error initializing dropdowns:', error);
     }
   }
 
@@ -460,24 +445,20 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadDocuments(): void {
-    console.log('[loadDocuments] Starting...');
     this.loading = true;
     this.documents = []; // Reset documents array
     let documentObservable: Observable<any>;
 
     if (this.caseId) {
-      console.log(`[loadDocuments] Loading documents for case ID: ${this.caseId}`);
       documentObservable = this.caseDocumentsService.getDocuments(this.caseId);
     } else {
-      console.log('[loadDocuments] Loading all documents.');
       documentObservable = this.documentService.getDocuments();
     }
 
     this.subscriptions.add(
       documentObservable.pipe(
         catchError(error => {
-          const errorSource = this.caseId ? 'case documents' : 'all documents';
-          console.error(`[loadDocuments] Error loading ${errorSource}:`, error);
+          console.error('Error loading documents:', error);
           this.snackBar.open('Error loading documents. Please try again later.', 'Close', {
             duration: 5000
           });
@@ -485,20 +466,14 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadTestDocuments(); // Load test data on error for dev
           this.applyFilters();
           this.calculateStats();
-          // Return an empty observable or rethrow, but ensure finalize still runs
-          // For simplicity here, we handle state and let finalize manage loading flag
           return []; // Return an empty array to complete the stream gracefully
         }),
         finalize(() => {
-          console.log('[loadDocuments] Finalizing... Setting loading = false.');
-          this.loading = false; 
+          this.loading = false;
           this.cdr.detectChanges();
         })
       )
       .subscribe(response => {
-        const source = this.caseId ? 'Case' : 'All';
-        console.log(`[loadDocuments] ${source} documents response received:`, response);
-        
         // Handle different response structures
         if (Array.isArray(response)) {
           this.documents = response;
@@ -506,72 +481,30 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           this.documents = (response as any).data;
         } else if (response && response.data && response.data.page && Array.isArray(response.data.page.content)) {
           this.documents = response.data.page.content;
-        } else if (response && typeof response === 'object' && Object.keys(response).length > 0) { // Check if it's a non-empty object
+        } else if (response && typeof response === 'object' && Object.keys(response).length > 0) {
           this.documents = [response];
         } else {
           this.documents = [];
-          console.warn('[loadDocuments] Unexpected response format or empty response:', response);
+          console.warn('Unexpected response format or empty response:', response);
         }
-        
-        console.log('[loadDocuments] Documents processed, count:', this.documents.length);
-        
-        // Debug: Log user information for documents
-        if (this.documents.length > 0) {
-          this.documents.forEach(doc => {
-            this.debugUserInfo(doc);
-          });
-        }
-        
+
         // Only add test data if API returned nothing
         if (this.documents.length === 0) {
           this.loadTestDocuments();
         }
-        
+
         this.applyFilters();
         this.calculateStats();
         this.cdr.detectChanges();
-        // Loading is set in finalize
       })
     );
   }
 
   /**
-   * Helper to debug user information
+   * Helper to debug user information - emptied for production
    */
   private debugUserInfo(doc: any): void {
-    // Log full document for debugging
-    console.log(`[debugUserInfo] Document ID: ${doc.id}, Title: ${doc.title}`);
-    console.log(`[debugUserInfo] FULL DOCUMENT DATA:`, JSON.stringify(doc, null, 2));
-    
-    // Check specifically for all user-related fields
-    console.log(`[debugUserInfo] User fields available:`, {
-      'uploadedBy': doc.uploadedBy,
-      'uploadedById': doc.uploadedById,
-      'createdBy': doc.createdBy,
-      'createdById': doc.createdById,
-      'created_by': doc.created_by,
-      'created_by_id': doc.created_by_id,
-      'uploaded_by': doc.uploaded_by,
-      'user': doc.user
-    });
-    
-    // Check nested structure (common in Spring backend)
-    if (doc.uploadedBy) {
-      console.log(`[debugUserInfo] uploadedBy structure:`, {
-        'id': doc.uploadedBy.id,
-        'firstName': doc.uploadedBy.firstName,
-        'lastName': doc.uploadedBy.lastName,
-        'email': doc.uploadedBy.email
-      });
-    }
-    
-    // Check if user ID is a property on the document
-    const possibleIdFields = ['uploadedById', 'createdById', 'userId', 'user_id', 'createdUserId', 'created_by_id'];
-    possibleIdFields.forEach(field => {
-      if (doc[field]) {
-        console.log(`[debugUserInfo] Found user ID in field ${field}:`, doc[field]);
-      }
-    });
+    // Debug function - removed for production
   }
 
   /**
@@ -610,48 +543,36 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    * Get user display name from document
    */
   getUserDisplayName(document: any): string {
-    // For debugging
-    console.log('[getUserDisplayName] Document:', document.id, document.title);
-    
     // Option 1: uploadedBy is a user object with firstName
     if (document.uploadedBy && typeof document.uploadedBy === 'object' && document.uploadedBy.firstName) {
-      console.log('[getUserDisplayName] Using uploadedBy object');
       return `${document.uploadedBy.firstName} ${document.uploadedBy.lastName || ''}`;
     }
-    
+
     // Option 2: uploadedBy is a numeric ID - look up name from cache
     if (document.uploadedBy && typeof document.uploadedBy === 'number') {
       const userId = document.uploadedBy;
-      console.log('[getUserDisplayName] Looking up user from ID:', userId);
-      
-      // Check if user exists in cache
       if (this.userCache.has(userId)) {
         const user = this.userCache.get(userId);
         return `${user.firstName} ${user.lastName || ''}`;
       }
-      
-      // Fallback if user not in cache
       return `User #${userId}`;
     }
-    
+
     // Option 3: created_by object with firstName
     if (document.created_by && typeof document.created_by === 'object' && document.created_by.firstName) {
-      console.log('[getUserDisplayName] Using created_by object');
       return `${document.created_by.firstName} ${document.created_by.lastName || ''}`;
     }
-    
+
     // Option 4: createdBy object with firstName
     if (document.createdBy && typeof document.createdBy === 'object' && document.createdBy.firstName) {
-      console.log('[getUserDisplayName] Using createdBy object');
       return `${document.createdBy.firstName} ${document.createdBy.lastName || ''}`;
     }
-    
+
     // Option 5: user object with firstName
     if (document.user && document.user.firstName) {
-      console.log('[getUserDisplayName] Using user object');
       return `${document.user.firstName} ${document.user.lastName || ''}`;
     }
-    
+
     // Option 6: Various ID fields that might contain user ID - try to look up in cache
     if (document.uploadedById) {
       const userId = document.uploadedById;
@@ -661,7 +582,7 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return `User #${userId}`;
     }
-    
+
     if (document.createdById) {
       const userId = document.createdById;
       if (this.userCache.has(userId)) {
@@ -670,9 +591,7 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return `User #${userId}`;
     }
-    
-    // No user information found at all
-    console.log('[getUserDisplayName] No user info found, using System');
+
     return 'System';
   }
 
@@ -907,7 +826,6 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   previewDocument(document: any): void {
-    console.log('previewDocument called for:', document.id, document.title);
     this.revokePreviewUrl(); // Revoke previous URL if any
     this.selectedDocument = document;
     this.previewUrl = null; // Reset preview URL
@@ -915,17 +833,14 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Show modal immediately
     try {
-      console.log('Attempting to show modal:', this.previewModalInstance);
       this.previewModalInstance?.show();
     } catch (error) {
       console.error('Error showing modal:', error);
     }
 
-    console.log('Attempting to preview document:', document.id, document.title);
-    
     // Use preview parameter to distinguish from downloads
     let downloadMethod;
-    
+
     if (this.caseId) {
       // For case documents, add preview parameter
       downloadMethod = this.caseDocumentsService.downloadDocument(this.caseId, document.id, true);
@@ -937,26 +852,20 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.add(
       downloadMethod.subscribe({
         next: (blob: Blob) => {
-          console.log('Blob received for preview:', blob);
-          console.log('Blob type:', blob.type);
-          
           if (blob && blob.size > 0) {
             // Force PDF type if filename ends with .pdf but type is incorrect
             let blobToUse = blob;
             const filename = document.fileName || '';
-            
+
             // If file is PDF but content type is not set correctly, fix it
             if (filename.toLowerCase().endsWith('.pdf') && blob.type !== 'application/pdf') {
-              console.log('File appears to be PDF but has wrong content type. Creating new blob with correct type');
               blobToUse = new Blob([blob], { type: 'application/pdf' });
             }
-            
+
             // Check blob type for preview compatibility
             if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
-              console.log('Creating object URL for blob type:', blobToUse.type);
               this.currentObjectUrl = URL.createObjectURL(blobToUse);
               this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
-              console.log('Preview URL generated:', this.currentObjectUrl);
               this.previewError = null;
             } else {
               console.warn(`Preview not supported for type: ${blobToUse.type}`);
@@ -982,9 +891,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    * Get document version history with proper modal handling
    */
   showVersionHistory(document: any): void {
-    console.log('Fetching version history for document:', document.id);
     this.documentForVersionHistory = {...document, versions: null};
-    
+
     // Initialize modal if needed
     if (!this.versionHistoryModalInstance && this.versionHistoryModal) {
       try {
@@ -993,15 +901,14 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
         console.error('Error initializing version history modal:', error);
       }
     }
-    
+
     // Show modal first with loading state
     this.versionHistoryModalInstance?.show();
-    
+
     // Fetch version history
     const service = this.caseId ? this.caseDocumentsService : this.documentService;
-    
+
     const processVersions = (versions: any) => {
-      console.log('Processing versions:', versions);
       if (!this.documentForVersionHistory) {
         this.documentForVersionHistory = {...document};
       }
@@ -1095,7 +1002,6 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   uploadNewVersion(document: any): void {
-    console.log('Preparing to upload new version for document:', document.id);
     this.documentForNewVersion = document;
     this.versionFile = null;
     this.versionForm.reset();
@@ -1295,7 +1201,6 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
    * Preview a specific version of a document
    */
   previewVersionDocument(documentId: string, versionId: string): void {
-    console.log(`Previewing version ${versionId} of document ${documentId}`);
     this.revokePreviewUrl(); // Revoke previous URL if any
     this.previewUrl = null; // Reset preview URL
     this.previewError = null; // Reset error
@@ -1314,42 +1219,33 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Show modal immediately
     try {
-      console.log('Attempting to show modal:', this.previewModalInstance);
       this.previewModalInstance?.show();
     } catch (error) {
       console.error('Error showing modal:', error);
     }
 
-    console.log(`Attempting to preview version ${versionId} of document:`, documentId);
-    
     const service = this.caseId ? this.caseDocumentsService : this.documentService;
-    const downloadMethod = this.caseId 
-      ? service.downloadVersion(this.caseId, documentId, versionId) 
+    const downloadMethod = this.caseId
+      ? service.downloadVersion(this.caseId, documentId, versionId)
       : (service as DocumentService).downloadVersion(documentId, versionId);
 
     this.subscriptions.add(
       downloadMethod.subscribe({
         next: (blob: Blob) => {
-          console.log('Blob received for version preview:', blob);
-          console.log('Blob type:', blob.type);
-          
           if (blob && blob.size > 0) {
             // Force PDF type if filename ends with .pdf but type is incorrect
             let blobToUse = blob;
-            
+
             // If file is PDF but content type is not set correctly, fix it
-            if (blobToUse.type !== 'application/pdf' && 
+            if (blobToUse.type !== 'application/pdf' &&
                 (this.selectedDocument.fileName?.toLowerCase().endsWith('.pdf') || true)) {
-              console.log('Creating new blob with PDF content type for preview');
               blobToUse = new Blob([blob], { type: 'application/pdf' });
             }
-            
+
             // Check blob type for preview compatibility
             if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
-              console.log('Creating object URL for blob type:', blobToUse.type);
               this.currentObjectUrl = URL.createObjectURL(blobToUse);
               this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
-              console.log('Preview URL generated:', this.currentObjectUrl);
               this.previewError = null;
             } else {
               console.warn(`Preview not supported for type: ${blobToUse.type}`);

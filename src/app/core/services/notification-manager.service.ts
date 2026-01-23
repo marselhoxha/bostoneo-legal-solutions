@@ -139,52 +139,23 @@ export class NotificationManagerService {
     ].filter(user => !recipients.excludeUsers?.includes(user.id));
 
     // Deduplicate recipients by user ID to prevent multiple notifications to same user
-    const uniqueRecipients = allRecipients.filter((user, index, arr) => 
+    const uniqueRecipients = allRecipients.filter((user, index, arr) =>
       arr.findIndex(u => u.id === user.id) === index
     );
 
-    // 🔍 NOTIFICATION DELIVERY AUDIT LOG
-    console.log(`🔍 📧 NOTIFICATION DELIVERY AUDIT - ${title}`);
-    console.log(`🔍 📧   Category: ${category}`);
-    console.log(`🔍 📧   Priority: ${priority}`);
-    console.log(`🔍 📧   Message: ${message}`);
-    console.log(`🔍 📧   Triggered by: ${notificationContext.triggeredBy.name} (${notificationContext.triggeredBy.email})`);
-    console.log(`🔍 📧   Primary recipients: ${recipients.primaryUsers.length}`);
-    recipients.primaryUsers.forEach(user => {
-      console.log(`🔍 📧     - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-    });
-    if (recipients.secondaryUsers?.length) {
-      console.log(`🔍 📧   Secondary recipients: ${recipients.secondaryUsers.length}`);
-      recipients.secondaryUsers.forEach(user => {
-        console.log(`🔍 📧     - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-      });
-    }
-    if (recipients.excludeUsers?.length) {
-      console.log(`🔍 📧   Excluded users: ${recipients.excludeUsers.join(', ')}`);
-    }
-    console.log(`🔍 📧   Final unique recipients: ${uniqueRecipients.length}`);
-    uniqueRecipients.forEach(user => {
-      console.log(`🔍 📧     ✅ WILL RECEIVE: ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-    });
-    
     // Send only one notification (not per recipient) since it's a broadcast notification
     if (uniqueRecipients.length > 0) {
       try {
-        console.log(`🔍 📧   📤 SENDING push notification to ${uniqueRecipients.length} recipients`);
         this.pushNotificationService.sendCustomNotification(payload);
-        console.log(`🔍 📧   ✅ Push notification sent successfully`);
       } catch (error) {
-        console.error('🔍 📧   ❌ Failed to send push notification:', error);
+        console.error('Failed to send push notification:', error);
       }
-    } else {
-      console.log(`🔍 📧   ⚠️ NO RECIPIENTS - Notification not sent`);
     }
 
     // Also send via backend for offline notifications
     try {
       const recipientIds = uniqueRecipients.map(u => u.id);
-      console.log(`🔍 📧   📤 SENDING backend notification to user IDs: ${recipientIds.join(', ')}`);
-      
+
       await this.sendBackendNotification(
         title,
         message,
@@ -193,15 +164,9 @@ export class NotificationManagerService {
         recipientIds,
         notificationContext
       );
-      
-      console.log(`🔍 📧   ✅ Backend notification sent successfully to ${recipientIds.length} users`);
     } catch (error) {
-      console.error('🔍 📧   ❌ Failed to send backend notification:', error);
-      // Don't fail the whole notification if backend fails
+      console.error('Failed to send backend notification:', error);
     }
-    
-    console.log(`🔍 📧 END NOTIFICATION DELIVERY AUDIT - ${title}`);
-    console.log('🔍 📧 ==========================================');
   }
 
   /**
@@ -238,11 +203,9 @@ export class NotificationManagerService {
       };
 
       try {
-        console.log(`🔍 📧     📤 Sending backend notification to user ${userId}`);
         await this.http.post(`${this.server}/api/v1/notifications/send`, payload, { headers }).toPromise();
-        console.log(`🔍 📧     ✅ Backend notification sent to user ${userId}`);
       } catch (error) {
-        console.error(`🔍 📧     ❌ Failed to send backend notification to user ${userId}:`, error);
+        console.error(`Failed to send backend notification to user ${userId}:`, error);
         // Continue sending to other users even if one fails
       }
     }
@@ -340,82 +303,62 @@ export class NotificationManagerService {
 
   /**
    * Get case team members for case-related notifications
-   * Enhanced with comprehensive role matching and fallback to all eligible users
    */
   async getCaseTeamMembers(caseId: number): Promise<User[]> {
     try {
-      console.log(`🔍 Getting case team members for case ${caseId}`);
-      
       // Try multiple role variations for comprehensive coverage
       const attorneys = await this.getUsersByRole('ATTORNEY');
       const managers = await this.getUsersByRole('MANAGER');
       const paralegals = await this.getUsersByRole('PARALEGAL');
       const admins = await this.getUsersByRole('ADMIN');
-      
+
       // Combine all legal professionals
       const caseTeam = [...attorneys, ...managers, ...paralegals, ...admins];
-      
+
       // Remove duplicates based on user ID
-      const uniqueTeam = caseTeam.filter((user, index, arr) => 
+      const uniqueTeam = caseTeam.filter((user, index, arr) =>
         arr.findIndex(u => u.id === user.id) === index
       );
-      
-      console.log(`🔍 Case team members found: ${uniqueTeam.length}`);
-      uniqueTeam.forEach(user => {
-        console.log(`🔍   - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-      });
-      
+
       // If no team members found, fallback to all eligible users
       if (uniqueTeam.length === 0) {
-        console.log('🔍 No specific case team found, using all eligible users as fallback');
         return await this.getAllEligibleUsers();
       }
-      
+
       return uniqueTeam;
     } catch (error) {
       console.error('Failed to get case team members:', error);
-      // Return all eligible users as final fallback
       return await this.getAllEligibleUsers();
     }
   }
 
   /**
    * Get task watchers (assignee, creator, supervisors)
-   * Enhanced with comprehensive role matching and fallback to all eligible users
    */
   async getTaskWatchers(taskId: number): Promise<User[]> {
     try {
-      console.log(`🔍 Getting task watchers for task ${taskId}`);
-      
       // Get comprehensive set of users who should watch tasks
       const attorneys = await this.getUsersByRole('ATTORNEY');
       const managers = await this.getUsersByRole('MANAGER');
       const paralegals = await this.getUsersByRole('PARALEGAL');
-      
+
       // Combine relevant watchers
       const watchers = [...attorneys, ...managers, ...paralegals];
-      
+
       // Remove duplicates based on user ID
-      const uniqueWatchers = watchers.filter((user, index, arr) => 
+      const uniqueWatchers = watchers.filter((user, index, arr) =>
         arr.findIndex(u => u.id === user.id) === index
       );
-      
-      console.log(`🔍 Task watchers found: ${uniqueWatchers.length}`);
-      uniqueWatchers.forEach(user => {
-        console.log(`🔍   - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-      });
-      
+
       // If no watchers found, fallback to all eligible users but limit to avoid spam
       if (uniqueWatchers.length === 0) {
-        console.log('🔍 No specific task watchers found, using limited eligible users as fallback');
         const allEligible = await this.getAllEligibleUsers();
-        return allEligible.slice(0, 10); // Limit to first 10 to avoid spam
+        return allEligible.slice(0, 10);
       }
-      
+
       return uniqueWatchers;
     } catch (error) {
       console.error('Failed to get task watchers:', error);
-      // Return limited eligible users as final fallback
       const allEligible = await this.getAllEligibleUsers();
       return allEligible.slice(0, 10);
     }
@@ -423,11 +366,9 @@ export class NotificationManagerService {
 
   /**
    * Get user's supervisors
-   * Enhanced with comprehensive role matching for management roles
    */
   async getSupervisors(userId: number): Promise<User[]> {
     try {
-      console.log(`🔍 Getting supervisors for user ${userId}`);
       
       // Get comprehensive set of management/supervisory roles
       const managers = await this.getUsersByRole('MANAGER');
@@ -439,15 +380,10 @@ export class NotificationManagerService {
       const supervisors = [...managers, ...admins, ...seniors, ...partners];
       
       // Remove duplicates and the user themselves
-      const uniqueSupervisors = supervisors.filter((user, index, arr) => 
+      const uniqueSupervisors = supervisors.filter((user, index, arr) =>
         arr.findIndex(u => u.id === user.id) === index && user.id !== userId
       );
-      
-      console.log(`🔍 Supervisors found: ${uniqueSupervisors.length}`);
-      uniqueSupervisors.forEach(user => {
-        console.log(`🔍   - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-      });
-      
+
       return uniqueSupervisors;
     } catch (error) {
       console.error('Failed to get supervisors:', error);
@@ -491,273 +427,63 @@ export class NotificationManagerService {
   }
 
   /**
-   * 🔍 DEBUGGING: Log all users and their role/permission data for notification targeting analysis
+   * Log all users and their role/permission data for notification targeting analysis (debugging)
    */
   async logAllUsersForNotificationTargeting(): Promise<void> {
-    console.log('🔍 =========================== USER NOTIFICATION TARGETING ANALYSIS ===========================');
-    try {
-      const allUsers = await this.getAllUsers();
-      console.log(`🔍 Total users found: ${allUsers.length}`);
-      
-      allUsers.forEach((user, index) => {
-        console.log(`🔍 --- User ${index + 1}/${allUsers.length} ---`);
-        console.log(`🔍 ID: ${user.id}`);
-        console.log(`🔍 Name: ${user.firstName} ${user.lastName}`);
-        console.log(`🔍 Email: ${user.email}`);
-        console.log(`🔍 Primary Role Name: ${user.roleName}`);
-        console.log(`🔍 Primary Role Name (backup): ${user.primaryRoleName}`);
-        console.log(`🔍 Roles Array: ${JSON.stringify(user.roles)}`);
-        console.log(`🔍 Permissions String: ${user.permissions}`);
-        console.log(`🔍 Enabled: ${user.enabled}`);
-        console.log(`🔍 Not Locked: ${user.notLocked}`);
-        
-        // Check if this is Jennifer Rodriguez
-        if (user.firstName?.toLowerCase().includes('jennifer') || user.lastName?.toLowerCase().includes('rodriguez')) {
-          console.log('🎯 *** THIS IS JENNIFER RODRIGUEZ - SPECIAL ATTENTION ***');
-          console.log('🎯 Full user object:', JSON.stringify(user, null, 2));
-        }
-        
-        console.log('🔍 ----------------------------------------');
-      });
-      
-      // Test role-based filtering
-      console.log('🔍 =========================== ROLE-BASED FILTERING TESTS ===========================');
-      const roleTestCases = ['ROLE_ATTORNEY', 'ATTORNEY', 'ROLE_MANAGER', 'MANAGER', 'ROLE_PARALEGAL', 'PARALEGAL', 'ROLE_ADMIN', 'ADMIN'];
-      
-      for (const role of roleTestCases) {
-        const usersWithRole = await this.getUsersByRole(role);
-        console.log(`🔍 Users with role '${role}': ${usersWithRole.length} users`);
-        usersWithRole.forEach(user => {
-          console.log(`🔍   - ${user.firstName} ${user.lastName} (${user.email})`);
-        });
-      }
-      
-    } catch (error) {
-      console.error('🔍 Failed to log user targeting analysis:', error);
-    }
-    console.log('🔍 =========================== END USER ANALYSIS ===========================');
+    // Debug function - logging removed for production
   }
 
   /**
-   * 🔍 DEBUGGING: Test if a specific user would receive notifications for different event types
+   * Test if a specific user would receive notifications for different event types (debugging)
    */
   async testUserNotificationEligibility(userId: number, userName?: string): Promise<void> {
-    console.log(`🔍 =========================== TESTING NOTIFICATION ELIGIBILITY FOR USER ${userId} (${userName || 'Unknown'}) ===========================`);
-    
-    try {
-      const allUsers = await this.getAllUsers();
-      const testUser = allUsers.find(u => u.id === userId);
-      
-      if (!testUser) {
-        console.log(`🔍 ❌ User ${userId} not found in user list`);
-        return;
-      }
-      
-      console.log(`🔍 Testing user: ${testUser.firstName} ${testUser.lastName} (${testUser.email})`);
-      console.log(`🔍 Role: ${testUser.roleName}`);
-      console.log(`🔍 Permissions: ${testUser.permissions}`);
-      
-      // Test different event types
-      const eventTypes = [
-        'DOCUMENT_UPLOADED',
-        'TASK_CREATED', 
-        'TASK_ASSIGNED',
-        'CASE_STATUS_CHANGED',
-        'CASE_PRIORITY_CHANGED',
-        'INVOICE_CREATED',
-        'LEAD_STATUS_CHANGED'
-      ];
-      
-      for (const eventType of eventTypes) {
-        console.log(`🔍 --- Testing ${eventType} ---`);
-        
-        // Test current role-based filtering
-        const attorneyUsers = await this.getUsersByRole('ROLE_ATTORNEY');
-        const managerUsers = await this.getUsersByRole('ROLE_MANAGER');
-        const paralegalUsers = await this.getUsersByRole('ROLE_PARALEGAL');
-        
-        const isInAttorneys = attorneyUsers.some(u => u.id === userId);
-        const isInManagers = managerUsers.some(u => u.id === userId);
-        const isInParalegals = paralegalUsers.some(u => u.id === userId);
-        
-        console.log(`🔍   Would be included in ATTORNEY recipients: ${isInAttorneys}`);
-        console.log(`🔍   Would be included in MANAGER recipients: ${isInManagers}`);
-        console.log(`🔍   Would be included in PARALEGAL recipients: ${isInParalegals}`);
-        
-        // Check if would be in case team (current fallback)
-        const caseTeamMembers = await this.getCaseTeamMembers(1); // Test with case ID 1
-        const isInCaseTeam = caseTeamMembers.some(u => u.id === userId);
-        console.log(`🔍   Would be included in CASE TEAM fallback: ${isInCaseTeam}`);
-      }
-      
-    } catch (error) {
-      console.error('🔍 Failed to test user notification eligibility:', error);
-    }
-    
-    console.log(`🔍 =========================== END ELIGIBILITY TEST FOR USER ${userId} ===========================`);
+    // Debug function - logging removed for production
   }
 
   /**
-   * 🔍 DEBUGGING: Enhanced getUsersByRole with detailed logging
+   * Enhanced getUsersByRole with detailed logging (debugging - logging removed)
    */
   private async getUsersByRoleWithLogging(role: string, eventType?: string): Promise<User[]> {
-    console.log(`🔍 📋 Getting users by role: '${role}' for event: ${eventType || 'Unknown'}`);
-    
     try {
       const response = await this.http.get<{data: {users: User[]}}>(`${this.server}/user/list`).toPromise();
       const allUsers = response?.data?.users || [];
-      
-      console.log(`🔍 📋 Total users in database: ${allUsers.length}`);
-      
+
       // Enhanced filtering with multiple role name formats
       const filteredUsers = allUsers.filter((user: User) => {
         const primaryRole = user.roleName?.toUpperCase() || '';
         const secondaryRole = user.primaryRoleName?.toUpperCase() || '';
         const rolesArray = user.roles?.map(r => String(r).toUpperCase()) || [];
         const searchRole = role.toUpperCase();
-        
-        // Multiple matching strategies
+
         const exactMatch = primaryRole === searchRole || secondaryRole === searchRole;
         const rolesArrayMatch = rolesArray.includes(searchRole);
-        const partialMatch = primaryRole.includes(searchRole.replace('ROLE_', '')) || 
+        const partialMatch = primaryRole.includes(searchRole.replace('ROLE_', '')) ||
                            secondaryRole.includes(searchRole.replace('ROLE_', ''));
         const reversePartialMatch = searchRole.includes(primaryRole.replace('ROLE_', '')) ||
                                   searchRole.includes(secondaryRole.replace('ROLE_', ''));
-        
-        const isMatch = exactMatch || rolesArrayMatch || partialMatch || reversePartialMatch;
-        
-        if (isMatch) {
-          console.log(`🔍 📋   ✅ MATCH: ${user.firstName} ${user.lastName} (${user.email})`);
-          console.log(`🔍 📋      Primary role: ${primaryRole}`);
-          console.log(`🔍 📋      Secondary role: ${secondaryRole}`);
-          console.log(`🔍 📋      Roles array: ${JSON.stringify(rolesArray)}`);
-          console.log(`🔍 📋      Match reason: ${exactMatch ? 'exact' : rolesArrayMatch ? 'roles-array' : partialMatch ? 'partial' : 'reverse-partial'}`);
-        }
-        
-        return isMatch;
+
+        return exactMatch || rolesArrayMatch || partialMatch || reversePartialMatch;
       });
-      
-      console.log(`🔍 📋 Users found with role '${role}': ${filteredUsers.length}`);
-      
+
       return filteredUsers;
     } catch (error) {
-      console.error(`🔍 📋 Failed to get users by role '${role}':`, error);
+      console.error(`Failed to get users by role '${role}':`, error);
       return [];
     }
   }
 
   /**
-   * 🔍 DEBUGGING: Test Jennifer Rodriguez notification delivery specifically
+   * Test Jennifer Rodriguez notification delivery specifically (debugging - logging removed)
    */
   async testJenniferRodriguezNotifications(): Promise<void> {
-    console.log('🎯 =========================== JENNIFER RODRIGUEZ NOTIFICATION TEST ===========================');
-    
-    try {
-      // Find Jennifer Rodriguez in user list
-      const allUsers = await this.getAllUsers();
-      const jenniferUser = allUsers.find(user => 
-        (user.firstName?.toLowerCase().includes('jennifer') && user.lastName?.toLowerCase().includes('rodriguez')) ||
-        user.email?.toLowerCase().includes('jennifer') ||
-        user.email?.toLowerCase().includes('rodriguez')
-      );
-      
-      if (!jenniferUser) {
-        console.log('🎯 ❌ Jennifer Rodriguez not found in user database');
-        console.log('🎯 Available users:');
-        allUsers.forEach(user => {
-          console.log(`🎯   - ${user.firstName} ${user.lastName} (${user.email})`);
-        });
-        return;
-      }
-      
-      console.log(`🎯 ✅ FOUND Jennifer Rodriguez:`);
-      console.log(`🎯   ID: ${jenniferUser.id}`);
-      console.log(`🎯   Name: ${jenniferUser.firstName} ${jenniferUser.lastName}`);
-      console.log(`🎯   Email: ${jenniferUser.email}`);
-      console.log(`🎯   Role: ${jenniferUser.roleName}`);
-      console.log(`🎯   Primary Role: ${jenniferUser.primaryRoleName}`);
-      console.log(`🎯   Roles Array: ${JSON.stringify(jenniferUser.roles)}`);
-      console.log(`🎯   Permissions: ${jenniferUser.permissions}`);
-      console.log(`🎯   Enabled: ${jenniferUser.enabled}`);
-      console.log(`🎯   Not Locked: ${jenniferUser.notLocked}`);
-      
-      // Test if Jennifer would be included in various role-based queries
-      const rolesToTest = ['ATTORNEY', 'ROLE_ATTORNEY', 'MANAGER', 'ROLE_MANAGER', 'PARALEGAL', 'ROLE_PARALEGAL', 'ADMIN', 'ROLE_ADMIN', 'USER', 'ROLE_USER'];
-      
-      console.log(`🎯 Testing Jennifer's inclusion in role-based targeting:`);
-      for (const role of rolesToTest) {
-        const usersWithRole = await this.getUsersByRole(role);
-        const isIncluded = usersWithRole.some(u => u.id === jenniferUser.id);
-        console.log(`🎯   Role '${role}': ${isIncluded ? '✅ INCLUDED' : '❌ NOT INCLUDED'} (${usersWithRole.length} total users)`);
-      }
-      
-      // Test case team membership
-      console.log(`🎯 Testing case team membership:`);
-      const caseTeamMembers = await this.getCaseTeamMembers(1); // Test with case ID 1
-      const isInCaseTeam = caseTeamMembers.some(u => u.id === jenniferUser.id);
-      console.log(`🎯   Case Team: ${isInCaseTeam ? '✅ INCLUDED' : '❌ NOT INCLUDED'} (${caseTeamMembers.length} total members)`);
-      
-      // Test all eligible users
-      console.log(`🎯 Testing all eligible users inclusion:`);
-      const allEligible = await this.getAllEligibleUsers();
-      const isEligible = allEligible.some(u => u.id === jenniferUser.id);
-      console.log(`🎯   All Eligible: ${isEligible ? '✅ INCLUDED' : '❌ NOT INCLUDED'} (${allEligible.length} total eligible)`);
-      
-      // Test a sample notification to Jennifer specifically
-      console.log(`🎯 Testing sample notification delivery to Jennifer:`);
-      try {
-        await this.sendNotification(
-          NotificationCategory.CASE_MANAGEMENT,
-          '🧪 TEST: Jennifer Rodriguez Notification Test',
-          'This is a test notification to verify Jennifer Rodriguez can receive notifications correctly.',
-          NotificationPriority.HIGH,
-          {
-            primaryUsers: [jenniferUser],
-            secondaryUsers: []
-          },
-          '/dashboard',
-          {
-            entityId: 999,
-            entityType: 'test',
-            additionalData: {
-              testType: 'jennifer_rodriguez_notification_test',
-              timestamp: new Date().toISOString()
-            }
-          }
-        );
-        console.log(`🎯 ✅ Test notification sent successfully to Jennifer Rodriguez`);
-      } catch (error) {
-        console.error(`🎯 ❌ Failed to send test notification to Jennifer:`, error);
-      }
-      
-    } catch (error) {
-      console.error('🎯 Failed to test Jennifer Rodriguez notifications:', error);
-    }
-    
-    console.log('🎯 =========================== END JENNIFER TEST ===========================');
+    // Debug function - logging removed for production
   }
 
   /**
-   * 🔍 DEBUGGING: Initialize comprehensive debugging - run all diagnostic tests
+   * Initialize comprehensive debugging - run all diagnostic tests (debugging - logging removed)
    */
   async initializeNotificationDebugging(): Promise<void> {
-    console.log('🔍 🔧 =========================== INITIALIZING NOTIFICATION DEBUGGING ===========================');
-    
-    try {
-      // Step 1: Log all users and their roles
-      console.log('🔍 🔧 Step 1: Logging all users for notification targeting analysis...');
-      await this.logAllUsersForNotificationTargeting();
-      
-      // Step 2: Test Jennifer Rodriguez specifically
-      console.log('🔍 🔧 Step 2: Testing Jennifer Rodriguez notification delivery...');
-      await this.testJenniferRodriguezNotifications();
-      
-      console.log('🔍 🔧 DEBUGGING INITIALIZATION COMPLETE');
-      console.log('🔍 🔧 =========================== END DEBUGGING INITIALIZATION ===========================');
-      
-    } catch (error) {
-      console.error('🔍 🔧 Failed to initialize notification debugging:', error);
-    }
+    // Debug function - logging removed for production
   }
 
   /**
@@ -857,12 +583,10 @@ export class NotificationManagerService {
       const allUsers = await this.getAllUsers();
       
       // Return all active, enabled users as the most inclusive fallback
-      const eligibleUsers = allUsers.filter(user => 
+      const eligibleUsers = allUsers.filter(user =>
         user.enabled && user.notLocked
       );
-      
-      console.log(`🔍 Found ${eligibleUsers.length} eligible users for notifications`);
-      
+
       return eligibleUsers;
     } catch (error) {
       console.error('Failed to get all eligible users:', error);

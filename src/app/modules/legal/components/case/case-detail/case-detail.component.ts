@@ -171,8 +171,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log('🎬 CaseDetailComponent - ngOnInit started');
-    
     // Set up role-based permissions
     this.setupRoleBasedPermissions();
     
@@ -223,13 +221,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   private initializeWithContext(caseId: number): void {
-    console.log('🎯 CaseDetailComponent - Initializing with context for case:', caseId);
-    
     // Check if case context already exists
     const currentCase = this.caseContextService.getCurrentCaseSnapshot();
-    
+
     if (currentCase && currentCase.id === caseId) {
-      console.log('✅ CaseDetailComponent - Using existing context');
       this.case = currentCase as any;
       this.contextLoaded = true;
       this.loadCaseEvents(currentCase.id);
@@ -293,8 +288,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   private handleComponentNotification(notification: any): void {
-    console.log('📢 CaseDetailComponent - Received notification:', notification);
-    
     switch (notification.type) {
       case 'TASK_ASSIGNED':
       case 'TASK_REASSIGNED':
@@ -314,7 +307,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   
   // Enhanced navigation methods with context
   navigateToTasks(): void {
-    console.log('🧭 CaseDetailComponent - Navigating to tasks with context');
     this.navigationContextService.navigateWithContext(
       ['/case-management/tasks', this.case?.id],
       { preserveFilters: true }
@@ -322,7 +314,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   navigateToAssignments(): void {
-    console.log('🧭 CaseDetailComponent - Navigating to assignments with context');
     this.navigationContextService.navigateWithContext(
       ['/case-management/assignments'],
       { 
@@ -447,9 +438,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   private showNotification(message: string, type: 'success' | 'error' | 'info' = 'info', taskInfo?: any): void {
-    console.log('🔔 TOPBAR NOTIFICATION CALL:', { message, type, taskInfo });
-    console.log('🔔 Task Count Check:', taskInfo?.taskCount, typeof taskInfo?.taskCount);
-    
     // Determine notification type and icon
     let notificationType = 'default';
     let iconClass = 'bx bx-bell';
@@ -471,7 +459,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         } else {
           title = 'Success';
         }
-        console.log('🔔 Title determined:', title, 'based on taskInfo:', taskInfo, 'message:', message);
         break;
       case 'error':
         notificationType = 'alert';
@@ -512,20 +499,17 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         } : null
       }
     };
-    
-    console.log('🔔 Sending notification to topbar:', notificationPayload);
-    
+
     // Send to topbar notification system
     this.pushNotificationService.sendCustomNotification(notificationPayload);
   }
-  
+
   /**
    * Safe audit logging helper - prevents HTTP requests to non-existent endpoints
    */
   private safeAuditLog(logAction: () => void): void {
     // Skip audit logging entirely to prevent 404 errors
     // TODO: Re-enable when backend audit endpoints are implemented
-    console.log('📝 Audit logging skipped - endpoints not implemented');
   }
 
   ngAfterViewInit(): void {
@@ -595,12 +579,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             defaultDate = typeof currentValue === 'string' ? new Date(currentValue) : currentValue;
           }
           
-          console.log(`Initializing flatpickr for ${controlName}:`, { 
-            currentValue, 
-            defaultDate,
-            element: input.nativeElement
-          });
-          
           // Create a new flatpickr instance
           const instance = flatpickr(input.nativeElement, {
             dateFormat: 'Y-m-d',
@@ -611,7 +589,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             onChange: (selectedDates) => {
               if (selectedDates.length > 0) {
                 formControl.setValue(selectedDates[0]);
-                console.log(`Date changed for ${controlName}:`, selectedDates[0]);
               }
             }
           });
@@ -662,10 +639,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       const totalHours = this.case.billingInfo?.totalHours || (this.case as any).totalHours || 0;
       const totalAmount = this.case.billingInfo?.totalAmount || (this.case as any).totalAmount || 0;
       const paymentStatus = this.case.billingInfo?.paymentStatus || (this.case as any).paymentStatus || 'PENDING';
-      
-      console.log('Billing info before form update:', {
-        hourlyRate, totalHours, totalAmount, paymentStatus
-      });
 
       this.editForm.patchValue({
         caseNumber: this.case.caseNumber,
@@ -712,9 +685,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     // Use the service to get real data from the API
     this.caseService.getCaseById(id).subscribe({
       next: (response) => {
-        console.log('Raw API response:', response);
-        console.log('Case data structure:', response?.data?.case);
-        
         try {
           // The backend returns data in a wrapper object
           if (response && response.data && response.data.case) {
@@ -852,8 +822,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           return;
         }
         
-        console.log('Received events for case:', events);
-        
         // Filter events based on user role
         if (this.isClient) {
           // Clients only see certain event types
@@ -941,7 +909,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         (reason) => {
           // Modal was closed without saving
-          console.log('Modal dismissed:', reason);
         }
       );
     } catch (error) {
@@ -1117,7 +1084,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         (reason) => {
           // Modal was closed without saving
-          console.log('Modal dismissed:', reason);
         }
       );
     } catch (error) {
@@ -1337,9 +1303,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           totalAmount: totalAmount,
           paymentStatus: formValues.paymentStatus
         };
-        
-        console.log('Updating case with data:', updateData);
-        
+
         // Store original values for change detection
         const originalStatus = this.case.status;
         const originalPriority = this.case.priority;
@@ -1349,15 +1313,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         // Call the API to update the case
         this.caseService.updateCase(this.case.id, updateData).subscribe({
           next: async (response) => {
-            console.log('Case updated successfully:', response);
-            
             // Detect and trigger notifications for changes
             const newStatus = formValues.status;
             const newPriority = formValues.priority;
-            
+
             // Trigger status change notification
             if (originalStatus !== newStatus) {
-              console.log('🔔 Case status changed:', originalStatus, '→', newStatus);
               await this.notificationTrigger.triggerCaseStatusChanged(
                 Number(this.case.id), 
                 originalStatus, 
@@ -1369,7 +1330,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             
             // Trigger priority change notification
             if (originalPriority !== newPriority) {
-              console.log('🔔 Case priority changed:', originalPriority, '→', newPriority);
               await this.notificationTrigger.triggerCasePriorityChanged(
                 Number(this.case.id), 
                 originalPriority, 
@@ -1687,11 +1647,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadTeamWithFallback(caseId: number): void {
-    console.log('🔄 Loading team data for case:', caseId);
     // First try the team members endpoint
     this.caseAssignmentService.getTeamMembers(caseId).subscribe({
       next: (response) => {
-        console.log('✅ Team members response:', response);
         if (response.data) {
           this.processTeamData(response.data);
         }
@@ -1702,7 +1660,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         // Fallback to case assignments endpoint
         this.caseAssignmentService.getCaseAssignments(caseId).subscribe({
           next: (response) => {
-            console.log('✅ Fallback assignments response:', response);
             if (response.data) {
               const data = response.data as any;
               const assignments = Array.isArray(data) ? data : data.content || [];
@@ -1720,7 +1677,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private processTeamData(assignments: CaseAssignment[]): void {
-    console.log('📑 Processing team data:', assignments);
     if (assignments && assignments.length > 0) {
       // First, map basic team data
       this.caseTeamMembers = assignments.map((assignment: CaseAssignment) => ({
@@ -1777,7 +1733,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             this.caseTeamMembers[index].overdueTasksCount = workload.overdueTasksCount || 0;
           }
         });
-        console.log('✅ Team workloads updated:', this.caseTeamMembers);
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -1822,7 +1777,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Handle team tab click - ensure team data is loaded
    */
   onTeamTabClick(): void {
-    console.log('🎯 Team tab clicked, ensuring team data is loaded');
     if (this.caseId && (!this.caseTeamMembers || this.caseTeamMembers.length === 0)) {
       this.loadCaseTeam(this.caseId);
     }
@@ -1835,7 +1789,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Handle task created from research tab - refresh team tasks, notes, and events
    */
   onTaskCreated(): void {
-    console.log('✅ Task/Note/Deadline created, refreshing data');
     if (this.caseId) {
       this.loadAllCaseTasks(this.caseId);
       this.loadCaseEvents(this.caseId);
@@ -1853,8 +1806,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   viewMemberDetails(member: any): void {
-    console.log('🔍 ViewMemberDetails called for member:', member);
-    
     // Use member.userId if available, otherwise fall back to member.id
     const userId = member.userId || member.id;
     
@@ -1875,7 +1826,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.userService.getUserById(userId).subscribe({
       next: (response) => {
-        console.log('✅ User details received:', response);
         if (response.data) {
           this.showUserDetailsModal(response.data);
         } else {
@@ -1981,9 +1931,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 reason
               );
               
-              console.log('✅ Personalized unassignment notifications sent successfully');
             } catch (error) {
-              console.error('❌ Failed to send personalized unassignment notifications:', error);
+              console.error('Failed to send personalized unassignment notifications:', error);
             }
             
             this.snackBar.open('Team member removed successfully', 'Close', { duration: 3000 });
@@ -2138,8 +2087,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Assign task to specific team member
    */
   assignTaskToMember(member: any): void {
-    console.log('📋 AssignTaskToMember called for member:', member);
-    
     // Use member.userId if available, otherwise fall back to member.id
     const userId = member.userId || member.id;
     const memberName = member.userName || member.name || `${member.firstName} ${member.lastName}`;
@@ -2232,8 +2179,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private assignSelectedTasks(userId: number, memberName: string, taskIds: number[]): void {
-    console.log('📋 Assigning tasks:', { userId, memberName, taskIds });
-    
     // Show loading
     Swal.fire({
       title: 'Assigning Tasks...',
@@ -2247,11 +2192,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Validate taskIds to prevent undefined values
     const validTaskIds = taskIds.filter(taskId => taskId !== undefined && taskId !== null && !isNaN(taskId));
-    console.log('🔧 Original taskIds:', taskIds);
-    console.log('🔧 Valid taskIds after filtering:', validTaskIds);
-    
+
     if (validTaskIds.length === 0) {
-      console.error('❌ No valid task IDs found');
+      console.error('No valid task IDs found');
       Swal.fire({
         title: 'Assignment Failed',
         text: 'No valid tasks selected for assignment.',
@@ -2263,7 +2206,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Validate that the user is a team member
     if (!this.isUserTeamMember(userId)) {
-      console.error('❌ User is not a team member:', userId);
+      console.error('User is not a team member:', userId);
       Swal.fire({
         title: 'Assignment Failed',
         text: `User is not assigned to this case. Please add them to the team first before assigning tasks.`,
@@ -2280,10 +2223,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
     Promise.all(assignmentPromises)
       .then(async (responses) => {
-        console.log('✅ All tasks assigned successfully:', responses);
-        
         // Send notification for each assigned task
-        console.log('🔔 Sending task assignment notifications for bulk assignment...');
         for (let i = 0; i < validTaskIds.length; i++) {
           const taskId = validTaskIds[i];
           const response = responses[i];
@@ -2298,7 +2238,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           }
           
           try {
-            console.log(`🎯 Triggering assignment notification for task ${taskId}: ${taskTitle}`);
             await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
               taskId,
               taskTitle,
@@ -2309,9 +2248,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
               undefined, // dueDate
               undefined  // priority
             );
-            console.log(`✅ Assignment notification sent for task ${taskId}`);
           } catch (error) {
-            console.error(`❌ Failed to send assignment notification for task ${taskId}:`, error);
+            console.error(`Failed to send assignment notification for task ${taskId}:`, error);
           }
         }
         
@@ -2322,7 +2260,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           confirmButtonText: 'OK'
         }).then(() => {
           // Show success notification using our enhanced topbar notification method
-          console.log('✅ Showing success notification for task assignment');
           this.showNotification(
             `Successfully assigned ${validTaskIds.length} task(s) to ${memberName}`, 
             'success',
@@ -2341,7 +2278,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       })
       .catch((error) => {
-        console.error('❌ Error assigning tasks:', error);
+        console.error('Error assigning tasks:', error);
         Swal.fire({
           title: 'Assignment Failed',
           text: 'Failed to assign some tasks. Please try again.',
@@ -2399,15 +2336,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Load all tasks for better filtering (extends the loadRecentTasks)
    */
   loadAllCaseTasks(caseId: string | number): void {
-    console.log('🔄 Loading all case tasks for caseId:', caseId);
     this.isLoadingTasks = true;
     this.recentTasks = []; // Ensure it's always an array
     this.cdr.detectChanges();
 
     this.caseTaskService.getTasksByCaseId(Number(caseId)).subscribe({
       next: (response) => {
-        console.log('📋 Case tasks response received:', response);
-        
         // Handle different possible response structures
         let tasks = [];
         if (response?.data?.tasks?.content) {
@@ -2421,12 +2355,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           tasks = response.data;
         }
         
-        console.log('📑 Parsed tasks:', {
-          count: tasks.length,
-          unassignedCount: tasks.filter((t: any) => !t.assignedToId).length,
-          tasks: tasks
-        });
-        
         this.recentTasks = Array.isArray(tasks) ? tasks : [];
         
         // Update the context service with the loaded tasks
@@ -2436,7 +2364,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading all case tasks:', error);
+        console.error('Error loading all case tasks:', error);
         this.recentTasks = [];
         this.isLoadingTasks = false;
         this.cdr.detectChanges();
@@ -2681,8 +2609,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       
-      console.log('🔧 Handling task assignment:', { taskId: task.id, userId: user.id, caseId: this.caseId });
-      
       // Use AssignmentSyncService for coordinated assignment
       this.assignmentSyncService.assignTaskToUser(
         task.id,
@@ -2751,26 +2677,18 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    * Handle task creation result - Enhanced with sync service
    */
   private async handleTaskCreated(result: any): Promise<void> {
-    console.log('🔧 handleTaskCreated - full result object:', result);
     if (result.action === 'created' && result.task) {
       const task = result.task;
-      console.log('🔧 handleTaskCreated - task object:', task);
-      console.log('🔧 handleTaskCreated - task.title:', task.title);
-      console.log('🔧 handleTaskCreated - task.name:', task.name);
-      console.log('🔧 handleTaskCreated - result.assignedUser:', result.assignedUser);
-      
+
       // Handle undefined task title with fallback
       const taskTitle = task.title || task.name || 'New Task';
       let message = `Task "${taskTitle}" created successfully`;
-      
-      console.log('🔔 Task created in case-detail, sending notifications...', task);
-      
+
       // ALWAYS trigger task creation notification to notify team members about new tasks
       if (task.id) {
         const assigneeName = task.assignedToId && task.assignedToName ? task.assignedToName : 'Unassigned';
         
         try {
-          console.log('🚀 Triggering task creation notification from case-detail...');
           await this.notificationTrigger.triggerTaskCreated(
             task.id,
             taskTitle,
@@ -2779,20 +2697,17 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             this.case?.title,
             task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined
           );
-          console.log('✅ Task creation notification sent successfully from case-detail');
         } catch (error) {
-          console.error('❌ Failed to send task creation notification from case-detail:', error);
+          console.error('Failed to send task creation notification:', error);
         }
       }
       
       // Check if task was assigned during creation - use task data instead of modal data
       if (task.assignedToId && task.assignedToName) {
         message += ` and assigned to ${task.assignedToName}`;
-        console.log('✅ Task already assigned in backend to:', task.assignedToName);
-        
+
         // Additionally, send specific assignment notification
         try {
-          console.log('🎯 Triggering task assignment notification from case-detail (pre-assigned)...');
           await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
             task.id,
             taskTitle,
@@ -2803,9 +2718,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
             task.priority
           );
-          console.log('✅ Task assignment notification sent successfully from case-detail (pre-assigned)');
         } catch (error) {
-          console.error('❌ Failed to send task assignment notification from case-detail (pre-assigned):', error);
+          console.error('Failed to send task assignment notification:', error);
         }
         
         // Show notification for task with assignment
@@ -2827,13 +2741,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         
         // Validate task ID before assignment
         if (!task.id || task.id === undefined || task.id === null) {
-          console.error('❌ Cannot assign task: task.id is undefined');
+          console.error('Cannot assign task: task.id is undefined');
           this.showNotification('Task created but assignment failed - invalid task ID', 'info');
           return;
         }
-        
-        console.log('🔧 Assigning task:', { taskId: task.id, userId: user.id, caseId: this.caseId });
-        
+
         // Use sync service for the assignment part
         this.assignmentSyncService.assignTaskToUser(
           task.id,
@@ -2844,7 +2756,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             if (syncResult.success) {
               // Send task assignment notification
               try {
-                console.log('🎯 Triggering task assignment notification from case-detail (post-creation)...');
                 await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
                   task.id,
                   taskTitle,
@@ -2855,9 +2766,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                   task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
                   task.priority
                 );
-                console.log('✅ Task assignment notification sent successfully from case-detail (post-creation)');
               } catch (error) {
-                console.error('❌ Failed to send task assignment notification from case-detail (post-creation):', error);
+                console.error('Failed to send task assignment notification:', error);
               }
               
               // Show enhanced notification for task creation + assignment
@@ -3033,35 +2943,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   getUnassignedTasks(): CaseTask[] {
     if (!this.recentTasks) {
-      console.log('🔍 getUnassignedTasks: No recentTasks available');
       return [];
     }
-    
-    console.log('🔍 getUnassignedTasks: Filtering from', this.recentTasks.length, 'total tasks');
-    
-    const unassigned = this.recentTasks.filter(task => {
-      // Check if task is unassigned (no assignedToId)
-      const isUnassigned = !task.assignedToId;
-      
-      if (isUnassigned) {
-        console.log('📋 Unassigned task found:', {
-          id: task.id,
-          title: task.title,
-          assignedToId: task.assignedToId,
-          assignedToName: task.assignedToName
-        });
-      }
-      
-      return isUnassigned;
-    });
-    
-    console.log('📑 Unassigned tasks result:', {
-      total: this.recentTasks.length,
-      unassigned: unassigned.length,
-      unassignedTasks: unassigned
-    });
-    
-    return unassigned;
+
+    return this.recentTasks.filter(task => !task.assignedToId);
   }
 
   /**

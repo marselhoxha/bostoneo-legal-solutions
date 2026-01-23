@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, throwError, map, tap, catchError } from 'rxjs';
+import { Observable, throwError, map, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Expense, ExpenseCategory, Vendor, Receipt } from '../interface/expense.interface';
 import { CustomHttpResponse, Page } from '../interface/appstates';
@@ -39,7 +39,6 @@ export class ExpensesService {
   getExpenses(page: number = 0, size: number = 10): Observable<CustomHttpResponse<Page<Expense>>> {
     return this.http.get<CustomHttpResponse<Page<Expense>>>(`${environment.apiUrl}/api/expenses?page=${page}&size=${size}`, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Expenses loaded:', response)),
         catchError(this.handleError)
       );
   }
@@ -47,7 +46,6 @@ export class ExpensesService {
   getExpense(id: number): Observable<CustomHttpResponse<Expense>> {
     return this.http.get<CustomHttpResponse<Expense>>(`${environment.apiUrl}/api/expenses/${id}`, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Expense loaded:', response)),
         catchError(this.handleError)
       );
   }
@@ -55,7 +53,6 @@ export class ExpensesService {
   createExpense(expense: Expense): Observable<CustomHttpResponse<Expense>> {
     return this.http.post<CustomHttpResponse<Expense>>(`${environment.apiUrl}/api/expenses`, expense, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Expense created:', response)),
         catchError(this.handleError)
       );
   }
@@ -63,7 +60,6 @@ export class ExpensesService {
   updateExpense(id: number, expense: Expense): Observable<CustomHttpResponse<Expense>> {
     return this.http.put<CustomHttpResponse<Expense>>(`${environment.apiUrl}/api/expenses/${id}`, expense, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Expense updated:', response)),
         catchError(this.handleError)
       );
   }
@@ -71,7 +67,6 @@ export class ExpensesService {
   deleteExpense(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/api/expenses/${id}`, { headers: this.getHeaders() })
       .pipe(
-        tap(() => console.log('Expense deleted:', id)),
         catchError(this.handleError)
       );
   }
@@ -84,7 +79,6 @@ export class ExpensesService {
   createCategory(category: ExpenseCategory): Observable<CustomHttpResponse<ExpenseCategory>> {
     return this.http.post<CustomHttpResponse<ExpenseCategory>>(`${environment.apiUrl}/api/expense-categories`, category, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Category created:', response)),
         catchError(this.handleError)
       );
   }
@@ -92,7 +86,6 @@ export class ExpensesService {
   updateCategory(id: number, category: ExpenseCategory): Observable<CustomHttpResponse<ExpenseCategory>> {
     return this.http.put<CustomHttpResponse<ExpenseCategory>>(`${environment.apiUrl}/api/expense-categories/${id}`, category, { headers: this.getHeaders() })
       .pipe(
-        tap(response => console.log('Category updated:', response)),
         catchError(this.handleError)
       );
   }
@@ -100,7 +93,6 @@ export class ExpensesService {
   deleteCategory(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/api/expense-categories/${id}`, { headers: this.getHeaders() })
       .pipe(
-        tap(() => console.log('Category deleted:', id)),
         catchError(this.handleError)
       );
   }
@@ -119,7 +111,6 @@ export class ExpensesService {
           statusCode: 200
           } as CustomHttpResponse<Vendor[]>;
         }),
-        tap(response => console.log('Vendors loaded:', response)),
         catchError(error => {
           console.error('Error loading vendors:', error);
           return throwError(() => error);
@@ -128,7 +119,6 @@ export class ExpensesService {
   }
 
   createVendor(vendor: Vendor): Observable<any> {
-    console.log('Creating vendor:', vendor);
     return this.http.post<any>(`${environment.apiUrl}/api/vendors`, vendor)
       .pipe(
         map(response => {
@@ -153,8 +143,7 @@ export class ExpensesService {
       console.error('Invalid vendor ID for update:', id);
       return throwError(() => new Error('Invalid vendor ID'));
     }
-    
-    console.log(`Updating vendor ${id}:`, vendor);
+
     return this.http.put<any>(`${environment.apiUrl}/api/vendors/${id}`, vendor)
       .pipe(
         map(response => {
@@ -179,8 +168,7 @@ export class ExpensesService {
       console.error('Invalid vendor ID for deletion:', id);
       return throwError(() => new Error('Invalid vendor ID'));
     }
-    
-    console.log(`Deleting vendor ${id}`);
+
     return this.http.delete<any>(`${environment.apiUrl}/api/vendors/${id}`)
       .pipe(
         map(response => {
@@ -203,7 +191,7 @@ export class ExpensesService {
       console.error('Invalid vendor ID:', id);
       return throwError(() => new Error('Invalid vendor ID'));
     }
-    
+
     return this.http.get<any>(`${environment.apiUrl}/api/vendors/${id}`, { headers: this.getHeaders() })
       .pipe(
         map(response => {
@@ -216,7 +204,6 @@ export class ExpensesService {
             statusCode: 200
           } as CustomHttpResponse<Vendor>;
         }),
-        tap(response => console.log('Vendor loaded:', response)),
         catchError(error => {
           console.error('Error loading vendor:', error);
           return throwError(() => error);
@@ -226,29 +213,24 @@ export class ExpensesService {
 
   // Receipts
   uploadReceipt(file: File): Observable<CustomHttpResponse<Receipt>> {
-    console.log('Uploading receipt:', file.name, file.size, file.type);
-    
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Get the auth token from localStorage or session storage
     const token = localStorage.getItem(Key.TOKEN) || sessionStorage.getItem(Key.TOKEN);
-    
+
     // Set headers with token if available
     let headers = new HttpHeaders();
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    
-    console.log('Sending receipt upload request to:', `${environment.apiUrl}/api/receipts/upload`);
-    
+
     // Return the observable with simple error handling
     return this.http.post<CustomHttpResponse<Receipt>>(
-      `${environment.apiUrl}/api/receipts/upload`, 
-      formData, 
+      `${environment.apiUrl}/api/receipts/upload`,
+      formData,
       { headers }
     ).pipe(
-      tap(response => console.log('Receipt upload success:', response?.statusCode)),
       catchError(error => {
         console.error('Receipt upload error:', error);
         return throwError(() => ({
@@ -260,23 +242,13 @@ export class ExpensesService {
   }
 
   getReceipt(id: number): Observable<CustomHttpResponse<Receipt>> {
-    console.log('Fetching receipt:', id);
     if (!id || isNaN(id)) {
       console.error('Invalid receipt ID:', id);
       return throwError(() => new Error('Invalid receipt ID'));
     }
-    
+
     return this.http.get<CustomHttpResponse<Receipt>>(`${environment.apiUrl}/api/receipts/${id}`, { headers: this.getHeaders() })
       .pipe(
-        tap(response => {
-          console.log('Receipt loaded:', response);
-          if (response.data) {
-            console.log('Receipt has content:', !!response.data.content);
-            console.log('Receipt content type:', response.data.contentType);
-          } else {
-            console.warn('Receipt response has no data');
-          }
-        }),
         catchError(error => {
           console.error('Error loading receipt:', error);
           return throwError(() => error);
@@ -287,7 +259,6 @@ export class ExpensesService {
   deleteReceipt(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/api/receipts/${id}`, { headers: this.getHeaders() })
       .pipe(
-        tap(() => console.log('Receipt deleted:', id)),
         catchError(this.handleError)
       );
   }
@@ -306,14 +277,11 @@ export class ExpensesService {
 
   // Receipt attachment to expense
   attachReceiptToExpense(expenseId: number, receiptId: number): Observable<CustomHttpResponse<Expense>> {
-    console.log(`Attaching receipt ${receiptId} to expense ${expenseId}`);
-    
     return this.http.post<CustomHttpResponse<Expense>>(
-      `${environment.apiUrl}/api/expenses/${expenseId}/attachReceipt/${receiptId}`, 
-      {}, 
+      `${environment.apiUrl}/api/expenses/${expenseId}/attachReceipt/${receiptId}`,
+      {},
       { headers: this.getHeaders() }
     ).pipe(
-      tap(response => console.log('Receipt attached to expense:', response)),
       catchError(error => {
         console.error('Error attaching receipt to expense:', error);
         return throwError(() => error);

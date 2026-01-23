@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Observable, BehaviorSubject, Subject, EMPTY, timer } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { retryWhen, delay, takeUntil, tap, catchError, switchMap, filter } from 'rxjs/operators';
+import { retryWhen, delay, takeUntil, tap, catchError, filter } from 'rxjs/operators';
 import { Key } from '../../enum/key.enum';
 
 export interface WebSocketMessage {
@@ -54,13 +54,11 @@ export class WebSocketService implements OnDestroy {
   private currentUserId: number | null = null;
   
   constructor() {
-    console.log('🔌 WebSocketService - Initializing');
     this.initializeAuthenticationWatcher();
-    
+
     // Try to connect if token already exists
     const token = localStorage.getItem(Key.TOKEN);
     if (token) {
-      console.log('🔌 WebSocketService - Found existing token, attempting connection');
       // Delay connection to allow app to initialize
       setTimeout(() => this.connect(), 2000);
     }
@@ -75,35 +73,30 @@ export class WebSocketService implements OnDestroy {
       window.addEventListener('storage', (event) => {
         if (event.key === Key.TOKEN) {
           if (event.newValue) {
-            console.log('🔌 WebSocketService - Token added, connecting');
             this.connect();
           } else {
-            console.log('🔌 WebSocketService - Token removed, disconnecting');
             this.disconnect();
           }
         }
       });
     }
-    
+
     // Check for token changes periodically
     timer(0, 30000) // Check every 30 seconds
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         const token = localStorage.getItem(Key.TOKEN);
         const isConnected = this.connectionStatus$.value.connected;
-        
+
         if (token && !isConnected && !this.connectionStatus$.value.reconnecting) {
-          console.log('🔌 WebSocketService - Token exists but not connected, attempting connection');
           this.connect();
         } else if (!token && isConnected) {
-          console.log('🔌 WebSocketService - No token but connected, disconnecting');
           this.disconnect();
         }
       });
   }
   
   ngOnDestroy(): void {
-    console.log('🔌 WebSocketService - Destroying');
     this.destroy$.next();
     this.destroy$.complete();
     this.disconnect();
@@ -115,7 +108,6 @@ export class WebSocketService implements OnDestroy {
    * Enable WebSocket connection (call when server is available)
    */
   enableWebSocket(): void {
-    console.log('🔌 WebSocketService - Enabling WebSocket connection');
     this.connect();
   }
 
@@ -124,7 +116,6 @@ export class WebSocketService implements OnDestroy {
    */
   connect(): void {
     if (this.socket$ && !this.socket$.closed) {
-      console.log('🔌 WebSocketService - Already connected');
       return;
     }
 
@@ -140,11 +131,9 @@ export class WebSocketService implements OnDestroy {
       return;
     }
 
-    console.log('🔌 WebSocketService - Connecting to:', this.wsUrl);
-    
-    this.updateConnectionStatus({ 
+    this.updateConnectionStatus({
       reconnecting: true,
-      retryCount: this.connectionStatus$.value.retryCount + 1 
+      retryCount: this.connectionStatus$.value.retryCount + 1
     });
 
     try {
@@ -152,7 +141,6 @@ export class WebSocketService implements OnDestroy {
         url: `${this.wsUrl}?token=${encodeURIComponent(token)}`,
         openObserver: {
           next: () => {
-            console.log('✅ WebSocket - Connected successfully with authentication');
             this.updateConnectionStatus({
               connected: true,
               reconnecting: false,
@@ -160,20 +148,19 @@ export class WebSocketService implements OnDestroy {
               retryCount: 0,
               error: undefined
             });
-            
+
             // Subscribe to current user and case if available
             this.resubscribeToChannels();
           }
         },
         closeObserver: {
           next: (event) => {
-            console.log('🔌 WebSocket - Connection closed:', event);
             this.updateConnectionStatus({
               connected: false,
               reconnecting: false,
               error: event
             });
-            
+
             // Only attempt reconnection if it wasn't a deliberate close
             if (event.code !== 1000) {
               this.scheduleReconnection();
@@ -195,12 +182,11 @@ export class WebSocketService implements OnDestroy {
       this.socket$
         .pipe(
           takeUntil(this.destroy$),
-          tap(message => console.log('📨 WebSocket - Received:', message)),
           catchError(error => {
             console.error('❌ WebSocket - Message error:', error);
-            this.updateConnectionStatus({ 
-              connected: false, 
-              error 
+            this.updateConnectionStatus({
+              connected: false,
+              error
             });
             return EMPTY;
           })
@@ -244,12 +230,10 @@ export class WebSocketService implements OnDestroy {
    * Disconnect WebSocket
    */
   disconnect(): void {
-    console.log('🔌 WebSocket - Disconnecting');
-    
     if (this.socket$ && !this.socket$.closed) {
       this.socket$.complete();
     }
-    
+
     this.socket$ = null;
     this.updateConnectionStatus({
       connected: false,
@@ -323,7 +307,8 @@ export class WebSocketService implements OnDestroy {
         break;
         
       default:
-        console.log('🔀 WebSocket - Unhandled message type:', message.type);
+        // Unhandled message type
+        break;
     }
   }
 
@@ -337,7 +322,6 @@ export class WebSocketService implements OnDestroy {
     }
 
     try {
-      console.log('📤 WebSocket - Sending:', message);
       this.socket$.next(message);
     } catch (error) {
       console.error('❌ WebSocket - Failed to send message:', error);
@@ -351,8 +335,7 @@ export class WebSocketService implements OnDestroy {
    */
   subscribeToCaseUpdates(caseId: number): void {
     this.currentCaseId = caseId;
-    console.log('🔔 WebSocket - Subscribing to case updates:', caseId);
-    
+
     this.sendMessage({
       type: 'SUBSCRIBE_CASE',
       data: { caseId },
@@ -365,16 +348,14 @@ export class WebSocketService implements OnDestroy {
    */
   unsubscribeFromCaseUpdates(caseId?: number): void {
     const targetCaseId = caseId || this.currentCaseId;
-    
+
     if (targetCaseId) {
-      console.log('🔕 WebSocket - Unsubscribing from case updates:', targetCaseId);
-      
       this.sendMessage({
         type: 'UNSUBSCRIBE_CASE',
         data: { caseId: targetCaseId },
         timestamp: Date.now()
       });
-      
+
       if (!caseId) {
         this.currentCaseId = null;
       }
@@ -386,8 +367,7 @@ export class WebSocketService implements OnDestroy {
    */
   subscribeToUserUpdates(userId: number): void {
     this.currentUserId = userId;
-    console.log('🔔 WebSocket - Subscribing to user updates:', userId);
-    
+
     this.sendMessage({
       type: 'SUBSCRIBE_USER',
       data: { userId },
@@ -400,16 +380,14 @@ export class WebSocketService implements OnDestroy {
    */
   unsubscribeFromUserUpdates(userId?: number): void {
     const targetUserId = userId || this.currentUserId;
-    
+
     if (targetUserId) {
-      console.log('🔕 WebSocket - Unsubscribing from user updates:', targetUserId);
-      
       this.sendMessage({
         type: 'UNSUBSCRIBE_USER',
         data: { userId: targetUserId },
         timestamp: Date.now()
       });
-      
+
       if (!userId) {
         this.currentUserId = null;
       }
@@ -422,13 +400,11 @@ export class WebSocketService implements OnDestroy {
   private resubscribeToChannels(): void {
     // Re-subscribe to case if we were previously subscribed
     if (this.currentCaseId) {
-      console.log('🔔 WebSocket - Re-subscribing to case:', this.currentCaseId);
       this.subscribeToCaseUpdates(this.currentCaseId);
     }
-    
+
     // Re-subscribe to user if we were previously subscribed
     if (this.currentUserId) {
-      console.log('🔔 WebSocket - Re-subscribing to user:', this.currentUserId);
       this.subscribeToUserUpdates(this.currentUserId);
     }
   }
@@ -485,7 +461,7 @@ export class WebSocketService implements OnDestroy {
    */
   private scheduleReconnection(): void {
     const currentStatus = this.connectionStatus$.value;
-    
+
     if (currentStatus.retryCount >= this.maxReconnectAttempts) {
       console.error('❌ WebSocket - Max reconnection attempts reached');
       this.updateConnectionStatus({
@@ -496,8 +472,6 @@ export class WebSocketService implements OnDestroy {
     }
 
     if (!currentStatus.reconnecting) {
-      console.log(`🔄 WebSocket - Scheduling reconnection in ${this.reconnectInterval}ms`);
-      
       timer(this.reconnectInterval)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => {
