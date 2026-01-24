@@ -135,6 +135,34 @@
                 }
             }
             },
+            "staging": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "8mb",
+                  "maximumError": "8mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.staging.ts"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                    "minify": true,
+                    "inlineCritical": false
+                }
+            }
+            },
             "development": {
               "buildOptimizer": false,
               "optimization": false,
@@ -155,6 +183,9 @@
           "configurations": {
             "production": {
               "buildTarget": "velzon:build:production"
+            },
+            "staging": {
+              "buildTarget": "velzon:build:staging"
             },
             "development": {
               "buildTarget": "velzon:build:development"
