@@ -6,11 +6,13 @@ import com.bostoneo.bostoneosolutions.model.CaseActivity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 
 import java.util.Collections;
 import java.util.Map;
 
+@Slf4j
 public class CaseActivityDTOMapper {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -42,7 +44,7 @@ public class CaseActivityDTOMapper {
                 dto.setMetadata(metadata);
             } catch (JsonProcessingException e) {
                 // Log error and continue with empty metadata
-                System.err.println("Error parsing metadata JSON: " + e.getMessage());
+                log.error("Error parsing metadata JSON: {}", e.getMessage());
                 dto.setMetadata(Collections.emptyMap());
             }
         }
@@ -71,7 +73,7 @@ public class CaseActivityDTOMapper {
                 entity.setMetadataJson(metadataJson);
             } catch (JsonProcessingException e) {
                 // Log error and continue with null metadata
-                System.err.println("Error serializing metadata to JSON: " + e.getMessage());
+                log.error("Error serializing metadata to JSON: {}", e.getMessage());
                 entity.setMetadataJson("{}");
             }
         }

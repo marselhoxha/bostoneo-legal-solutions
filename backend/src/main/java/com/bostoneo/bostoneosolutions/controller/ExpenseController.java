@@ -6,12 +6,14 @@ import com.bostoneo.bostoneosolutions.model.Expense;
 import com.bostoneo.bostoneosolutions.service.ExpenseService;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/expenses")
+@Slf4j
 public class ExpenseController {
 
     private final ExpenseService expenseService;
@@ -36,14 +38,8 @@ public class ExpenseController {
     @AuditLog(action = "CREATE", entityType = "EXPENSE", description = "Created new expense record")
     public ResponseEntity<CustomHttpResponse<Expense>> createExpense(@Valid @RequestBody ExpenseDTO expenseDTO) {
         try {
-            System.out.println("Received expense DTO: " + expenseDTO);
-            System.out.println("Amount: " + expenseDTO.getAmount());
-            System.out.println("Currency: " + expenseDTO.getCurrency());
-            System.out.println("Date: " + expenseDTO.getDate());
-            System.out.println("Category ID: " + expenseDTO.getCategoryId());
-            System.out.println("Vendor ID: " + expenseDTO.getVendorId());
-            System.out.println("Client ID: " + expenseDTO.getClientId());
-            
+            log.debug("Received expense DTO: {}", expenseDTO);
+
             if (expenseDTO.getAmount() == null) {
                 throw new IllegalArgumentException("Amount is required");
             }
@@ -62,11 +58,10 @@ public class ExpenseController {
             if (expenseDTO.getClientId() == null) {
                 throw new IllegalArgumentException("Client ID is required");
             }
-            
+
             return ResponseEntity.ok(expenseService.createExpense(expenseDTO));
         } catch (Exception e) {
-            System.err.println("Error creating expense: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error creating expense: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                 .body(new CustomHttpResponse<>(400, e.getMessage(), null));
         }

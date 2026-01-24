@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -18,15 +19,13 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/api/notification-preferences")
 @CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"})
+@Slf4j
 public class UserNotificationPreferenceController {
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
-        System.err.println("=== EXCEPTION HANDLER TRIGGERED ===");
-        System.err.println("Exception type: " + e.getClass().getName());
-        System.err.println("Exception message: " + e.getMessage());
-        e.printStackTrace();
-        
+        log.error("Exception handler triggered - type: {}, message: {}", e.getClass().getName(), e.getMessage(), e);
+
         Map<String, String> error = new HashMap<>();
         error.put("error", e.getMessage());
         error.put("type", e.getClass().getSimpleName());
@@ -105,38 +104,20 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestBody Map<String, UserNotificationPreference> preferences) {
         try {
-            System.out.println("=== UPDATE PREFERENCES REQUEST ===");
-            System.out.println("User ID: " + userId);
-            System.out.println("Preferences received: " + preferences);
-            
+            log.debug("Update preferences request - userId: {}, preferences count: {}", userId, preferences != null ? preferences.size() : 0);
+
             if (preferences == null || preferences.isEmpty()) {
-                System.err.println("ERROR: Preferences map is null or empty");
+                log.warn("Preferences map is null or empty for userId: {}", userId);
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "Preferences data is required");
                 return ResponseEntity.badRequest().body(error);
             }
-            
-            // Log each preference
-            for (Map.Entry<String, UserNotificationPreference> entry : preferences.entrySet()) {
-                System.out.println("Event Type: " + entry.getKey());
-                UserNotificationPreference pref = entry.getValue();
-                if (pref != null) {
-                    System.out.println("  - userId: " + pref.getUserId());
-                    System.out.println("  - eventType: " + pref.getEventType());
-                    System.out.println("  - enabled: " + pref.getEnabled());
-                    System.out.println("  - emailEnabled: " + pref.getEmailEnabled());
-                    System.out.println("  - pushEnabled: " + pref.getPushEnabled());
-                    System.out.println("  - inAppEnabled: " + pref.getInAppEnabled());
-                    System.out.println("  - priority: " + pref.getPriority());
-                }
-            }
-            
+
             List<UserNotificationPreference> updatedPreferences = notificationPreferenceService.updateUserPreferences(userId, preferences);
-            System.out.println("Successfully updated " + updatedPreferences.size() + " preferences");
+            log.debug("Successfully updated {} preferences for userId: {}", updatedPreferences.size(), userId);
             return ResponseEntity.ok(updatedPreferences);
         } catch (Exception e) {
-            System.err.println("ERROR updating preferences: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error updating preferences for userId: {}", userId, e);
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             error.put("type", e.getClass().getSimpleName());

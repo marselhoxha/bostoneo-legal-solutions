@@ -78,7 +78,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             sendEmail(user.getFirstName(), user.getEmail(), verificationUrl, ACCOUNT);
             user.setEnabled(false);
             user.setNotLocked(true);
-            System.out.println(verificationUrl);
+            log.debug("Verification URL: {}", verificationUrl);
             return user;
         } catch (Exception exception) {
             log.error(exception.getMessage());

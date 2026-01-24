@@ -21,8 +21,7 @@ public interface EmailService {
     
     // Legacy methods for backward compatibility
     default void sendInvoiceEmail(Invoice invoice, String templateName, boolean attachPdf) {
-        // Default implementation logs the action
-        System.out.println("Sending email for invoice " + invoice.getInvoiceNumber() + " using template " + templateName);
+        // Default stub - implementations should override this method
     }
     
     default void sendReminderEmail(String to, String subject, String body) {

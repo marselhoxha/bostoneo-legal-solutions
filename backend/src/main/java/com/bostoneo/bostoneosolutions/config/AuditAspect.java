@@ -130,8 +130,7 @@ public class AuditAspect {
             
         } catch (Exception e) {
             // Log error but don't fail the original request
-            System.err.println("Failed to create audit log: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to create audit log: {}", e.getMessage(), e);
         }
         
         return result;

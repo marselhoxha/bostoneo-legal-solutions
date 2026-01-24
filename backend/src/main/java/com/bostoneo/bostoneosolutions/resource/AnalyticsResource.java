@@ -15,6 +15,7 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.Invoice;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/analytics")
 @RequiredArgsConstructor
+@Slf4j
 public class AnalyticsResource {
 
     private final InvoiceService invoiceService;
@@ -116,7 +118,7 @@ public class AnalyticsResource {
         double totalRevenue = invoiceService.calculateTotalEarnings();
         int totalClients = (int) clientsPage.getTotalElements();
         
-        System.out.println("Geographic analysis - Clients: " + totalClients + ", Revenue: " + totalRevenue);
+        log.debug("Geographic analysis - Clients: " + totalClients + ", Revenue: " + totalRevenue);
         
         // Try to get actual geographic data from client records
         Map<String, Integer> clientsByRegion = getActualClientLocationData(allClients);
@@ -133,7 +135,7 @@ public class AnalyticsResource {
             }
         } else {
             // If no location data available, return empty result
-            System.out.println("No geographic location data available in client records");
+            log.debug("No geographic location data available in client records");
         }
         
         return geographic;
@@ -167,10 +169,10 @@ public class AnalyticsResource {
                 locationCounts.put(region, count);
             }
             
-            System.out.println("Actual client location data: " + locationCounts);
+            log.debug("Actual client location data: " + locationCounts);
             
         } catch (Exception e) {
-            System.err.println("Error querying client location data: " + e.getMessage());
+            log.error("Error querying client location data: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -186,9 +188,9 @@ public class AnalyticsResource {
         Map<String, Integer> monthlyCases = getMonthlyCasesFromDB();
         Map<String, Integer> monthlyUsers = getMonthlyUsersFromDB();
         
-        System.out.println("Real monthly revenue data: " + monthlyRevenue);
-        System.out.println("Real monthly cases data: " + monthlyCases);
-        System.out.println("Real monthly users data: " + monthlyUsers);
+        log.debug("Real monthly revenue data: " + monthlyRevenue);
+        log.debug("Real monthly cases data: " + monthlyCases);
+        log.debug("Real monthly users data: " + monthlyUsers);
         
         // Get all unique months from all data sources
         Set<String> allMonths = new HashSet<>();
@@ -256,10 +258,10 @@ public class AnalyticsResource {
                 monthlyRevenue.put(month, revenue);
             }
             
-            System.out.println("Retrieved monthly revenue from DB: " + monthlyRevenue);
+            log.debug("Retrieved monthly revenue from DB: " + monthlyRevenue);
             
         } catch (Exception e) {
-            System.err.println("Error querying monthly revenue: " + e.getMessage());
+            log.error("Error querying monthly revenue: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -284,10 +286,10 @@ public class AnalyticsResource {
                 monthlyCases.put(month, cases);
             }
             
-            System.out.println("Retrieved monthly cases from DB: " + monthlyCases);
+            log.debug("Retrieved monthly cases from DB: " + monthlyCases);
             
         } catch (Exception e) {
-            System.err.println("Error querying monthly cases: " + e.getMessage());
+            log.error("Error querying monthly cases: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -312,10 +314,10 @@ public class AnalyticsResource {
                 monthlyUsers.put(month, users);
             }
             
-            System.out.println("Retrieved monthly users from DB: " + monthlyUsers);
+            log.debug("Retrieved monthly users from DB: " + monthlyUsers);
             
         } catch (Exception e) {
-            System.err.println("Error querying monthly users: " + e.getMessage());
+            log.error("Error querying monthly users: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -337,7 +339,7 @@ public class AnalyticsResource {
                 Collectors.summingDouble(LegalCaseDTO::getTotalAmount)
             ));
         
-        System.out.println("Actual revenue by case type: " + actualRevenue);
+        log.debug("Actual revenue by case type: " + actualRevenue);
         
         // Calculate total revenue from all cases
         double totalCaseRevenue = actualRevenue.values().stream().mapToDouble(Double::doubleValue).sum();
@@ -377,12 +379,12 @@ public class AnalyticsResource {
             // Remove any zero-value entries for cleaner display
             revenueData.entrySet().removeIf(entry -> entry.getValue() <= 0);
             
-            System.out.println("Mapped revenue by practice area: " + revenueData);
+            log.debug("Mapped revenue by practice area: " + revenueData);
             
         } else {
             // If no case revenue data, use actual invoice totals with realistic distribution
             double totalInvoiceRevenue = invoiceService.calculateTotalEarnings();
-            System.out.println("Using total invoice revenue for distribution: " + totalInvoiceRevenue);
+            log.debug("Using total invoice revenue for distribution: " + totalInvoiceRevenue);
             
             // Get case type counts from database for proportional distribution
             Map<String, Long> caseTypeCounts = allCases.stream()
@@ -480,7 +482,7 @@ public class AnalyticsResource {
         kpis.put("systemEfficiency", Math.round(systemEfficiency * 100.0) / 100.0);
         kpis.put("averageResolutionTime", avgResolutionTime);
         
-        System.out.println("Calculated KPIs from real data: " + kpis);
+        log.debug("Calculated KPIs from real data: " + kpis);
         
         return kpis;
     }
@@ -499,7 +501,7 @@ public class AnalyticsResource {
                 return Math.round(avgMonths * 10.0) / 10.0; // Round to 1 decimal place
             }
         } catch (Exception e) {
-            System.err.println("Error calculating average resolution time: " + e.getMessage());
+            log.error("Error calculating average resolution time: " + e.getMessage());
         }
         
         // If no closed cases or error, return 0
@@ -605,10 +607,10 @@ public class AnalyticsResource {
                 activityData.put(key, activityData.getOrDefault(key, 0) + (count * 3)); // Weight updates highest
             }
             
-            System.out.println("Real activity data points: " + activityData.size());
+            log.debug("Real activity data points: " + activityData.size());
             
         } catch (Exception e) {
-            System.err.println("Error querying real activity data: " + e.getMessage());
+            log.error("Error querying real activity data: " + e.getMessage());
             e.printStackTrace();
         }
         
@@ -657,7 +659,7 @@ public class AnalyticsResource {
             funnelData.add(createFunnelStage("Successfully Resolved", (int)casesWon, (double)casesWon/inquiries * 100));
         }
         
-        System.out.println("Case funnel data based on real cases: " + funnelData);
+        log.debug("Case funnel data based on real cases: " + funnelData);
         
         return funnelData;
     }
@@ -774,7 +776,7 @@ public class AnalyticsResource {
             return revenue != null ? revenue : 0.0;
             
         } catch (Exception e) {
-            System.err.println("Error calculating current month revenue: " + e.getMessage());
+            log.error("Error calculating current month revenue: " + e.getMessage());
             return 0.0;
         }
     }
@@ -866,10 +868,10 @@ public class AnalyticsResource {
             distribution.put("counts", statusCounts);
             distribution.put("revenue", statusRevenue);
             
-            System.out.println("Invoice status distribution: " + distribution);
+            log.debug("Invoice status distribution: " + distribution);
             
         } catch (Exception e) {
-            System.err.println("Error getting invoice status distribution: " + e.getMessage());
+            log.error("Error getting invoice status distribution: " + e.getMessage());
             // Return empty data instead of fallback
             distribution.put("counts", new HashMap<>());
             distribution.put("revenue", new HashMap<>());
@@ -906,7 +908,7 @@ public class AnalyticsResource {
             analysis.put("priorityBreakdown", priorityData);
             
         } catch (Exception e) {
-            System.err.println("Error analyzing case priorities: " + e.getMessage());
+            log.error("Error analyzing case priorities: " + e.getMessage());
             // Return empty data instead of fallback
             analysis.put("priorityBreakdown", new HashMap<>());
         }
@@ -947,10 +949,10 @@ public class AnalyticsResource {
             activity.put("recentRevenue", recentRevenue);
             activity.put("recentStatusChanges", recentStatusChanges != null ? recentStatusChanges : 0);
             
-            System.out.println("Recent activity data: " + activity);
+            log.debug("Recent activity data: " + activity);
             
         } catch (Exception e) {
-            System.err.println("Error getting recent activity: " + e.getMessage());
+            log.error("Error getting recent activity: " + e.getMessage());
             // Return zero values instead of fallback
             activity.put("recentCases", 0);
             activity.put("recentInvoices", 0);
@@ -998,7 +1000,7 @@ public class AnalyticsResource {
             Collections.reverse(trends);
             
         } catch (Exception e) {
-            System.err.println("Error getting payment trends: " + e.getMessage());
+            log.error("Error getting payment trends: " + e.getMessage());
             // Return empty list as fallback
         }
         
@@ -1037,7 +1039,7 @@ public class AnalyticsResource {
             }
             
         } catch (Exception e) {
-            System.err.println("Error getting top case types: " + e.getMessage());
+            log.error("Error getting top case types: " + e.getMessage());
             // Return empty data instead of fallback
         }
         
@@ -1094,7 +1096,7 @@ public class AnalyticsResource {
             summary.put("monthlyTrends", monthlyRevenue);
             
         } catch (Exception e) {
-            System.err.println("Error getting financial summary: " + e.getMessage());
+            log.error("Error getting financial summary: " + e.getMessage());
             summary.put("receivables", new HashMap<>());
             summary.put("collection", new HashMap<>());
             summary.put("monthlyTrends", new ArrayList<>());
@@ -1171,7 +1173,7 @@ public class AnalyticsResource {
             metrics.put("valueDistribution", valueDistribution);
             
         } catch (Exception e) {
-            System.err.println("Error getting case performance metrics: " + e.getMessage());
+            log.error("Error getting case performance metrics: " + e.getMessage());
             metrics.put("statusBreakdown", new ArrayList<>());
             metrics.put("priorityAnalysis", new ArrayList<>());
             metrics.put("valueDistribution", new ArrayList<>());
@@ -1222,7 +1224,7 @@ public class AnalyticsResource {
             productivity.put("departmentMetrics", deptMetrics);
             
         } catch (Exception e) {
-            System.err.println("Error getting team productivity: " + e.getMessage());
+            log.error("Error getting team productivity: " + e.getMessage());
             productivity.put("teamPerformance", new ArrayList<>());
             productivity.put("departmentMetrics", new ArrayList<>());
         }
@@ -1291,7 +1293,7 @@ public class AnalyticsResource {
             analytics.put("geographicDistribution", geographic);
             
         } catch (Exception e) {
-            System.err.println("Error getting client analytics: " + e.getMessage());
+            log.error("Error getting client analytics: " + e.getMessage());
             analytics.put("acquisitionTrends", new ArrayList<>());
             analytics.put("clientValueAnalysis", new ArrayList<>());
             analytics.put("geographicDistribution", new ArrayList<>());
@@ -1369,7 +1371,7 @@ public class AnalyticsResource {
             intelligence.put("benchmarks", benchmarks);
             
         } catch (Exception e) {
-            System.err.println("Error getting business intelligence: " + e.getMessage());
+            log.error("Error getting business intelligence: " + e.getMessage());
             intelligence.put("revenueVsCases", new ArrayList<>());
             intelligence.put("benchmarks", new HashMap<>());
         }
@@ -1411,7 +1413,7 @@ public class AnalyticsResource {
             summary.put("averageRate", averageRate != null ? averageRate : 0.0);
             
         } catch (Exception e) {
-            System.err.println("Error getting billing summary: " + e.getMessage());
+            log.error("Error getting billing summary: " + e.getMessage());
             summary.put("totalRevenue", 0.0);
             summary.put("pendingInvoices", 0);
             summary.put("pendingAmount", 0.0);
@@ -1449,7 +1451,7 @@ public class AnalyticsResource {
             topClients = jdbcTemplate.queryForList(sql);
             
         } catch (Exception e) {
-            System.err.println("Error getting top clients: " + e.getMessage());
+            log.error("Error getting top clients: " + e.getMessage());
         }
         
         return topClients;
@@ -1504,7 +1506,7 @@ public class AnalyticsResource {
             }
             
         } catch (Exception e) {
-            System.err.println("Error getting case profitability: " + e.getMessage());
+            log.error("Error getting case profitability: " + e.getMessage());
         }
         
         return caseProfitability;
