@@ -522,12 +522,10 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
   }
 
   onDocumentGenerated(event: any): void {
-    console.log('Document generated:', event);
     // Handle the generated document
     if (event.content) {
       // Don't close the modal - let the user see the generated document in step 4
       // The wizard will show the generated content and provide download/copy options
-      console.log('Document content available in wizard step 4');
 
       // Show a toast notification to indicate success
       Swal.fire({

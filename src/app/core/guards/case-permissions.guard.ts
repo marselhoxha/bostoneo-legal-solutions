@@ -30,22 +30,17 @@ export class CasePermissionsGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
-    
-    console.log('🛡️ CasePermissionsGuard - Checking permissions for:', state.url);
-
     // Get permission configuration from route data
     const permissionConfig = route.data['permissions'] as CasePermissionConfig;
-    
+
     if (!permissionConfig) {
-      console.log('✅ CasePermissionsGuard - No permission config, allowing access');
       return true;
     }
 
     const caseId = this.extractCaseId(route);
-    
+
     // If case context is required but not available
     if (permissionConfig.requireCaseContext && !caseId) {
-      console.log('❌ CasePermissionsGuard - Case context required but not available');
       this.handleAccessDenied('Case context required', permissionConfig.redirectTo);
       return false;
     }
@@ -73,13 +68,6 @@ export class CasePermissionsGuard implements CanActivate {
     caseId: number,
     url: string
   ): Observable<boolean> {
-    
-    console.log('🔍 CasePermissionsGuard - Checking case permission:', {
-      caseId,
-      resource: config.resource,
-      action: config.action
-    });
-
     return this.rbacService.hasCasePermission(caseId, config.resource, config.action).pipe(
       switchMap(hasPermission => {
         if (hasPermission) {
@@ -95,17 +83,14 @@ export class CasePermissionsGuard implements CanActivate {
       }),
       tap(hasAccess => {
         if (!hasAccess) {
-          console.log('❌ CasePermissionsGuard - Access denied for case permission');
           this.handleAccessDenied(
             `Access denied: Missing ${config.resource}:${config.action} permission for case`,
             config.redirectTo
           );
-        } else {
-          console.log('✅ CasePermissionsGuard - Case permission granted');
         }
       }),
       catchError(error => {
-        console.error('❌ CasePermissionsGuard - Error checking case permission:', error);
+        console.error('Error checking case permission:', error);
         this.handleAccessDenied('Permission check failed', config.redirectTo);
         return of(false);
       })
@@ -116,26 +101,17 @@ export class CasePermissionsGuard implements CanActivate {
     config: CasePermissionConfig,
     url: string
   ): Observable<boolean> {
-    
-    console.log('🔍 CasePermissionsGuard - Checking general permission:', {
-      resource: config.resource,
-      action: config.action
-    });
-
     return this.rbacService.hasPermission(config.resource, config.action).pipe(
       tap(hasAccess => {
         if (!hasAccess) {
-          console.log('❌ CasePermissionsGuard - Access denied for general permission');
           this.handleAccessDenied(
             `Access denied: Missing ${config.resource}:${config.action} permission`,
             config.redirectTo
           );
-        } else {
-          console.log('✅ CasePermissionsGuard - General permission granted');
         }
       }),
       catchError(error => {
-        console.error('❌ CasePermissionsGuard - Error checking general permission:', error);
+        console.error('Error checking general permission:', error);
         this.handleAccessDenied('Permission check failed', config.redirectTo);
         return of(false);
       })
@@ -146,9 +122,6 @@ export class CasePermissionsGuard implements CanActivate {
     fallbackPermissions: { resource: string; action: string }[],
     caseId: number
   ): Observable<boolean> {
-    
-    console.log('🔄 CasePermissionsGuard - Checking fallback permissions');
-
     const permissionChecks = fallbackPermissions.map(perm =>
       this.rbacService.hasCasePermission(caseId, perm.resource, perm.action)
     );

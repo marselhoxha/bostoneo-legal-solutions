@@ -18,13 +18,7 @@ export class CaseNotesService {
    * @returns An observable of CaseNote array
    */
   getNotesByCaseId(caseId: string | number): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/notes`)
-      .pipe(
-        map(response => {
-          console.log('Raw notes API response:', response);
-          return response;
-        })
-      );
+    return this.http.get<any>(`${this.apiUrl}/cases/${caseId}/notes`);
   }
 
   /**
@@ -51,7 +45,6 @@ export class CaseNotesService {
    * @returns An observable of the created CaseNote
    */
   createNote(data: CreateCaseNoteRequest): Observable<any> {
-    console.log('Creating note with data:', data);
     return this.http.post<any>(`${this.apiUrl}/cases/${data.caseId}/notes`, data)
       .pipe(
         map(response => {

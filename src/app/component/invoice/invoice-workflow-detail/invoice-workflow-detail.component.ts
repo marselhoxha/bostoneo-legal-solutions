@@ -29,32 +29,10 @@ export class InvoiceWorkflowDetailComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Debug: Check JWT token contents
-    this.debugJWTToken();
-    
     this.workflowId = this.route.snapshot.paramMap.get('id');
     if (this.workflowId) {
       this.loadWorkflowRule();
       this.loadExecutions();
-    }
-  }
-
-  private debugJWTToken(): void {
-    const token = localStorage.getItem('[KEY] TOKEN');
-    if (token) {
-      try {
-        // Decode JWT token
-        const payload = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payload));
-        console.log('JWT Token Payload:', decodedPayload);
-        console.log('Authorities:', decodedPayload.authorities);
-        console.log('Permissions:', decodedPayload.permissions);
-        console.log('Roles:', decodedPayload.roles);
-      } catch (error) {
-        console.error('Error decoding JWT token:', error);
-      }
-    } else {
-      console.error('No token found in localStorage with key TOKEN');
     }
   }
 
@@ -95,12 +73,9 @@ export class InvoiceWorkflowDetailComponent implements OnInit {
 
   toggleRule(): void {
     if (!this.workflowRule?.id) return;
-    
-    console.log('Toggling workflow rule with ID:', this.workflowRule.id);
-    
+
     this.workflowService.toggleWorkflowRule(this.workflowRule.id).subscribe({
       next: (response) => {
-        console.log('Toggle response:', response);
         this.workflowRule = response.data;
         Swal.fire({
           icon: 'success',
@@ -112,8 +87,6 @@ export class InvoiceWorkflowDetailComponent implements OnInit {
       },
       error: (error) => {
         console.error('Toggle error:', error);
-        console.error('Error status:', error?.status);
-        console.error('Error details:', error?.error);
         const errorMessage = error?.error?.message || error?.message || 'Failed to toggle workflow rule';
         Swal.fire({
           icon: 'error',

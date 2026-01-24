@@ -197,7 +197,6 @@ export class PaymentDashboardComponent implements OnInit {
 
   exportPayments(): void {
     // TODO: Implement export functionality
-    console.log('Export payments clicked');
   }
 
   viewInvoice(payment: InvoicePayment): void {

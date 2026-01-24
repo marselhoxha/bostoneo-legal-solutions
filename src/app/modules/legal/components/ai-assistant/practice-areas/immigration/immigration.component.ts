@@ -311,19 +311,15 @@ export class ImmigrationComponent extends PracticeAreaBaseComponent implements O
       caseData: caseData
     }).subscribe({
       next: (response) => {
-        console.log('PDF filled successfully:', response);
         this.filledPdfPath = response.filledPdfPath;
 
         // Create the PDF URL
         const filledPath = response.filledPdfPath;
         this.pdfUrl = `http://localhost:8085/api/files/download?path=${encodeURIComponent(filledPath)}`;
-        console.log('PDF URL:', this.pdfUrl);
 
         // Fetch PDF as blob and create blob URL for display
         this.http.get(this.pdfUrl, { responseType: 'blob' }).subscribe({
           next: (blob) => {
-            console.log('PDF blob received, size:', blob.size);
-
             // Clean up previous blob URL if exists
             if (this.pdfBlobUrl) {
               URL.revokeObjectURL(this.pdfBlobUrl);
@@ -361,7 +357,6 @@ export class ImmigrationComponent extends PracticeAreaBaseComponent implements O
 
   private showFormCompletionSuccess(): void {
     // Show success message and provide download link
-    console.log('Form completed successfully');
   }
 
   // Visa Petition Drafting Methods

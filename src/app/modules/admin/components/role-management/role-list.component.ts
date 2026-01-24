@@ -25,11 +25,6 @@ export class RoleListComponent implements OnInit {
   
   ngOnInit(): void {
     this.loadRoles();
-    
-    // Debugging: Check current permissions
-    console.log('Current permissions:', this.rbacService['permissionsSubject'].value);
-    console.log('Current roles:', this.rbacService['rolesSubject'].value);
-    console.log('Has SYSTEM:VIEW permission:', this.rbacService.hasPermissionSync('SYSTEM', 'VIEW'));
   }
   
   loadRoles(): void {

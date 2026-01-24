@@ -30,7 +30,6 @@ export class ClientDetailComponent implements OnInit {
         return this.clientService.client$(+params.get(this.CLIENT_ID))
           .pipe(
             map(response => {
-              console.log(response);
               this.dataSubject.next(response);
               return { dataState: DataState.LOADED, appData: response };
             }),
@@ -48,7 +47,6 @@ export class ClientDetailComponent implements OnInit {
     this.clientState$ = this.clientService.update$(customerForm.value)
       .pipe(
         map(response => {
-          console.log(response);
           this.dataSubject.next({ ...response, 
             data: { ...response.data, 
               client: { ...response.data.client, 

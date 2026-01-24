@@ -91,7 +91,6 @@ export class RbacGuard implements CanActivate, CanActivateChild {
         ) || false;
 
         if (hasAdminRole || hasHighHierarchy || hasSystemAdmin) {
-          console.log('🔍 RBAC Guard: Admin user detected, granting full access to:', state.url);
           return true;
         }
 
@@ -104,7 +103,6 @@ export class RbacGuard implements CanActivate, CanActivateChild {
           }
         }
 
-        console.log('🔍 RBAC Guard: Access granted to:', state.url);
         return true;
       }),
       catchError(error => {

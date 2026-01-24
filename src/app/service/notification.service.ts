@@ -220,10 +220,7 @@ export class NotificationService {
     executeAction(notification: UserNotification, action: NotificationAction): void {
         switch (action.action) {
             case 'NAVIGATE':
-                if (action.target) {
-                    // Router navigation would be handled by the component
-                    console.log('Navigate to:', action.target);
-                }
+                // Router navigation would be handled by the component
                 break;
             case 'API_CALL':
                 if (action.target && action.payload) {
@@ -235,7 +232,6 @@ export class NotificationService {
                 break;
             case 'MODAL':
                 // Modal opening would be handled by the component
-                console.log('Open modal:', action.target);
                 break;
             case 'DISMISS':
                 this.markAsRead(notification.id).subscribe();

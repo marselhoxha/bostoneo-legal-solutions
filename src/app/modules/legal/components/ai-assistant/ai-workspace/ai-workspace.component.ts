@@ -981,7 +981,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Check if there are running background tasks - if so, don't clear state
     const runningTasks = this.backgroundTaskService.getRunningTasks();
     if (runningTasks.length > 0) {
-      console.log(`🔄 Found ${runningTasks.length} running background tasks - restoring generation state`);
       // Restore the generation state and workflow steps for running tasks
       this.stateService.setIsGenerating(true);
 
@@ -1018,7 +1017,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.currentUser = user;
-        console.log('Current user from UserService observable:', user);
         // Load user-specific data when user is available
         if (user && user.id) {
           this.loadUserCases();
@@ -1028,18 +1026,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Load current user immediately from UserService
     this.currentUser = this.userService.getCurrentUser();
-    console.log('Current user on init from UserService:', this.currentUser);
 
     // If user is null but we have a token, fetch user profile from backend
     if (!this.currentUser && this.userService.isAuthenticated()) {
-      console.log('User is null but authenticated - fetching profile from backend');
       this.userService.profile$()
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
             if (response && response.data && response.data.user) {
               this.currentUser = response.data.user;
-              console.log('User profile loaded from backend:', this.currentUser);
               // Load user-specific data after user is loaded
               this.loadUserCases();
               this.loadAnalysisHistory();
@@ -1084,7 +1079,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         const caseId = parseInt(params['caseId'], 10);
         if (!isNaN(caseId)) {
           this.selectedCaseId = caseId;
-          console.log('Pre-selected case from query params:', caseId);
         }
       }
 
@@ -1093,7 +1087,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         const conversationId = params['openConversation'];
         const taskType = params['taskType'];
         const backendId = params['backendId'] ? parseInt(params['backendId'], 10) : undefined;
-        console.log('🔗 Opening conversation from notification:', conversationId, 'taskType:', taskType, 'backendId:', backendId);
 
         // Wait for conversations to load, then open the specified one with retry logic
         this.openConversationWithRetry(conversationId, taskType, 0, backendId);
@@ -1103,7 +1096,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       if (params['openWorkflow']) {
         const workflowId = parseInt(params['openWorkflow'], 10);
         if (!isNaN(workflowId)) {
-          console.log('🔗 Opening workflow from notification:', workflowId);
           this.selectedTask = ConversationType.Workflow;
 
           // Wait for workflows to load, then open details
@@ -1141,23 +1133,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const MAX_RETRIES = 5;
     const RETRY_DELAY = 500;
 
-    console.log(`🔄 openConversationWithRetry attempt ${retryCount + 1}/${MAX_RETRIES}`);
-    console.log(`   conversationId: ${conversationId}, backendId: ${backendConversationId}`);
-
     // Find the conversation in our list
     const conversations = this.stateService.getConversations();
-    console.log(`📋 Available conversations: ${conversations.length}`);
 
     let conversation = conversations.find(c => c.id === conversationId);
 
     // CRITICAL: Also try to find by backendConversationId (most reliable after page reload)
     // Frontend IDs are regenerated on reload, but backend IDs persist
     if (!conversation && backendConversationId) {
-      console.log(`🔍 Searching by backendConversationId: ${backendConversationId}`);
       conversation = conversations.find(c => c.backendConversationId === backendConversationId);
-      if (conversation) {
-        console.log(`✅ Found by backendConversationId: ${conversation.id}`);
-      }
     }
 
     // Also try other formats for compatibility
@@ -1170,8 +1154,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
 
     if (conversation) {
-      console.log('✅ Found conversation, opening:', conversation.id, conversation.title);
-
       // Set the correct task type
       if (taskType === 'draft' || conversation.taskType === 'GENERATE_DRAFT') {
         this.selectedTask = ConversationType.Draft;
@@ -1185,7 +1167,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.switchConversation(conversation.id);
       this.cdr.detectChanges();
     } else if (retryCount < MAX_RETRIES) {
-      console.log(`⏳ Conversation not found yet, retrying in ${RETRY_DELAY}ms...`);
       // Retry after delay
       setTimeout(() => {
         this.openConversationWithRetry(conversationId, taskType, retryCount + 1, backendConversationId);
@@ -1282,13 +1263,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       // Validate that active document actually exists
       if (activeDocId && !activeDoc) {
-        console.log('📋 State sync: Active document not found, clearing document viewer state');
         this.stateService.closeDocumentViewer();
         // Fall through to default task selection
       } else {
         this.selectedTask = ConversationType.Upload;
         this.activeTask = ConversationType.Upload;
-        console.log('📋 State sync: Document viewer mode - setting selectedTask to upload');
         return;
       }
     }
@@ -1299,11 +1278,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       if (activeConvId) {
         this.selectedTask = ConversationType.Draft;
         this.activeTask = ConversationType.Draft;
-        console.log('📋 State sync: Drafting mode - setting selectedTask to draft');
         return;
       } else {
         // Drafting mode but no conversation - reset
-        console.log('📋 State sync: Drafting mode without conversation, resetting');
         this.stateService.setDraftingMode(false);
         this.stateService.setShowChat(false);
         // Fall through to default task selection
@@ -1313,7 +1290,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Clear any stale chat state if not in a valid mode
     // This prevents showing old conversation when returning to workspace
     if (this.stateService.getShowChat() && !this.stateService.getActiveConversationId()) {
-      console.log('📋 State sync: Clearing stale chat state');
       this.stateService.setShowChat(false);
       this.stateService.clearConversationMessages();
     }
@@ -1323,7 +1299,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     if (storedTask) {
       this.selectedTask = storedTask;
       this.activeTask = storedTask;
-      console.log('📋 State sync: Restored selectedTask from state:', storedTask);
     }
   }
 
@@ -1342,7 +1317,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       if (!activeConv) {
         // Active conversation no longer exists - reset UI state
-        console.log('🧹 Cleanup: Active conversation not found, resetting UI state');
         this.resetToWelcomeState();
         return;
       }
@@ -1350,7 +1324,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // Check if active conversation type matches current selected task
       const convMatchesTask = this.conversationMatchesTask(activeConv.type, selectedTask);
       if (!convMatchesTask) {
-        console.log('🧹 Cleanup: Active conversation type mismatch:', activeConv.type, 'vs task:', selectedTask);
         this.resetToWelcomeState();
         return;
       }
@@ -1358,7 +1331,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // If chat is showing but no active conversation ID, something is wrong
     if (showChat && !activeConvId && !this.stateService.getIsGenerating()) {
-      console.log('🧹 Cleanup: Chat showing but no active conversation');
       this.resetToWelcomeState();
     }
   }
@@ -1393,13 +1365,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setIsGenerating(false);
     this.stateService.setDraftingMode(false);
     this.stateService.clearFollowUpQuestions();
-    console.log('🏠 Reset to welcome state');
   }
 
   // Load user's cases for case selector
   loadUserCases(): void {
     if (!this.currentUser || !this.currentUser.id) {
-      console.log('No current user, skipping case load');
       return;
     }
 
@@ -1408,7 +1378,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response: any) => {
           this.userCases = response.data?.cases || response.cases || response.content || [];
-          console.log('Loaded user cases:', this.userCases.length);
         },
         error: (error) => {
           console.error('Error loading user cases:', error);
@@ -1426,8 +1395,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (history) => {
-          console.log('📄 Loaded analysis history:', history.length, 'documents');
-
           // Map AnalysisHistory to AnalyzedDocument format
           const dbDocs = history.map(h => ({
             id: `analysis_${h.id}`,
@@ -1457,7 +1424,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           // Merge: DB docs first, then local-only docs
           const mergedDocs = [...dbDocs, ...localOnlyDocs];
-          console.log('📄 Merged documents:', dbDocs.length, 'from DB +', localOnlyDocs.length, 'local =', mergedDocs.length, 'total');
 
           // Set to state service (this populates the sidebar)
           this.stateService.setAnalyzedDocuments(mergedDocs);
@@ -1516,7 +1482,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (collections) => {
-          console.log('📁 Loaded collections:', collections.length);
           this.loadingCollections = false;
           this.cdr.detectChanges();
         },
@@ -1537,7 +1502,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (templates) => {
-          console.log('📋 Loaded workflow templates:', templates.length);
           this.workflowTemplates = templates;
           this.loadingWorkflowTemplates = false;
           this.cdr.detectChanges();
@@ -1559,7 +1523,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (workflows) => {
-          console.log('📋 Loaded user workflows:', workflows.length);
           this.userWorkflows = workflows;
           this.loadingWorkflows = false;
 
@@ -1584,11 +1547,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   startWorkflowPolling(): void {
     if (this.workflowPollingInterval) {
-      console.log('Polling already active');
       return;
     }
-
-    console.log('Starting workflow polling (every 2 seconds)');
 
     // Track when polling started (minimum 10 seconds of polling)
     this.workflowPollingStartTime = Date.now();
@@ -1610,17 +1570,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (workflows) => {
-          // Log progress for debugging
           const runningWorkflows = workflows.filter(w => w.status === 'RUNNING');
-          if (runningWorkflows.length > 0) {
-            console.log('Polling sidebar - Running workflows:', runningWorkflows.map(w => ({
-              id: w.id,
-              name: w.name || w.template?.name,
-              step: w.currentStep,
-              total: w.totalSteps,
-              progress: w.progressPercentage
-            })));
-          }
 
           // Check for newly completed workflows (was running, now completed/failed)
           const currentRunningIds = new Set(runningWorkflows.map(w => w.id));
@@ -1681,10 +1631,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
              this.selectedWorkflowForDetails.status === 'WAITING_USER');
 
           // Don't stop if minimum time hasn't elapsed
-          if (pollingElapsed < minPollingDuration) {
-            console.log(`Polling for ${Math.round(pollingElapsed/1000)}s, waiting for min ${minPollingDuration/1000}s`);
-          } else if (!hasActiveWorkflow && !detailsWorkflowActive) {
-            console.log('No active workflows and minimum polling time elapsed, stopping polling');
+          if (pollingElapsed >= minPollingDuration && !hasActiveWorkflow && !detailsWorkflowActive) {
             this.stopWorkflowPolling();
           }
 
@@ -1710,12 +1657,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * View workflow details - opens full-page view
    */
   viewWorkflowDetails(workflow: any): void {
-    console.log('Viewing workflow details:', workflow);
     this.caseWorkflowService.getExecutionWithSteps(workflow.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (executionWithSteps) => {
-          console.log('Workflow details loaded:', executionWithSteps);
           this.selectedWorkflowForDetails = executionWithSteps;
           this.showWorkflowDetailsPage = true;
           this.expandedStepIds.clear();
@@ -1935,18 +1880,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   refreshWorkflowDetails(): void {
     if (this.selectedWorkflowForDetails?.id) {
-      console.log('Polling workflow details for ID:', this.selectedWorkflowForDetails.id);
       // Use no-cache version to get fresh data
       this.caseWorkflowService.getExecutionWithStepsNoCache(this.selectedWorkflowForDetails.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (executionWithSteps) => {
-            console.log('Polled workflow details:', {
-              status: executionWithSteps?.status,
-              currentStep: executionWithSteps?.currentStep,
-              steps: executionWithSteps?.stepExecutions?.map((s: any) => ({ name: s.stepName, status: s.status }))
-            });
-
             // Update the workflow details
             this.selectedWorkflowForDetails = executionWithSteps;
 
@@ -1970,7 +1908,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             // Stop polling if workflow completed or failed
             if (executionWithSteps?.status === 'COMPLETED' || executionWithSteps?.status === 'FAILED') {
-              console.log('Workflow finished, stopping polling');
               this.stopWorkflowPolling();
             }
 
@@ -1987,7 +1924,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Resume a workflow step that is waiting for user action
    */
   resumeWorkflowStep(executionId: number, stepId: number): void {
-    console.log('Resuming workflow step:', executionId, stepId);
     this.caseWorkflowService.resumeWorkflow(executionId, stepId, {})
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -2051,7 +1987,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.loadUserCases();
     }
 
-    console.log('Selected workflow template:', template.name, 'Cases:', this.userCases.length);
     this.cdr.detectChanges();
   }
 
@@ -2098,7 +2033,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   toggleWorkflowDocument(documentId: number): void {
     if (!documentId && documentId !== 0) {
-      console.warn('toggleWorkflowDocument called with invalid documentId:', documentId);
       return;
     }
     const index = this.workflowSelectedDocuments.indexOf(documentId);
@@ -2107,7 +2041,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     } else {
       this.workflowSelectedDocuments.splice(index, 1);
     }
-    console.log('Document selection toggled:', documentId, 'Selected docs:', this.workflowSelectedDocuments);
     this.cdr.detectChanges();
   }
 
@@ -2147,12 +2080,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
 
     this.startingWorkflow = true;
-    console.log('Starting workflow:', {
-      templateId: this.selectedWorkflowTemplate.id,
-      documentIds: this.workflowSelectedDocuments,
-      caseId: this.selectedCaseId,
-      name: this.workflowName
-    });
 
     this.caseWorkflowService.startWorkflow(
       this.selectedWorkflowTemplate.id,
@@ -2162,8 +2089,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.workflowName.trim()
     ).pipe(takeUntil(this.destroy$)).subscribe({
       next: (execution) => {
-        console.log('Workflow started successfully:', execution);
-
         // Reset loading state
         this.startingWorkflow = false;
         this.activeWorkflowExecution = execution;
@@ -2345,7 +2270,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onResearchModeChange(mode: 'FAST' | 'THOROUGH'): void {
     this.selectedResearchMode = mode === 'FAST' ? ResearchMode.Fast : ResearchMode.Thorough;
-    console.log(`Research mode changed to: ${mode}`);
 
     // Show notification to user
     const modeInfo = mode === 'FAST'
@@ -2493,25 +2417,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const conversations = this.stateService.getConversations();
     const activeConv = conversations.find(c => c.id === activeConvId);
 
-    console.log('🛑 STOP button clicked');
-    console.log('🔍 Active conversation ID:', activeConvId);
-    console.log('🔍 Active conversation:', activeConv);
-    console.log('🔍 Backend conversation ID:', activeConv?.backendConversationId);
-
     // Call backend to cancel the AI request
     if (activeConv?.backendConversationId) {
-      console.log('🔵 Calling backend cancel API with ID:', activeConv.backendConversationId);
       this.legalResearchService.cancelConversation(activeConv.backendConversationId)
         .subscribe({
           next: () => {
-            console.log('✅ Backend generation cancelled successfully for conversation', activeConv.backendConversationId);
+            // Cancelled successfully
           },
           error: (err) => {
-            console.error('❌ Failed to cancel backend generation:', err);
+            console.error('Failed to cancel backend generation:', err);
           }
         });
-    } else {
-      console.warn('⚠️ No backend conversation ID found - cannot cancel');
     }
 
     // Cancel any ongoing frontend HTTP requests
@@ -2567,8 +2483,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            console.log(`Loaded ${backendTaskType} conversations from backend:`, response);
-
             // Map backend conversations to frontend format
             const conversations: Conversation[] = response.conversations.map(conv => ({
               id: `conv_${conv.id}`,
@@ -2621,21 +2535,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Load specific conversation by ID
   loadConversation(conversationId: string): void {
-    console.log('🔍 loadConversation called with ID:', conversationId);
-
     const conv = this.stateService.getConversations().find(c => c.id === conversationId);
     if (!conv || !conv.backendConversationId) {
-      console.error('❌ Conversation not found or missing backend ID');
+      console.error('Conversation not found or missing backend ID');
       return;
     }
-
-    console.log('📦 Conversation found:', {
-      id: conv.id,
-      type: conv.type,
-      title: conv.title,
-      backendId: conv.backendConversationId,
-      relatedDraftId: conv.relatedDraftId
-    });
 
     // CRITICAL: Clear existing messages BEFORE loading new ones
     // This forces Angular to destroy and recreate DOM elements (including Bootstrap tabs)
@@ -2645,7 +2549,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Check if this is a document analysis conversation (Summarize or Upload)
     if (conv.type === ConversationType.Summarize || conv.type === ConversationType.Upload) {
-      console.log('📄 Document analysis conversation detected, loading analysis...');
       this.loadDocumentAnalysisFromConversation(conv);
       return;
     }
@@ -2654,7 +2557,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('✅ Loaded conversation details:', response);
 
           // Update conversation with messages via state service
           this.stateService.setActiveConversationId(conversationId);
@@ -2673,19 +2575,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             if (msg.metadata && typeof msg.metadata === 'object' && msg.role === 'assistant') {
               const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
               if (metadata.analysisId) {
-                console.log('🎯 Detected Document Analysis message with analysisId:', metadata.analysisId);
                 baseMessage.hasStrategicAnalysis = true;
                 baseMessage.analysisId = metadata.analysisId;
                 baseMessage.parsedSections = this.parseStrategicSections(msg.content);
-                console.log('🎯 Final message with strategic analysis:', baseMessage);
               }
             }
 
             return baseMessage;
           });
-
-          console.log('🎯 All mapped messages:', messages);
-          console.log('✅ Messages loaded:', messages.length);
 
           // Check draft type BEFORE setTimeout (conv object is available now)
           const isWorkflowDraft = conv.type === 'draft' && conv.workflowExecutionId && !conv.relatedDraftId;
@@ -2695,13 +2592,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             // Handle workflow-created drafts - ONLY show in editor, NOT in conversation sidebar
             if (isWorkflowDraft) {
-              console.log('📋 Loading workflow-created draft:', conv.workflowExecutionId);
-
               // Get content from first assistant message
               const firstAssistantMessage = messages.find(m => m.role === 'assistant');
               const draftContent = firstAssistantMessage?.content || '';
-
-              console.log('📄 Workflow draft content length:', draftContent.length);
 
               // CLEAR conversation messages - workflow drafts should NOT appear in chat sidebar
               this.stateService.setConversationMessages([]);
@@ -2752,43 +2645,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             if (lastAssistantMsg) {
               const cleanedContent = this.extractAndRemoveFollowUpQuestions(lastAssistantMsg.content);
               lastAssistantMsg.content = cleanedContent;
-              console.log('🔥 After cleaning follow-ups, hasStrategicAnalysis:', lastAssistantMsg.hasStrategicAnalysis);
             }
 
             this.stateService.setConversationMessages(messages);
-            console.log('🔥 Messages being set to state:', messages);
 
             // Add another setTimeout to ensure Angular has time to process
             setTimeout(() => {
               this.cdr.markForCheck();
               this.cdr.detectChanges();
-
-              // Debug: Check what the observable is emitting
-              this.conversationMessages$.subscribe(msgs => {
-                console.log('🔥 Observable value after setting:', msgs);
-                msgs.forEach((msg, idx) => {
-                  if (msg.hasStrategicAnalysis) {
-                    console.log(`🔥 Message ${idx} has hasStrategicAnalysis:`, msg.hasStrategicAnalysis);
-                  }
-                });
-              }).unsubscribe();
-
-              console.log('🔥 FINAL: Change detection triggered after delay');
             }, 100);
-
-            console.log('🔥 Messages set and first timeout complete');
           }, 0);
 
           // Handle regular drafts (with relatedDraftId) - these load document from backend
           if (isRegularDraft) {
-            console.log('Loading draft document for conversation:', conv.relatedDraftId);
-
             // Load the draft document from backend
             this.documentGenerationService.getDocument(conv.relatedDraftId, this.currentUser?.id)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: (document) => {
-                  console.log('Loaded draft document:', document);
 
                   // Populate document state
                   this.currentDocumentId = document.id;
@@ -2806,11 +2680,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   // Load version history for dropdown
                   this.loadVersionHistory();
 
-                  console.log('📄 Document loaded, length:', document.content?.length || 0);
-
                   // CRITICAL: Cancel any pending content load from previous document
                   if (this.contentLoadTimeoutId !== null) {
-                    console.log('🚫 Cancelling previous document load timeout');
                     clearTimeout(this.contentLoadTimeoutId);
                     this.contentLoadTimeoutId = null;
                   }
@@ -2855,24 +2726,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               });
           } else {
             // Non-draft conversations: use regular chat mode
-            console.log('💬 Loading non-draft conversation in regular chat mode');
-            console.log('📈 Setting state: showChat=true, showBottomSearchBar=true, draftingMode=false');
-
             this.stateService.setShowChat(true);
             this.stateService.setShowBottomSearchBar(true);
             this.stateService.setDraftingMode(false);
 
-            console.log('📈 State after setting:', {
-              showChat: this.stateService.getShowChat(),
-              showBottomSearchBar: this.stateService.getShowBottomSearchBar(),
-              draftingMode: this.stateService.getDraftingMode(),
-              isGenerating: this.stateService.getIsGenerating()
-            });
-
             // Use setTimeout to ensure change detection runs after observable emits
             setTimeout(() => {
               this.cdr.detectChanges();
-              console.log('✅ Change detection triggered for loaded conversation');
             }, 0);
           }
         },
@@ -2976,8 +2836,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Close mobile sidebar if open
     this.closeSidebar();
-
-    console.log('Started new conversation - view reset');
   }
 
   // Exit drafting mode and return to task selection
@@ -2999,8 +2857,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeDocumentTitle = 'Generated Document';
     this.currentDocumentId = null;
     this.documentMetadata = {};
-
-    console.log('Exited drafting mode - returning to welcome screen');
   }
 
   // ========================================
@@ -3249,8 +3105,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   activeTask: ConversationType = ConversationType.Question;
 
   selectTask(task: ConversationType): void {
-    console.log('⭐ selectTask called:', task);
-
     this.selectedTask = task;
     this.activeTask = task;
 
@@ -3780,8 +3634,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (analysis) => {
-          console.log('Analysis results:', analysis);
-
           // Format structured analysis with Velzon HTML components
           let formattedAnalysis = '';
 
@@ -3885,12 +3737,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Always set true for document analysis - content was enhanced with HTML
           const hasStrategicAnalysis = true;
 
-          console.log('📈 viewAnalysis - hasStrategicAnalysis:', hasStrategicAnalysis);
-          console.log('📈 viewAnalysis - parsedSections keys:', Object.keys(parsedSections));
-          console.log('📈 viewAnalysis - originalAnalysis preview:', originalAnalysis.substring(0, 500));
-
           // Add to conversation as assistant message with proper flags
-          console.log('🔍 Setting analysisId from analysis.databaseId:', analysis.databaseId);
           this.stateService.addConversationMessage({
             role: 'assistant',
             content: formattedAnalysis,
@@ -4000,8 +3847,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('📄 Loaded conversation for analysis ID extraction:', response);
-
           // Find the analysis ID from message metadata
           // Try analysisId (UUID string) first, then databaseId (number) as fallback
           let analysisId: string | null = null;
@@ -4010,7 +3855,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           for (const msg of response.messages) {
             if (msg.metadata) {
               const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
-              console.log('📄 Message metadata:', metadata);
 
               // Prefer the UUID analysisId for API calls
               if (metadata.analysisId && typeof metadata.analysisId === 'string') {
@@ -4035,8 +3879,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             return;
           }
 
-          console.log('📄 Found analysis ID (UUID):', analysisId, 'databaseId:', databaseId);
-
           // Load the analysis from the backend
           // Use UUID if available, otherwise use database ID
           const analysisObservable = analysisId
@@ -4047,8 +3889,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (analysisResult) => {
-                console.log('📄 Loaded analysis result:', analysisResult);
-
                 // Create AnalyzedDocument and add to state
                 const analyzedDoc: AnalyzedDocument = {
                   id: `analysis_${analysisResult.databaseId}`,
@@ -4121,8 +3961,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (result) => {
-            console.log('📄 Loaded full analysis for document:', result.fileName);
-
             // Update the document with full analysis
             const updatedDoc: AnalyzedDocument = {
               ...document,
@@ -4409,7 +4247,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Download workflow report
    */
   downloadWorkflowReport(workflow: any): void {
-    console.log('Downloading report for workflow:', workflow.id);
     // TODO: Implement report download via service
     this.notificationService.info('Report', 'Report download will be available soon');
   }
@@ -4531,7 +4368,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Pause a running workflow
    */
   pauseWorkflow(executionId: number): void {
-    console.log('Pausing workflow:', executionId);
     this.caseWorkflowService.pauseWorkflow(executionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -4553,7 +4389,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Cancel a workflow
    */
   cancelWorkflow(executionId: number): void {
-    console.log('Cancelling workflow:', executionId);
     this.caseWorkflowService.cancelWorkflow(executionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -4574,7 +4409,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onExportPdf(document: AnalyzedDocumentData): void {
     // TODO: Implement PDF export
-    console.log('Exporting as PDF:', document.fileName);
     this.notificationService.info('Coming Soon', 'PDF export will be available soon');
   }
 
@@ -4583,7 +4417,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onExportWord(document: AnalyzedDocumentData): void {
     // TODO: Implement Word export
-    console.log('Exporting as Word:', document.fileName);
     this.notificationService.info('Coming Soon', 'Word export will be available soon');
   }
 
@@ -4592,7 +4425,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onSaveToFileManager(document: AnalyzedDocumentData): void {
     // TODO: Implement File Manager integration
-    console.log('Saving to File Manager:', document.fileName);
     this.notificationService.info('Coming Soon', 'File Manager integration will be available soon');
   }
 
@@ -4701,13 +4533,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Always set true for document analysis - content was enhanced with HTML
     const hasStrategicAnalysis = true;
 
-    console.log('📈 New analysis - hasStrategicAnalysis:', hasStrategicAnalysis);
-    console.log('📈 New analysis - parsedSections keys:', Object.keys(parsedSections));
-    console.log('📈 New analysis - originalAnalysis preview:', originalAnalysis.substring(0, 500));
-
     // Add to local state
     // Store BOTH IDs: result.id (UUID string for API) and result.databaseId (number for action items)
-    console.log('🔍 Setting analysisId from result.id:', result.id, 'databaseId:', result.databaseId);
     const assistantMessage = {
       role: 'assistant' as 'assistant',
       content: formattedAnalysis,
@@ -4717,8 +4544,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       analysisId: result.databaseId
     };
     this.stateService.addConversationMessage(assistantMessage);
-    console.log('🔍 Message added to state:', assistantMessage);
-    console.log('🔍 All messages after add:', this.stateService.getConversationMessages());
 
     // Show chat panel to display the analysis tabs
     this.stateService.setShowChat(true);
@@ -4726,7 +4551,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Use setTimeout to ensure change detection runs after observable emits
     setTimeout(() => {
       this.cdr.detectChanges();
-      console.log('🔍 Forced change detection after message add');
     }, 0);
 
     // Persist to database and update conversation object
@@ -4737,13 +4561,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         // Persist assistant message to database with metadata
         // IMPORTANT: Save ORIGINAL MARKDOWN (not HTML) so tabs can parse sections on reload
         // Store result.id (UUID) for API calls, result.databaseId (number) for action items
-        console.log('💾 Saving to database:', {
-          sessionId: conv.backendConversationId,
-          contentLength: originalAnalysis.length,
-          contentPreview: originalAnalysis.substring(0, 100),
-          metadata: { analysisId: result.id, databaseId: result.databaseId }
-        });
-
         this.legalResearchService.addMessageToSession(
           conv.backendConversationId,
           this.currentUser.id,
@@ -4753,19 +4570,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         ).pipe(takeUntil(this.destroy$))
          .subscribe({
            next: (response) => {
-             console.log('✅ Assistant message persisted to database:', response);
-             console.log('✅ Metadata in response:', response.metadata);
-
              // Update conversation object in sidebar for message count badge
              conv.messages.push(assistantMessage);
              conv.messageCount = (conv.messageCount || 0) + 1;
-             console.log(`Updated conversation ${activeConvId} messages count: ${conv.messages.length}, messageCount: ${conv.messageCount}`);
 
              // Force change detection to update badge
              this.cdr.detectChanges();
            },
            error: (err) => {
-             console.error('❌ Failed to persist assistant message:', err);
+             console.error('Failed to persist assistant message:', err);
              // Still update local state even if DB save fails
              conv.messages.push(assistantMessage);
              conv.messageCount = (conv.messageCount || 0) + 1;
@@ -4868,10 +4681,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Uses the robust markdown-to-html pipe for conversion
    */
   private enhanceAnalysisWithStyling(markdown: string): string {
-    console.log('🔧 enhanceAnalysisWithStyling called');
-    console.log('📝 Input markdown length:', markdown.length);
-    console.log('📄 First 500 chars of input:', markdown.substring(0, 500));
-
     // STEP 1: Process inline elements BEFORE converting markdown structure
     let content = markdown;
 
@@ -4908,12 +4717,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // STEP 3: Wrap everything in analysis container for styling
     const result = `<div class="ai-document-analysis">${htmlString}</div>`;
 
-    console.log('✅ Output HTML length:', result.length);
-    console.log('📄 First 1000 chars of output:', result.substring(0, 1000));
-    console.log('🔍 Contains .ai-document-analysis wrapper:', result.includes('ai-document-analysis'));
-    console.log('🔍 Contains tables:', result.includes('<table'));
-    console.log('🔍 Contains timelines:', result.includes('timeline'));
-
     return result;
   }
 
@@ -4923,12 +4726,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private parseStrategicSections(markdown: string): any {
     const sections: any = {};
 
-    console.log('🔍 parseStrategicSections - Input markdown length:', markdown.length);
-    console.log('🔍 parseStrategicSections - First 200 chars:', markdown.substring(0, 200));
-
     // Check if this is strategic analysis (contains markers)
     if (!markdown.includes('EXECUTIVE') && !markdown.includes('CRITICAL') && !markdown.includes('STRATEGIC')) {
-      console.log('⚠️ Not strategic analysis - no markers found');
       return sections;
     }
 
@@ -4937,12 +4736,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const overviewMatch = markdown.match(/##\s*⚡[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/i);
     if (overviewMatch) {
       sections.overview = overviewMatch[0];
-      console.log('✅ Overview matched, length:', sections.overview.length, 'preview:', sections.overview.substring(0, 100));
     } else {
       // Fallback: extract content up to first major section (or full content if no sections)
       const firstSectionMatch = markdown.match(/([\s\S]*?)(?=\n##\s+[🎯💰🚨📈⏱️🛡️📝💡]|$)/);
       sections.overview = firstSectionMatch ? firstSectionMatch[1] : markdown;
-      console.log('⚠️ Overview fallback used, length:', sections.overview.length);
     }
 
     // Extract weaknesses/critical issues (more flexible patterns with lookahead)
@@ -4956,19 +4753,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       const match = markdown.match(pattern);
       if (match) {
         sections.weaknesses = match[0];
-        console.log('✅ Weaknesses matched, length:', sections.weaknesses.length, 'preview:', sections.weaknesses.substring(0, 100));
         break;
       }
-    }
-    if (!sections.weaknesses) {
-      console.log('❌ No weaknesses section matched');
     }
 
     // Extract timeline (flexible for all document types)
     const timelineMatch = markdown.match(/##\s*⏱️[\s\S]*?(ACTION\s+)?TIMELINE[\s\S]*?(?=\n##\s+[🎯⚡💰🚨📈⏱️🛡️📝💡]|$)/gi);
     if (timelineMatch) {
       sections.timeline = timelineMatch[0];
-      console.log('✅ Timeline matched, length:', sections.timeline.length);
     }
 
     // Extract evidence checklist (more flexible, with lookahead)
@@ -4981,12 +4773,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       const match = markdown.match(pattern);
       if (match && !match[0].includes('STRATEGY')) {  // Exclude strategy sections
         sections.evidence = match[0];
-        console.log('✅ Evidence matched, length:', sections.evidence.length, 'preview:', sections.evidence.substring(0, 100));
         break;
       }
-    }
-    if (!sections.evidence) {
-      console.log('❌ No evidence section matched');
     }
 
     // Extract strategy/recommendations (flexible with lookahead to avoid capturing next section)
@@ -4998,15 +4786,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       const match = markdown.match(pattern);
       if (match) {
         sections.strategy = match[0];
-        console.log('✅ Strategy matched, length:', sections.strategy.length, 'preview:', sections.strategy.substring(0, 100));
         break;
       }
     }
-    if (!sections.strategy) {
-      console.log('❌ No strategy section matched');
-    }
 
-    console.log('🔍 Final sections keys:', Object.keys(sections));
     return sections;
   }
 
@@ -5286,14 +5069,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.showDocTypeWarning = false; // Hide warning once type is selected
     this.showDocTypeDropdown = false; // Close dropdown after selection
 
-    // Find the selected pill across all categories
-    for (const category of this.documentTypeCategories) {
-      const selectedPill = category.types.find(p => p.id === pillId);
-      if (selectedPill) {
-        console.log(`Selected document type: ${selectedPill.name} (${category.name})`);
-        break;
-      }
-    }
   }
 
   toggleDocTypeDropdown(): void {
@@ -5630,7 +5405,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (collection) => {
-            console.log('📁 Created new collection for upload:', collection.id);
             this.bulkUploadCollectionId = collection.id;
             this.proceedWithUploadAnalysis(title, userMessage);
           },
@@ -5644,7 +5418,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     } else if (typeof this.selectedUploadCollectionId === 'number') {
       // Use existing collection
       this.bulkUploadCollectionId = this.selectedUploadCollectionId;
-      console.log('📁 Using existing collection:', this.bulkUploadCollectionId);
       this.proceedWithUploadAnalysis(title, userMessage);
     } else {
       // No collection selected
@@ -5662,8 +5435,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
-          console.log('Created upload analysis conversation:', session);
-
           // Add to conversations list immediately (UI update)
           const newConv: Conversation = {
             id: `conv_${session.id}`,
@@ -5692,12 +5463,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           ).pipe(takeUntil(this.destroy$))
            .subscribe({
              next: () => {
-               console.log('✅ User message persisted, starting file uploads');
                // Now proceed with document analysis AFTER user message is saved
                this.uploadFiles(session.id);
              },
              error: (err) => {
-               console.error('❌ Failed to persist user message:', err);
+               console.error('Failed to persist user message:', err);
                // Still proceed with uploads even if message save failed
                this.uploadFiles(session.id);
              }
@@ -5789,9 +5559,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.addConversation(tempConv);
     this.stateService.setActiveConversationId(tempConvId);
 
-    console.log('🔵 Created temporary conversation for cancellation:', tempConvId);
-    console.log('📋 Document type:', documentType, this.selectedDocTypePill ? '(selected)' : '(auto-detected)');
-
     // Prepare draft generation request
     const draftRequest = {
       userId: this.currentUser.id,
@@ -5808,13 +5575,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (initResponse) => {
-          console.log('🔵 Initialized conversation:', initResponse.conversationId);
-
           // Update temp conversation with real backend ID
           const tempConvInList = this.stateService.getConversations().find(c => c.id === tempConvId);
           if (tempConvInList) {
             tempConvInList.backendConversationId = initResponse.conversationId;
-            console.log('✅ Temp conversation updated with backend ID:', initResponse.conversationId);
           }
 
           // Now call the generate endpoint with the conversation ID so it reuses the same conversation
@@ -5837,8 +5601,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.cancelGeneration$))
             .subscribe({
               next: (response) => {
-                console.log('Draft generated with conversation:', response);
-
           // Complete the background task
           this.backgroundTaskService.completeTask(taskId, response);
 
@@ -5862,8 +5624,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             // Update active conversation ID to the real one
             this.stateService.setActiveConversationId(`conv_${response.conversationId}`);
-
-            console.log('✅ Updated temp conversation with backend ID:', response.conversationId);
           }
 
           // Reload conversations from backend to ensure sidebar is up-to-date
@@ -5878,13 +5638,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Extract professional title from document content (first # heading) instead of using user prompt
           this.activeDocumentTitle = this.extractTitleFromMarkdown(response.document.content) || title;
 
-          console.log('Document content received:', {
-            contentLength: response.document.content?.length || 0,
-            contentPreview: response.document.content?.substring(0, 200) || 'NO CONTENT',
-            wordCount: response.document.wordCount,
-            documentId: response.document.id
-          });
-
           this.currentDocumentWordCount = response.document.wordCount;
           this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.document.wordCount);
           this.documentMetadata = {
@@ -5897,19 +5650,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Load version history for dropdown
           this.loadVersionHistory();
 
-          console.log('📄 Document generated, length:', response.document.content?.length || 0);
-
           // CRITICAL: Cancel any pending content load from previous document
           if (this.contentLoadTimeoutId !== null) {
-            console.log('🚫 Cancelling previous document load timeout');
             clearTimeout(this.contentLoadTimeoutId);
             this.contentLoadTimeoutId = null;
           }
 
           // Store content in pending property - will be loaded in onEditorCreated()
           this.pendingDocumentContent = response.document.content || '';
-          console.log('📝 pendingDocumentContent SET, length:', this.pendingDocumentContent.length);
-          console.log('📝 Content preview:', this.pendingDocumentContent.substring(0, 200));
 
           // Add assistant message
           this.stateService.addConversationMessage({
@@ -5919,16 +5667,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           });
 
           // FORCE editor destruction and recreation
-          console.log('🔄 Destroying editor (showEditor = false)');
           this.showEditor = false;
           this.cdr.detectChanges();
 
           // Recreate editor - content will load automatically in onEditorCreated()
           // Use 50ms delay to ensure Angular fully destroys the old editor
           setTimeout(() => {
-            console.log('🔄 Recreating editor...');
-            console.log('📝 pendingDocumentContent at recreation time:', this.pendingDocumentContent?.length || 'NULL');
-
             // Clear editor instance BEFORE recreating component
             this.quillEditorInstance = null;
 
@@ -5939,7 +5683,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.stateService.setDraftingMode(true);
             this.stateService.setIsGenerating(false);
             this.cdr.detectChanges(); // Render the split-view-container first
-            console.log('🔄 Drafting mode activated, container should be visible');
 
             // NOW set showEditor to true - the container exists, so Quill can be created
             this.showEditor = true;
@@ -5948,7 +5691,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.setModeForDrafting();
 
             this.cdr.detectChanges();
-            console.log('🔄 showEditor=true, detectChanges called, Quill editor should be created now');
           }, 50);
         },
         error: (error) => {
@@ -5962,7 +5704,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           const tempIndex = conversations.findIndex(c => c.id === tempConvId);
           if (tempIndex !== -1) {
             conversations.splice(tempIndex, 1);
-            console.log('🗑️ Removed temporary conversation after error');
           }
 
           // Mark workflow as error
@@ -6029,8 +5770,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
-          console.log('Created conversation:', session);
-
           // Add to conversations list
           const newConv: Conversation = {
             id: `conv_${session.id}`,
@@ -6073,8 +5812,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               .pipe(takeUntil(this.cancelGeneration$))
               .subscribe({
                 next: (message) => {
-                  console.log('Received AI response for conversation:', requestConversationId);
-
                   // Complete the background task with result
                   this.backgroundTaskService.completeTask(taskId, message);
 
@@ -6099,7 +5836,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     if (conv) {
                       conv.messages.push(assistantMessage);
                       conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
-                      console.log(`Updated conversation ${requestConversationId} messages count: ${conv.messages.length}, messageCount: ${conv.messageCount}`);
                       // Force change detection to update badge
                       this.cdr.detectChanges();
                     }
@@ -6108,7 +5844,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     this.stateService.setShowBottomSearchBar(true);
                     this.cdr.detectChanges();
                   } else {
-                    console.log('Response arrived for inactive conversation - will show notification');
                     this.stateService.setIsGenerating(false);
                   }
                 },
@@ -6178,10 +5913,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Apply drafting tool (simplify, condense, expand, redraft) - REAL BACKEND CALL
   // Smart button: applies to selection if text is selected, otherwise to full document
   applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
-    console.log(`🔧 applyDraftingTool('${tool}') called`);
-    console.log(`  selectedText:`, this.selectedText?.substring(0, 50) || 'NONE');
-    console.log(`  selectionRange:`, this.selectionRange);
-
     if (!this.currentDocumentId) {
       this.notificationService.warning('No Document', 'Please generate a document first before applying revisions.');
       return;
@@ -6189,13 +5920,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Check if text is selected - if so, apply to selection only
     if (this.selectedText && this.selectionRange) {
-      console.log(`  ✅ Applying ${tool} to SELECTED text (${this.selectedText.length} chars)`);
       this.applySelectionTransform(tool);
       return;
     }
-
-    // Otherwise, apply to full document
-    console.log(`  ⚠️ No selection, applying ${tool} to FULL document`);
 
     // Add user message requesting the tool
     let toolPrompt = '';
@@ -6241,7 +5968,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
           // ALWAYS clear generating state when observable completes/errors/unsubscribes
-          console.log('🏁 Transform full document finalized - clearing generating state');
           this.stateService.setIsGenerating(false);
           this.completeAllWorkflowSteps();
           this.cdr.detectChanges();
@@ -6250,8 +5976,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           try {
-            console.log('✅ Transform full document response received:', response);
-
             // Generate unique message ID
             const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
@@ -6319,13 +6043,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Convert Markdown to HTML
     const htmlContent = this.markdownConverter.convert(markdownContent);
-    console.log('📋 HTML content generated, length:', htmlContent.length);
-    console.log('📋 HTML preview (first 1000 chars):', htmlContent.substring(0, 1000));
 
     try {
       // CRITICAL: Use dangerouslyPasteHTML directly instead of clipboard.convert
       // This properly handles lists, tables, and all HTML elements
-      console.log('📋 Using dangerouslyPasteHTML to insert content...');
 
       // Clear existing content first
       this.quillEditorInstance.setText('');
@@ -6334,19 +6055,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // This converts HTML to proper Quill Delta automatically
       this.quillEditorInstance.clipboard.dangerouslyPasteHTML(0, htmlContent, 'silent');
 
-      // Verify content was set
-      const editorText = this.quillEditorInstance.getText();
-      const delta = this.quillEditorInstance.getContents();
-      console.log('✅ Content inserted successfully');
-      console.log('✅ Editor text length:', editorText.length);
-      console.log('✅ Delta ops count:', delta.ops?.length || 0);
-
     } catch (error) {
-      console.error('❌ Failed to set content via dangerouslyPasteHTML:', error);
-      console.log('⚠️ Fallback: Setting innerHTML directly');
+      console.error('Failed to set content via dangerouslyPasteHTML:', error);
       // Fallback to direct innerHTML if dangerouslyPasteHTML fails
       this.quillEditorInstance.root.innerHTML = htmlContent;
-      console.log('✅ Content set via innerHTML fallback');
     }
   }
 
@@ -6365,10 +6077,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Get current plain text from Quill
     let currentText = quill.getText();
-
-    console.log('📊 Applying diff changes to document...');
-    let successfulChanges = 0;
-    let failedChanges = 0;
 
     // Apply each change
     for (const change of changes) {
@@ -6391,16 +6099,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         // Highlight the changed text briefly
         const highlightLength = change.replace.length;
         quill.formatText(index, highlightLength, { 'background': '#d4edda' }); // Green highlight
-
-        successfulChanges++;
-        console.log(`✅ Applied change #${successfulChanges}: "${change.find.substring(0, 30)}..." -> "${change.replace.substring(0, 30)}..."`);
-      } else {
-        failedChanges++;
-        console.warn(`⚠️ Could not find text to replace: "${change.find.substring(0, 50)}..."`);
       }
     }
-
-    console.log(`📊 Diff application complete: ${successfulChanges} successful, ${failedChanges} failed`);
 
     // Remove all highlights after 4 seconds
     setTimeout(() => {
@@ -6438,22 +6138,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // CRITICAL: Cancel any pending content load timeout to prevent race conditions
     if (this.contentLoadTimeoutId !== null) {
-      console.log('🚫 Cancelling previous content load timeout:', this.contentLoadTimeoutId);
       clearTimeout(this.contentLoadTimeoutId);
       this.contentLoadTimeoutId = null;
     }
 
-    console.log('📄 Loading document content');
-    console.log('📄 Markdown length:', markdownContent.length);
-    console.log('📄 Markdown preview:', markdownContent.substring(0, 300));
-
     // Convert Markdown to HTML
     const htmlContent = this.markdownConverter.convert(markdownContent);
-    console.log('🔄 HTML length:', htmlContent.length);
-    console.log('🔄 HTML preview:', htmlContent.substring(0, 500));
-    console.log('🔄 HTML contains <h1>?', htmlContent.includes('<h1>'));
-    console.log('🔄 HTML contains <strong>?', htmlContent.includes('<strong>'));
-    console.log('🔄 HTML contains <p>?', htmlContent.includes('<p>'));
 
     // CRITICAL: Use Quill's proper Delta API with setTimeout
     // setTimeout allows Quill's clipboard module to fully initialize
@@ -6470,7 +6160,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         if (this.quillEditorInstance) {
           this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
-          console.log('✅ Synced activeDocumentContent after initial load, length:', this.activeDocumentContent.length);
         }
       }, 50); // Small delay after content is set
     }, 100); // CRITICAL: Must be 100ms, not 0ms!
@@ -6492,11 +6181,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           htmlChild.style.webkitUserSelect = 'text';
           htmlChild.style.cursor = 'text';
         });
-        console.log('✅ Selection enabled on', allChildren.length, 'child elements');
       }, 100);
     }
-
-    console.log('✅ Content loaded successfully');
   }
 
   /**
@@ -6504,7 +6190,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onEditorCreated(quill: any): void {
     this.quillEditorInstance = quill;
-    console.log('✅ Quill editor created');
 
     // Enable text selection explicitly
     if (quill) {
@@ -6513,7 +6198,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // CRITICAL: Load content here if pending - this is the ONLY reliable place
       // onEditorCreated fires when editor is actually ready, not based on setTimeout guessing
       if (this.pendingDocumentContent) {
-        console.log('⭐ Loading pending content (length: ' + this.pendingDocumentContent.length + ')');
         this.loadDocumentContent(this.pendingDocumentContent);
         this.pendingDocumentContent = null;
       }
@@ -6566,7 +6250,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           updateLinks();
         });
 
-        console.log('✅ Editor configured for text selection and link handling');
       }
     }
   }
@@ -6575,30 +6258,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Handle text selection changes in Quill editor
    */
   onTextSelectionChanged(event: any): void {
-    console.log('📝 onTextSelectionChanged called:', event);
-
     if (!event || !event.range) {
       // No selection
-      console.log('  ❌ No event or range, clearing selection');
       this.selectedText = '';
       this.selectionRange = null;
       return;
     }
 
     const { index, length } = event.range;
-    console.log('  Range:', { index, length });
 
     if (length > 0 && this.quillEditorInstance) {
       // User has selected text
       this.selectedText = this.quillEditorInstance.getText(index, length);
       this.selectionRange = { index, length };
-      console.log('  ✅ Selection captured:', this.selectedText.substring(0, 50));
-      console.log('  📍 Now you can use drafting tools!');
     } else {
       // Selection cleared
       this.selectedText = '';
       this.selectionRange = null;
-      console.log('  ⚠️ Selection cleared (length = 0)');
     }
 
     // DO NOT call cdr.detectChanges() here - it destroys the selection
@@ -6645,11 +6321,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   applySelectionTransform(tool: string): void {
     if (!this.selectedText || !this.selectionRange || !this.quillEditorInstance) {
-      console.log('No text selected for transformation');
       return;
     }
-
-    console.log(`Applying "${tool}" to selected text:`, this.selectedText.substring(0, 50) + '...');
 
     // Get transformation prompt
     let toolPrompt = '';
@@ -6705,7 +6378,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
           // ALWAYS clear generating state when observable completes/errors/unsubscribes
-          console.log('🏁 Transform selection finalized - clearing generating state');
           this.stateService.setIsGenerating(false);
           this.completeAllWorkflowSteps();
           this.cdr.detectChanges();
@@ -6714,8 +6386,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           try {
-            console.log('✅ Transform selection response received:', response);
-
             // Generate unique message ID
             const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
@@ -6768,8 +6438,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('📝 Applying custom revision:', userPrompt.substring(0, 50) + '...');
-
     // Start generating state
     this.stateService.setIsGenerating(true);
 
@@ -6791,7 +6459,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
-          console.log('🏁 Custom revision finalized - clearing generating state');
           this.stateService.setIsGenerating(false);
           this.completeAllWorkflowSteps();
           this.stateService.setShowBottomSearchBar(true);
@@ -6801,8 +6468,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           try {
-            console.log('✅ Custom revision response received:', response);
-
             // Generate unique message ID
             const messageId = `custom_revision_${Date.now()}_${this.transformationMessageIdCounter++}`;
 
@@ -6851,8 +6516,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Saving document:', this.currentDocumentId);
-
+    
     // Call backend to save document
     this.documentGenerationService.saveDocument(
       this.currentDocumentId,
@@ -6884,8 +6548,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.notificationService.warning('No Document', 'No document to download. Please generate a document first.');
       return;
     }
-
-    console.log(`Downloading document ${this.currentDocumentId} as ${format}`);
 
     // Call backend export service
     this.documentGenerationService.exportDocument(this.currentDocumentId, format)
@@ -6920,7 +6582,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             window.URL.revokeObjectURL(url);
           }, 100);
 
-          console.log(`Document downloaded as: ${filename}`);
           this.notificationService.success('Downloaded!', `${filename} downloaded successfully`);
         },
         error: (error) => {
@@ -6934,8 +6595,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private downloadDocumentById(documentId: string, format: 'docx' | 'pdf'): void {
     this.currentDocumentId = documentId;
     this.downloadDocument(format);
-
-    console.log(`Download initiated: ${format.toUpperCase()}`);
   }
 
   /**
@@ -6947,24 +6606,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     try {
       const contentDisposition = headers.get('Content-Disposition');
 
-      // Debug: Log raw header value
-      console.log('🔍 RAW Content-Disposition header:', contentDisposition);
-
       if (!contentDisposition) {
-        console.warn('❌ No Content-Disposition header found, using fallback filename');
         return fallbackName;
       }
 
       // Method 1: Try filename*=UTF-8'' format (our backend's format)
       // Example: filename*=UTF-8''Demand_Letter_TO_Insurance_Carrier.pdf
       if (contentDisposition.includes("filename*=UTF-8''")) {
-        console.log(`✅ Found filename*=UTF-8'' format`);
         const parts = contentDisposition.split("filename*=UTF-8''");
         if (parts.length > 1) {
           // Get everything after filename*=UTF-8'' until semicolon or end
           const encoded = parts[1].split(';')[0].trim();
           const filename = decodeURIComponent(encoded);
-          console.log('✅ EXTRACTED filename:', filename);
           return filename;
         }
       }
@@ -6972,27 +6625,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // Method 2: Try standard filename="..." format
       // Example: filename="document.pdf"
       if (contentDisposition.includes('filename=')) {
-        console.log('⚠️ Trying standard filename= format');
         const match = contentDisposition.match(/filename="([^"]+)"/);
         if (match && match[1]) {
           let filename = match[1];
 
           // Decode RFC 2047 Q-encoding if present (=?UTF-8?Q?...?=)
           if (filename.startsWith('=?UTF-8?Q?') && filename.endsWith('?=')) {
-            console.log('⚠️ Decoding Q-encoded filename');
             filename = filename.substring(10, filename.length - 2);
             filename = decodeURIComponent(filename.replace(/=/g, '%'));
           }
 
-          console.log('⚠️ EXTRACTED filename (fallback):', filename);
           return filename;
         }
       }
 
-      console.error('❌ Could not parse filename from Content-Disposition header, using fallback');
       return fallbackName;
     } catch (error) {
-      console.error('❌ Error extracting filename from header:', error);
+      console.error('Error extracting filename from header:', error);
       return fallbackName;
     }
   }
@@ -7117,12 +6766,10 @@ You can:
     if (activeConv) {
       activeConv.messages.push(userMsg);
       activeConv.messageCount = (activeConv.messageCount || 0) + 1;
-      console.log(`Added user message to conversation ${this.stateService.getActiveConversationId()}, count: ${activeConv.messages.length}, messageCount: ${activeConv.messageCount}`);
     }
 
     // DRAFTING MODE: Apply changes directly to the document
     // Check multiple conditions to detect if we're in document editing mode
-    const isDraftingMode = this.stateService.getDraftingMode();
     const isEditorVisible = this.showEditor && this.quillEditorInstance !== null;
     const hasDocumentId = this.currentDocumentId !== null && this.currentDocumentId !== undefined;
 
@@ -7134,25 +6781,11 @@ You can:
 
     const hasDocumentOpen = isEditorVisible && hasDocumentId && hasContent;
 
-    console.log('📝 Drafting mode check:', {
-      isDraftingMode,
-      showEditor: this.showEditor,
-      quillExists: this.quillEditorInstance !== null,
-      currentDocumentId: this.currentDocumentId,
-      documentIdType: typeof this.currentDocumentId,
-      activeContentLength: this.activeDocumentContent?.length || 0,
-      quillContentLength: quillContent.length,
-      hasDocumentOpen
-    });
-
     // If we have a document open in the editor, treat follow-up messages as revisions
     if (hasDocumentOpen) {
-      console.log('📝 Document editor is open - routing to custom revision');
-
       // Ensure activeDocumentContent is synced from Quill if it's empty
       if (!this.activeDocumentContent && this.quillEditorInstance) {
         this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
-        console.log('📝 Synced activeDocumentContent from Quill before revision');
       }
 
       this.applyCustomRevision(userMessage);
@@ -7204,8 +6837,6 @@ You can:
       .pipe(takeUntil(this.cancelGeneration$))
       .subscribe({
         next: (message) => {
-          console.log('Received AI response for conversation:', requestConversationId);
-
           // Complete the background task with result
           this.backgroundTaskService.completeTask(taskId, message);
 
@@ -7230,7 +6861,6 @@ You can:
             if (conv) {
               conv.messages.push(assistantMessage);
               conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
-              console.log(`Updated conversation ${requestConversationId} messages count: ${conv.messages.length}, messageCount: ${conv.messageCount}`);
               // Force change detection to update badge
               this.cdr.detectChanges();
             }
@@ -7239,7 +6869,6 @@ You can:
             this.stateService.setShowBottomSearchBar(true);
             this.cdr.detectChanges();
           } else {
-            console.log('Response arrived for inactive conversation - will show notification');
             this.stateService.setIsGenerating(false);
           }
         },
@@ -7311,8 +6940,7 @@ You can:
 
   // Save document from editor
   onEditorSave(updatedContent: string): void {
-    console.log('Saving document:', this.editorDocumentId);
-
+    
     // Update the message content
     const message = this.stateService.getConversationMessages().find(
       m => m.documentId === this.editorDocumentId
@@ -7340,19 +6968,16 @@ You can:
   // View draft
   viewDraft(draft: any): void {
     // TODO: Implement draft viewing
-    console.log('Viewing draft:', draft);
-  }
+      }
 
   // Delete draft
   deleteDraft(draft: any): void {
     // TODO: Implement draft deletion
-    console.log('Deleting draft:', draft);
-  }
+      }
 
   // Execute suggested action
   executeSuggestedAction(action: string, documentId?: string | number): void {
-    console.log(`Executing suggested action: ${action} for document ${documentId}`);
-
+    
     switch (action) {
       case 'view-document':
         if (documentId) {
@@ -7468,17 +7093,13 @@ You can:
   // Extract follow-up questions from AI response and remove section from markdown (matching case-research component)
   extractAndRemoveFollowUpQuestions(response: string): string {
     this.stateService.clearFollowUpQuestions();
-    console.log('=== EXTRACTING FOLLOW-UP QUESTIONS ===');
-    console.log('Response length:', response.length);
 
     // Look for "## Follow-up Questions" markdown heading (like case-research component)
     const followUpPattern = /##\s*Follow-up Questions\s*\n([\s\S]*?)(?=\n##|$)/i;
     const match = response.match(followUpPattern);
 
     if (match) {
-      console.log('Found Follow-up Questions section');
       const questionsSection = match[1];
-      console.log('Questions section:', questionsSection);
 
       // Extract questions from list items (- or • or * or numbered)
       const questionMatches = questionsSection.match(/[-•*]\s*(.+?)(?=\n[-•*]|\n\d+\.|\n|$)/g) ||
@@ -7493,9 +7114,6 @@ You can:
           .slice(0, 3); // Limit to 3 questions
 
         this.stateService.setFollowUpQuestions(questions);
-        console.log('Extracted follow-up questions:', questions);
-      } else {
-        console.log('No question matches found in section');
       }
 
       // Remove the entire "Follow-up Questions" section from the response
@@ -7508,21 +7126,18 @@ You can:
   isValidFollowUpQuestion(question: string): boolean {
     // Reject questions under 40 characters (likely fragments)
     if (question.length < 40) {
-      console.log(`❌ Rejected follow-up question (too short): "${question}"`);
       return false;
     }
 
     // Reject questions that are just punctuation or symbols
     const onlyPunctuation = /^[\s\-\.\?\!,;:]+$/;
     if (onlyPunctuation.test(question)) {
-      console.log(`❌ Rejected follow-up question (only punctuation): "${question}"`);
       return false;
     }
 
     // Require questions to have action verbs or question words
     const hasQuestionIndicators = /\b(find|does|what|how|can|should|is|are|will|would|could|may|might|has|have|when|where|which|who|why)\b/i;
     if (!hasQuestionIndicators.test(question)) {
-      console.log(`❌ Rejected follow-up question (no question indicators): "${question}"`);
       return false;
     }
 
@@ -7551,8 +7166,7 @@ You can:
 
     // Skip loading for mock documents
     if (typeof this.currentDocumentId === 'string' && this.currentDocumentId.startsWith('mock-doc-')) {
-      console.log('[MOCK MODE] Skipping version history load for mock document');
-      this.documentVersions = [];
+            this.documentVersions = [];
       return;
     }
 
@@ -7733,14 +7347,10 @@ You can:
 
       // Check if this is a diff-based transformation
       if (transformation.useDiffMode && transformation.changes && transformation.changes.length > 0) {
-        console.log('📊 Applying DIFF MODE transformation with', transformation.changes.length, 'changes');
-
         // Apply diffs to current content in Quill editor
         this.applyDiffChangesToQuill(transformation.changes);
       } else {
         // Traditional full replacement mode
-        console.log('📄 Applying FULL REPLACEMENT transformation');
-
         // Update Quill editor with transformed content using robust helper
         setTimeout(() => {
           this.setQuillContentFromMarkdown(transformation.newContent);
@@ -7750,7 +7360,6 @@ You can:
           setTimeout(() => {
             if (this.quillEditorInstance) {
               this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
-              console.log('✅ Synced activeDocumentContent with Quill HTML after transformation');
             }
           }, 50);
         }, 100);
@@ -7765,13 +7374,6 @@ You can:
       const quill = this.quillEditorInstance;
       const transformedSnippet = transformation.response.transformedSelection || transformation.newContent;
       const selectionRange = transformation.selectionRange;
-
-      console.log('Accept transformation:', {
-        transformedSnippet,
-        selectionRange,
-        responseTransformedSelection: transformation.response.transformedSelection,
-        responseTransformedContent: transformation.response.transformedContent
-      });
 
       if (!selectionRange || !transformedSnippet) {
         console.error('Missing selection range or transformed snippet');
@@ -7882,8 +7484,7 @@ You can:
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (saveResponse) => {
-            console.log('✅ Transformation saved to database:', saveResponse);
-            // Update version number from save response
+                        // Update version number from save response
             if (saveResponse && saveResponse.version) {
               this.documentMetadata.version = saveResponse.version;
             }
@@ -8142,8 +7743,7 @@ You can:
    * Called when a task completes (either while on this page or from completedTask$ subscription)
    */
   private handleCompletedBackgroundTask(task: BackgroundTask): void {
-    console.log('📬 Handling completed background task:', task.id, task.type);
-
+    
     switch (task.type) {
       case 'question':
         this.handleCompletedQuestionTask(task);

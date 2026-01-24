@@ -62,13 +62,6 @@ export class DebugPermissionsComponent implements OnInit {
           : [decodedPayload.roles];
       }
 
-      console.log('Token Debug Info:', {
-        full: decodedPayload,
-        authorities: this.authorities,
-        permissions: this.permissions,
-        roles: this.roles
-      });
-
     } catch (error) {
       this.hasError = true;
       this.errorMessage = 'Error decoding token: ' + error;

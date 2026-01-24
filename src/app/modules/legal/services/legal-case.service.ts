@@ -135,27 +135,21 @@ export class LegalCaseService {
    * @returns An observable of CaseNote array
    */
   getCaseNotes(caseId: string | number): Observable<CaseNote[]> {
-    console.log(`Fetching notes for case ID: ${caseId} from ${this.caseApiUrl}/${caseId}/notes`);
     return this.http.get<any>(`${this.caseApiUrl}/${caseId}/notes`, {
       headers: this.getAuthHeaders()
     })
       .pipe(
         map(response => {
-          console.log('Raw notes API response:', response);
-          
           // Extract notes from the response
           if (response && response.data && response.data.notes) {
-            console.log(`Found ${response.data.notes.length} notes in the response data`);
             return response.data.notes;
           }
-          
+
           // If API returns a direct array
           if (Array.isArray(response)) {
-            console.log(`Found ${response.length} notes in direct response array`);
             return response;
           }
-          
-          console.log('Unexpected response format, returning empty array');
+
           return [];
         }),
         catchError((error: HttpErrorResponse) => {
@@ -183,7 +177,6 @@ export class LegalCaseService {
     })
       .pipe(
         map(response => {
-          console.log('Get note by ID response:', response);
           if (response && response.data && response.data.note) {
             return response.data.note;
           }
@@ -216,15 +209,12 @@ export class LegalCaseService {
       content: noteData.content,
       isPrivate: noteData.isPrivate || false  // This matches the @JsonProperty in the backend
     };
-    
-    console.log('Sending create note request:', createNoteRequest);
-    
+
     return this.http.post<any>(`${this.caseApiUrl}/${caseId}/notes`, createNoteRequest, {
       headers: this.getAuthHeaders()
     })
       .pipe(
         map(response => {
-          console.log('Create note response:', response);
           if (response && response.data && response.data.note) {
             return response.data.note;
           }
@@ -257,15 +247,12 @@ export class LegalCaseService {
       content: noteData.content,
       isPrivate: noteData.isPrivate
     };
-    
-    console.log(`Sending update request for note ${noteId}:`, updateNoteRequest);
-    
+
     return this.http.put<any>(`${this.caseApiUrl}/${caseId}/notes/${noteId}`, updateNoteRequest, {
       headers: this.getAuthHeaders()
     })
       .pipe(
         map(response => {
-          console.log('Update note response:', response);
           if (response && response.data && response.data.note) {
             return response.data.note;
           }
@@ -302,24 +289,21 @@ export class LegalCaseService {
    * @returns An observable of activities array
    */
   getCaseActivities(caseId: string | number): Observable<any[]> {
-    console.log(`Fetching activities for case ID: ${caseId}`);
     return this.http.get<any>(`${this.caseApiUrl}/${caseId}/activities`, {
       headers: this.getAuthHeaders()
     })
       .pipe(
         map(response => {
-          console.log('Raw activities API response:', response);
-          
           // Extract activities from the response
           if (response && response.data && response.data.activities) {
             return response.data.activities;
           }
-          
+
           // If API returns a direct array
           if (Array.isArray(response)) {
             return response;
           }
-          
+
           return [];
         }),
         catchError((error: HttpErrorResponse) => {
@@ -344,7 +328,6 @@ export class LegalCaseService {
     })
       .pipe(
         map(response => {
-          console.log('Create activity response:', response);
           if (response && response.data && response.data.activity) {
             return response.data.activity;
           }

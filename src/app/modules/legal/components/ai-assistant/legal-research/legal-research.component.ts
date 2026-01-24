@@ -784,7 +784,6 @@ export class LegalResearchComponent implements OnInit, OnDestroy, AfterViewInit 
   saveFilterPreset(): void {
     const filters = this.searchForm.value;
     localStorage.setItem('legalSearchFilters', JSON.stringify(filters));
-    console.log('Filters saved');
   }
 
   applyFilters(): void {
@@ -914,13 +913,11 @@ export class LegalResearchComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   addToNotebook(result: SearchResult): void {
-    console.log('Adding to research notebook:', result.title);
-    // Implementation for adding to notebook
+    // TODO: Implementation for adding to notebook
   }
 
   citationHelper(result: SearchResult): void {
-    console.log('Generating citation for:', result.title);
-    // Implementation for citation generation
+    // TODO: Implementation for citation generation
   }
 
   findSimilar(result: SearchResult): void {
@@ -936,13 +933,11 @@ export class LegalResearchComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   showTour(): void {
-    console.log('Starting tour');
-    // Implementation for tour
+    // TODO: Implementation for tour
   }
 
   showVideoGuide(): void {
-    console.log('Showing video guide');
-    // Implementation for video guide
+    // TODO: Implementation for video guide
   }
 
   showSearchGuide(): void {

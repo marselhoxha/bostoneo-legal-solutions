@@ -155,8 +155,6 @@ export class TemplateManagerComponent implements OnInit, OnDestroy {
    */
   private updateTemplate(templateId: string, templateData: any): void {
     // This would call a template update API when implemented
-    console.log('Update template:', templateId, templateData);
-    
     Swal.fire({
       title: 'Info',
       text: 'Template update functionality will be implemented with backend API',
@@ -180,8 +178,6 @@ export class TemplateManagerComponent implements OnInit, OnDestroy {
     }).then((result) => {
       if (result.isConfirmed) {
         // This would call a template delete API when implemented
-        console.log('Delete template:', template.id);
-        
         Swal.fire({
           title: 'Info',
           text: 'Template deletion functionality will be implemented with backend API',

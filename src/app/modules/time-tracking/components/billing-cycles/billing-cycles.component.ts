@@ -11,6 +11,6 @@ import { CommonModule } from '@angular/common';
 export class BillingCyclesComponent implements OnInit {
 
   ngOnInit(): void {
-    console.log('Billing Cycles loaded successfully!');
+    // Component initialized
   }
 } 

@@ -43,19 +43,16 @@ export class VendorListComponent implements OnInit {
   }
 
   loadVendors(): void {
-    console.log('loadVendors started, loading = true');
     this.loading = true;
     this.error = null;
     this.changeDetectorRef.detectChanges();
-    
+
     this.expensesService.getVendors()
       .pipe(
         tap(response => {
-          console.log('Loaded vendors:', response);
           this.vendors = response.data || [];
         }),
         catchError(error => {
-          console.log('Error in getVendors catchError');
           this.error = 'Failed to load vendors. Please try again.';
           console.error('Error loading vendors:', error);
           this.changeDetectorRef.detectChanges();
@@ -64,18 +61,15 @@ export class VendorListComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          console.log('getVendors subscribe next');
           this.loading = false;
           this.changeDetectorRef.detectChanges();
         },
         error: (err) => {
-          console.log('getVendors subscribe error (might not be reached)');
           this.error = 'Failed to load vendors. Please try again later.';
           this.loading = false;
           this.changeDetectorRef.detectChanges();
         },
         complete: () => {
-          console.log('getVendors subscribe complete');
           if(this.loading) {
             this.loading = false;
             this.changeDetectorRef.detectChanges();
@@ -87,7 +81,6 @@ export class VendorListComponent implements OnInit {
   onSubmit(): void {
     if (this.vendorForm.invalid) return;
 
-    console.log('onSubmit started, submitting = true');
     this.submitting = true;
     this.error = null;
     this.changeDetectorRef.detectChanges();
@@ -96,8 +89,6 @@ export class VendorListComponent implements OnInit {
     const formData = { ...this.vendorForm.value };
     const isEditing = !!this.editingVendor;
     const vendorId = isEditing ? this.editingVendor.id : null;
-
-    console.log(isEditing ? `Updating vendor ${vendorId}` : 'Creating new vendor', formData);
 
     const request = isEditing
       ? this.expensesService.updateVendor(vendorId!, formData)

@@ -89,10 +89,8 @@ export class IntakeSubmissionsComponent implements OnInit {
    * Send CRM notification using NotificationManager (with proper user context and routing)
    */
   private async sendCrmNotification(title: string, message: string, type: 'success' | 'error' | 'info' = 'info', crmInfo?: any): Promise<void> {
-    console.log('🔔 CRM NOTIFICATION:', { title, message, type, crmInfo });
-    
     const priority = type === 'error' ? NotificationPriority.HIGH : NotificationPriority.NORMAL;
-    
+
     try {
       // For intake conversions, notify intake team and relevant department
       if (crmInfo?.action === 'INTAKE_CONVERTED_TO_LEAD') {
@@ -136,9 +134,8 @@ export class IntakeSubmissionsComponent implements OnInit {
         );
       }
       
-      console.log('✅ CRM notification sent successfully');
     } catch (error) {
-      console.error('❌ Failed to send CRM notification:', error);
+      console.error('Failed to send CRM notification:', error);
     }
   }
 
@@ -151,8 +148,6 @@ export class IntakeSubmissionsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('🚀 COMPONENT LOADED - IntakeSubmissionsComponent ngOnInit called');
-    console.log('🚀 Component initialized, about to load submissions...');
     this.loadSubmissions();
   }
 
@@ -166,12 +161,9 @@ export class IntakeSubmissionsComponent implements OnInit {
       page: 0,
       size: 100 // Load more submissions at once
     };
-    
-    console.log('📤 Loading all submissions for client-side pagination');
-    
+
     this.crmService.getIntakeSubmissions$(params).subscribe({
       next: (response: any) => {
-        console.log('📑 Raw Backend Response:', response);
         
         // Handle different response structures
         let dataArray: any[] = [];
@@ -202,23 +194,18 @@ export class IntakeSubmissionsComponent implements OnInit {
         }
         
         if (dataArray.length > 0) {
-          console.log('🔄 Processing', dataArray.length, 'submissions');
           this.submissions = this.mapSubmissions(dataArray);
           // Apply filters after loading all data
           this.applyFilters();
-          console.log('✅ Successfully processed', this.submissions.length, 'submissions');
         } else {
           this.submissions = [];
           this.filteredSubmissions = [];
           this.totalElements = 0;
-          console.log('⚠️ No submissions found in response');
         }
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading submissions:', error);
-        
         if (error.status === 401) {
           this.error = 'Authentication required. Please log in to access intake submissions.';
         } else if (error.status === 404) {
@@ -242,8 +229,6 @@ export class IntakeSubmissionsComponent implements OnInit {
 
   private mapSubmissions(backendSubmissions: any[]): IntakeSubmissionDTO[] {
     return backendSubmissions.map(submission => {
-      console.log('🔍 Mapping submission:', submission.id, submission);
-      
       // Parse submissionData if it's a string
       let parsedSubmissionData = submission.submissionData;
       if (typeof submission.submissionData === 'string') {
@@ -280,8 +265,7 @@ export class IntakeSubmissionsComponent implements OnInit {
         followUpDate: submission.followUpDate,
         notes: submission.notes
       };
-      
-      console.log('✅ Mapped submission:', mappedSubmission);
+
       return mappedSubmission;
     });
   }
@@ -386,8 +370,6 @@ export class IntakeSubmissionsComponent implements OnInit {
       case 'spam':
         this.markAsSpam(submission);
         break;
-      default:
-        console.log(`Action ${action} on submission ${submissionId}`);
     }
   }
 
@@ -420,8 +402,6 @@ export class IntakeSubmissionsComponent implements OnInit {
       case 'spam':
         this.bulkMarkAsSpam(selectedSubmissionsList);
         break;
-      default:
-        console.log(`Bulk action ${action} on submissions:`, Array.from(this.selectedSubmissions));
     }
   }
 
@@ -530,7 +510,6 @@ export class IntakeSubmissionsComponent implements OnInit {
     submission.assignedToName = 'John Attorney';
     submission.updatedAt = new Date().toISOString();
     this.cdr.detectChanges();
-    console.log('Submission assigned:', submission.id);
   }
 
   private markAsSpam(submission: IntakeSubmissionDTO): void {
@@ -658,7 +637,6 @@ export class IntakeSubmissionsComponent implements OnInit {
     this.selectedSubmissions.clear();
     this.selectAll = false;
     this.cdr.detectChanges();
-    console.log('Bulk assigned submissions:', submissions.length);
   }
 
   private bulkMarkAsSpam(submissions: IntakeSubmissionDTO[]): void {

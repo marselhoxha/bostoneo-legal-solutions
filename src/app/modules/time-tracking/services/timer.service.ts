@@ -63,15 +63,12 @@ export class TimerService {
   }
 
   pauseTimer(userId: number, timerId: number): Observable<ActiveTimer> {
-    console.log('Pausing timer:', { userId, timerId });
-    
     if (!userId || !timerId) {
       return throwError(() => new Error('Invalid userId or timerId'));
     }
 
     return this.http.post<any>(`${this.baseUrl}/${timerId}/pause`, { userId: userId }).pipe(
       map(response => {
-        console.log('Pause timer response:', response);
         if (response?.data?.timer) {
           const timer = response.data.timer;
           this.updateActiveTimer(timer);
@@ -109,15 +106,12 @@ export class TimerService {
   }
 
   resumeTimer(userId: number, timerId: number): Observable<ActiveTimer> {
-    console.log('Resuming timer:', { userId, timerId });
-    
     if (!userId || !timerId) {
       return throwError(() => new Error('Invalid userId or timerId'));
     }
 
     return this.http.post<any>(`${this.baseUrl}/${timerId}/resume`, { userId: userId }).pipe(
       map(response => {
-        console.log('Resume timer response:', response);
         if (response?.data?.timer) {
           const timer = response.data.timer;
           this.updateActiveTimer(timer);
@@ -232,45 +226,24 @@ export class TimerService {
 
   // Timer to Time Entry Conversion
   convertTimerToTimeEntry(userId: number, timerId: number, description: string): Observable<TimeEntry> {
-    console.log('🔄 TimerService.convertTimerToTimeEntry called with:', { userId, timerId, description });
-    
     const requestBody = { userId, description };
-    console.log('🔄 Request URL:', `${this.baseUrl}/${timerId}/convert`);
-    console.log('🔄 Request body:', requestBody);
-    
+
     return this.http.post<any>(`${this.baseUrl}/${timerId}/convert`, requestBody).pipe(
       map(response => {
-        console.log('🔄 Raw API response received:', response);
-        console.log('🔄 Response structure:', JSON.stringify(response, null, 2));
-        
         // Check if response has expected structure
         if (!response || !response.data) {
-          console.error('❌ Invalid response structure - missing data field');
           throw new Error('Invalid response structure from server');
         }
-        
+
         if (!response.data.timeEntry) {
-          console.error('❌ Invalid response structure - missing timeEntry field');
-          console.error('❌ Available fields in response.data:', Object.keys(response.data));
           throw new Error('Invalid response structure - missing timeEntry field');
         }
-        
-        console.log('🔄 Extracted timeEntry:', response.data.timeEntry);
-        console.log('🔄 Removing active timer from local state...');
+
         this.removeActiveTimer(timerId);
-        console.log('✅ Timer removed from local state, returning timeEntry');
-        
         return response.data.timeEntry;
       }),
       catchError(error => {
-        console.error('❌ TimerService error in convertTimerToTimeEntry:', error);
-        console.error('❌ Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error,
-          url: error.url
-        });
+        console.error('TimerService error in convertTimerToTimeEntry:', error);
         return this.handleError(error);
       })
     );

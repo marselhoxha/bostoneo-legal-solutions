@@ -61,10 +61,7 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
     
     if (shouldPreload) {
       return timer(50).pipe(
-        switchMap(() => {
-          console.log(`Preloading module: ${route.path}`);
-          return fn();
-        }),
+        switchMap(() => fn()),
         catchError(() => of(null))
       );
     }
@@ -134,7 +131,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
       loadModule()
         .then(() => {
           this.preloadedModules.add(routePath);
-          console.log(`Successfully preloaded: ${routePath}`);
         })
         .catch(error => console.error(`Failed to preload ${routePath}:`, error));
     }
@@ -148,9 +144,8 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
     expiresIn: number = 300000 // 5 minutes default
   ): Observable<T> {
     const cached = this.getFromCache<T>(key);
-    
+
     if (cached) {
-      console.log(`Cache hit for: ${key}`);
       return of(cached);
     }
     
@@ -233,7 +228,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
     const lcpObserver = new PerformanceObserver((list) => {
       const entries = list.getEntries();
       const lastEntry = entries[entries.length - 1] as any;
-      console.log('LCP:', lastEntry.renderTime || lastEntry.loadTime);
       this.updateMetrics({ largestContentfulPaint: lastEntry.renderTime || lastEntry.loadTime });
     });
     lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
@@ -242,7 +236,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
     const fidObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         const fidEntry = entry as any;
-        console.log('FID:', fidEntry.processingStart - fidEntry.startTime);
         this.updateMetrics({ firstInputDelay: fidEntry.processingStart - fidEntry.startTime });
       }
     });
@@ -255,7 +248,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
         const clsEntry = entry as any;
         if (!clsEntry.hadRecentInput) {
           clsValue += clsEntry.value;
-          console.log('CLS:', clsValue);
           this.updateMetrics({ cumulativeLayoutShift: clsValue });
         }
       }
@@ -285,7 +277,7 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
     try {
       observer.observe({ entryTypes: ['longtask'] });
     } catch (e) {
-      console.log('Long task monitoring not supported');
+      // Long task monitoring not supported
     }
   }
 
@@ -386,7 +378,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
   }
 
   private loadComponent(componentName: string): void {
-    console.log(`Lazy loading component: ${componentName}`);
     // Component-specific loading logic
   }
 
@@ -509,8 +500,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
   }
 
   private performAggressiveCleanup(): void {
-    console.log('Performing aggressive memory cleanup...');
-    
     // Clear all cache
     this.cache.clear();
     
@@ -534,8 +523,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
   
   private reportPerformanceIssue(type: string, data: any): void {
     // Send to analytics or monitoring service
-    console.log('Performance issue reported:', { type, data });
-    
     // Could integrate with services like Sentry, LogRocket, etc.
   }
 
@@ -543,7 +530,6 @@ export class EnhancedPerformanceService implements PreloadingStrategy {
   
   optimizeChangeDetection(): void {
     // This would be called from components to optimize change detection
-    console.log('Optimizing change detection strategy...');
   }
 
   trackByIndex(index: number): number {

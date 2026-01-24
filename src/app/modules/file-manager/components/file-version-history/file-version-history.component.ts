@@ -32,8 +32,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    console.log('FileVersionHistoryComponent initialized with:', { fileId: this.fileId, fileName: this.fileName });
-    
     if (this.fileId && this.fileId !== undefined && this.fileId !== null) {
       this.loadVersionHistory();
     } else {
@@ -89,10 +87,7 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (versions) => {
-          console.log('Raw versions from API:', versions);
           this.versions = this.processVersions(versions || []);
-          console.log('Processed versions:', this.versions);
-          console.log('Versions length:', this.versions.length);
         },
         error: (error) => {
           console.error('Failed to load version history:', error);
@@ -124,12 +119,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
    * Upload a new version of the file
    */
   uploadNewVersion(): void {
-    console.log('uploadNewVersion called with:', { 
-      fileId: this.fileId, 
-      selectedFile: this.selectedFile?.name, 
-      comment: this.versionComment 
-    });
-
     if (!this.selectedFile) {
       this.error = 'Please select a file to upload.';
       this.cdr.detectChanges();
@@ -162,8 +151,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       }
     }, 200);
 
-    console.log('Calling uploadNewVersion service with fileId:', this.fileId);
-
     this.fileManagerService.uploadNewVersion(this.fileId, this.selectedFile, this.versionComment)
       .pipe(
         takeUntil(this.destroy$),
@@ -179,7 +166,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (newVersion) => {
-          console.log('New version uploaded successfully:', newVersion);
           this.selectedFile = null;
           this.versionComment = '';
           
@@ -280,7 +266,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
         )
         .subscribe({
           next: () => {
-            console.log('Version restored successfully - new version created');
             // Reload version history to show the new current version
             this.loadVersionHistory();
             
@@ -335,7 +320,6 @@ export class FileVersionHistoryComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            console.log('Version deleted successfully');
             this.loadVersionHistory(); // Reload to show updated list
             
             // Show success message

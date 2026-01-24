@@ -198,7 +198,6 @@ export class FirmTemplateCustomizationComponent implements OnInit, OnDestroy {
    */
   editFirmCustomization(customization: FirmTemplateCustomization): void {
     // Implementation for editing existing customization
-    console.log('Edit customization:', customization);
   }
   
   /**
@@ -248,6 +247,5 @@ export class FirmTemplateCustomizationComponent implements OnInit, OnDestroy {
    */
   previewCustomizedTemplate(customization: FirmTemplateCustomization): void {
     // Implementation for previewing customized template
-    console.log('Preview customization:', customization);
   }
 }

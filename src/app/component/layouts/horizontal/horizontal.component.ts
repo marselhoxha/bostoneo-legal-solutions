@@ -39,29 +39,21 @@ export class HorizontalComponent implements OnInit {
 
   ngOnInit(): void {
     // Get current user
-    console.log("🔍 Horizontal component - UserService result:", this.userService.getCurrentUser());
     this.currentUser = this.userService.getCurrentUser();
-    console.log("🔍 Horizontal component - currentUser set to:", this.currentUser);
-    console.log("🔍 Token in localStorage:", localStorage.getItem(Key.TOKEN));
-    console.log("🔍 Current user in localStorage:", localStorage.getItem("currentUser"));
-    
+
     // If user is null but we have a token, load user data
     if (!this.currentUser && this.userService.isAuthenticated()) {
-      console.log("🔄 User is null but authenticated - loading profile data");
       this.userService.profile$().subscribe(response => {
         if (response && response.data && response.data.user) {
           this.currentUser = response.data.user;
-          console.log("✅ User profile loaded:", this.currentUser);
           // Initialize RBAC service now that user is loaded
-          console.log("🔄 Initializing RBAC service");
           this.rbacService.initialize();
         }
       });
     }
-    
+
     // Initialize RBAC service if user is already loaded
     if (this.currentUser && this.userService.isAuthenticated()) {
-      console.log("🔄 User already loaded, initializing RBAC service");
       this.rbacService.initialize();
     }
     

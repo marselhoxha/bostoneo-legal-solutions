@@ -84,7 +84,6 @@ export class CaseListComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (response) => {
-        console.log('Search response:', response);
         if (response?.data?.page?.content) {
           this.cases = response.data.page.content;
         } else if (response?.data?.page) {
@@ -118,7 +117,6 @@ export class CaseListComponent implements OnInit, OnDestroy {
     // Use real data from the API with pagination
     this.caseService.getCases(this.currentPageSubject.value).subscribe({
       next: (response) => {
-        console.log('Cases response:', response);
         // The backend returns data in a wrapper object
         if (response && response.data) {
           // Handle both formats: data.page and data.cases

@@ -242,8 +242,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   private processCasesData(response: any): void {
-    console.log('Processing cases response:', response);
-    
     let casesArray = [];
     if (response?.data?.cases) {
       casesArray = response.data.cases;
@@ -413,15 +411,11 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   private loadCaseAssignments(caseId: number): void {
-    console.log('Loading assignments for case:', caseId);
-    
     this.caseAssignmentService.getCaseAssignments(caseId).subscribe({
       next: (response) => {
-        console.log('Case assignments response:', response);
-        
         // Extract assignments from response
         const assignments = response?.data || [];
-        
+
         // Convert assignments to attorney objects for display
         this.selectedCase.assignedAttorneys = assignments.map(assignment => ({
           id: assignment.userId,
@@ -434,8 +428,7 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
           assignedAt: assignment.assignedAt,
           active: assignment.active
         }));
-        
-        console.log('Updated case with assigned attorneys:', this.selectedCase.assignedAttorneys);
+
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -447,8 +440,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   private processAssignmentsData(assignments: any): void {
-    console.log('Processing assignments data:', assignments);
-    
     if (Array.isArray(assignments)) {
       this.assignments = assignments;
     } else if (assignments?.data) {
@@ -456,8 +447,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     } else {
       this.assignments = [];
     }
-    
-    console.log('Processed assignments:', this.assignments);
   }
 
   private processWorkloadData(workloadData: any): void {
@@ -475,8 +464,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
 
   // Assignment Action Methods
   editAssignment(attorney: AssignedAttorney): void {
-    console.log('Edit assignment for:', attorney);
-    
     // Pre-populate the form with existing assignment data
     this.assignmentForm.patchValue({
       caseId: this.selectedCase?.id,
@@ -496,8 +483,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   transferAssignment(attorney: AssignedAttorney): void {
-    console.log('Transfer assignment for:', attorney);
-    
     if (!attorney.assignmentId || !this.selectedCase) {
       this.notificationService.onError('Cannot transfer assignment - missing assignment ID or case');
       return;
@@ -550,8 +535,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   private performTransfer(fromAttorney: AssignedAttorney, toAttorney: User): void {
-    console.log('Performing transfer from:', fromAttorney, 'to:', toAttorney);
-    
     if (!fromAttorney.assignmentId || !this.selectedCase) {
       this.notificationService.onError('Cannot perform transfer - missing assignment data');
       return;
@@ -560,8 +543,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     // First remove the current assignment
     this.caseAssignmentService.unassignCase(this.selectedCase.id, fromAttorney.id, 'Assignment transferred').subscribe({
       next: () => {
-        console.log('Successfully removed old assignment');
-        
         // Create new assignment for the selected attorney
         const newAssignmentData: CaseAssignmentRequest = {
           caseId: this.selectedCase!.id,
@@ -573,7 +554,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
 
         this.caseAssignmentService.assignCase(newAssignmentData).subscribe({
           next: (response) => {
-            console.log('Successfully created new assignment:', response);
             this.notificationService.onSuccess(
               `Assignment transferred from ${fromAttorney.firstName} ${fromAttorney.lastName} to ${toAttorney.firstName} ${toAttorney.lastName}`
             );
@@ -619,8 +599,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
   }
 
   removeAssignment(attorney: AssignedAttorney): void {
-    console.log('Remove assignment for:', attorney);
-    
     if (!attorney.assignmentId || !this.selectedCase) {
       this.notificationService.onError('Cannot remove assignment - missing assignment ID');
       return;
@@ -659,7 +637,6 @@ export class CaseAssignmentManagementComponent implements OnInit, OnDestroy {
     this.caseAssignmentService.unassignCase(this.selectedCase.id, attorney.id, reason)
       .subscribe({
         next: (response) => {
-          console.log('Assignment removed successfully:', response);
           this.notificationService.onSuccess('Assignment removed successfully');
           
           // Reload the assignments for the current case

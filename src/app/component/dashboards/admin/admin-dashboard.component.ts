@@ -228,13 +228,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private loadAndInitializeCharts(): void {
     this.initializeChartsWithBasicData();
     this.loadRealActivityData();
-    
-    // Debug: Check token before making request
-    const token = localStorage.getItem('[KEY] TOKEN');
-    console.log('Admin Dashboard - Token check before client request:');
-    console.log('Token exists:', !!token);
-    console.log('Token length:', token?.length || 0);
-    
+
     // Load client stats data
     this.clientService.clients$(0)
       .pipe(takeUntil(this.destroy$))
@@ -477,41 +471,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   private loadRealActivityData(): void {
     this.activitiesLoading = true;
-    console.log('🔄 Loading activity data...');
-    
+
     this.auditService.getRecentActivities$(10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
           this.activitiesLoading = false;
-          console.log('📑 Raw audit response:', response);
-          
+
           // Handle the CustomHttpResponse structure
           if (response?.data?.activities && Array.isArray(response.data.activities)) {
             this.recentActivities = response.data.activities.slice(0, 10);
-            console.log('✅ Activities loaded:', this.recentActivities.length, 'items');
-            console.log('📋 First activity:', this.recentActivities[0]);
           } else if (response?.data && Array.isArray(response.data)) {
             // Fallback for different response structure
             this.recentActivities = response.data.slice(0, 10);
-            console.log('✅ Activities loaded (fallback):', this.recentActivities.length, 'items');
           } else {
             this.recentActivities = [];
-            console.warn('⚠️ No activities found in response');
-            console.log('📑 Response structure:', response);
           }
-          
+
           this.cdr.detectChanges();
         },
         error: (error) => {
           this.activitiesLoading = false;
           this.recentActivities = [];
-          console.error('❌ Error loading activities:', error);
-          console.error('📑 Error details:', {
-            status: error.status,
-            message: error.message,
-            url: error.url
-          });
+          console.error('Error loading activities:', error);
           this.cdr.detectChanges();
         }
       });
@@ -525,8 +507,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   private loadRecentPayments(): void {
     this.paymentsLoading = true;
-    console.log('🔄 Loading recent payments...');
-    
+
     this.invoicePaymentService.getRecentPayments(10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -534,17 +515,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.paymentsLoading = false;
           if (response?.data && Array.isArray(response.data)) {
             this.recentPayments = response.data;
-            console.log('✅ Recent payments loaded:', this.recentPayments.length, 'items');
           } else {
             this.recentPayments = [];
-            console.warn('⚠️ No payments found in response');
           }
           this.cdr.detectChanges();
         },
         error: (error) => {
           this.paymentsLoading = false;
           this.recentPayments = [];
-          console.error('❌ Error loading recent payments:', error);
+          console.error('Error loading recent payments:', error);
           this.cdr.detectChanges();
         }
       });

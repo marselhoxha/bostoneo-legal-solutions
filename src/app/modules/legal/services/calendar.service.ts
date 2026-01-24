@@ -22,8 +22,6 @@ export class CalendarService {
     return this.http.get<any>(`${this.apiUrl}/events/${id}`)
       .pipe(
         map(response => {
-          console.log(`Fetched event ${id} successfully`, response);
-          
           // Extract event from the response structure
           let event;
           if (response && response.data && response.data.event) {
@@ -60,8 +58,6 @@ export class CalendarService {
     return this.http.get<any>(`${this.apiUrl}/events/case/${caseId}`)
       .pipe(
         map(response => {
-          console.log(`Fetched events for case ${caseId} successfully`, response);
-          
           // Extract events from the nested response structure
           if (response && response.data && Array.isArray(response.data.events)) {
             return response.data.events.map(event => {
@@ -87,17 +83,14 @@ export class CalendarService {
   createEvent(event: Partial<CalendarEvent>): Observable<CalendarEvent> {
     // Format dates to be compatible with Java LocalDateTime (no 'Z' timezone marker)
     const formattedEvent = this.formatEventDatesForBackend(event);
-    console.log('Creating new event:', formattedEvent);
-    
+
     return this.http.post<any>(`${this.apiUrl}/events`, formattedEvent)
       .pipe(
         map(response => {
-          console.log('Event created successfully, server response:', response);
           return response.data || response;
         }),
         catchError(error => {
           console.error('Error creating event:', error);
-          console.error('Request payload was:', formattedEvent);
           return this.handleError<CalendarEvent>('createEvent')(error);
         })
       );
@@ -106,17 +99,15 @@ export class CalendarService {
   updateEvent(id: string, event: Partial<CalendarEvent>): Observable<CalendarEvent> {
     // Format dates to be compatible with Java LocalDateTime (no 'Z' timezone marker)
     const formattedEvent = this.formatEventDatesForBackend(event);
-    console.log('Updating event:', id, formattedEvent);
-    
+
     // Force reminderSent to false when updating reminder settings
     if (formattedEvent.reminderMinutes !== undefined && formattedEvent.reminderMinutes > 0) {
       formattedEvent.reminderSent = false;
     }
-    
+
     return this.http.put<any>(`${this.apiUrl}/events/${id}`, formattedEvent)
       .pipe(
         map(response => {
-          console.log('Event updated successfully, server response:', response);
           // Extract event data from response
           let updatedEvent = null;
           if (response && response.data && response.data.event) {
@@ -144,7 +135,6 @@ export class CalendarService {
         }),
         catchError(error => {
           console.error('Error updating event:', error);
-          console.error('Request payload was:', formattedEvent);
           return this.handleError<CalendarEvent>('updateEvent')(error);
         })
       );
@@ -153,25 +143,13 @@ export class CalendarService {
   deleteEvent(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/events/${id}`)
       .pipe(
-        tap(() => {
-          console.log('Event deleted successfully');
-        }),
         catchError(this.handleError<void>('deleteEvent'))
       );
   }
 
   private formatEventDatesForBackend(event: any): any {
     const formattedEvent = { ...event };
-    
-    console.log('Formatting event for backend - BEFORE:', JSON.stringify({
-      id: formattedEvent.id,
-      reminderMinutes: formattedEvent.reminderMinutes,
-      type: typeof formattedEvent.reminderMinutes,
-      additionalReminders: formattedEvent.additionalReminders,
-      emailNotification: formattedEvent.emailNotification,
-      pushNotification: formattedEvent.pushNotification
-    }, null, 2));
-    
+
     // Remove the frontend-only 'start' and 'end' properties to avoid conflicts with backend
     if (formattedEvent.start && formattedEvent.startTime) {
       delete formattedEvent.start;
@@ -190,21 +168,19 @@ export class CalendarService {
         // Force to number type
         formattedEvent.reminderMinutes = Number(formattedEvent.reminderMinutes);
       }
-      console.log('Formatted reminderMinutes:', formattedEvent.reminderMinutes, 'type:', typeof formattedEvent.reminderMinutes);
     }
-    
+
     // If reminderMinutes is 0, make sure notification flags are off
     if (formattedEvent.reminderMinutes === 0) {
       formattedEvent.emailNotification = false;
       formattedEvent.pushNotification = false;
     }
-    
+
     // Convert additional reminders to an array of numbers if it's not already
     if (formattedEvent.additionalReminders && Array.isArray(formattedEvent.additionalReminders)) {
       formattedEvent.additionalReminders = formattedEvent.additionalReminders.map(min => Number(min));
-      console.log('Formatted additionalReminders:', formattedEvent.additionalReminders);
     }
-    
+
     // Convert startTime to format Java LocalDateTime can parse
     if (formattedEvent.startTime) {
       // Handle both Date objects and string dates
@@ -216,20 +192,11 @@ export class CalendarService {
     // Convert endTime to format Java LocalDateTime can parse (if it exists)
     if (formattedEvent.endTime) {
       // Handle both Date objects and string dates
-      formattedEvent.endTime = formattedEvent.endTime instanceof Date 
+      formattedEvent.endTime = formattedEvent.endTime instanceof Date
         ? this.formatDateForJava(formattedEvent.endTime)
         : this.formatStringDateForJava(formattedEvent.endTime);
     }
-    
-    console.log('Formatting event for backend - AFTER:', JSON.stringify({
-      id: formattedEvent.id,
-      reminderMinutes: formattedEvent.reminderMinutes,
-      type: typeof formattedEvent.reminderMinutes,
-      additionalReminders: formattedEvent.additionalReminders,
-      emailNotification: formattedEvent.emailNotification,
-      pushNotification: formattedEvent.pushNotification
-    }, null, 2));
-    
+
     return formattedEvent;
   }
   
@@ -255,13 +222,11 @@ export class CalendarService {
     if (!dateString) {
       return null;
     }
-    
-    console.log('Formatting date string:', dateString);
-    
+
     try {
       // Parse the string date into a Date object and then format it
       const date = new Date(dateString);
-      
+
       // Create formatted date string in the exact format Java expects: YYYY-MM-DDTHH:MM:SS
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -269,11 +234,8 @@ export class CalendarService {
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
-      
-      const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-      console.log('Converted to Java format:', formattedDate);
-      
-      return formattedDate;
+
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     } catch (error) {
       console.error('Error formatting date string:', error);
       return null;
@@ -496,9 +458,6 @@ export class CalendarService {
   testReminderEmail(eventId: string): Observable<any> {
     return this.http.get<any>(`${environment.apiUrl}/api/v1/test/reset-and-process-reminder`)
       .pipe(
-        tap(response => {
-          console.log('Test reminder response:', response);
-        }),
         catchError(this.handleError<any>('testReminderEmail'))
       );
   }
@@ -510,8 +469,6 @@ export class CalendarService {
     return this.http.get<any>(`${environment.apiUrl}/api/calendar/events?size=${size}`)
       .pipe(
         map(response => {
-          console.log('Fetched calendar events successfully', response);
-
           // Extract events from the nested response structure
           if (response && response.data && Array.isArray(response.data.events)) {
             return response.data.events.map(event => ({
@@ -531,7 +488,6 @@ export class CalendarService {
         }),
         catchError(error => {
           console.error('getEvents failed:', error);
-          // Return empty events array instead of propagating the error
           return of([]);
         })
       );
@@ -544,8 +500,6 @@ export class CalendarService {
     return this.http.get<any>(`${environment.apiUrl}/api/calendar/events/today`)
       .pipe(
         map(response => {
-          console.log('Fetched today events successfully', response);
-
           if (response && response.data && Array.isArray(response.data.events)) {
             return response.data.events.map(event => ({
               ...event,
@@ -570,8 +524,6 @@ export class CalendarService {
     return this.http.get<any>(`${environment.apiUrl}/api/calendar/events/upcoming?days=${days}`)
       .pipe(
         map(response => {
-          console.log('Fetched upcoming events successfully', response);
-
           if (response && response.data && Array.isArray(response.data.events)) {
             return response.data.events.map(event => ({
               ...event,

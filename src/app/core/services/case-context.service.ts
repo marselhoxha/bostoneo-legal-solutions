@@ -138,9 +138,7 @@ export class CaseContextService {
    */
   private initializeWebSocketIntegration(): void {
     if (!this.realTimeEnabled) return;
-    
-    console.log('🔌 CaseContextService - Initializing WebSocket integration');
-    
+
     // Subscribe to case-related messages
     this.webSocketService.getCaseMessages()
       .pipe(takeUntil(this.destroy$))
@@ -173,9 +171,7 @@ export class CaseContextService {
     if (!currentCase || message.caseId !== currentCase.id) {
       return;
     }
-    
-    console.log('📨 CaseContextService - Processing case message:', message);
-    
+
     switch (message.type) {
       case 'CASE_UPDATED':
         this.refreshCurrentCase();
@@ -201,9 +197,7 @@ export class CaseContextService {
     if (!currentCase || message.caseId !== currentCase.id) {
       return;
     }
-    
-    console.log('📨 CaseContextService - Processing task message:', message);
-    
+
     switch (message.type) {
       case 'TASK_CREATED':
         if (message.data) {
@@ -239,9 +233,7 @@ export class CaseContextService {
     if (!currentCase || message.caseId !== currentCase.id) {
       return;
     }
-    
-    console.log('📨 CaseContextService - Processing assignment message:', message);
-    
+
     switch (message.type) {
       case 'ASSIGNMENT_CREATED':
       case 'ASSIGNMENT_UPDATED':
@@ -262,7 +254,6 @@ export class CaseContextService {
    */
   setRealTimeEnabled(enabled: boolean): void {
     this.realTimeEnabled = enabled;
-    console.log('🔄 CaseContextService - Real-time updates:', enabled ? 'enabled' : 'disabled');
   }
   
   /**
@@ -344,8 +335,6 @@ export class CaseContextService {
    * Set current case and load related data
    */
   setCurrentCase(caseData: LegalCase, loadRelatedData: boolean = true): Observable<void> {
-    console.log('🎯 CaseContextService - Setting current case:', caseData);
-    
     this.setLoading('case', true);
     this.currentCase$.next(caseData);
     
@@ -391,7 +380,6 @@ export class CaseContextService {
    * Update case team
    */
   updateCaseTeam(team: CaseAssignment[]): void {
-    console.log('👥 CaseContextService - Updating case team:', team);
     this.caseTeam$.next(team);
     this.notifyComponents('TEAM_UPDATED', team);
     this.recalculateTeamSummary();
@@ -435,7 +423,6 @@ export class CaseContextService {
    * Update case tasks
    */
   updateTasks(tasks: CaseTask[]): void {
-    console.log('📋 CaseContextService - Updating case tasks:', tasks);
     this.caseTasks$.next(tasks);
     this.notifyComponents('TASKS_UPDATED', tasks);
     this.recalculateTaskSummary();
@@ -653,7 +640,6 @@ export class CaseContextService {
    * Clear all context data
    */
   clearContext(): void {
-    console.log('🧹 CaseContextService - Clearing context');
     this.currentCase$.next(null);
     this.caseTeam$.next([]);
     this.caseTasks$.next([]);
@@ -668,8 +654,6 @@ export class CaseContextService {
    * Sync with backend data
    */
   syncWithBackend(caseId: number): Observable<void> {
-    console.log('🔄 CaseContextService - Syncing with backend for case:', caseId);
-    
     this.setLoading('sync', true);
     
     return forkJoin({
@@ -796,8 +780,7 @@ export class CaseContextService {
       payload,
       timestamp: Date.now()
     };
-    
-    console.log('📢 CaseContextService - Notifying components:', notification);
+
     this.componentNotifications$.next(notification);
     
     // Clear notification after a short delay to allow components to react

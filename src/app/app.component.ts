@@ -53,19 +53,15 @@ export class AppComponent implements OnInit, OnDestroy {
     // Handle navigation events
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationStart) {
-        console.log('NavigationStart:', event.url);
-        
         // Redirect root URL to dashboard
         if (event.url === '/' || event.url === '') {
           this.router.navigate(['/home']);
           return;
         }
-        
+
         if (!this.isExcludedRoute(event.url)) {
-          console.log('Showing preloader');
           this.preloaderService.show();
         } else {
-          console.log('Hiding preloader (excluded route)');
           this.preloaderService.hide();
         }
       } else if (
@@ -73,9 +69,7 @@ export class AppComponent implements OnInit, OnDestroy {
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
-        console.log('NavigationEnd/Cancel/Error:', event);
         setTimeout(() => {
-          console.log('Hiding preloader after navigation end');
           this.preloaderService.hide();
         }, 700);
       }
@@ -111,10 +105,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.userService.loginSuccess$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        console.log('Login success detected, waiting for interceptor reset...');
         // Small delay to ensure interceptor state is fully reset
         setTimeout(() => {
-          console.log('Initializing authenticated services...');
           this.initializeAuthenticatedServices();
         }, 100);
       });
@@ -123,8 +115,6 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.userService.isAuthenticated()) {
       this.initializeAuthenticatedServices();
     }
-
-    console.log('App component initialized');
   }
 
   /**
@@ -132,21 +122,16 @@ export class AppComponent implements OnInit, OnDestroy {
    * Called on app init if already authenticated, or after login success
    */
   private initializeAuthenticatedServices(): void {
-    console.log('Initializing authenticated services...');
-
     this.userService.preloadUserData();
 
     // Start deadline reminder service for authenticated users
     this.reminderService.startReminders();
-    console.log('Reminder service started with improved error handling');
 
     // Start deadline alert monitoring
     this.deadlineAlertService.startDeadlineMonitoring();
-    console.log('Deadline alert monitoring started');
 
     // Initialize Enhanced Notification Manager with EventBus
     this.enhancedNotificationManager.initialize();
-    console.log('Enhanced Notification Manager with EventBus initialized');
 
     // Initialize WebSocket connection
     this.initializeWebSocketNotifications();
@@ -160,10 +145,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const urlSegments = cleanUrl.split('/').filter(segment => segment.length > 0);
     const routePath = urlSegments.join('/');
     const excludedRoutes = ['login', 'register', 'resetpassword'];
-  
-    const isExcluded = excludedRoutes.includes(routePath);
-    console.log(`Navigating to: ${routePath}, isExcludedRoute: ${isExcluded}`);
-    return isExcluded;
+
+    return excludedRoutes.includes(routePath);
   }
 
   private initializePushNotifications(): void {
@@ -171,81 +154,53 @@ export class AppComponent implements OnInit, OnDestroy {
       // Register the Firebase service worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/firebase-messaging-sw.js')
-          .then(registration => {
-            console.log('🔔 Firebase Service Worker registered:', registration);
-          })
           .catch(error => {
-            console.error('❌ Service Worker registration failed:', error);
+            console.error('Service Worker registration failed:', error);
           });
       }
-      
+
       // Auto-request permission if not denied and not already granted
       if (Notification.permission === 'default') {
-        this.pushNotificationService.requestPermission()
-          .then(token => {
-            console.log('🔔 FCM Token registered automatically:', token);
-          })
-          .catch(err => {
-            console.log('🔔 Push notification permission not granted:', err);
-          });
+        this.pushNotificationService.requestPermission().catch(() => {});
       } else if (Notification.permission === 'granted') {
         // If permission already granted, just get the token
-        this.pushNotificationService.requestPermission()
-          .then(token => {
-            console.log('🔔 FCM Token refreshed:', token);
-          })
-          .catch(err => {
-            console.log('🔔 Error refreshing FCM token:', err);
-          });
+        this.pushNotificationService.requestPermission().catch(() => {});
       }
-      
+
       // Subscribe to notifications to handle them when the app is open
       this.pushNotificationService.notification$.subscribe(notification => {
-        if (notification) {
-          console.log('Received notification in app component:', notification);
-          // You can add custom handling here like playing sounds or showing toasts
-        }
+        // Custom handling for notifications when app is open
       });
     }
   }
 
   private initializeWebSocketNotifications(): void {
-    console.log('🔌 Initializing WebSocket notifications');
-    
     // Enable WebSocket and establish connection
     this.webSocketService.enableWebSocket();
-    
+
     // Subscribe to WebSocket connection status
     this.webSocketService.getConnectionStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe(status => {
-        console.log('🔌 WebSocket connection status:', status);
-        if (status.connected) {
-          console.log('✅ WebSocket connected successfully');
-        } else if (status.error) {
-          console.error('❌ WebSocket connection error:', status.error);
+        if (status.error) {
+          console.error('WebSocket connection error:', status.error);
         }
       });
-    
+
     // Subscribe to all notification messages
     this.webSocketService.getNotificationMessages()
       .pipe(takeUntil(this.destroy$))
       .subscribe(message => {
-        console.log('📨 Received WebSocket notification:', message);
         this.handleWebSocketNotification(message);
       });
-      
+
     // Keep connection alive by subscribing to all messages
     this.webSocketService.getMessages()
       .pipe(takeUntil(this.destroy$))
-      .subscribe(message => {
-        console.log('📨 WebSocket message received:', message.type, message);
-      });
+      .subscribe(() => {});
   }
 
   private handleWebSocketNotification(message: any): void {
-    console.log('🎯 Processing notification:', message);
-
     try {
       const data = message.data || message;
       const title = data.title || message.title || 'Notification';
@@ -267,7 +222,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pushNotificationService.sendCustomNotification(notificationPayload);
 
     } catch (error) {
-      console.error('❌ Error handling WebSocket notification:', error);
+      console.error('Error handling WebSocket notification:', error);
     }
   }
 
@@ -285,7 +240,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Also do an immediate check on startup
     this.userService.proactiveTokenRefresh();
-    console.log('Proactive token refresh monitoring started');
   }
 
   ngOnDestroy(): void {

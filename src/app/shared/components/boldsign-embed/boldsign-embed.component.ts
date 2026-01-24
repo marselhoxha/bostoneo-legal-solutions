@@ -594,8 +594,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
-    console.log('[BoldSign] Received postMessage from:', event.origin, 'data:', event.data);
-
     try {
       let data: any;
 
@@ -612,7 +610,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
         data = event.data;
       } else {
         // Unknown format
-        console.log('[BoldSign] Unknown data format:', typeof event.data, event.data);
         return;
       }
 
@@ -636,7 +633,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
    */
   private handleBoldSignMessage(data: any): void {
     const eventType = data.type || data.action || data.event || data.status;
-    console.log('[BoldSign Event]', eventType, data);
 
     // Normalize event type for comparison (lowercase, trim)
     const normalizedEvent = eventType?.toLowerCase()?.trim();
@@ -670,7 +666,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
 
         // Check mode to emit appropriate event
         if (this.mode === 'create-template' || this.mode === 'edit-template') {
-          console.log('[BoldSign] Template created/updated successfully!');
           this.completed.emit({
             type: 'completed',
             templateId: data.templateId || data.template_id || data.id,
@@ -678,7 +673,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
           });
         } else {
           // send-document or send-from-template mode
-          console.log('[BoldSign] Document sent successfully!');
           this.sent.emit({
             type: 'sent',
             documentId: data.documentId || data.document_id || data.id,
@@ -691,7 +685,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       // === Template Editing Completed ===
       case 'ontemplateeditingcompleted':
       case 'templateeditingcompleted':
-        console.log('[BoldSign] Template editing completed!');
         this.loading = false;
         this.stopLoadingProgress();
         this.completed.emit({
@@ -709,7 +702,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       case 'signed':
       case 'onsigncompleted':
       case 'signcompleted':
-        console.log('[BoldSign] Signing completed!');
         this.loading = false;
         this.stopLoadingProgress();
         this.completed.emit({
@@ -730,7 +722,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       case 'ontemplatecreated':
       case 'templatecreated':
       case 'template_created':
-        console.log('[BoldSign] Draft/Template saved successfully!');
         this.saved.emit({
           type: 'saved',
           documentId: data.documentId || data.document_id || data.id,
@@ -749,7 +740,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       case 'templateeditingfailed':
       case 'onerror':
       case 'error':
-        console.error('[BoldSign] Error:', data.message || data);
         this.error = data.message || 'An error occurred while processing your document';
         this.loading = false;
         this.stopLoadingProgress();
@@ -765,7 +755,6 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       case 'cancelled':
       case 'closed':
       case 'onclose':
-        console.log('[BoldSign] Operation cancelled');
         this.cancelled.emit({
           type: 'cancelled',
           message: data.message
@@ -776,14 +765,9 @@ export class BoldSignEmbedComponent implements OnInit, OnDestroy, AfterViewInit 
       // === Page Navigation (informational, don't emit anything) ===
       case 'onpagenavigation':
       case 'pagenavigation':
-        console.log('[BoldSign] Page navigation:', data.pageType, data.category);
         break;
 
       default:
-        // Log unknown events for debugging
-        if (eventType) {
-          console.log('[BoldSign] Unhandled event type:', eventType, data);
-        }
         break;
     }
   }

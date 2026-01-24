@@ -64,24 +64,12 @@ export class LoginComponent implements OnInit{
             this.notificationService.onSuccess(response.message)
             localStorage.setItem(Key.TOKEN, response.data.access_token);
             localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
-            
-            // DEBUG: Log token details to help diagnose permission issues
-            try {
-              const decodedToken = JSON.parse(atob(response.data.access_token.split('.')[1]));
-              console.log('Decoded JWT Token:', decodedToken);
-              console.log('Roles:', decodedToken.roles || []);
-              console.log('Permissions:', decodedToken.permissions || []);
-            } catch (error) {
-              console.error('Error decoding token:', error);
-            }
-            
             this.router.navigate(['/']);
             return { dataState: DataState.LOADED, loginSuccess: true };
           }
         }),
         startWith({ dataState: DataState.LOADING, isUsingMfa: false }),
         catchError((error: string) => {
-          console.log(error);
           return of({ dataState: DataState.ERROR, isUsingMfa: false, loginSuccess: false, error })
         })
       )

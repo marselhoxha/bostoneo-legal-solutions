@@ -142,18 +142,7 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         this.allTimeEntries = Array.isArray(data.timeEntries) ? data.timeEntries : data.timeEntries.content || [];
         this.attorneys = data.attorneys;
         this.legalCases = data.cases;
-        
-        console.log('📑 All time entries loaded:', this.allTimeEntries.length);
-        console.log('👥 Time entries sample user IDs:', this.allTimeEntries.slice(0, 3).map(e => ({ userId: e.userId, userName: e.userName })));
-        console.log('👥 Available attorneys:', this.attorneys);
-        
-        // Debug: Check what statuses we have in the data
-        const statusCounts = this.allTimeEntries.reduce((acc, entry) => {
-          acc[entry.status] = (acc[entry.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        console.log('📑 Status distribution:', statusCounts);
-        
+
         this.applyFilters();
         this.calculateStats();
         this.lastUpdated = new Date();
@@ -183,9 +172,8 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
     return this.userService.getUsers().pipe(
       map(response => {
         const users = response?.data?.users || response?.data || [];
-        console.log('👥 Raw users response:', users);
-        
-        const mappedUsers = users.map((user: any) => ({
+
+        return users.map((user: any) => ({
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -193,9 +181,6 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
           initials: this.getUserInitials(user),
           avatarColor: this.getUserAvatarColor(user)
         }));
-        
-        console.log('👥 Mapped attorneys:', mappedUsers);
-        return mappedUsers;
       }),
       catchError(error => {
         console.error('Error loading attorneys:', error);
@@ -207,10 +192,8 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
   private loadLegalCases() {
     return this.legalCaseService.getAllCases(0, 100).pipe(
       map(response => {
-        console.log('📁 Legal Cases API response:', response);
-        
         let cases = [];
-        
+
         if (response?.data?.cases && Array.isArray(response.data.cases)) {
           cases = response.data.cases;
         } else if (response?.data?.content && Array.isArray(response.data.content)) {
@@ -220,22 +203,18 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         } else if (Array.isArray(response)) {
           cases = response;
         } else {
-          console.warn('⚠️ Unexpected legal cases response structure:', response);
           return [];
         }
-        
-        console.log(`📁 Processing ${cases.length} legal cases`);
-        
+
         if (!Array.isArray(cases)) {
-          console.error('❌ Cases is not an array:', typeof cases, cases);
           return [];
         }
-        
+
         return cases.map((legalCase: any) => ({
           id: parseInt(legalCase.id) || legalCase.id,
           title: legalCase.title || legalCase.name || 'Untitled Case',
           caseNumber: legalCase.caseNumber || legalCase.number || 'Unknown',
-          clientName: legalCase.clientName || 
+          clientName: legalCase.clientName ||
                      (legalCase.client ? `${legalCase.client.firstName} ${legalCase.client.lastName}` : 'Unknown Client')
         }));
       }),
@@ -264,25 +243,12 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
 
     // Employee filter - fix ID matching
     if (this.filters.attorneyId) {
-      console.log('🔍 Filtering by attorney ID:', this.filters.attorneyId);
-      console.log('🔍 Before employee filter:', filtered.length);
-      
       filtered = filtered.filter(entry => {
         // Handle both string and number IDs
         const entryUserId = entry.userId ? String(entry.userId) : null;
         const filterUserId = String(this.filters.attorneyId);
-        const matches = entryUserId === filterUserId;
-        
-        if (!matches && entryUserId) {
-          console.log('🔍 No match:', { entryUserId, filterUserId, userName: entry.userName });
-        } else if (matches) {
-          console.log('✅ Match found:', { entryUserId, filterUserId, userName: entry.userName });
-        }
-        
-        return matches;
+        return entryUserId === filterUserId;
       });
-      
-      console.log('🔍 After employee filter:', filtered.length);
     }
 
     // Date range filter - simplified

@@ -159,7 +159,6 @@ export class ClientAppointmentsComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe(() => {
-        console.log('📅 Appointment notification received, triggering refresh...');
         this.refreshTrigger$.next();
       });
   }

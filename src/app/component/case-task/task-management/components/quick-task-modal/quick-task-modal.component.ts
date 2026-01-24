@@ -123,10 +123,6 @@ export class QuickTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.caseTaskService.createTask(newTask).subscribe({
       next: (response) => {
-        console.log('✅ Task created - full response:', response);
-        console.log('✅ Task created - response.data:', response.data);
-        console.log('✅ Task created - selected user:', this.getSelectedUser());
-        
         this.notificationService.onSuccess('Task created successfully');
         this.taskCreated.emit({
           task: response.data.task,

@@ -215,18 +215,11 @@ export class BillingRatesComponent implements OnInit, OnDestroy, AfterViewInit {
   private processRateCards(): void {
     this.rateCards = this.billingRates.map(rate => {
       const realData = this.realUsageData[rate.id!];
-      
+
       // Use real data from time tracking integration
       const totalHours = realData?.totalHours || 0;
       const totalBilled = realData?.totalBilled || 0;
-      
-      console.log(`Processing rate ${rate.id} (${rate.rateType}):`, {
-        realData,
-        totalHours,
-        totalBilled,
-        usage: Number(totalHours)
-      });
-      
+
       return {
         id: rate.id,
         type: this.formatRateType(rate.rateType),
@@ -249,8 +242,6 @@ export class BillingRatesComponent implements OnInit, OnDestroy, AfterViewInit {
       const lastActiveRate = activeRateCards[activeRateCards.length - 1];
       lastActiveRate.usage = lastActiveRate.usage + (totalFromAnalytics - currentSum);
     }
-    
-    console.log('Final rate cards:', this.rateCards);
   }
 
 
@@ -293,7 +284,6 @@ export class BillingRatesComponent implements OnInit, OnDestroy, AfterViewInit {
             const rateData = timeEntriesData.rateGroups[key];
             if (rateData.rateId) {
               this.realUsageData[rateData.rateId] = rateData;
-              console.log(`Rate ${rateData.rateId} (${rateData.rateType}): ${rateData.totalHours} hours, $${rateData.totalBilled} billed`);
             }
           });
         }
@@ -308,10 +298,7 @@ export class BillingRatesComponent implements OnInit, OnDestroy, AfterViewInit {
         
         // Re-process rate cards now that we have real usage data
         this.processRateCards();
-        
-        console.log('Real usage data loaded:', this.realUsageData);
-        console.log('Updated rate cards:', this.rateCards);
-        
+
         resolve();
       }).catch((error) => {
         console.warn('Failed to load analytics, using fallback:', error);

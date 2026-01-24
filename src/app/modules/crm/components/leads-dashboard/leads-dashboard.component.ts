@@ -265,12 +265,10 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
    * Send CRM notification using push notification service (same as task assignments)
    */
   private sendCrmNotification(title: string, message: string, type: 'success' | 'error' | 'info' = 'info', crmInfo?: any): void {
-    console.log('🔔 CRM NOTIFICATION:', { title, message, type, crmInfo });
-    
     // Determine notification type and icon
     let notificationType = 'crm';
     let iconClass = 'bx bx-bell';
-    
+
     switch (type) {
       case 'success':
         iconClass = 'bx bx-check-circle';
@@ -282,7 +280,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
         iconClass = 'bx bx-info-circle';
         break;
     }
-    
+
     const notificationPayload = {
       notification: {
         title: title,
@@ -305,8 +303,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
         } : null
       }
     };
-    
-    console.log('🔔 Sending CRM notification via NotificationManager:', notificationPayload);
   }
 
   initializeForms() {
@@ -383,16 +379,13 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   }
 
   loadAvailableAttorneys() {
-    console.log('🔍 Loading available attorneys...');
-    
     this.userService.getAttorneys().subscribe({
       next: (attorneys: User[]) => {
-        console.log('✅ Attorneys loaded successfully:', attorneys);
         this.availableAttorneys = attorneys;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading attorneys:', error);
+        console.error('Error loading attorneys:', error);
         this.availableAttorneys = [];
         this.cdr.detectChanges();
       }
@@ -402,26 +395,23 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   loadLeads() {
     this.loading = true;
     this.cdr.detectChanges();
-    
+
     const params = {
       page: 0,
       size: 1000,
       sortBy: this.sortBy,
       sortDir: this.sortDirection
     };
-    
-    console.log('🚀 Loading all leads for client-side pagination');
-    
+
     this.crmService.getLeads(params).subscribe({
       next: (response: any) => {
-        console.log('✅ Leads loaded successfully:', response);
         this.allLeads = response.content || [];
         this.applyFilters();
         this.loading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading leads:', error);
+        console.error('Error loading leads:', error);
         this.allLeads = [];
         this.filteredLeads = [];
         this.totalItems = 0;
@@ -1787,10 +1777,9 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
 
   private loadRequiredConversionFields(conversionType: string) {
     if (!this.selectedLead) return;
-    
+
     this.crmService.getRequiredConversionFields(this.selectedLead.id, conversionType).subscribe({
       next: (fieldsResponse) => {
-        console.log('Required fields for conversion:', fieldsResponse);
         // This can be used to dynamically show/hide fields or add additional validation
       },
       error: (error) => {
@@ -2050,7 +2039,6 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
           }).then((result) => {
             if (result.isConfirmed) {
               // Here you would typically navigate to conflict resolution page
-              console.log('Navigate to conflict resolution:', conflictResult);
             }
           });
         } else {
@@ -2173,10 +2161,9 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             if (result.isConfirmed) {
               // Navigate to view the created records
               if (response.clientId) {
-                console.log('Navigate to client:', response.clientId);
-              }
-              if (response.caseId) {
-                console.log('Navigate to case:', response.caseId);
+                this.router.navigate(['/client', response.clientId]);
+              } else if (response.caseId) {
+                this.router.navigate(['/case', response.caseId]);
               }
             }
           });

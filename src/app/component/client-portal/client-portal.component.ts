@@ -75,7 +75,6 @@ export class ClientPortalComponent implements OnInit {
   initializeStripe(): void {
     // Initialize Stripe.js
     // This would be implemented with actual Stripe.js integration
-    console.log('Stripe initialization would happen here');
   }
 
   async processPayment(): Promise<void> {
@@ -91,8 +90,6 @@ export class ClientPortalComponent implements OnInit {
       
       // Process payment with Stripe
       // This would use actual Stripe.js confirmCardPayment
-      console.log('Processing payment with intent:', paymentIntent);
-      
       // Simulate successful payment
       setTimeout(() => {
         this.paymentProcessing = false;

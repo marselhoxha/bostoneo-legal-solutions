@@ -50,8 +50,6 @@ export class SmartNotificationTargetingService {
    * Get smart recipients based on role hierarchy, business logic, and context
    */
   async getSmartRecipients(context: SmartNotificationContext): Promise<{ primaryUsers: User[], secondaryUsers: User[] }> {
-    console.log(`🎯 Smart targeting for ${context.eventType}`, context);
-
     const recipients = { primaryUsers: [] as User[], secondaryUsers: [] as User[] };
 
     switch (context.eventType) {

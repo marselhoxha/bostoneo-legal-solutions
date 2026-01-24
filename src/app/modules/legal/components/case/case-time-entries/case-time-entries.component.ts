@@ -115,11 +115,6 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
-        console.log('🔄 Filter change triggered - loading time entries with:', {
-          dateRange: this.dateRange,
-          status: this.selectedStatus,
-          preset: this.selectedDatePreset
-        });
         this.loadTimeEntries();
       });
 
@@ -270,8 +265,6 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
 
   // Date Presets - Use explicit click handler
   onDatePresetClick(preset: string) {
-    console.log('📅 Date preset clicked:', preset, '(current:', this.selectedDatePreset, ')');
-
     // Allow re-clicking same preset to refresh
     this.selectedDatePreset = preset;
     const today = new Date();
@@ -286,7 +279,6 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
         weekEnd.setHours(23, 59, 59, 999);
         this.dateRange = { start: weekStart, end: weekEnd };
         this.dateRangeText = 'This Week';
-        console.log('📅 Week range:', this.formatDateForApi(weekStart), 'to', this.formatDateForApi(weekEnd));
         break;
       case 'month':
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -295,7 +287,6 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
         monthEnd.setHours(23, 59, 59, 999);
         this.dateRange = { start: monthStart, end: monthEnd };
         this.dateRangeText = 'This Month';
-        console.log('📅 Month range:', this.formatDateForApi(monthStart), 'to', this.formatDateForApi(monthEnd));
         break;
       case 'lastMonth':
         const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -304,13 +295,11 @@ export class CaseTimeEntriesComponent implements OnInit, OnDestroy, AfterViewIni
         lastMonthEnd.setHours(23, 59, 59, 999);
         this.dateRange = { start: lastMonthStart, end: lastMonthEnd };
         this.dateRangeText = 'Last Month';
-        console.log('📅 Last month range:', this.formatDateForApi(lastMonthStart), 'to', this.formatDateForApi(lastMonthEnd));
         break;
       case 'all':
       default:
         this.dateRange = { start: null, end: null };
         this.dateRangeText = 'All Time';
-        console.log('📅 All time - no date filter');
         break;
     }
 

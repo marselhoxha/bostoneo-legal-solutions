@@ -23,29 +23,23 @@ export class CaseContextGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
-    
-    console.log('🛡️ CaseContextGuard - Checking route access:', state.url);
-    
     const caseId = this.extractCaseId(route);
-    
+
     // If no case ID is required, allow access
     if (!caseId) {
       this.updateNavigationContext(route, state);
       return true;
     }
-    
+
     // Check if we already have the case context
     const currentCase = this.caseContextService.getCurrentCaseSnapshot();
-    
+
     if (currentCase && currentCase.id === caseId) {
-      console.log('✅ CaseContextGuard - Case context already loaded');
       this.updateNavigationContext(route, state);
       return true;
     }
-    
+
     // Load case context
-    console.log('🔄 CaseContextGuard - Loading case context for caseId:', caseId);
-    
     return this.loadCaseContext(caseId).pipe(
       tap(() => {
         this.updateNavigationContext(route, state);
@@ -128,8 +122,6 @@ export class CaseContextGuard implements CanActivate {
             if (userRole.data) {
               this.caseContextService.setUserCaseRole(userRole.data.roleType);
             }
-            
-            console.log('✅ CaseContextGuard - Case context loaded successfully');
           })
         );
       })
@@ -147,10 +139,7 @@ export class CaseContextGuard implements CanActivate {
     this.navigationContextService.setContextParams(routeParams);
     
     // If this route preserves context, maintain current filters/sorts
-    if (this.navigationContextService.shouldPreserveContext()) {
-      // Preserved filters/sorts are maintained automatically
-      console.log('🔒 CaseContextGuard - Preserving navigation context');
-    }
+    // Preserved filters/sorts are maintained automatically
   }
 }
 

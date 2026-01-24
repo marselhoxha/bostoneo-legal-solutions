@@ -40,43 +40,19 @@ export class CaseService {
   // Helper method to get auth headers
   private getAuthHeaders(): HttpHeaders {
     const token = this.getToken();
-    
-    // Debug logging to help identify authentication issues
-    console.log('🔍 Case Service Token Debug:', {
-      tokenExists: !!token,
-      tokenLength: token?.length || 0,
-      tokenStart: token?.substring(0, 20) + '...' || 'null',
-      keyUsed: Key.TOKEN,
-      allLocalStorageKeys: Object.keys(localStorage)
-    });
-    
+
     if (!token) {
-      console.error('❌ No authentication token found! User might not be logged in.');
-      console.log('Available localStorage keys:', Object.keys(localStorage));
-      console.log('Available sessionStorage keys:', Object.keys(sessionStorage));
+      console.error('No authentication token found! User might not be logged in.');
     }
-    
+
     // Create headers and force materialization to avoid lazy initialization issues
     let headers = new HttpHeaders();
     headers = headers.set('Content-Type', 'application/json');
-    
+
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    
-    // Force header materialization by accessing a property
-    const materializedHeaders = headers.keys();
-    
-    // Debug the created headers
-    console.log('🔧 Headers being created:', {
-      hasContentType: headers.has('Content-Type'),
-      hasAuthorization: headers.has('Authorization'),
-      authHeader: headers.get('Authorization')?.substring(0, 50) + '...' || 'missing',
-      allHeaders: materializedHeaders,
-      headersMap: headers,
-      headersMaterialized: materializedHeaders.length > 0
-    });
-    
+
     return headers;
   }
 

@@ -131,8 +131,7 @@ export class AssignmentSyncService implements OnDestroy {
     
     // Note: Team membership validation should be done at the UI level
     // The backend will ultimately enforce this business rule
-    console.log('🔧 AssignmentSyncService.assignTaskToUser:', { taskId, userId, caseId });
-    
+
     const change: AssignmentChange = {
       type: 'TASK_ASSIGNMENT',
       entityId: taskId,
@@ -297,7 +296,6 @@ export class AssignmentSyncService implements OnDestroy {
 
         // If this is a LEAD_ATTORNEY assignment, update the case's leadAttorney field
         if (change.assignmentData?.roleType === 'LEAD_ATTORNEY') {
-          console.log('📝 Updating case leadAttorney to:', assignment.userName);
           this.legalCaseService.updateCase(String(change.entityId), {
             leadAttorney: assignment.userName,
             leadAttorneyId: assignment.userId
@@ -411,8 +409,6 @@ export class AssignmentSyncService implements OnDestroy {
       });
     }
 
-    console.log('🔧 processTaskAssignment with validated entityId:', change.entityId);
-
     const updateData: TaskUpdateRequest = {
       assignedToId: change.userId
     };
@@ -509,7 +505,6 @@ export class AssignmentSyncService implements OnDestroy {
 
         // If removing lead attorney, clear the case's leadAttorney field
         if (isLeadAttorney) {
-          console.log('📝 Clearing case leadAttorney since LEAD_ATTORNEY was unassigned');
           this.legalCaseService.updateCase(String(change.entityId), {
             leadAttorney: null,
             leadAttorneyId: null
@@ -566,7 +561,6 @@ export class AssignmentSyncService implements OnDestroy {
     // Notifications are now handled by the personalized notification system
     // in the calling components (task-management.component.ts, case-detail.component.ts)
     // to avoid duplicate and generic notifications
-    console.log('📝 Task assignment notification skipped - handled by personalized system');
     return of();
   }
 
@@ -604,7 +598,6 @@ export class AssignmentSyncService implements OnDestroy {
   private sendTaskReassignmentNotifications(change: AssignmentChange, task: CaseTask): Observable<void> {
     // Task reassignment notifications are now handled by the personalized notification system
     // in the calling components to avoid duplicate and generic notifications
-    console.log('📝 Task reassignment notification skipped - handled by personalized system');
     return of();
   }
 
@@ -656,7 +649,7 @@ export class AssignmentSyncService implements OnDestroy {
     this.assignmentQueue$
       .pipe(takeUntil(this.destroy$))
       .subscribe(change => {
-        console.log('Assignment change queued:', change);
+        // Assignment change queued for future processing
       });
   }
 }

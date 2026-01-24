@@ -247,13 +247,9 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadClients(): void {
-    console.log('Loading ALL clients for invoice creation...');
-    
     // Try newInvoice endpoint first which should return all clients
     this.clientService.newInvoice$().subscribe({
       next: (response: any) => {
-        console.log('newInvoice response received:', response);
-        
         // Handle multiple possible response formats from newInvoice endpoint
         let clientsList: any[] = [];
         
@@ -273,16 +269,13 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
           // Direct array format
           clientsList = response;
         } else {
-          console.warn('Unexpected newInvoice response format:', response);
           clientsList = [];
         }
-        
+
         this.clients = clientsList;
-        console.log('All clients loaded via newInvoice endpoint:', this.clients.length, 'clients');
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('newInvoice endpoint failed, trying to load all clients via pagination:', error);
         
         // Fallback: Load all clients by using a large page size or multiple pages
         this.loadAllClientsWithPagination();
@@ -291,12 +284,9 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadAllClientsWithPagination(): void {
-    console.log('Loading clients with large page size using service method...');
-    
     // Use the new allClients$ method from the service
     this.clientService.allClients$().subscribe({
       next: (response: any) => {
-        console.log('All clients response received:', response);
         
         // Handle multiple possible response formats
         let clientsList: any[] = [];
@@ -312,11 +302,9 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
         }
         
         this.clients = clientsList;
-        console.log('All clients loaded via service allClients$ method:', this.clients.length, 'clients');
         this.cdr.markForCheck();
       },
       error: (serviceError) => {
-        console.error('Service allClients$ failed, using regular pagination:', serviceError);
         
         // Final fallback: Use the regular clients$ method (will show only first 10)
         this.clientService.clients$().subscribe({
@@ -334,12 +322,9 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
             }
             
             this.clients = clientsList;
-            console.log('Limited clients loaded (first page only):', this.clients.length, 'clients');
-            console.warn('Note: Only showing first page of clients. Consider adding client search functionality.');
             this.cdr.markForCheck();
           },
           error: (finalError) => {
-            console.error('All client loading methods failed:', finalError);
             this.clients = [];
             this.cdr.markForCheck();
           }
@@ -349,16 +334,12 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onClientChange(clientId: string): void {
-    console.log('Client changed to:', clientId);
-    
     if (clientId) {
       const client = this.clients.find(c => c.id === Number(clientId));
-      console.log('Selected client:', client);
-      
+
       // First try to get cases by client ID (preferred method)
       this.legalCaseService.getCasesByClient(Number(clientId)).subscribe({
         next: (response: any) => {
-          console.log('Direct cases response for client:', response);
           
           // Extract cases from response
           let clientCases: any[] = [];
@@ -373,16 +354,12 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
           }
           
           this.cases = clientCases;
-          console.log('Cases loaded directly for client:', this.cases.length);
           this.cdr.markForCheck();
         },
         error: (error) => {
-          console.warn('Direct case loading failed, trying fallback method:', error);
-          
           // Fallback: Load all cases and filter by client name
           this.legalCaseService.getAllCases(0, 1000).subscribe({
             next: (response: any) => {
-              console.log('All cases response for filtering:', response);
               
               // Extract cases from various possible response formats
               let allCases: any[] = [];
@@ -398,20 +375,18 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
               
               if (client) {
                 // Filter cases by client name since backend doesn't filter properly yet
-                this.cases = allCases.filter((c: any) => 
-                  c.clientName === client.name || 
+                this.cases = allCases.filter((c: any) =>
+                  c.clientName === client.name ||
                   c.clientId === Number(clientId) ||
                   c.client?.name === client.name ||
                   c.client?.id === Number(clientId)
                 );
-                                 console.log('Cases filtered by client name/ID:', this.cases.length);
-                 this.cdr.markForCheck();
+                this.cdr.markForCheck();
               } else {
                 this.cases = [];
               }
             },
             error: (fallbackError) => {
-              console.error('Fallback case loading also failed:', fallbackError);
               this.cases = [];
             }
           });
@@ -420,7 +395,6 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.cases = [];
       this.invoiceForm.patchValue({ legalCaseId: '' });
-      console.log('Client cleared, cases reset');
       this.cdr.markForCheck();
     }
   }

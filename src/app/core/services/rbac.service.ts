@@ -157,37 +157,29 @@ export class RbacService {
   private createFallbackPermissions(userId: number): Observable<UserPermissions | null> {
     try {
       const currentUser = this.getCurrentUserFromStorage();
-      console.log('🔍 RBAC: Creating fallback permissions for user:', userId, currentUser);
-      
+
       if (!currentUser) {
-        console.warn('🔍 RBAC: No current user found for fallback permissions');
         return of(null);
       }
       
       // Extract permissions from different possible locations
-      let permissionString = currentUser.permissions || 
-                           currentUser.effectivePermissions || 
+      let permissionString = currentUser.permissions ||
+                           currentUser.effectivePermissions ||
                            currentUser.permissionString ||
                            currentUser.user?.permissions ||
                            '';
-      
-      console.log('🔍 RBAC: Raw permission data:', typeof permissionString, permissionString);
-      
+
       // Extract roles from different possible locations
-      const userRoles = currentUser.roles || 
-                       currentUser.user?.roles || 
+      const userRoles = currentUser.roles ||
+                       currentUser.user?.roles ||
                        [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean) ||
                        [];
-      
-      console.log('🔍 RBAC: User roles found:', userRoles);
-      
+
       // Parse permissions with improved error handling
       const effectivePermissions = this.parsePermissionsString(permissionString);
-      console.log('🔍 RBAC: Parsed permissions:', effectivePermissions);
-      
+
       // If no permissions parsed, create some basic ones based on roles
       if (effectivePermissions.length === 0 && userRoles.length > 0) {
-        console.log('🔍 RBAC: No permissions parsed, creating basic permissions from roles');
         
         // Add basic permissions for all users
         const basicPermissions = [
@@ -266,10 +258,9 @@ export class RbacService {
         hasAdministrativeAccess: this.hasAdministrativePermissions(effectivePermissions)
       };
 
-      console.log('🔍 RBAC: Created fallback permissions:', userPermissions);
       return of(userPermissions);
     } catch (error) {
-      console.error('🔍 RBAC: Error creating fallback permissions:', error);
+      console.error('RBAC: Error creating fallback permissions:', error);
       return of(null);
     }
   }
@@ -515,7 +506,6 @@ export class RbacService {
       );
       
       if (hasAdminRole) {
-        console.log('🔍 RBAC: Admin user bypass - granting permission for:', `${resource}:${action}`);
         return true;
       }
     }
@@ -1029,12 +1019,9 @@ export class RbacService {
     try {
       // Import Key enum for correct token key
       const token = localStorage.getItem(Key.TOKEN);
-      console.log('🔍 RBAC getCurrentUserId - token:', token ? 'exists' : 'null');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('🔍 RBAC getCurrentUserId - JWT payload:', payload);
         const userId = Number(payload.sub || payload.userId || payload.id);
-        console.log('🔍 RBAC getCurrentUserId - extracted userId:', userId);
         return userId;
       }
       return null;

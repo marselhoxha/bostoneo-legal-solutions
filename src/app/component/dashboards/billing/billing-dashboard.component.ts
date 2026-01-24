@@ -67,12 +67,10 @@ export class BillingDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    console.log('BillingDashboardComponent initialized');
     this.loadDashboardData();
   }
 
   loadDashboardData(): void {
-    console.log('Loading real billing dashboard data...');
     this.loading = true;
     this.error = null;
     
@@ -119,11 +117,9 @@ export class BillingDashboardComponent implements OnInit {
       finalize(() => {
         this.loading = false;
         this.cdr.detectChanges();
-        console.log('Billing dashboard data loading completed');
       })
     ).subscribe({
       next: (data) => {
-        console.log('Real billing data loaded:', data);
         this.billingSummary = data.billingSummary;
         this.topClients = Array.isArray(data.topClients) ? data.topClients : [];
         this.caseProfitability = Array.isArray(data.caseProfitability) ? data.caseProfitability : [];
@@ -141,7 +137,6 @@ export class BillingDashboardComponent implements OnInit {
   }
 
   refreshData(): void {
-    console.log('Refreshing billing dashboard data...');
     this.error = null;
     this.loadDashboardData();
   }

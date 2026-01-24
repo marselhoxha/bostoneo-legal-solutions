@@ -40,21 +40,10 @@ export class ClientsComponent implements OnInit {
   constructor(private router: Router, private clientService: ClientService, private modalService: NgbModal, private cdRef: ChangeDetectorRef) { }
 
   ngOnInit(): void {
-    // Debug authentication status
-    console.log('🔍 Clients Component - Authentication Debug:');
-    console.log('- Token exists:', !!localStorage.getItem('TOKEN'));
-    console.log('- Token value:', localStorage.getItem('TOKEN')?.substring(0, 50) + '...');
-    console.log('- All localStorage keys:', Object.keys(localStorage));
-    
-    // Check if user service thinks we're authenticated
-    const userService = this.clientService as any; // Access to check if we can get userService
-    console.log('- UserService available:', !!userService);
-    
     // Combine the clients and searchClients observables into one to prevent redundant state changes
     this.clientsState$ = this.clientService.clients$().pipe(
       switchMap(() => this.clientService.searchClients$()), // Combine both calls
       map(response => {
-        console.log('✅ Client data received:', response);
         this.dataSubject.next(response);
         return { dataState: DataState.LOADED, appData: response };
       }),
@@ -62,7 +51,7 @@ export class ClientsComponent implements OnInit {
       distinctUntilChanged(), // Prevent re-emitting the same values
       shareReplay(1), // Cache the last emission to avoid redundant API calls
       catchError((error: string) => {
-        console.error('❌ Client data error:', error);
+        console.error('Client data error:', error);
         return of({ dataState: DataState.ERROR, error });
       })
     );
@@ -112,7 +101,6 @@ export class ClientsComponent implements OnInit {
     this.clientsState$ = this.clientService.searchClients$(searchForm.value.name)
       .pipe(
         map(response => {
-          console.log(response);
           this.dataSubject.next(response);
           return { dataState: DataState.LOADED, appData: response };
         }),
@@ -138,8 +126,6 @@ export class ClientsComponent implements OnInit {
       // If user confirms, proceed with deletion
       this.clientService.deleteClient$(clientId).subscribe(
         () => {
-          console.log(`Client ${clientId} deleted successfully`);
-
           // Show success message using SweetAlert2
           Swal.fire({
             title: 'Deleted!',
@@ -191,7 +177,6 @@ export class ClientsComponent implements OnInit {
     this.clientsState$ = this.clientService.searchClients$(name, pageNumber)
       .pipe(
         map(response => {
-          console.log(response);
           this.dataSubject.next(response);
           this.currentPageSubject.next(pageNumber);
           return { dataState: DataState.LOADED, appData: response };
@@ -215,7 +200,6 @@ export class ClientsComponent implements OnInit {
     this.clientsState$ = this.clientService.downloadReport$()
       .pipe(
         map(response => {
-          console.log(response);
           this.reportProgress(response);
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
         }),
@@ -232,7 +216,6 @@ export class ClientsComponent implements OnInit {
         this.fileStatusSubject.next({ status: 'progress', type: 'Downloading...', percent: Math.round(100 * httpEvent.loaded / httpEvent.total) });
         break;
       case HttpEventType.ResponseHeader:
-        console.log('Got response Headers', httpEvent);
         break;
       case HttpEventType.Response:
         saveAs(new File([<Blob>httpEvent.body], httpEvent.headers.get('File-Name'),
@@ -240,7 +223,6 @@ export class ClientsComponent implements OnInit {
         this.fileStatusSubject.next(undefined);
         break;
       default:
-        console.log(httpEvent);
         break;
     }
   }

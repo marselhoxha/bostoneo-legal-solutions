@@ -52,10 +52,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy {
   private checkAuthenticationStatus(): void {
     const token = this.getValidAuthToken();
     if (!token) {
-      console.warn('⚠️ No valid authentication token found');
       // Don't show error immediately, let user interact first
-    } else {
-      console.log('✅ Valid authentication token found');
     }
   }
 
@@ -78,12 +75,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (template) => {
-          console.log('✅ Loaded template from database:', template.name);
           this.currentTemplate = template;
-          
+
           // Use the template content from database, or create a basic structure
           this.documentContent = template.templateContent || this.createBasicTemplate(template);
-          
+
           this.cdr.detectChanges();
         },
         error: (error) => {
@@ -182,19 +178,15 @@ Generated Date: [CURRENT_DATE]`;
       caseId: parseInt(selectedCase.id) // Use selected case ID
     };
 
-    console.log('Generating document with Claude AI for case:', selectedCase.clientName, request);
-
     this.documentService.generateDocument(request)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('AI Document generated successfully:', response);
           if (response.content) {
             // Update document with AI-generated content and clean up placeholders
             this.documentContent = this.cleanupPlaceholders(response.content);
             // Switch to preview mode to show formatted content
             this.isEditing = false;
-            console.log('Document content updated with AI response');
           } else {
             this.updateDocumentWithAIResponse(response);
           }
@@ -294,7 +286,6 @@ Generated Date: [CURRENT_DATE]`;
       ...(this.getTemplateSpecificFields(selectedCase))
     };
 
-    console.log('🔧 Extracted variables from selected case:', selectedCase.clientName, caseVariables);
     return caseVariables;
   }
 
@@ -425,26 +416,22 @@ Generated Date: [CURRENT_DATE]`;
   }
 
   private generateWithTestEndpoint(): void {
-    console.log('🤖 Falling back to backend AI endpoint...');
-    
     const selectedCase = this.getSelectedCase();
     if (!selectedCase) {
       this.errorMessage = 'Please select a case before generating document';
       this.isGenerating = false;
       return;
     }
-    
+
     // Extract template variables for AI generation
     const variables = this.extractVariables();
-    
+
     const request = {
       templateId: this.templateId,
       variables: variables,
       outputFormat: 'HTML',
       caseId: parseInt(selectedCase.id)
     };
-
-    console.log('🔄 Sending request to backend AI service...');
 
     fetch('http://localhost:8085/api/ai/documents/generate', {
       method: 'POST',
@@ -455,40 +442,35 @@ Generated Date: [CURRENT_DATE]`;
       body: JSON.stringify(request)
     })
     .then(response => {
-      console.log('📡 Response received from Claude AI:', response.status);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return response.json();
     })
     .then(data => {
-      console.log('✅ Backend AI response:', data);
       if (data.content) {
         // Replace the document content with AI-generated content
         this.documentContent = this.cleanupPlaceholders(data.content);
-        console.log('📝 Document updated with AI generated content');
         // Switch to preview mode after generation
         this.isEditing = false;
       } else if (data.status === 'COMPLETED' && data.documentUrl) {
         // Handle successful generation with document URL
-        console.log('📄 Document generated successfully:', data.documentUrl);
         this.errorMessage = 'Document generated successfully! (Backend integration in progress)';
       } else {
         throw new Error('Invalid response from backend AI service');
       }
       this.isGenerating = false;
-      this.cdr.detectChanges(); // Force change detection
+      this.cdr.detectChanges();
     })
     .catch(error => {
-      console.error('❌ Error with backend AI endpoint:', error);
+      console.error('Error with backend AI endpoint:', error);
       this.errorMessage = `Backend AI service error: ${error.message}. Please check if backend is running on port 8085.`;
       this.isGenerating = false;
-      this.cdr.detectChanges(); // Force change detection
+      this.cdr.detectChanges();
     })
     .finally(() => {
-      // Ensure isGenerating is always reset
       this.isGenerating = false;
-      this.cdr.detectChanges(); // Force change detection
+      this.cdr.detectChanges();
     });
   }
 
@@ -505,7 +487,6 @@ Generated Date: [CURRENT_DATE]`;
       return;
     }
 
-    console.log('Saving document...');
     const selectedCase = this.getSelectedCase();
     
     const saveRequest = {
@@ -532,8 +513,7 @@ Generated Date: [CURRENT_DATE]`;
       }
       return response.json();
     })
-    .then(data => {
-      console.log('✅ Document saved successfully:', data);
+    .then(() => {
       // Show success message temporarily
       const originalError = this.errorMessage;
       this.errorMessage = '✅ Document saved successfully!';
@@ -713,9 +693,7 @@ Generated Date: [CURRENT_DATE]`;
   }
 
   loadAvailableCases(): void {
-    console.log('🔄 Loading cases from backend...');
     const token = localStorage.getItem(Key.TOKEN);
-    console.log('🔑 Auth token:', token ? 'Present' : 'Missing');
 
     fetch('http://localhost:8085/legal-case/list?page=0&size=20', {
       method: 'GET',
@@ -726,14 +704,12 @@ Generated Date: [CURRENT_DATE]`;
       }
     })
     .then(response => {
-      console.log('📡 Response status:', response.status);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return response.json();
     })
     .then(data => {
-      console.log('✅ Successfully loaded cases from backend:', data);
       // Transform backend data to match component interface
       if (data.data && data.data.cases && Array.isArray(data.data.cases)) {
         this.availableCases = data.data.cases.map((caseData: any) => ({
@@ -742,17 +718,15 @@ Generated Date: [CURRENT_DATE]`;
           caseNumber: caseData.caseNumber,
           caseType: caseData.type || 'General Legal'
         }));
-        console.log('✅ Transformed cases:', this.availableCases.length, 'cases loaded');
       } else {
-        console.error('❌ Unexpected data structure:', data);
+        console.error('Unexpected data structure:', data);
         this.errorMessage = 'Failed to load cases: Unexpected data format';
         this.availableCases = [];
       }
     })
     .catch(error => {
-      console.error('❌ Error loading cases from backend:', error);
+      console.error('Error loading cases from backend:', error);
       this.errorMessage = `Failed to load cases: ${error.message}. Please ensure backend is running on port 8085 and you are logged in.`;
-      // NO MOCK DATA - show error instead
       this.availableCases = [];
     });
   }
@@ -788,8 +762,6 @@ Generated Date: [CURRENT_DATE]`;
   }
 
   exportPDF(): void {
-    console.log('Exporting as PDF...');
-    
     // Create a new window for PDF content
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -845,8 +817,6 @@ Generated Date: [CURRENT_DATE]`;
   }
 
   exportDOCX(): void {
-    console.log('Exporting as DOCX...');
-    
     // Create RTF format (compatible with Word) instead of plain text
     const rtfHeader = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}} {\\colortbl;\\red0\\green0\\blue0;}`;
     const rtfFooter = `}`;
@@ -873,8 +843,6 @@ Generated Date: [CURRENT_DATE]`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    
-    console.log('✅ Document exported as RTF (Word-compatible format)');
   }
 
   private cleanupPlaceholders(content: string): string {

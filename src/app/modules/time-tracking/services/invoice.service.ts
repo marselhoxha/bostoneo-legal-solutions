@@ -79,25 +79,14 @@ export class InvoiceService {
       timeEntryIds: timeEntryIds
     };
 
-    console.log('🚀 InvoiceService - Making request to:', `${this.baseUrl}/from-time-entries`);
-    console.log('🚀 InvoiceService - Request body:', JSON.stringify(requestBody, null, 2));
-    console.log('🚀 InvoiceService - Base URL:', this.baseUrl);
-
     return this.http.post<any>(`${this.baseUrl}/from-time-entries`, requestBody).pipe(
-      tap(response => {
-        console.log('✅ InvoiceService - Success response:', response);
-      }),
       map(response => response.data),
       tap(data => {
-        console.log('✅ InvoiceService - Mapped data:', data);
         const currentInvoices = this.invoicesSubject.value;
         this.invoicesSubject.next([...currentInvoices, data]);
       }),
       catchError(error => {
-        console.error('❌ InvoiceService - Error in createInvoiceFromTimeEntries:', error);
-        console.error('❌ InvoiceService - Error status:', error.status);
-        console.error('❌ InvoiceService - Error message:', error.message);
-        console.error('❌ InvoiceService - Error body:', error.error);
+        console.error('Error creating invoice from time entries:', error);
         return this.handleError(error);
       })
     );
@@ -192,17 +181,14 @@ export class InvoiceService {
   getUnbilledTimeEntries(clientId: number, legalCaseId?: number): Observable<TimeEntry[]> {
     let params = new HttpParams().set('clientId', clientId.toString());
     if (legalCaseId) params = params.set('legalCaseId', legalCaseId.toString());
-    
-    console.log(`Fetching unbilled entries for client ${clientId}${legalCaseId ? ` and case ${legalCaseId}` : ''}`);
-    
+
     // Try the unbilled entries endpoint first
-    return this.http.get<any>(`${this.baseUrl}/unbilled-entries`, { 
+    return this.http.get<any>(`${this.baseUrl}/unbilled-entries`, {
       params: new HttpParams()
         .set('clientId', clientId.toString())
         .set(legalCaseId ? 'legalCaseId' : 'dummy', legalCaseId ? legalCaseId.toString() : '')
     }).pipe(
       map(response => {
-        console.log('Unbilled entries response from invoice endpoint:', response);
         if (response && response.data) {
           return response.data;
         } else {
@@ -211,31 +197,28 @@ export class InvoiceService {
       }),
       catchError(error => {
         console.error('Error fetching from unbilled-entries endpoint:', error);
-        
+
         // Fall back to time entries endpoint with filters
-        return this.http.get<any>(`${environment.apiUrl}/api/time-entries`, { 
+        return this.http.get<any>(`${environment.apiUrl}/api/time-entries`, {
           params: params
             .append('status', 'APPROVED')
             .append('billable', 'true')
             .append('size', '100')
         }).pipe(
           map(response => {
-            console.log('Unbilled entries response from time entries API:', response);
             if (response && response.data && response.data.content) {
               return response.data.content;
             } else {
-              console.error('Invalid response format from time entries API:', response);
               throw new Error('Invalid response format from time entries API');
             }
           }),
           catchError(innerError => {
             console.error('Error fetching from time-entries endpoint:', innerError);
-            
+
             // Try another endpoint variation as last resort
             const queryParams = `?clientId=${clientId}${legalCaseId ? `&legalCaseId=${legalCaseId}` : ''}&status=APPROVED&billable=true`;
             return this.http.get<any>(`${environment.apiUrl}/api/time-entries/unbilled${queryParams}`).pipe(
               map(lastResponse => {
-                console.log('Response from last resort endpoint:', lastResponse);
                 if (lastResponse && lastResponse.data) {
                   return lastResponse.data;
                 } else {

@@ -16,43 +16,17 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       return '';
     }
 
-    // DEBUG: Check what we're receiving for links
-    if (value.includes('[IRC') || value.includes('[USC') || value.includes('[26 U.S.C')) {
-      console.log('📝 Markdown input contains citations:', value.substring(0, 300));
-      // Log specific citation patterns
-      const citationMatch = value.match(/\[([^\]]+)\]\(([^)]+)\)/);
-      if (citationMatch) {
-        console.log('🔗 Found markdown link:', citationMatch[0]);
-      }
-    }
-
     // STEP 1: Process checkmark citations BEFORE markdown conversion (while still markdown syntax)
     let markdown = this.processCheckmarkCitations(value);
 
     // STEP 2: Convert markdown to HTML
     let html = this.convertMarkdownToHtml(markdown);
 
-    // DEBUG: Check conversion result
-    if (value.includes('[IRC') || value.includes('[USC')) {
-      console.log('🔄 After markdown conversion:', html.substring(0, 500));
-      // Check if links were converted
-      if (html.includes('<a href=')) {
-        console.log('✅ Links converted to HTML');
-      } else {
-        console.log('❌ Links NOT converted to HTML');
-      }
-    }
-
     // STEP 3: CREATE LINKS DIRECTLY (emergency fix - backend not injecting URLs)
     html = this.createCitationLinks(html);
 
     // STEP 4: Apply legal highlighting to the HTML output (NOT checkmarks - already processed)
     html = this.highlightLegalTerms(html);
-
-    // DEBUG: Log a sample of the output to verify highlighting is applied
-    if (html.includes('Hon.') || html.includes('M.G.L.')) {
-      console.log('🔍 Legal highlighting applied. Sample:', html.substring(0, 500));
-    }
 
     // IMPORTANT: Use bypassSecurityTrustHtml to allow our custom HTML/CSS classes
     return this.sanitizer.bypassSecurityTrustHtml(html);
@@ -875,7 +849,6 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    * Removes CHART:BAR prefix and returns as markdown table for normal table rendering
    */
   private convertChartToTable(chartText: string): string {
-    console.log('📑 Converting chart to table:', chartText.substring(0, 100));
     // Remove CHART:BAR prefix, return remainder as markdown table
     const tableMarkdown = chartText.replace(/^CHART:BAR\s*\n/i, '');
     // The table will be processed by convertTablesToHtml() in the normal flow
@@ -888,7 +861,6 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    */
   private parseChartValue(text: string): number {
     if (!text) {
-      console.log('📑 parseChartValue: Empty text → 0');
       return 0;
     }
 
@@ -903,9 +875,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     if (rangeMatch) {
       const min = parseFloat(rangeMatch[1]);
       const max = parseFloat(rangeMatch[2]);
-      const result = (min + max) / 2;
-      console.log(`📑 parseChartValue: "${text}" (range) → ${result}`);
-      return result;
+      return (min + max) / 2;
     }
 
     // Handle slash-separated values like "0 upfront/15000 contingency" → take max
@@ -914,20 +884,12 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     if (numbers && numbers.length > 1) {
       // Multiple numbers found - take the maximum (usually the actual fee, not upfront)
       const values = numbers.map(n => parseFloat(n));
-      const result = Math.max(...values);
-      console.log(`📑 parseChartValue: "${text}" (multi-number) → ${result}`);
-      return result;
+      return Math.max(...values);
     }
 
     // Handle single number
     const num = parseFloat(cleaned);
-    const result = isNaN(num) ? 0 : num;
-    if (result === 0 && text.trim() !== '0') {
-      console.warn(`⚠️ parseChartValue: "${text}" → 0 (TEXT, not number!)`);
-    } else {
-      console.log(`📑 parseChartValue: "${text}" → ${result}`);
-    }
-    return result;
+    return isNaN(num) ? 0 : num;
   }
 
   /**
@@ -938,16 +900,12 @@ export class MarkdownToHtmlPipe implements PipeTransform {
   private createBarChart(chartText: string): string {
     const lines = chartText.trim().split('\n').filter(l => l.trim());
 
-    console.log('📑 BAR CHART DEBUG - Raw Input:', chartText.substring(0, 200));
-
     // Find the separator row (markdown table structure: |---|---|)
     const separatorIndex = lines.findIndex(l => l.match(/^\|[-\s|]+\|$/));
-    console.log('📑 Separator index:', separatorIndex);
 
     // If separator found, start from the row after it; otherwise start from row 1 (skip CHART:BAR)
     const startIndex = separatorIndex >= 0 ? separatorIndex + 1 : 1;
     const dataRows = lines.slice(startIndex);
-    console.log('📑 Data rows to parse:', dataRows);
 
     if (dataRows.length === 0) return chartText;
 
@@ -979,14 +937,11 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       }
     });
 
-    console.log('📑 Parsed chart data:', chartData);
-
     if (chartData.length === 0) return chartText;
 
     // Validate: Check if all values are 0 (indicates text data being parsed as numbers)
     const allZero = chartData.every(item => item.value === 0);
     if (allZero) {
-      console.warn('⚠️ BAR CHART: Text data detected, auto-converting to table. DisplayValues:', chartData.map(d => d.displayValue));
       // Convert invalid bar chart back to table format
       return this.convertChartToTable(chartText);
     }

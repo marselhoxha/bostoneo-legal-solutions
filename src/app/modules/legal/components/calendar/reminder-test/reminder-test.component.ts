@@ -77,7 +77,7 @@ export class ReminderTestComponent implements OnInit {
     this.http.get<any>(`${environment.apiUrl}/api/v1/test/ping`)
       .subscribe({
         next: (response) => {
-          console.log('Test controller is accessible:', response);
+          // Test controller is accessible
         },
         error: (err) => {
           console.error('Error accessing test controller:', err);
@@ -103,10 +103,7 @@ export class ReminderTestComponent implements OnInit {
           this.result = response;
           this.isLoading = false;
           
-          // Show success message if no error
-          if (this.result.success) {
-            console.log('Test reminder sent successfully');
-          }
+          // Success message displayed in result card
         },
         error: (err) => {
           console.error('Error sending test email:', err);

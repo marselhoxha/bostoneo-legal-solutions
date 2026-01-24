@@ -43,34 +43,27 @@ export class ExpenseCategoryComponent implements OnInit {
   }
 
   loadCategories(): void {
-    console.log('loadCategories started, loading = true');
     this.loading = true;
     this.error = null;
     this.changeDetectorRef.detectChanges();
-    
+
     this.categoryService.getCategories()
       .pipe(
         tap(categories => {
-          console.log('Loaded categories:', categories);
           this.categories = categories;
-          
+
           // Clear the set of non-deletable categories
           this.nonDeletableCategories.clear();
-          
+
           // Find all categories that are used as parents
           for (const category of categories) {
             if (category.parentId) {
               // If a category has a parent, that parent cannot be deleted
               this.nonDeletableCategories.add(category.parentId);
-              console.log(`Category ${category.parentId} cannot be deleted because it's a parent of ${category.id} (${category.name})`);
             }
           }
-          
-          // Log all non-deletable categories
-          console.log('Non-deletable categories:', Array.from(this.nonDeletableCategories).join(', '));
         }),
         catchError(error => {
-          console.log('Error in getCategories catchError');
           this.error = 'Failed to load categories. Please try again.';
           console.error('Error loading categories:', error);
           this.changeDetectorRef.detectChanges();
@@ -79,18 +72,15 @@ export class ExpenseCategoryComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          console.log('getCategories subscribe next');
           this.loading = false;
           this.changeDetectorRef.detectChanges();
         },
         error: (err) => {
-           console.log('getCategories subscribe error (might not be reached)');
            this.error = 'Failed to load categories. Please try again later.';
            this.loading = false;
            this.changeDetectorRef.detectChanges();
         },
         complete: () => {
-           console.log('getCategories subscribe complete');
            if(this.loading) {
               this.loading = false;
               this.changeDetectorRef.detectChanges();
@@ -101,9 +91,7 @@ export class ExpenseCategoryComponent implements OnInit {
 
   // Simple check if a category can be deleted
   canDeleteCategory(categoryId: number): boolean {
-    const canDelete = !this.nonDeletableCategories.has(categoryId);
-    console.log(`Can delete category ${categoryId}? ${canDelete}`);
-    return canDelete;
+    return !this.nonDeletableCategories.has(categoryId);
   }
 
   // Get the categories that have this category as their parent
@@ -114,7 +102,6 @@ export class ExpenseCategoryComponent implements OnInit {
   onSubmit(): void {
     if (this.categoryForm.invalid) return;
 
-    console.log('onSubmit started, submitting = true');
     this.submitting = true;
     this.error = null;
     this.changeDetectorRef.detectChanges();
@@ -123,8 +110,6 @@ export class ExpenseCategoryComponent implements OnInit {
     const formData = { ...this.categoryForm.value };
     const isEditing = !!this.editingCategory;
     const categoryId = isEditing ? this.editingCategory.id : null;
-
-    console.log(isEditing ? `Updating category ${categoryId}` : 'Creating new category', formData);
 
     const request = isEditing
       ? this.categoryService.updateCategory(categoryId!, formData)

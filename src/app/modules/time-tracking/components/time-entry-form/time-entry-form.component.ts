@@ -159,61 +159,44 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
 
   private loadLegalCases(): void {
     this.loading = true;
-    console.log('=== Loading Legal Cases ===');
-    
+
     // Load all cases for the current user
     this.legalCaseService.getAllCases(0, 100).subscribe({
       next: (response) => {
-        console.log('Raw API response:', response);
-        
         // Try different response structures
         let cases = [];
-        
+
         if (response && response.data) {
           if (response.data.cases) {
             cases = response.data.cases;
-            console.log('Found cases in response.data.cases:', cases);
           } else if (response.data.content) {
             cases = response.data.content;
-            console.log('Found cases in response.data.content:', cases);
           } else if (response.data.page && response.data.page.content) {
             cases = response.data.page.content;
-            console.log('Found cases in response.data.page.content:', cases);
-          } else {
-            console.log('response.data structure:', Object.keys(response.data));
           }
         } else if (Array.isArray(response)) {
           cases = response;
-          console.log('Response is direct array:', cases);
-        } else {
-          console.log('Unexpected response structure:', response);
         }
-        
+
         if (cases && cases.length > 0) {
-          this.legalCases = cases.map((legalCase: any) => {
-            console.log('Processing case:', legalCase);
-            return {
-              id: parseInt(legalCase.id),
-              title: legalCase.title,
-              caseNumber: legalCase.caseNumber,
-              clientName: legalCase.clientName || 
-                         (legalCase.client ? `${legalCase.client.firstName} ${legalCase.client.lastName}` : 'Unknown Client'),
-              defaultRate: legalCase.billingInfo?.hourlyRate || legalCase.hourlyRate || 250
-            };
-          });
-          
-          console.log('Processed legal cases:', this.legalCases);
-          
+          this.legalCases = cases.map((legalCase: any) => ({
+            id: parseInt(legalCase.id),
+            title: legalCase.title,
+            caseNumber: legalCase.caseNumber,
+            clientName: legalCase.clientName ||
+                       (legalCase.client ? `${legalCase.client.firstName} ${legalCase.client.lastName}` : 'Unknown Client'),
+            defaultRate: legalCase.billingInfo?.hourlyRate || legalCase.hourlyRate || 250
+          }));
+
           // Set recent cases (last 5 cases)
           this.recentCases = this.legalCases.slice(0, 5);
-          
+
           // If a case is selected from timer, set default rate
           const selectedCaseId = this.timeEntryForm.get('legalCaseId')?.value;
           if (selectedCaseId) {
             this.updateRateFromCase(selectedCaseId);
           }
         } else {
-          console.warn('No cases found in response:', response);
           this.legalCases = [];
           this.recentCases = [];
         }
@@ -221,14 +204,7 @@ export class TimeEntryFormComponent implements OnInit, OnDestroy {
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
-        console.error('=== API Error ===');
         console.error('Error loading legal cases:', error);
-        console.error('Error status:', error.status);
-        console.error('Error message:', error.message);
-        if (error.error) {
-          console.error('Error body:', error.error);
-        }
-
         this.error = `Failed to load cases: ${error.message || 'Unknown error'}`;
         this.legalCases = [];
         this.recentCases = [];

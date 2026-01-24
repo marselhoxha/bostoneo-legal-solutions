@@ -60,10 +60,9 @@ export class CrmService {
   }
 
   // Intake Submissions - using the same pattern as ClientService
-  getIntakeSubmissions$ = (params?: any): Observable<any> => 
+  getIntakeSubmissions$ = (params?: any): Observable<any> =>
     this.http.get<any>(`${this.apiUrl}/intake-submissions`, { params })
       .pipe(
-        tap(response => console.log('✅ CRM Submissions Response:', response)),
         catchError(error => {
           console.error('❌ CRM Submissions Error:', error);
           return throwError(() => error);

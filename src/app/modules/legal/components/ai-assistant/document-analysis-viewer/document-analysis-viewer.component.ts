@@ -848,7 +848,6 @@ export class DocumentAnalysisViewerComponent implements OnInit, OnDestroy, OnCha
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (messages) => {
-          console.log('📨 Loaded Ask AI messages:', messages.length);
           this.askAiMessages = messages.map(m => ({
             role: m.role,
             content: m.content,

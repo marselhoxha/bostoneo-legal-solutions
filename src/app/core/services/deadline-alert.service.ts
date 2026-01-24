@@ -61,8 +61,6 @@ export class DeadlineAlertService {
     this.checkInterval = interval(14400000).subscribe(() => {
       this.checkUpcomingDeadlines().subscribe();
     });
-
-    console.log('📅 Deadline monitoring started - checking every 4 hours');
   }
 
   /**
@@ -72,7 +70,6 @@ export class DeadlineAlertService {
     if (this.checkInterval) {
       this.checkInterval.unsubscribe();
       this.checkInterval = null;
-      console.log('📅 Deadline monitoring stopped');
     }
   }
 

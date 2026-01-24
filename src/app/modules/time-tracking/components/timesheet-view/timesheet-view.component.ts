@@ -177,22 +177,6 @@ export class TimesheetViewComponent implements OnInit {
       canDelete: this.rbacService.hasPermissionSync('TIME_TRACKING', 'EDIT') || isAdmin,
       canManageRates: isAdmin
     };
-
-    // Debug logging to help troubleshoot RBAC
-    console.log('🔐 RBAC Debug Info:', {
-      currentUser: this.currentUser,
-      userRoles: {
-        isAdmin,
-        isManager,
-        isAttorney
-      },
-      permissions: {
-        hasTimePermission,
-        hasApprovalPermission
-      },
-      finalPermissions: this.permissions,
-      viewMode: this.viewMode
-    });
   }
 
   private determineViewMode(): void {
@@ -417,17 +401,11 @@ export class TimesheetViewComponent implements OnInit {
       };
 
       // Note: We load all entries and filter client-side for my/team tabs
-      console.log('📊 Loading all entries for unified timesheet view');
 
       // Apply additional filters (user can still filter by status if needed)
       if (this.selectedStatus) {
         filters.statuses = [this.selectedStatus];
-        console.log('📑 Applying status filter:', this.selectedStatus);
       }
-
-      console.log('🔧 Final filters:', filters);
-      console.log('🎭 Current view mode:', this.viewMode);
-      console.log('🔐 Current permissions:', this.permissions);
 
       this.timeTrackingService.getTimeEntriesWithFilters(filters).pipe(
         timeout(15000),

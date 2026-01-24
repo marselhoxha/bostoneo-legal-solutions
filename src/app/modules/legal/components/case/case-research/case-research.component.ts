@@ -148,7 +148,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     // Get current user from UserService
     this.currentUser = this.userService.getCurrentUser();
-    console.log('🔐 Current user on init:', this.currentUser);
 
     // Subscribe to user changes - critical for handling login/logout scenarios
     this.userService.userData$
@@ -157,12 +156,10 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         if (user && user.id) {
           const previousUserId = this.currentUser?.id;
           this.currentUser = user;
-          console.log('🔐 User updated:', user.id, 'previous:', previousUserId);
 
           // Load conversations when user is available
           // Also reload if userId changed (logout/login scenario)
           if (!this.conversations.length || (previousUserId && previousUserId !== user.id)) {
-            console.log('🔄 Loading conversations due to user change or empty list');
             this.loadConversations();
           }
         }
@@ -173,13 +170,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loadConversations();
     } else {
       // If no user yet, retry after a short delay (handles fresh login scenario)
-      console.log('⏳ No user on init, will retry after userData$ emits or timeout');
       setTimeout(() => {
         if (!this.currentUser?.id) {
           // Try to get user from service again
           this.currentUser = this.userService.getCurrentUser();
           if (this.currentUser?.id && !this.conversations.length) {
-            console.log('🔄 Got user after timeout, loading conversations');
             this.loadConversations();
           }
         }
@@ -301,18 +296,14 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   loadConversations(): void {
     if (!this.caseId) return;
     if (!this.userId) {
-      console.warn('⚠️ Cannot load conversations - no user ID available');
+      console.warn('Cannot load conversations - no user ID available');
       return;
     }
-
-    console.log('💬 Loading conversations from backend for case:', this.caseId, 'userId:', this.userId);
 
     this.legalResearchService.getConversationsForCase(parseInt(this.caseId), this.userId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (sessions) => {
-          console.log('✅ Loaded sessions from backend:', sessions);
-
           // Map backend sessions to frontend conversation format
           this.conversations = sessions.map(session => ({
             id: session.id!.toString(), // Use backend ID as string for frontend
@@ -326,7 +317,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
           // If no conversations exist after loading, create the first one
           if (this.conversations.length === 0) {
-            console.log('📝 No conversations found, creating first conversation');
             this.createNewConversation();
           } else {
             // Set active conversation to most recent if none set
@@ -338,7 +328,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           }
 
-          console.log('💬 Loaded conversations:', this.conversations.length);
           this.cdr.detectChanges();
         },
         error: (error) => {
@@ -355,15 +344,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
 
     if (activeConv) {
-      console.log('🔄 Loading active conversation from backend:', activeConv.sessionId);
-
       // Load messages from backend
       this.legalResearchService.getConversation(activeConv.sessionId, this.userId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (data) => {
-            console.log('✅ Loaded conversation messages:', data.messages.length);
-
             // Map backend messages to frontend format
             this.chatMessages = data.messages.map(msg => ({
               role: msg.role as 'user' | 'assistant',
@@ -376,8 +361,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             this.followUpQuestions = activeConv.followUpQuestions;
             this.currentSessionId = activeConv.sessionId;
             this.showChat = this.chatMessages.length > 0;
-
-            console.log('✅ Loaded active conversation:', activeConv.title);
 
             // Load action suggestions from backend
             this.loadActionSuggestionsFromBackend();
@@ -415,8 +398,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadActionSuggestionsFromBackend(): void {
-    console.log('🔄 Loading action suggestions from backend for session:', this.currentSessionId);
-
     this.loadingActions = true;
     this.actionLoadingAttempted = true; // Mark that we attempted to load
 
@@ -424,35 +405,20 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       timeout(10000), // 10 second timeout for loading existing actions
       catchError(error => {
         if (error instanceof TimeoutError) {
-          console.error('⏱️ Loading actions timed out after 10 seconds');
+          console.error('Loading actions timed out after 10 seconds');
         }
         return throwError(() => error);
       })
     ).subscribe({
       next: (actions) => {
-        console.log('✅ Loaded actions from backend:', actions);
-        console.log('📑 Number of loaded actions:', actions?.length || 0);
-
         // Filter to only show PENDING actions (exclude COMPLETED and DISMISSED)
         const pendingActions = (actions || []).filter(a => a.actionStatus === 'PENDING');
-        console.log('📑 Pending actions after filtering:', pendingActions.length);
-
         this.actionSuggestions = pendingActions;
         this.loadingActions = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading actions from backend:', error);
-        if (error instanceof TimeoutError) {
-          console.error('⏱️ Request timed out loading existing actions');
-        } else {
-          console.error('Error details:', {
-            message: error.message,
-            status: error.status,
-            statusText: error.statusText,
-            url: error.url
-          });
-        }
+        console.error('Error loading actions from backend:', error);
         this.loadingActions = false;
         this.actionSuggestions = [];
         this.cdr.detectChanges(); // CRITICAL: Force UI update
@@ -466,17 +432,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
       const currentUserId = this.userId;
 
-      console.log('🔍 saveConversations check:', {
-        activeConvId: this.activeConversationId,
-        activeConvTitle: activeConv?.title,
-        chatMessagesCount: this.chatMessages.length,
-        userId: currentUserId,
-        sessionId: activeConv?.sessionId
-      });
-
       // CRITICAL: Ensure we have a valid userId before attempting to update
       if (!currentUserId || currentUserId === 0) {
-        console.error('❌ Cannot update title - no valid userId available');
+        console.error('Cannot update title - no valid userId available');
         return;
       }
 
@@ -485,15 +443,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         const firstUserMsg = this.chatMessages.find(m => m.role === 'user');
         if (firstUserMsg) {
           const newTitle = this.generateConversationTitle(firstUserMsg.content);
-          console.log('📝 Updating conversation title to:', newTitle, 'for sessionId:', activeConv.sessionId, 'userId:', currentUserId);
 
           // Store sessionId locally to avoid closure issues
           const sessionIdToUpdate = activeConv.sessionId;
 
           // Retry mechanism for title update with increasing delay
           const retryTitleUpdate = (attempt: number, delay: number) => {
-            console.log(`📝 Title update attempt ${attempt} - sessionId: ${sessionIdToUpdate}, userId: ${currentUserId}, newTitle: ${newTitle}`);
-
             // Add delay before first attempt to ensure session is fully persisted
             setTimeout(() => {
               this.legalResearchService.updateConversationTitle(sessionIdToUpdate, currentUserId, newTitle)
@@ -501,8 +456,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
                 .subscribe({
                   next: (success) => {
                     if (success) {
-                      console.log('✅ Title update succeeded on attempt', attempt);
-
                       // Update local conversation object
                       activeConv.title = newTitle;
 
@@ -512,15 +465,14 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
                         this.conversations[convIndex].title = newTitle;
                       }
 
-                      console.log('✅ Updated conversation title:', newTitle);
                       this.cdr.detectChanges(); // Force UI refresh
                     } else {
-                      console.warn('⚠️ Title update returned false on attempt', attempt);
+                      console.warn('Title update returned false on attempt', attempt);
                       if (attempt < 5) {
                         // Retry with exponential backoff (500ms, 1000ms, 2000ms, 4000ms)
                         retryTitleUpdate(attempt + 1, delay * 2);
                       } else {
-                        console.error('❌ Title update failed after 5 attempts');
+                        console.error('Title update failed after 5 attempts');
                         // Still update local state
                         activeConv.title = newTitle;
                         this.cdr.detectChanges();
@@ -528,12 +480,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
                     }
                   },
                   error: (error) => {
-                    console.error(`❌ Error on attempt ${attempt}:`, error);
+                    console.error(`Error on title update attempt ${attempt}:`, error);
                     if (attempt < 5) {
                       // Retry with exponential backoff
                       retryTitleUpdate(attempt + 1, delay * 2);
                     } else {
-                      console.error('❌ Title update failed after 5 attempts. Details - sessionId:', sessionIdToUpdate, 'userId:', currentUserId);
+                      console.error('Title update failed after 5 attempts');
                       // Update local state so user sees correct title
                       activeConv.title = newTitle;
                       this.cdr.detectChanges();
@@ -565,7 +517,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // CRITICAL: Don't save messages with invalid userId
     if (!currentUserId || currentUserId === 0) {
-      console.error('❌ Cannot save message - no valid userId. Message will not be persisted.');
+      console.error('Cannot save message - no valid userId. Message will not be persisted.');
       return;
     }
 
@@ -573,14 +525,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (message) => {
-          console.log('✅ Saved message to backend:', message.id);
-
           // CRITICAL FIX: Update title immediately after first user message is saved
           // This ensures the title update happens AFTER the session is fully persisted
           if (role === 'user' && activeConv &&
               (!activeConv.title || activeConv.title === 'New Conversation' || activeConv.title === 'Untitled Conversation')) {
             const newTitle = this.generateConversationTitle(content);
-            console.log('📝 Triggering title update after message save - sessionId:', sessionId, 'newTitle:', newTitle);
 
             // Update title now that we know the message is saved
             this.legalResearchService.updateConversationTitle(sessionId, currentUserId, newTitle)
@@ -588,7 +537,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
               .subscribe({
                 next: (success) => {
                   if (success) {
-                    console.log('✅ Title updated successfully after message save');
                     activeConv.title = newTitle;
                     const convIndex = this.conversations.findIndex(c => c.id === this.activeConversationId);
                     if (convIndex !== -1) {
@@ -596,17 +544,17 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
                     }
                     this.cdr.detectChanges();
                   } else {
-                    console.warn('⚠️ Title update returned false after message save');
+                    console.warn('Title update returned false after message save');
                   }
                 },
                 error: (error) => {
-                  console.error('❌ Error updating title after message save:', error);
+                  console.error('Error updating title after message save:', error);
                 }
               });
           }
         },
         error: (error) => {
-          console.error('❌ Error saving message to backend:', error);
+          console.error('Error saving message to backend:', error);
         }
       });
   }
@@ -614,11 +562,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   createNewConversation(): void {
     if (!this.caseId) return;
     if (!this.userId) {
-      console.warn('⚠️ Cannot create conversation - no user ID available');
+      console.warn('Cannot create conversation - no user ID available');
       return;
     }
-
-    console.log('🆕 Creating new conversation on backend for userId:', this.userId);
 
     // Create new session on backend
     this.legalResearchService.getOrCreateConversationSession(
@@ -629,8 +575,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     ).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
-          console.log('✅ Created new session on backend:', session.id);
-
           // Create frontend conversation object
           const newConv: Conversation = {
             id: session.id!.toString(),
@@ -654,11 +598,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           this.searchQuery = '';
 
           this.cdr.detectChanges();
-
-          console.log('🆕 Created new conversation:', newConv.id);
         },
         error: (error) => {
-          console.error('❌ Error creating new conversation:', error);
+          console.error('Error creating new conversation:', error);
           Swal.fire({
             title: 'Error',
             text: 'Failed to create new conversation',
@@ -681,8 +623,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Close dropdown after switching
     this.showConversationList = false;
-
-    console.log('🔄 Switched to conversation:', conversationId);
   }
 
   deleteConversation(conversationId: string): void {
@@ -811,7 +751,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.searchSessionId = this.generateSessionId();
     // CRITICAL: Capture which conversation initiated this search
     this.searchConversationId = this.activeConversationId;
-    console.log('🔍 Starting search with session ID:', this.searchSessionId, 'for conversation:', this.searchConversationId);
 
     // Connect to SSE for real-time progress updates
     this.connectToSSE(this.searchSessionId);
@@ -913,10 +852,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     // Add message to UI immediately if we're viewing the conversation that initiated the search
     if (this.activeConversationId === this.searchConversationId) {
       this.chatMessages.push(message);
-      console.log('✅ Added AI response to chatMessages for immediate display');
       this.cdr.detectChanges();
-    } else {
-      console.log('⚠️ User switched conversations - response will be loaded when they switch back');
     }
 
     // Also keep conversation object in sync
@@ -951,14 +887,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       match = aiResponse.match(pattern);
       if (match) {
         matchedPattern = pattern;
-        console.log('📋 Found follow-up questions section with pattern:', pattern.source.substring(0, 30));
         break;
       }
     }
 
     if (match) {
       const questionsSection = match[1];
-      console.log('📋 Questions section content:', questionsSection.substring(0, 200));
 
       // Extract questions from list items (- or 1., 2., etc. or • or *)
       const questionMatches = questionsSection.match(/[-•*]\s*(.+?)(?=\n[-•*]|\n\d+\.|\n\n|$)/g)
@@ -972,10 +906,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           .filter(q => q.length > 0)
           .filter(q => this.isValidFollowUpQuestion(q)) // Validate question quality
           .slice(0, 5); // Limit to 5 questions
-
-        console.log('✅ Extracted follow-up questions:', this.followUpQuestions);
       } else {
-        console.log('⚠️ No question list items found in section');
         this.followUpQuestions = [];
       }
 
@@ -983,7 +914,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       return aiResponse.replace(matchedPattern!, '').trim();
     }
 
-    console.log('⚠️ No follow-up questions section found in response');
     this.followUpQuestions = [];
     return aiResponse;
   }
@@ -991,21 +921,18 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   isValidFollowUpQuestion(question: string): boolean {
     // Reject questions under 40 characters (likely fragments)
     if (question.length < 40) {
-      console.log(`❌ Rejected follow-up question (too short): "${question}"`);
       return false;
     }
 
     // Reject questions that are just punctuation or symbols
     const onlyPunctuation = /^[\s\-\.\?\!,;:]+$/;
     if (onlyPunctuation.test(question)) {
-      console.log(`❌ Rejected follow-up question (only punctuation): "${question}"`);
       return false;
     }
 
     // Require questions to have action verbs or question words
     const hasQuestionIndicators = /\b(find|does|what|how|can|should|is|are|will|would|could|may|might|has|have|when|where|which|who|why)\b/i;
     if (!hasQuestionIndicators.test(question)) {
-      console.log(`❌ Rejected follow-up question (no question indicators): "${question}"`);
       return false;
     }
 
@@ -1057,14 +984,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const finding = result.summary || result.title;
     const citation = result.citation;
 
-    console.log('🎯 generateActionSuggestions called with:', {
-      sessionId: this.currentSessionId,
-      userId: this.userId,
-      caseId: this.caseId,
-      finding: finding?.substring(0, 100),
-      citation
-    });
-
     this.loadingActions = true;
     this.actionLoadingAttempted = true; // Mark that we attempted to load
     this.cdr.detectChanges();
@@ -1079,60 +998,26 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       timeout(30000), // 30 second timeout
       catchError(error => {
         if (error instanceof TimeoutError) {
-          console.error('⏱️ Action suggestions timed out after 30 seconds');
+          console.error('Action suggestions timed out after 30 seconds');
         }
         return throwError(() => error);
       })
     ).subscribe({
       next: (suggestions) => {
-        console.log('✅ Action suggestions received:', suggestions);
-        console.log('📑 Number of suggestions:', suggestions?.length || 0);
-        console.log('🔍 Raw suggestions data:', JSON.stringify(suggestions, null, 2));
-
         // Replace with new suggestions (already cleared in performSearch)
         this.actionSuggestions = suggestions || [];
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
 
-        console.log('🔄 State after setting suggestions:', {
-          actionSuggestions: this.actionSuggestions,
-          length: this.actionSuggestions.length,
-          loadingActions: this.loadingActions,
-          aiThinking: this.aiThinking,
-          isSearching: this.isSearching,
-          actionLoadingAttempted: this.actionLoadingAttempted,
-          chatMessages: this.chatMessages.length,
-          lastMessage: this.chatMessages[this.chatMessages.length - 1],
-          'lastMessage.role': this.chatMessages[this.chatMessages.length - 1]?.role,
-          'lastMessage.isTyping': this.chatMessages[this.chatMessages.length - 1]?.isTyping
-        });
-
         // Force UI update with a slight delay to ensure all state is updated
         this.cdr.detectChanges();
         setTimeout(() => {
-          console.log('🔄 State 100ms after setting suggestions:', {
-            actionSuggestions: this.actionSuggestions,
-            length: this.actionSuggestions.length,
-            loadingActions: this.loadingActions,
-            lastMessageRole: this.chatMessages[this.chatMessages.length - 1]?.role,
-            lastMessageIsTyping: this.chatMessages[this.chatMessages.length - 1]?.isTyping
-          });
           this.cdr.detectChanges();
         }, 100);
       },
       error: (error) => {
-        console.error('❌ Error generating action suggestions:', error);
-        if (error instanceof TimeoutError) {
-          console.error('⏱️ Request timed out - backend may be slow or unresponsive');
-        } else {
-          console.error('Error details:', {
-            message: error.message,
-            status: error.status,
-            statusText: error.statusText,
-            url: error.url
-          });
-        }
+        console.error('Error generating action suggestions:', error);
         this.actionSuggestions = []; // Ensure empty array on error
         this.loadingActions = false;
         this.aiThinking = false;
@@ -1147,21 +1032,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const finding = aiAnalysis.substring(0, 500).trim(); // First 500 chars
     const citation = `Research Query: ${query}`;
 
-    console.log('🎯 generateActionSuggestionsFromAnalysis called with:', {
-      sessionId: this.currentSessionId,
-      userId: this.userId,
-      caseId: this.caseId,
-      query,
-      finding: finding?.substring(0, 100),
-      citation,
-      findingLength: finding?.length,
-      findingEmpty: !finding,
-      citationEmpty: !citation
-    });
-
     // Validate finding and citation
     if (!finding || finding.length === 0) {
-      console.error('❌ Cannot generate actions: finding is empty');
+      console.error('Cannot generate actions: finding is empty');
       this.actionSuggestions = [];
       this.loadingActions = false;
       this.aiThinking = false;
@@ -1191,15 +1064,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       })
     ).subscribe({
       next: (suggestions) => {
-        console.log('✅ Action suggestions from analysis received:', suggestions);
-        console.log('📑 Number of suggestions:', suggestions?.length || 0);
         // Replace with new suggestions (already cleared in performSearch)
         this.actionSuggestions = suggestions || [];
         this.loadingActions = false;
         this.aiThinking = false;
         this.isSearching = false;
         this.cdr.detectChanges();
-        console.log('🔄 actionSuggestions after set:', this.actionSuggestions);
       },
       error: (error) => {
         console.error('❌ Error generating action suggestions from analysis:', error);
@@ -1268,9 +1138,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private createTask(action: ResearchActionItem): void {
-    console.log('🎯 createTask() called for action:', action.id);
-    console.log('📋 Action has caseId:', action.caseId);
-
     // Use simple fallback title immediately to show modal fast
     const fallbackTitle = this.generateShortTitle(action.taskDescription);
 
@@ -1413,21 +1280,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           assignedToId: null
         };
 
-        console.log('⚡ Executing action atomically');
-        console.log('📋 Action details:', {
-          id: action.id,
-          caseId: action.caseId,
-          type: action.actionType
-        });
-        console.log('📋 Execute data:', executeData);
-
         this.researchActionService.executeAction(action.id, executeData).subscribe({
           next: (response) => {
-            console.log('✅ Action executed successfully:', response);
-
             const createdTask = response.data.result;
-            console.log('✅ Task created with ID:', createdTask.id);
-            console.log('✅ Action', response.data.actionId, 'marked as completed');
 
             // Show success message immediately
             Swal.fire({
@@ -1523,8 +1378,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private createDeadline(action: ResearchActionItem): void {
-    console.log('🎯 createDeadline() called for action:', action.id);
-
     // Use simple fallback title immediately to show modal fast
     const fallbackTitle = this.generateShortTitle(action.taskDescription);
 
@@ -1645,13 +1498,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           showConfirmButton: false
         });
 
-        console.log('⚡ Executing deadline creation atomically:', executeData);
-
         // Execute API call in background
         this.researchActionService.executeAction(action.id, executeData).subscribe({
           next: (response) => {
-            console.log('✅ Deadline created successfully:', response);
-
             // Remove from UI
             this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
             this.cdr.detectChanges();
@@ -1780,13 +1629,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         // Execute API call in background
         this.researchActionService.executeAction(action.id, executeData).subscribe({
           next: (response) => {
-            console.log('✅ Note created successfully:', response);
             this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
             this.cdr.detectChanges();
             setTimeout(() => this.taskCreated.emit(), 0);
           },
           error: (error) => {
-            console.error('❌ Note creation failed:', error);
+            console.error('Note creation failed:', error);
             Swal.fire({
               title: 'Failed',
               text: error.error?.message || 'Failed to create note. Please try again.',
@@ -1804,22 +1652,13 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private markActionCompleted(action: ResearchActionItem): void {
-    console.log('🎯 Marking action as completed:', action.id);
-
     this.researchActionService.completeAction(action.id).subscribe({
       next: () => {
-        console.log('✅ Action marked as completed on backend, removing from UI');
         this.actionSuggestions = this.actionSuggestions.filter(a => a.id !== action.id);
-        console.log('📑 Remaining actions:', this.actionSuggestions.length);
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error marking action as completed:', error);
-        console.error('❌ Action will remain visible. Error details:', {
-          actionId: action.id,
-          status: error.status,
-          message: error.error?.message || error.message
-        });
+        console.error('Error marking action as completed:', error);
       }
     });
   }
@@ -2052,27 +1891,12 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.executeAction(action);
   }
 
-  // Debug helper to log template conditions
   shouldShowActions(isLast: boolean, messageRole: string, messageIsTyping: boolean): boolean {
-    const result = isLast &&
-                   messageRole === 'assistant' &&
-                   this.actionSuggestions.length > 0 &&
-                   !messageIsTyping &&
-                   !this.loadingActions;
-
-    console.log('🔍 shouldShowActions check:', {
-      isLast,
-      messageRole,
-      'messageRole === assistant': messageRole === 'assistant',
-      messageIsTyping,
-      'actionSuggestions.length': this.actionSuggestions.length,
-      'actionSuggestions.length > 0': this.actionSuggestions.length > 0,
-      loadingActions: this.loadingActions,
-      result,
-      actionSuggestions: this.actionSuggestions
-    });
-
-    return result;
+    return isLast &&
+           messageRole === 'assistant' &&
+           this.actionSuggestions.length > 0 &&
+           !messageIsTyping &&
+           !this.loadingActions;
   }
 
   // SSE Methods for real-time progress updates
@@ -2098,16 +1922,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     // The current user message is at the end, so we get messages from -11 to -1
     const recentMessages = activeConv.messages.slice(-11, -1);
 
-    console.log('📤 Sending conversation history:', {
-      activeConvId: this.activeConversationId,
-      totalMessagesInConv: activeConv.messages.length,
-      historyMessageCount: recentMessages.length,
-      historyPreview: recentMessages.slice(0, 2).map(m => ({
-        role: m.role,
-        contentPreview: m.content.substring(0, 50) + '...'
-      }))
-    });
-
     // Convert to format expected by backend
     return recentMessages.map(msg => ({
       role: msg.role,
@@ -2120,19 +1934,16 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.closeSSEConnection(); // Close any existing connection
 
     const sseUrl = `http://localhost:8085/api/ai/legal-research/progress-stream?sessionId=${sessionId}`;
-    console.log('🔌 Connecting to SSE:', sseUrl);
 
     this.eventSource = new EventSource(sseUrl);
 
     this.eventSource.onopen = () => {
-      console.log('✅ SSE connection established');
+      // Connection established
     };
 
     this.eventSource.onmessage = (event: MessageEvent) => {
-      console.log('📨 SSE message received:', event);
       try {
-        const data = JSON.parse(event.data);
-        console.log('📑 Parsed SSE data:', data);
+        JSON.parse(event.data);
       } catch (error) {
         console.error('Error parsing SSE message:', error);
       }
@@ -2141,20 +1952,18 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.eventSource.addEventListener('progress', (event: MessageEvent) => {
       try {
         const progressEvent = JSON.parse(event.data);
-        console.log('📑 Progress event:', progressEvent);
         this.handleProgressEvent(progressEvent);
       } catch (error) {
-        console.error('Error parsing progress event:', error, event);
+        console.error('Error parsing progress event:', error);
       }
     });
 
     this.eventSource.addEventListener('complete', (event: MessageEvent) => {
       try {
         const completeEvent = JSON.parse(event.data);
-        console.log('✅ Complete event:', completeEvent);
         this.handleCompleteEvent(completeEvent);
       } catch (error) {
-        console.error('Error parsing complete event:', error, event);
+        console.error('Error parsing complete event:', error);
       }
     });
 
@@ -2162,17 +1971,15 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       try {
         if (event.data) {
           const errorEvent = JSON.parse(event.data);
-          console.error('❌ Error event:', errorEvent);
           this.handleErrorEvent(errorEvent);
         }
       } catch (error) {
-        console.error('Error parsing error event:', error, event);
+        console.error('Error parsing error event:', error);
       }
     });
 
     this.eventSource.onerror = (error) => {
-      console.error('❌ SSE connection error:', error);
-      console.error('EventSource readyState:', this.eventSource?.readyState);
+      console.error('SSE connection error:', error);
 
       // Don't close connection on transient errors, only if backend is truly down
       if (this.eventSource?.readyState === EventSource.CLOSED) {
@@ -2183,7 +1990,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private closeSSEConnection(): void {
     if (this.eventSource) {
-      console.log('🔌 Closing SSE connection');
       this.eventSource.close();
       this.eventSource = undefined;
     }
@@ -2221,7 +2027,6 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
         message: event.detail || event.message || 'Executing tool',
         icon: event.icon || 'ri-tools-line'
       });
-      console.log('🔧 Tool captured:', this.toolsUsed[this.toolsUsed.length - 1]);
       this.cdr.detectChanges();
     }
   }

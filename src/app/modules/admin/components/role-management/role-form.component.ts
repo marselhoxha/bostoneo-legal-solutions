@@ -192,8 +192,6 @@ export class RoleFormComponent implements OnInit {
       )
     };
     
-    console.log('Submitting role data:', roleData);
-    
     // Emit the submit event for parent component handling
     this.submit.emit(roleData);
     
@@ -202,7 +200,6 @@ export class RoleFormComponent implements OnInit {
       if (this.isEditMode && this.role) {
         this.rbacService.updateRole(this.role.id, roleData).subscribe({
           next: (response) => {
-            console.log('Role update response:', response);
             this.snackBar.open('Role updated successfully', 'Close', { 
               duration: 3000,
               panelClass: ['bg-success', 'text-white']
@@ -222,7 +219,6 @@ export class RoleFormComponent implements OnInit {
       } else {
         this.rbacService.createRole(roleData).subscribe({
           next: (response) => {
-            console.log('Role create response:', response);
             this.snackBar.open('Role created successfully', 'Close', { 
               duration: 3000,
               panelClass: ['bg-success', 'text-white']

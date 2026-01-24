@@ -255,12 +255,9 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       paymentStatus: this.caseForm.value.paymentStatus
     };
 
-    console.log('Sending case data to API:', caseData);
-
     // Make the actual API call
     this.caseService.createCase(caseData).subscribe({
       next: (response) => {
-        console.log('API response:', response);
         this.snackBar.open('Case created successfully', 'Close', {
           duration: 3000,
           horizontalPosition: 'end',

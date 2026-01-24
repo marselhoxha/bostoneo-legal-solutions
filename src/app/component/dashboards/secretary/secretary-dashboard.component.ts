@@ -291,7 +291,6 @@ export class SecretaryDashboardComponent implements OnInit, OnDestroy {
   }
 
   completeTask(taskId: number): void {
-    console.log('Completing task:', taskId);
     // Implement task completion logic
   }
 

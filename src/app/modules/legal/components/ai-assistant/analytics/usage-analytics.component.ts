@@ -57,7 +57,6 @@ export class UsageAnalyticsComponent implements OnInit {
 
   loadAnalytics(): void {
     // In production, load from service
-    console.log('Loading analytics for period:', this.selectedPeriod);
   }
 
   onPeriodChange(): void {
@@ -65,6 +64,6 @@ export class UsageAnalyticsComponent implements OnInit {
   }
 
   exportReport(): void {
-    console.log('Exporting analytics report...');
+    // Export analytics report functionality
   }
 }

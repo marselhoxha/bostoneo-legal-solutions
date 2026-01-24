@@ -68,7 +68,6 @@ export class CrmDashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
-          console.log('📊 Dashboard data loaded:', response);
           // Handle wrapped response (data.xxx) or direct response
           const data = response?.data || response;
 

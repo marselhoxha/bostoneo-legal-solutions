@@ -35,7 +35,6 @@ export class TokenInterceptor implements HttpInterceptor {
   ) {
     // Subscribe to login success events to reset state
     this.userService.loginSuccess$.subscribe(() => {
-      console.log('[TokenInterceptor] Login success detected, resetting state');
       this.resetState();
     });
   }
@@ -55,7 +54,6 @@ export class TokenInterceptor implements HttpInterceptor {
       // We have a valid token - reset failed state if it was set and proceed
       const currentState = this.refreshState$.getValue();
       if (currentState.failed) {
-        console.log('[TokenInterceptor] Valid token found, auto-resetting failed state');
         this.resetState();
       }
 
@@ -87,7 +85,6 @@ export class TokenInterceptor implements HttpInterceptor {
     }
 
     if (currentState.inProgress) {
-      console.log('[TokenInterceptor] No token but refresh in progress, waiting:', request.url);
       return this.waitForTokenRefresh(request, next);
     }
 
@@ -136,7 +133,6 @@ export class TokenInterceptor implements HttpInterceptor {
     }
 
     if (!currentState.inProgress) {
-      console.log('[TokenInterceptor] Starting token refresh');
       this.refreshState$.next({ inProgress: true, token: null, failed: false });
 
       return this.userService.refreshToken$().pipe(
@@ -149,7 +145,6 @@ export class TokenInterceptor implements HttpInterceptor {
           }
 
           const newToken = response.data.access_token;
-          console.log('[TokenInterceptor] Token refresh successful');
           this.refreshState$.next({ inProgress: false, token: newToken, failed: false });
           return next.handle(this.addAuthorizationHeader(request, newToken));
         }),

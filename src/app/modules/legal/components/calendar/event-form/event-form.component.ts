@@ -109,7 +109,6 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
     const reminderSub = this.eventForm.get('reminderMinutes').valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(value => {
-        console.log('Reminder minutes changed to:', value, 'type:', typeof value);
         if (value === 'custom') {
           // Initialize with a reasonable default
           this.customReminderMinutes = 60;
@@ -222,17 +221,12 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // Parse recurrence rule if it exists
     const recurrenceInfo = this.parseRecurrenceRule(this.event?.recurrenceRule);
-    
-    // Log received event for debugging
-    console.log('Initializing form with event:', this.event);
-    
+
     // Make sure reminderMinutes is properly initialized as a number
     let initialReminderMinutes = 0;
     if (this.event?.reminderMinutes !== undefined && this.event?.reminderMinutes !== null) {
       initialReminderMinutes = Number(this.event.reminderMinutes);
     }
-    
-    console.log('Initial reminderMinutes value:', initialReminderMinutes, 'type:', typeof initialReminderMinutes);
     
     this.eventForm = this.fb.group({
       title: [this.event?.title || '', [Validators.required]],
@@ -270,18 +264,13 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
       // Update form with these values
       this.updateAdditionalRemindersInForm();
     }
-    
-    // Log the initialized form value for debugging
-    console.log('Initialized form with reminderMinutes:', this.eventForm.get('reminderMinutes').value, 
-               'type:', typeof this.eventForm.get('reminderMinutes').value);
   }
   
   // Custom reminder methods
   setCustomReminder(): void {
     const minutes = this.eventForm.get('customReminderMinutes').value;
-    
+
     if (minutes >= 5 && minutes <= 43200) {
-      console.log('Setting custom reminder minutes:', minutes, 'type:', typeof minutes);
       // Set the actual reminder minutes to the custom value
       this.eventForm.get('reminderMinutes').setValue(Number(minutes));
       
@@ -606,12 +595,11 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
     
     this.isLoading = true;
     const formValues = this.eventForm.value;
-    
+
     try {
       // Handle reminderMinutes if 'custom' is selected
       let reminderMinutes = formValues.reminderMinutes;
-      console.log('Original reminderMinutes:', reminderMinutes, 'type:', typeof reminderMinutes);
-      
+
       if (reminderMinutes === 'custom') {
         reminderMinutes = Number(formValues.customReminderMinutes);
       } else {
@@ -623,9 +611,7 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
           reminderMinutes = 0;
         }
       }
-      
-      console.log('Final reminderMinutes value for submission:', reminderMinutes, 'type:', typeof reminderMinutes);
-      
+
       // Make sure additionalReminders is an array of numbers
       const additionalReminders = this.selectedAdditionalReminders.map(min => Number(min));
       
@@ -657,9 +643,7 @@ export class EventFormComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.event && 'reminderSent' in this.event) {
         (eventRequest as any).reminderSent = false;
       }
-      
-      console.log('Submitting event request:', JSON.stringify(eventRequest, null, 2));
-      
+
       // Add recurrence rule if enabled
       if (formValues.enableRecurrence) {
         eventRequest.recurrenceRule = this.buildRecurrenceRule();

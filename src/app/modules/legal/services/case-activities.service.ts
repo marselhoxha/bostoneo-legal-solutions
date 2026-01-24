@@ -33,17 +33,14 @@ export class CaseActivitiesService {
    */
   notifyRefresh(caseId: number): void {
     if (!caseId || isNaN(caseId)) {
-      console.warn('Cannot refresh activities: Invalid case ID');
       return;
     }
-    
-    console.log(`Notifying subscribers to refresh activities for case ${caseId}`);
+
     // First emit the refresh notification
     this.refreshNeeded.next(caseId);
-    
+
     // Also delay a second notification to ensure backend has completed processing
     setTimeout(() => {
-      console.log(`Sending delayed refresh notification for case ${caseId}`);
       this.refreshNeeded.next(caseId);
     }, 1000);
   }
@@ -62,32 +59,25 @@ export class CaseActivitiesService {
    * @returns An observable of CaseActivity array
    */
   getActivitiesByCaseId(caseId: string | number): Observable<CaseActivity[]> {
-    console.log(`Fetching activities for case ID: ${caseId} from ${this.apiUrl}/${caseId}/activities`);
     // Server returns a nested structure, so we map to extract the activities array
     return this.http.get<any>(`${this.apiUrl}/${caseId}/activities`)
       .pipe(
         map(response => {
-          console.log('Raw activities API response:', response);
-          
           // Extract activities from the response
           if (response && response.data && response.data.activities) {
-            console.log(`Found ${response.data.activities.length} activities in the response data`);
             return response.data.activities;
           }
-          
+
           // If API returns a direct array
           if (Array.isArray(response)) {
-            console.log(`Found ${response.length} activities in direct response array`);
             return response;
           }
-          
+
           // If API returns a different structure with data and activities properties at top level
           if (response && response.activities && Array.isArray(response.activities)) {
-            console.log(`Found ${response.activities.length} activities in response.activities`);
             return response.activities;
           }
-          
-          console.log('Unexpected response format, returning empty array');
+
           return [];
         }),
         catchError((error: HttpErrorResponse) => {
@@ -117,8 +107,6 @@ export class CaseActivitiesService {
    * @returns An observable of the created CaseActivity
    */
   createActivity(data: CreateActivityRequest): Observable<CaseActivity> {
-    console.log('Creating activity:', data);
-    
     // Normalize the activity type to the full string format before sending to backend
     data.activityType = this.normalizeActivityType(data.activityType);
     
@@ -150,13 +138,10 @@ export class CaseActivitiesService {
       metadata: data.metadata, // Use metadata directly, not metadataJson
       userId: userId // Include userId in the request for proper tracking
     };
-    
-    console.log('Sending activity request:', requestBody);
-    
+
     return this.http.post<any>(`${this.apiUrl}/${data.caseId}/activities`, requestBody)
       .pipe(
         map(response => {
-          console.log('Create activity response:', response);
           if (response && response.data && response.data.activity) {
             return response.data.activity;
           }
@@ -232,7 +217,6 @@ export class CaseActivitiesService {
     return this.http.get<any>(url)
       .pipe(
         map(response => {
-          console.log('Get reminders response:', response);
           if (response && response.data && response.data.reminders) {
             return response.data.reminders;
           }

@@ -55,21 +55,18 @@ export class VendorFormComponent implements OnInit {
   loadVendor(id: number): Observable<any> {
     this.loading = true;
     this.errorMessage = null;
-    console.log('Loading vendor, setting loading to true');
     this.changeDetectorRef.markForCheck();
-    
+
     return this.expensesService.getVendorById(id).pipe(
       tap(response => {
-        console.log('Vendor loaded successfully:', response);
         if (response && response.data) {
           const vendor = response.data;
-          
+
           this.vendorForm.patchValue({
             name: vendor.name || '',
             contact: vendor.contact || '',
             taxId: vendor.taxId || ''
           });
-          console.log('Form patched with vendor data');
         } else {
           this.errorMessage = 'Vendor not found';
           console.error('Vendor data is null or undefined');
@@ -82,7 +79,6 @@ export class VendorFormComponent implements OnInit {
       }),
       finalize(() => {
         this.loading = false;
-        console.log('Vendor loading complete, setting loading to false');
         this.changeDetectorRef.markForCheck();
       })
     );

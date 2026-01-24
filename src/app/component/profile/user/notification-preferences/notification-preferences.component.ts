@@ -168,8 +168,6 @@ export class NotificationPreferencesComponent implements OnInit, OnDestroy {
         priority: 'NORMAL' as 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL'
       });
     });
-
-    console.log(`Added ${missingEventTypes.length} missing notification types:`, missingEventTypes);
   }
 
   organizePreferencesIntoCategories(): void {
@@ -314,7 +312,6 @@ export class NotificationPreferencesComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (updatedPreferences) => {
-          console.log('Preferences saved successfully:', updatedPreferences);
           this.preferences = updatedPreferences;
           this.organizePreferencesIntoCategories();
           this.isSaving = false; // Stop spinner on success

@@ -545,7 +545,6 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
    */
   toggleDebugger(): void {
     this.showDebugger = !this.showDebugger;
-    console.log('Permission debugger toggled:', this.showDebugger);
   }
   
   /**

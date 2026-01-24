@@ -272,7 +272,6 @@ export class FilePreviewModalComponent implements OnInit, OnDestroy {
         // If a version was changed, we might want to update the preview
         if (result && result.changed) {
           // Optionally reload the preview or show a message
-          console.log('File version was changed');
         }
       },
       (dismissed) => {

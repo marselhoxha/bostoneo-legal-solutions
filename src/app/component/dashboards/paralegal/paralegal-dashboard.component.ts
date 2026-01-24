@@ -52,8 +52,6 @@ export class ParalegalDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.userId = this.currentUser?.id || null;
-    console.log('Paralegal Dashboard - User:', this.currentUser);
-    console.log('Paralegal Dashboard - User ID:', this.userId);
     this.loadParalegalData();
   }
 
@@ -91,7 +89,6 @@ export class ParalegalDashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Paralegal cases response:', response);
           if (response?.data?.content) {
             this.assignedCases = response.data.content;
             this.activeCases = response.data.totalElements || 0;
@@ -241,7 +238,6 @@ export class ParalegalDashboardComponent implements OnInit, OnDestroy {
   }
   
   completeTask(taskId: number): void {
-    console.log('Completing task:', taskId);
     // Implement task completion logic
   }
   

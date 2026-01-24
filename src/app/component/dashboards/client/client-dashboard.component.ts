@@ -78,7 +78,6 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
   private initializeClient(): void {
     // The ClientPortalService handles user-to-client mapping on the backend
     // No need for client-side mapping
-    console.log('Client Dashboard - User:', this.currentUser);
   }
 
   private loadClientData(): void {
@@ -119,8 +118,6 @@ export class ClientDashboardComponent implements OnInit, OnDestroy {
               lastUpdated: c.lastUpdated
             }));
             this.myCases = response.totalElements || this.clientCases.length;
-
-            console.log('Loaded cases from ClientPortalService:', this.clientCases);
           }
           this.casesLoading = false;
           this.cdr.detectChanges();

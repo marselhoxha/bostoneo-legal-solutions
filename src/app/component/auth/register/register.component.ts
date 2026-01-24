@@ -33,7 +33,6 @@ export class RegisterComponent {
     this.registerState$ = this.userService.save$(registerForm.value)
       .pipe(
         map(response => {
-          console.log(response);
           registerForm.reset();
           return { dataState: DataState.LOADED, registerSuccess: true, message: response.message };
         }),

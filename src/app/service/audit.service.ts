@@ -64,14 +64,10 @@ export class AuditService {
    */
   getRecentActivities$(limit: number = 10): Observable<CustomHttpResponse<AuditLog>> {
     const params = new HttpParams().set('limit', limit.toString());
-    
-    console.log('🔍 Making request to audit endpoint:', `${this.apiUrl}/activities/recent`);
-    console.log('📋 Request params:', params.toString());
-    
+
     return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, { params })
       .pipe(
         tap(response => {
-          console.log('✅ Audit API Response received:', response);
           if (response?.data) {
             const auditData: AuditLog = {
               activities: response.data.activities || [],
@@ -80,17 +76,11 @@ export class AuditService {
               weekCount: response.data.weekCount || 0,
               statistics: response.data.statistics
             };
-            console.log('📑 Processed audit data:', auditData);
             this.auditSubject.next(auditData);
-          } else {
-            console.warn('⚠️ No data in audit response');
           }
         }),
         catchError((error: HttpErrorResponse) => {
-          console.error('❌ Audit API Error Details:');
-          console.error('Status:', error.status);
-          console.error('Message:', error.message);
-          console.error('Error body:', error.error);
+          console.error('Audit API Error:', error.message);
           return throwError(() => error);
         })
       );
@@ -116,23 +106,12 @@ export class AuditService {
       'Expires': '0'
     };
     
-    console.log('🔄 Making FRESH request to audit endpoint (bypassing cache)');
-    console.log('🚫 Cache busting params:', params.toString());
-    
-    return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, { 
-      params, 
-      headers 
+    return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, {
+      params,
+      headers
     })
       .pipe(
         tap(response => {
-          console.log('✅ Fresh Audit API Response received:', response);
-          console.log('🕐 Server timestamp:', response.timestamp);
-          
-          if (response?.data?.activities && response.data.activities.length > 0) {
-            console.log('🕐 First activity timestamp:', response.data.activities[0].timestamp);
-            console.log('🕐 Current time:', new Date().toISOString());
-          }
-          
           if (response?.data) {
             const auditData: AuditLog = {
               activities: response.data.activities || [],
@@ -141,14 +120,11 @@ export class AuditService {
               weekCount: response.data.weekCount || 0,
               statistics: response.data.statistics
             };
-            console.log('📑 Fresh audit data processed:', auditData);
             this.auditSubject.next(auditData);
-          } else {
-            console.warn('⚠️ No data in fresh audit response');
           }
         }),
         catchError((error: HttpErrorResponse) => {
-          console.error('❌ Fresh Audit API Error:', error);
+          console.error('Fresh Audit API Error:', error);
           return throwError(() => error);
         })
       );
@@ -327,16 +303,11 @@ export class AuditService {
    */
   getActivitiesForPage$(limit: number = 50): Observable<CustomHttpResponse<any>> {
     const params = new HttpParams().set('limit', limit.toString());
-    
-    console.log('📑 Making request for activities page:', `${this.apiUrl}/activities/recent`);
-    
+
     return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, { params })
       .pipe(
-        tap(response => {
-          console.log('📑 Activities page API response:', response);
-        }),
         catchError((error: HttpErrorResponse) => {
-          console.error('❌ Activities Page API Error:', error);
+          console.error('Activities Page API Error:', error);
           return throwError(() => error);
         })
       );
@@ -365,36 +336,13 @@ export class AuditService {
       'X-Force-Fresh': 'true'  // Additional bypass signal
     };
     
-    console.log('🔄 Making FRESH request for activities page (bypassing cache)');
-    console.log('🚫 Cache busting params:', params.toString());
-    console.log('🚫 Cache busting headers:', headers);
-    
-    return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, { 
-      params, 
-      headers 
+    return this.http.get<CustomHttpResponse<any>>(`${this.apiUrl}/activities/recent`, {
+      params,
+      headers
     })
       .pipe(
-        tap(response => {
-          console.log('✅ Fresh activities page response:', response);
-          console.log('🕐 Server timestamp:', response.timestamp);
-          
-          if (response?.data?.activities && response.data.activities.length > 0) {
-            console.log('🕐 Raw backend timestamp:', response.data.activities[0].timestamp);
-            console.log('🕐 Current time:', new Date().toISOString());
-            
-            // Check if backend has timestamp issues
-            const backendTimestamp = new Date(response.data.activities[0].timestamp);
-            if (backendTimestamp.getFullYear() !== new Date().getFullYear()) {
-              console.warn('🚨 Backend timestamp year mismatch detected!', {
-                backendYear: backendTimestamp.getFullYear(),
-                currentYear: new Date().getFullYear(),
-                backendTimestamp: response.data.activities[0].timestamp
-              });
-            }
-          }
-        }),
         catchError((error: HttpErrorResponse) => {
-          console.error('❌ Fresh Activities Page API Error:', error);
+          console.error('Fresh Activities Page API Error:', error);
           return throwError(() => error);
         })
       );

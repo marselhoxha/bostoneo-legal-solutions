@@ -183,8 +183,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (results) => {
-        console.log('[Dashboard] Data loaded - Cases:', this.activeCases.length, 'Assignments:', this.myAssignments.length);
-
         // Generate team workload from cases if not already populated
         if (this.teamMembers.length === 0 && this.activeCases.length > 0) {
           this.generateTeamWorkloadFromCases();
@@ -409,8 +407,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
         ? Math.round((completedTasks.length / totalAssigned) * 100)
         : 0
     };
-
-    console.log('[TaskStats] Calculated:', this.taskStats);
   }
 
   /**
@@ -419,7 +415,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   private createCasePipelineChart(): void {
     const canvas = document.getElementById('casePipelineChart') as HTMLCanvasElement;
     if (!canvas) {
-      console.log('[CasePipeline] Canvas not found, retrying...');
       setTimeout(() => this.createCasePipelineChart(), 200);
       return;
     }
@@ -448,11 +443,8 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
       this.activeCases.filter(c => c.status === stage).length
     );
 
-    console.log('[CasePipeline] Stage counts:', stageCounts);
-
     // If no cases, don't create chart
     if (stageCounts.every(count => count === 0)) {
-      console.log('[CasePipeline] No cases to display');
       return;
     }
 
@@ -507,8 +499,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
         }
       }
     });
-
-    console.log('[CasePipeline] Chart created successfully');
   }
 
   /**
@@ -517,7 +507,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   private createTaskCompletionChart(): void {
     const canvas = document.getElementById('taskCompletionChart') as HTMLCanvasElement;
     if (!canvas) {
-      console.log('[TaskCompletion] Canvas not found, retrying...');
       setTimeout(() => this.createTaskCompletionChart(), 200);
       return;
     }
@@ -568,8 +557,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
         }
       }
     });
-
-    console.log('[TaskCompletion] Chart created successfully');
   }
 
   /**
@@ -578,7 +565,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
   private createTeamCapacityChart(): void {
     const canvas = document.getElementById('teamCapacityChart') as HTMLCanvasElement;
     if (!canvas) {
-      console.log('[TeamCapacity] Canvas not found, retrying...');
       setTimeout(() => this.createTeamCapacityChart(), 200);
       return;
     }
@@ -594,11 +580,8 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
 
     const teamData = this.teamMembers.slice(0, 6); // Top 6 team members
 
-    console.log('[TeamCapacity] Team data:', teamData);
-
     // If no team data, don't create chart
     if (teamData.length === 0) {
-      console.log('[TeamCapacity] No team data to display');
       return;
     }
 
@@ -680,8 +663,6 @@ export class CaseManagementDashboardComponent implements OnInit, OnDestroy {
         }
       }
     });
-
-    console.log('[TeamCapacity] Chart created successfully');
   }
 
   /**

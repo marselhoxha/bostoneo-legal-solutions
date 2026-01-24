@@ -459,16 +459,7 @@ export class NotificationTemplatesService {
     const newStatus = additionalInfo?.newStatus || 'Unknown';
     
     const caseName = this.getEnhancedCaseName(context);
-    
-    // Debug logging to help identify issues
-    console.log('🔍 Case status notification context:', {
-      contextCaseName: context.caseName,
-      additionalInfoCaseName: context.additionalInfo?.caseName,
-      finalCaseName: caseName,
-      caseNumber: context.caseNumber,
-      caseId: context.caseId
-    });
-    
+
     // Map status to appropriate emoji and priority
     const statusEmojis: { [key: string]: string } = {
       'OPEN': '📂',

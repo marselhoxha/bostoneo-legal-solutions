@@ -219,8 +219,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (events: any[]) => {
-        console.log('[UrgentItems] Upcoming events from API:', events.length);
-
         const now = new Date();
 
         // Filter for deadlines and important events only
@@ -242,8 +240,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
           })
           .sort((a, b) => new Date(a.start || a.startTime).getTime() - new Date(b.start || b.startTime).getTime())
           .slice(0, 10);
-
-        console.log('[UrgentItems] Filtered urgent events:', urgentEvents.length);
 
         // Map to UrgentItem format
         this.urgentItems = urgentEvents.map((event, index) => ({
@@ -340,8 +336,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (todayEvents: any[]) => {
-        console.log('[Schedule] Today events from API:', todayEvents.length);
-
         const now = new Date();
 
         // Map to ScheduleEvent format with time status
@@ -384,10 +378,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
           // Within same category, sort by start time
           return (a.rawStart?.getTime() || 0) - (b.rawStart?.getTime() || 0);
         });
-
-        console.log('[Schedule] Mapped schedule events:', this.scheduleEvents.length);
-        console.log('[Schedule] In progress:', this.scheduleEvents.filter(e => e.isInProgress).length);
-        console.log('[Schedule] Past:', this.scheduleEvents.filter(e => e.isPast).length);
 
         this.eventsLoading = false;
         // Signal that schedule events are loaded, then try to load AI briefing
@@ -496,15 +486,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
    */
   private tryLoadAiBriefing(): void {
     if (this.scheduleEventsLoaded && this.urgentItemsLoaded) {
-      console.log('[AIBriefing] Both data sources loaded, generating briefing...');
-      console.log('[AIBriefing] Schedule events:', this.scheduleEvents.length);
-      console.log('[AIBriefing] Urgent items:', this.urgentItems.length);
       this.loadAiBriefing();
-    } else {
-      console.log('[AIBriefing] Waiting for data sources...', {
-        scheduleEventsLoaded: this.scheduleEventsLoaded,
-        urgentItemsLoaded: this.urgentItemsLoaded
-      });
     }
   }
 
@@ -514,11 +496,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     // Find if there's a court appearance today (that hasn't ended)
     const todayHearing = this.getTodayHearing();
     const nextEvent = this.getNextEvent();
-
-    console.log('[AIBriefing] Today hearing:', todayHearing);
-    console.log('[AIBriefing] Next event:', nextEvent);
-    console.log('[AIBriefing] Active events count:', this.getActiveEventsCount());
-    console.log('[AIBriefing] Completed events count:', this.getCompletedEventsCount());
 
     const request: BriefingRequest = {
       todayEventsCount: this.getActiveEventsCount(), // Only count active (non-past) events
@@ -531,8 +508,6 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       courtTime: todayHearing?.startTime || null,
       recentTeamActivity: [] // TODO: Add team activity when available
     };
-
-    console.log('[AIBriefing] Request:', request);
 
     this.aiBriefingService.getBriefing(request).pipe(
       takeUntil(this.destroy$)

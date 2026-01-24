@@ -65,14 +65,12 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
 
   loadPermissions(): void {
     this.loading = true;
-    console.log('Loading permissions for role:', this.role.name);
-    
+
     this.rbacService.getPermissions()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (permissions) => {
           this.allPermissions = permissions as Permission[] || [];
-          console.log('Loaded permissions:', this.allPermissions.length);
           
           // Mark assigned permissions and store original state
           const rolePermissionIds = new Set((this.role.permissions || []).map(p => p.id));
@@ -143,8 +141,6 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
     // Update counts
     this.assignedCount = this.allPermissions.filter(p => p.assigned).length;
     this.unassignedCount = this.allPermissions.length - this.assignedCount;
-    
-    console.log('Updated data - Groups:', this.groupedPermissions.length, 'Assigned:', this.assignedCount);
   }
 
   // New method to update only counts without recreating groups
@@ -153,12 +149,10 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
     this.groupedPermissions.forEach(group => {
       group.assignedCount = group.permissions.filter(p => p.assigned).length;
     });
-    
+
     // Update overall counts
     this.assignedCount = this.allPermissions.filter(p => p.assigned).length;
     this.unassignedCount = this.allPermissions.length - this.assignedCount;
-    
-    console.log('Updated counts - Assigned:', this.assignedCount);
   }
 
   onSearchChange(): void {
@@ -170,7 +164,6 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
   }
 
   onPermissionChange(): void {
-    console.log('Permission changed');
     // Only update counts, don't recreate groups to preserve expanded state
     this.updateCounts();
     this.cdr.detectChanges();
@@ -180,7 +173,6 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
     const group = this.groupedPermissions.find(g => g.name === groupName);
     if (group) {
       group.isExpanded = !group.isExpanded;
-      console.log(`Group ${groupName} is now ${group.isExpanded ? 'expanded' : 'collapsed'}`);
       this.cdr.detectChanges();
     }
   }
@@ -210,23 +202,19 @@ export class PermissionAssignmentComponent implements OnInit, OnDestroy {
 
   savePermissions(): void {
     if (this.saving) return;
-    
+
     this.saving = true;
-    console.log('Saving permissions...');
-    
+
     const assignedPermissionIds = this.allPermissions
       .filter(permission => permission.assigned)
       .map(permission => permission.id);
-    
-    console.log('Assigning permission IDs:', assignedPermissionIds);
-    
+
     this.rbacService.assignPermissionsToRole(this.role.id, assignedPermissionIds)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (success) => {
           this.saving = false;
-          console.log('Save result:', success);
-          
+
           if (success) {
             this.showSuccess('Permissions updated successfully');
             this.dialogRef.close(true);

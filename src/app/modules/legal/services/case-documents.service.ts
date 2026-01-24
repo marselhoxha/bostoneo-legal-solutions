@@ -20,87 +20,41 @@ export class CaseDocumentsService {
       return throwError(() => new Error('Case ID is required'));
     }
 
-    console.log('Fetching documents for case ID:', caseId);
     // Use the direct document service endpoint that doesn't apply role filtering
     const url = `${environment.apiUrl}/legal/documents/case/${caseId}`;
-    
-    // Get fresh headers for each request
     const headers = this.getAuthHeaders(false);
-    console.log('Request headers:', headers);
-    console.log('Request URL:', url);
-    console.log('Environment API URL:', environment.apiUrl);
-    console.log('Full constructed URL:', url);
-    
+
     return this.http.get<any>(url, { headers }).pipe(
-      tap(response => {
-        console.log('✅ SUCCESS: Raw documents API response:', response);
-        console.log('✅ SUCCESS: Response type:', typeof response);
-        console.log('✅ SUCCESS: Response keys:', Object.keys(response || {}));
-        console.log('✅ SUCCESS: Response status:', response?.status);
-        console.log('✅ SUCCESS: Response data:', response?.data);
-      }),
       map(response => {
         // Handle the actual backend response structure
-        // Backend may return different formats, so let's handle them all
         if (!response) {
-          console.log('Empty response received');
           return [];
         }
-        
-        // If response is already an array
+
         if (Array.isArray(response)) {
-          console.log('Response is already an array with', response.length, 'items');
           return response;
         }
-        
-        // If response has documents property directly
+
         if (response.documents && Array.isArray(response.documents)) {
-          console.log('Found documents array with', response.documents.length, 'items');
           return response.documents;
         }
-        
-        // If response has data.documents structure
+
         if (response.data && response.data.documents && Array.isArray(response.data.documents)) {
-          console.log('Found nested documents array with', response.data.documents.length, 'items');
           return response.data.documents;
         }
-        
-        // If response has data property that is an array
+
         if (response.data && Array.isArray(response.data)) {
-          console.log('Found data array with', response.data.length, 'items');
           return response.data;
         }
-        
-        // If response has data property that contains the documents
+
         if (response.data) {
-          console.log('Response has data property:', response.data);
           return response.data;
         }
-        
-        // Fallback
-        console.warn('Unexpected response format, returning as-is:', response);
+
         return response;
       }),
       catchError(error => {
-        console.error('❌ ERROR: Error fetching documents:', error);
-        console.error('❌ ERROR: Error status:', error.status);
-        console.error('❌ ERROR: Error message:', error.message);
-        console.error('❌ ERROR: Error body:', error.error);
-        console.error('❌ ERROR: Full error object:', JSON.stringify(error, null, 2));
-        
-        if (error.status === 401) {
-          console.log('❌ ERROR: Authentication error - token may be expired');
-          console.log('❌ ERROR: Current token:', localStorage.getItem('token'));
-        } else if (error.status === 403) {
-          console.log('❌ ERROR: Permission denied for documents');
-        } else if (error.status === 404) {
-          console.log('❌ ERROR: Case not found or no documents');
-        } else if (error.status === 500) {
-          console.log('❌ ERROR: Backend internal server error');
-          console.log('❌ ERROR: This indicates a problem with the backend service');
-          console.log('❌ ERROR: URL that failed:', `${this.apiUrl}/${arguments[0]}/documents`);
-        }
-        
+        console.error('Error fetching documents:', error);
         return throwError(() => error);
       })
     );
@@ -115,7 +69,6 @@ export class CaseDocumentsService {
     const url = `${this.apiUrl}/${caseId}/documents`;
     
     return this.http.post<any>(url, formData, { headers: this.getAuthHeaders(true) }).pipe(
-      tap(response => console.log('Document uploaded successfully')),
       catchError(error => {
         console.error('Error uploading document:', error);
         return throwError(() => error);
@@ -132,7 +85,6 @@ export class CaseDocumentsService {
     const url = `${this.apiUrl}/${caseId}/documents/${documentId}/versions`;
     
     return this.http.post<any>(url, formData, { headers: this.getAuthHeaders(true) }).pipe(
-      tap(response => console.log('New version uploaded successfully')),
       catchError(error => {
         console.error('Error uploading new version:', error);
         return throwError(() => error);
@@ -159,7 +111,6 @@ export class CaseDocumentsService {
       headers: this.getAuthHeaders(false),
       responseType: 'blob'
     }).pipe(
-      tap(() => console.log('Version downloaded successfully')),
       catchError(error => {
         console.error('Error downloading version:', error);
         return throwError(() => error);
@@ -179,40 +130,21 @@ export class CaseDocumentsService {
     
     if (isNaN(numericCaseId) || isNaN(numericDocId)) {
       console.error('Invalid ID format - Case ID and Document ID must be convertible to numbers');
-      console.error('Provided values:', { caseId, documentId, numericCaseId, numericDocId });
       return throwError(() => new Error('Invalid ID format'));
     }
-    
-    // Detailed logging for debugging
-    console.log(`%c[DELETE REQUEST] Deleting document: Case ID=${numericCaseId}, Document ID=${numericDocId}`, 'background: blue; color: white; font-weight: bold;');
-    
-    // Ensure correct API URL format
+
     const baseUrl = environment.apiUrl;
     const url = `${baseUrl}/legal-case/${numericCaseId}/documents/${numericDocId}`;
-    
-    console.log('%c[DELETE URL]', 'background: blue; color: white;', url);
-    console.log('%c[DELETE HEADERS]', 'background: blue; color: white;', this.getAuthHeaders(false));
-    
-    return this.http.delete(url, { 
+
+    return this.http.delete(url, {
       headers: this.getAuthHeaders(false),
       observe: 'response'
     }).pipe(
       map(response => {
-        console.log('%c[DELETE RESPONSE] Success!', 'background: green; color: white; font-weight: bold;');
-        console.log('Full response:', response);
-        
         return response.body || { success: true };
       }),
       catchError(error => {
-        console.error('%c[DELETE ERROR] Failed!', 'background: red; color: white; font-weight: bold;');
-        console.error('Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          url,
-          headers: this.getAuthHeaders(false),
-          error: error.error
-        });
-        
+        console.error('Error deleting document:', error);
         return throwError(() => ({
           ...error,
           message: error.error?.message || error.message || `Error ${error.status}: ${error.statusText || 'Unknown error'}`
@@ -230,7 +162,6 @@ export class CaseDocumentsService {
     const url = `${this.apiUrl}/${caseId}/documents/${documentId}/versions`;
     
     return this.http.get<any>(url, { headers: this.getAuthHeaders(false) }).pipe(
-      tap(response => console.log('Version history fetched successfully')),
       catchError(error => {
         console.error('Error fetching version history:', error);
         return throwError(() => error);

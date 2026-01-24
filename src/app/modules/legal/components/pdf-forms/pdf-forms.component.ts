@@ -255,7 +255,6 @@ export class PdfFormsComponent implements OnInit, OnDestroy {
   fillPDF(): void {
     if (!this.selectedTemplate) return;
 
-    console.log('Starting PDF fill process...');
     this.isLoading = true;
     this.cdr.detectChanges();
 
@@ -265,19 +264,15 @@ export class PdfFormsComponent implements OnInit, OnDestroy {
       caseData: caseData
     }).subscribe({
       next: (response) => {
-        console.log('PDF filled successfully:', response);
         this.filledPdfPath = response.filledPdfPath;
 
         // Create the PDF URL - handle both absolute and relative paths
         const filledPath = response.filledPdfPath;
         this.pdfUrl = `${this.apiUrl}/files/download?path=${encodeURIComponent(filledPath)}`;
-        console.log('PDF URL:', this.pdfUrl);
 
         // Fetch PDF as blob and create blob URL for display
         this.http.get(this.pdfUrl, { responseType: 'blob' }).subscribe({
           next: (blob) => {
-            console.log('PDF blob received, size:', blob.size);
-
             // Clean up previous blob URL if exists
             if (this.pdfBlobUrl) {
               URL.revokeObjectURL(this.pdfBlobUrl);
@@ -287,8 +282,6 @@ export class PdfFormsComponent implements OnInit, OnDestroy {
             this.pdfBlob = blob;
             this.pdfBlobUrl = URL.createObjectURL(blob);
             this.pdfSrc = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfBlobUrl);
-
-            console.log('Blob URL created:', this.pdfBlobUrl);
 
             this.showPdfEditor = true;
             this.editableFields = { ...caseData };

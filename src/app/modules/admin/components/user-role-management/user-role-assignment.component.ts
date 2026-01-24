@@ -157,12 +157,6 @@ export class UserRoleAssignmentComponent implements OnInit, OnDestroy {
         this.roles = response.roles || [];
         this.availableRoles = [...this.roles];
         this.cases = response.cases?.data?.page?.content || [];
-        
-        console.log('Loaded data:', {
-          users: this.users.length,
-          roles: this.roles.length,
-          cases: this.cases.length
-        });
       },
       error: (error) => {
         console.error('Error in loadInitialData:', error);
@@ -238,8 +232,6 @@ export class UserRoleAssignmentComponent implements OnInit, OnDestroy {
           expiresAt: role.expiresAt ? new Date(role.expiresAt) : undefined,
           assignedAt: role.assignedAt ? new Date(role.assignedAt) : undefined
         }));
-        
-        console.log('User roles loaded:', this.userRoles);
       },
       error: (error) => {
         console.error('Error loading user roles:', error);
@@ -262,7 +254,6 @@ export class UserRoleAssignmentComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response: any[]) => {
         this.caseRoles = response || [];
-        console.log('Case roles loaded:', this.caseRoles);
       },
       error: (error) => {
         console.error('Error loading case roles:', error);

@@ -40,9 +40,6 @@ export class ExpensesListComponent implements OnInit {
       next: (response) => {
         if (response && response.data) {
           this.expenses = response.data.content || [];
-          if (this.expenses.length > 0) {
-            console.log('First expense structure:', JSON.stringify(this.expenses[0]));
-          }
           this.totalItems = response.data.totalElements || 0;
           this.totalPages = response.data.totalPages || 0;
           this.currentPage = response.data.number || 0;
@@ -129,7 +126,6 @@ export class ExpensesListComponent implements OnInit {
 
   exportExpenses(): void {
     // Implement export functionality
-    console.log('Exporting expenses...');
   }
 
   formatCurrency(amount: number, currency: string): string {

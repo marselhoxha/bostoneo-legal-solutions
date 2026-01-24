@@ -99,7 +99,7 @@ export class CollaborationComponent implements OnInit {
 
   inviteParticipant(): void {
     if (!this.inviteEmail || !this.selectedSession) return;
-    console.log('Inviting:', this.inviteEmail);
+    // TODO: Implement invite functionality
     this.inviteEmail = '';
   }
 

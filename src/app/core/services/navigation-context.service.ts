@@ -120,8 +120,6 @@ export class NavigationContextService {
       navigationExtras.replaceUrl = true;
     }
 
-    console.log('🧭 NavigationContextService - Navigating with context:', { commands, navigationExtras });
-
     return this.router.navigate(commands, navigationExtras);
   }
 
@@ -285,12 +283,6 @@ export class NavigationContextService {
       previousRoute: currentState.currentRoute || null,
       breadcrumbs,
       timestamp: Date.now()
-    });
-
-    console.log('🧭 NavigationContextService - Navigation updated:', {
-      currentRoute: newRoute,
-      previousRoute: currentState.currentRoute,
-      breadcrumbs: breadcrumbs.length
     });
   }
 

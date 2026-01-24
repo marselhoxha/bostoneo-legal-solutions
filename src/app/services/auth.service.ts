@@ -89,8 +89,7 @@ export class AuthService {
     // Clear user subject and timer
     this.currentUserSubject.next(null);
     this.clearTokenExpirationTimer();
-    
-    console.log('🚪 User logged out - all storage cleared');
+
     this.router.navigate(['/login']);
   }
 

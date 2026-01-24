@@ -353,12 +353,10 @@ export class ManagerDashboardComponent implements OnInit, OnDestroy {
   }
 
   approveItem(itemId: number): void {
-    console.log('Approving item:', itemId);
     // Implement approval logic
   }
 
   rejectItem(itemId: number): void {
-    console.log('Rejecting item:', itemId);
     // Implement rejection logic
   }
 

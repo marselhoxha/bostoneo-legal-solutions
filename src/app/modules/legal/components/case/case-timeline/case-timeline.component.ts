@@ -393,18 +393,13 @@ export class CaseTimelineComponent implements OnInit, OnChanges, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    console.log(`Timeline initialized with case ID: ${this.caseId}`);
     this.loadActivities();
-    
+
     // Subscribe to refresh notifications
     this.subscription.add(
       this.activitiesService.getRefreshObservable().subscribe(refreshCaseId => {
-        console.log(`Received refresh notification for case ${refreshCaseId}, current case: ${this.caseId}`);
-        
         // Stringify for safer comparison
         if (String(refreshCaseId) === String(this.caseId)) {
-          console.log(`Refreshing timeline for case ${this.caseId}`);
-          
           // Set a small delay to ensure backend has processed the new activity
           setTimeout(() => {
             this.loadActivities();
@@ -418,7 +413,6 @@ export class CaseTimelineComponent implements OnInit, OnChanges, OnDestroy {
     if (changes['caseId'] && changes['caseId'].currentValue !== changes['caseId'].previousValue) {
       this._previousCaseId = changes['caseId'].previousValue;
       if (changes['caseId'].currentValue) {
-        console.log(`Case ID changed to ${changes['caseId'].currentValue}, reloading activities`);
         this.loadActivities();
       }
     }
@@ -445,56 +439,45 @@ export class CaseTimelineComponent implements OnInit, OnChanges, OnDestroy {
     this.error = null;
     this.activities = []; // Clear existing activities
     this.cdr.detectChanges();
-    
-    console.log(`Loading activities for case ${this.caseId}`);
-    
-      this.activitiesService.getActivities(this.caseId)
+
+    this.activitiesService.getActivities(this.caseId)
       .pipe(finalize(() => {
             this.isLoading = false;
         this.cdr.detectChanges();
       }))
       .subscribe({
         next: (activitiesData) => {
-          console.log(`Received ${activitiesData?.length || 0} raw activities from API`);
-          console.log('Raw data:', JSON.stringify(activitiesData));
-          
           if (!activitiesData || activitiesData.length === 0) {
-            console.log('No activities found');
             this.activities = [];
             this.cdr.detectChanges();
             return;
           }
-          
+
           try {
             // Map and normalize activity data
             const processedActivities = this.processActivityData(activitiesData);
-            console.log(`Processed ${processedActivities.length} activities after mapping`);
-            
+
             // Sort by createdAt, newest first
             this.activities = processedActivities.sort((a, b) => {
               // Ensure we have valid dates
               const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
               const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
-              
+
               // Sort newest first
               return dateB.getTime() - dateA.getTime();
             });
-              
-            console.log(`Displaying ${this.activities.length} activities in timeline`);
-            console.log('Final activities:', this.activities);
-            
+
             this.lastUpdated = new Date();
           } catch (err) {
             console.error('Error processing activities:', err);
             this.error = 'Error processing timeline data';
             this.activities = [];
           }
-          
+
           this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Error loading activities:', err);
-          console.error('Error details:', err.message);
           this.error = 'Failed to load timeline activities';
           this.activities = [];
           this.cdr.detectChanges();
@@ -510,13 +493,7 @@ export class CaseTimelineComponent implements OnInit, OnChanges, OnDestroy {
     return activitiesData.map(activity => {
       // Skip invalid activities
       if (!activity) return null;
-      
-      // Just for logging to help debug
-      console.log('Processing activity:', activity);
-      console.log('Activity ID:', activity.id);
-      console.log('Activity type:', activity.activityType);
-      console.log('Activity user:', activity.user?.firstName, activity.user?.lastName);
-      
+
       // Normalize activity type for display purposes only
       let normalizedType = this.normalizeActivityType(activity.activityType);
       

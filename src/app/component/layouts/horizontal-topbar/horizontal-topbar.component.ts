@@ -41,7 +41,6 @@ export class HorizontalTopbarComponent implements OnInit {
 
     // Check comprehensive admin access
     if (this.rbacService.isAdmin()) {
-      console.log('User has admin access - showing admin navigation options');
       this.showAdminNavigation = true;
     }
 
@@ -56,13 +55,9 @@ export class HorizontalTopbarComponent implements OnInit {
     const userRole = this.getUserPrimaryRole();
     this.currentUserRole = userRole;
 
-    console.log('🔍 Loading menu for role:', userRole);
-
     // Get menu based on user's role
     this.menuItems = getMenuForRole(userRole);
     this.menu = this.menuItems;
-
-    console.log('📋 Menu items loaded:', this.menuItems.length);
   }
 
   /**

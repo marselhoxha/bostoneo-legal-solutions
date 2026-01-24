@@ -247,11 +247,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.activeTimersSubscription = this.timerService.activeTimers$.subscribe(timers => {
         // Run inside Angular zone to ensure change detection
         this.ngZone.run(() => {
-          console.log('[Dashboard] Received timer update from service:', timers.map(t => ({
-            id: t.id,
-            isActive: t.isActive,
-            duration: t.formattedDuration
-          })));
           this.activeTimers = timers;
           this.updateLocalTimerState(timers);
           this.changeDetectorRef.detectChanges();
@@ -671,19 +666,10 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const pausedTimer = timers.find(t => !t.isActive);
     const primaryTimer = runningTimer || pausedTimer;
 
-    console.log('[Dashboard] updateLocalTimerState:', {
-      timersCount: timers.length,
-      runningTimerId: runningTimer?.id,
-      pausedTimerId: pausedTimer?.id,
-      primaryTimerId: primaryTimer?.id,
-      primaryTimerIsActive: primaryTimer?.isActive
-    });
-
     if (primaryTimer) {
       // IMPORTANT: Stop timer updates FIRST if timer is now paused
       // This prevents race conditions with the interval overwriting state
       if (!primaryTimer.isActive && this.timerUpdateSubscription) {
-        console.log('[Dashboard] Stopping timer updates - timer paused');
         this.timerUpdateSubscription.unsubscribe();
         this.timerUpdateSubscription = undefined;
       }
@@ -705,12 +691,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         caseName: caseName
       };
 
-      console.log('[Dashboard] Setting timer state:', {
-        isRunning: newTimerState.isRunning,
-        elapsed: newTimerState.elapsed,
-        wasRunning: this.timer.isRunning
-      });
-
       this.timer = newTimerState;
 
       // Update stats
@@ -718,12 +698,10 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
       // Start timer updates if running and not already running
       if (primaryTimer.isActive && !this.timerUpdateSubscription) {
-        console.log('[Dashboard] Starting timer updates - timer running');
         this.startTimerUpdates();
       }
     } else {
       // No active timers
-      console.log('[Dashboard] No timers - resetting');
       this.activeTimer = undefined;
       this.resetTimer();
       this.stats.activeTimers = 0;
@@ -933,11 +911,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.changeDetectorRef.detectChanges();
       })
     ).subscribe({
-      next: (timer) => {
-        if (timer) {
-          console.log('[Dashboard] Timer paused, state will update via subscription');
-          // State is updated via activeTimers$ subscription in updateLocalTimerState()
-        }
+      next: () => {
+        // State is updated via activeTimers$ subscription in updateLocalTimerState()
       },
       error: (error) => {
         console.error('Pause timer error:', error);
@@ -951,8 +926,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.isProcessing = true;
     const userId = this.getCurrentUserId();
-
-    console.log('[Dashboard] Resuming timer:', this.activeTimer.id);
 
     this.timerService.resumeTimer(userId!, this.activeTimer.id).pipe(
       timeout(10000),
@@ -968,11 +941,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.changeDetectorRef.detectChanges();
       })
     ).subscribe({
-      next: (timer) => {
-        if (timer) {
-          console.log('[Dashboard] Timer resumed, state will update via subscription');
-          // State is updated via activeTimers$ subscription in updateLocalTimerState()
-        }
+      next: () => {
+        // State is updated via activeTimers$ subscription in updateLocalTimerState()
       },
       error: (error) => {
         console.error('Resume timer error:', error);
@@ -1511,7 +1481,6 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     // Load up to 100 entries for expanded view
     this.timeTrackingService.getTimeEntriesByUser(userId, 0, 100).subscribe({
       next: (response) => {
-        console.log('All entries loaded for expanded view:', response);
         let entries = response.content || [];
         
         // Sort entries by most recent first
@@ -1548,30 +1517,23 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   viewAllCases(): void {
     // Toggle the view to show all cases in the current interface
     this.showAllCases = true;
-    this.loadAvailableCases().then(() => {
-      console.log('Expanded to show all cases:', this.availableCases.length);
-    });
+    this.loadAvailableCases();
   }
 
   collapseAllCases(): void {
     // Collapse back to limited view
     this.showAllCases = false;
-    this.loadAvailableCases().then(() => {
-      console.log('Collapsed to show limited cases:', this.availableCases.length);
-    });
+    this.loadAvailableCases();
   }
 
   // Add refresh functionality
   refreshRecentEntries(): void {
-    this.loadRecentEntries().then(() => {
-      console.log('Recent entries refreshed');
-    });
+    this.loadRecentEntries();
   }
 
   // Add method to refresh dashboard stats
   refreshDashboardStats(): void {
     this.loadDashboardStats().then(() => {
-      console.log('Dashboard stats refreshed');
       this.lastUpdated = new Date();
       this.changeDetectorRef.detectChanges();
     }).catch(error => {
@@ -1589,12 +1551,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     // Load up to 50 recent entries for comprehensive view
     this.timeTrackingService.getTimeEntriesByUser(userId, 0, 50).subscribe({
       next: (response) => {
-        console.log('All recent entries loaded:', response);
         let entries = response.content || [];
-        
-        // Debug: Log original order
-        console.log('Original entries order (more):', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
-        
+
         // Sort entries by most recent first
         entries = entries.sort((a, b) => {
           // First try to sort by createdAt if available
@@ -1603,23 +1561,20 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             const dateB = new Date(b.createdAt).getTime();
             return dateB - dateA;
           }
-          
+
           // Then try by date
           const dateA = new Date(a.date).getTime();
           const dateB = new Date(b.date).getTime();
           if (dateA !== dateB) {
             return dateB - dateA;
           }
-          
+
           // If dates are the same, sort by ID (higher ID = more recent)
           return b.id - a.id;
         });
-        
-        // Debug: Log sorted order
-        console.log('Sorted entries order (more):', entries.map(e => ({ id: e.id, date: e.date, createdAt: e.createdAt })));
-        
+
         this.recentEntries = entries;
-        this.lastUpdated = new Date(); // Update timestamp
+        this.lastUpdated = new Date();
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {

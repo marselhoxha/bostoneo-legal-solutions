@@ -71,14 +71,11 @@ export class CaseNotesComponent implements OnInit, OnChanges {
   ) {}
 
   ngOnInit(): void {
-    console.log(`CaseNotesComponent initialized with caseId: ${this.caseId}`);
     this.loadNotes();
   }
-  
+
   ngOnChanges(changes: SimpleChanges): void {
-    console.log('CaseNotesComponent changes:', changes);
     if (changes['caseId'] && !changes['caseId'].firstChange) {
-      console.log(`Case ID changed from ${changes['caseId'].previousValue} to ${changes['caseId'].currentValue}`);
       this.loadNotes();
     }
   }
@@ -94,8 +91,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
     this.error = null;
     this.cdr.detectChanges();
     
-    console.log(`Loading notes for case ${this.caseId} from API`);
-    
     this.notesService.getNotesByCaseId(this.caseId)
       .pipe(
         finalize(() => {
@@ -107,17 +102,13 @@ export class CaseNotesComponent implements OnInit, OnChanges {
         next: (response) => {
           // Check if response has the expected structure
           if (response && response.data && response.data.notes) {
-            console.log(`Loaded ${response.data.notes.length} notes for case ${this.caseId}:`, JSON.stringify(response.data.notes));
             this.notes = response.data.notes;
           } else if (Array.isArray(response)) {
-            // Handle the case where response is directly an array
-            console.log(`Loaded ${response.length} notes for case ${this.caseId}:`, JSON.stringify(response));
             this.notes = response;
           } else {
-            console.log('No notes or unexpected format found for case', this.caseId, response);
             this.notes = [];
           }
-          
+
           this.error = null;
           this.cdr.detectChanges();
         },
@@ -183,8 +174,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       isPrivate: this.newNote.isPrivate
     };
     
-    console.log(`Creating note for case ${this.caseId}:`, noteRequest);
-    
     this.notesService.createNote(noteRequest)
       .pipe(finalize(() => {
         this.isLoading = false;
@@ -192,7 +181,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       }))
       .subscribe({
         next: async (createdNote) => {
-          console.log('Note created successfully:', createdNote);
           
           // Trigger case note notification
           try {
@@ -262,13 +250,10 @@ export class CaseNotesComponent implements OnInit, OnChanges {
   
   startEditingNote(note: CaseNote): void {
     try {
-      console.log('Starting to edit note:', note);
-      
       // Ensure note ID is treated as a string for consistent comparison
       const noteId = String(note.id);
       this.editNoteId = noteId;
-      console.log(`Setting editNoteId to: ${this.editNoteId}`);
-      
+
       // Create a deep copy with all required properties
       this.editedNote = {
         id: note.id,
@@ -284,8 +269,7 @@ export class CaseNotesComponent implements OnInit, OnChanges {
         createdBy: note.createdBy,
         updatedBy: note.updatedBy
       };
-      
-      console.log('Edited note object prepared:', this.editedNote);
+
       setTimeout(() => this.cdr.detectChanges(), 0);
     } catch (error) {
       console.error('Error when starting to edit note:', error);
@@ -320,8 +304,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       isPrivate: this.editedNote.isPrivate
     };
     
-    console.log(`Updating note ${this.editNoteId} with data:`, updateData);
-    
     this.notesService.updateNote(this.caseId, this.editNoteId, updateData)
       .pipe(finalize(() => {
         this.isLoading = false;
@@ -329,8 +311,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       }))
       .subscribe({
         next: (updatedNote) => {
-          console.log('Note updated successfully:', updatedNote);
-          
           // Reset edit state
           this.editNoteId = null;
           this.editedNote = null;
@@ -464,8 +444,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       }
     };
     
-    console.log(`Logging ${type} activity for note ${noteId}:`, data);
-    
     this.activitiesService.createActivity(data)
       .pipe(
         catchError(error => {
@@ -475,7 +453,6 @@ export class CaseNotesComponent implements OnInit, OnChanges {
       )
       .subscribe(result => {
         if (result) {
-          console.log(`Successfully logged ${type} activity`);
           // Notify that activities should be refreshed
           this.activitiesService.notifyRefresh(caseId);
         }

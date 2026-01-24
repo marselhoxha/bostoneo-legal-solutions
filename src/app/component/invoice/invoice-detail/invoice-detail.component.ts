@@ -109,7 +109,6 @@ export class InvoiceDetailComponent implements OnInit {
     // Load clients and cases for dropdowns - extract arrays from API responses
     this.clients$ = this.clientService.allClients$().pipe(
       map((response: any) => {
-        console.log('Clients response:', response);
         // The response structure is: { data: { page: { content: Client[] }, user: {...} }, ... }
         if (response?.data?.page?.content && Array.isArray(response.data.page.content)) {
           return response.data.page.content;
@@ -120,7 +119,6 @@ export class InvoiceDetailComponent implements OnInit {
         } else if (Array.isArray(response)) {
           return response;
         }
-        console.warn('Unexpected clients response structure:', response);
         return [];
       }),
       catchError(error => {
@@ -131,7 +129,6 @@ export class InvoiceDetailComponent implements OnInit {
     
     this.cases$ = this.legalCaseService.getAllCases().pipe(
       map((response: any) => {
-        console.log('Cases response:', response);
         // Handle different possible response structures
         if (response?.data?.page?.content && Array.isArray(response.data.page.content)) {
           return response.data.page.content;
@@ -142,7 +139,6 @@ export class InvoiceDetailComponent implements OnInit {
         } else if (Array.isArray(response)) {
           return response;
         }
-        console.warn('Unexpected cases response structure:', response);
         return [];
       }),
       catchError(error => {
@@ -210,7 +206,6 @@ export class InvoiceDetailComponent implements OnInit {
     this.invoiceState$ = this.invoiceService.getInvoiceById(invoiceId)
       .pipe(
         map(response => {
-          console.log(response);
           this.dataSubject.next(response);
           
           // Initialize invoice items from response
@@ -340,7 +335,6 @@ export class InvoiceDetailComponent implements OnInit {
 
   // Client and case selection handlers
   onClientChange(clientId: any): void {
-    console.log('Client changed:', clientId);
     if (clientId) {
       this.editableInvoice.clientId = clientId;
       this.loadClientDetails(clientId);
@@ -353,7 +347,6 @@ export class InvoiceDetailComponent implements OnInit {
   }
 
   onCaseChange(caseId: any): void {
-    console.log('Case changed:', caseId);
     if (caseId) {
       this.editableInvoice.legalCaseId = caseId;
       this.loadCaseDetails(caseId);

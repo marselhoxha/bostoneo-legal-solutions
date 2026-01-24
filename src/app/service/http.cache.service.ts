@@ -8,8 +8,6 @@ export class HttpCacheService {
      private httpResponseCache: { [key: string]: HttpResponse<any> } = {};
 
      put = (key: string, httpResponse: HttpResponse<any>): void => {
-
-        console.log('Caching response', httpResponse);
         this.httpResponseCache[key] = httpResponse;
      }
 
@@ -18,12 +16,11 @@ export class HttpCacheService {
      evict = (key: string): boolean => delete this.httpResponseCache[key];
 
      evictAll = (): void => {
-        console.log('Clearing entire cache');
         this.httpResponseCache = {};
      }
 
      logCache = (): void => {
-        console.log('Cache:', this.httpResponseCache);
+        // Cache logging disabled in production
      }
      
 

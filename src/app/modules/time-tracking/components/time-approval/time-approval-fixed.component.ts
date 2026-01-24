@@ -146,19 +146,10 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (data) => {
-        console.log('📑 Time Approval Data loaded:', data);
         this.timeEntries = Array.isArray(data.timeEntries) ? data.timeEntries : data.timeEntries.content || [];
         this.attorneys = data.attorneys;
         this.legalCases = data.cases;
-        console.log(`✅ Loaded ${this.timeEntries.length} time entries, ${this.attorneys.length} attorneys, ${this.legalCases.length} cases`);
-        
-        // Log time entry statuses for debugging
-        const statusCounts = this.timeEntries.reduce((acc: any, entry) => {
-          acc[entry.status] = (acc[entry.status] || 0) + 1;
-          return acc;
-        }, {});
-        console.log('📑 Time entry status breakdown:', statusCounts);
-        
+
         this.applyFilters();
         this.calculateStats();
         this.lastUpdated = new Date();
@@ -192,7 +183,6 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
     // Load users who can create time entries (attorneys, paralegals, etc.)
     return this.userService.getUsers().pipe(
       map(response => {
-        console.log('👥 Users API response:', response);
         const users = response?.data?.users || response?.data || [];
         return users.map((user: any) => ({
           id: user.id,
@@ -213,11 +203,8 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
   private loadLegalCases() {
     return this.legalCaseService.getAllCases(0, 100).pipe(
       map(response => {
-        console.log('📁 Legal Cases API response:', response);
-        
-        // Better data extraction with debugging
         let cases = [];
-        
+
         if (response?.data?.cases && Array.isArray(response.data.cases)) {
           cases = response.data.cases;
         } else if (response?.data?.content && Array.isArray(response.data.content)) {
@@ -227,23 +214,18 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         } else if (Array.isArray(response)) {
           cases = response;
         } else {
-          console.warn('⚠️ Unexpected legal cases response structure:', response);
           return [];
         }
-        
-        console.log(`📁 Processing ${cases.length} legal cases`);
-        
-        // Ensure cases is an array before mapping
+
         if (!Array.isArray(cases)) {
-          console.error('❌ Cases is not an array:', typeof cases, cases);
           return [];
         }
-        
+
         return cases.map((legalCase: any) => ({
           id: parseInt(legalCase.id) || legalCase.id,
           title: legalCase.title || legalCase.name || 'Untitled Case',
           caseNumber: legalCase.caseNumber || legalCase.number || 'Unknown',
-          clientName: legalCase.clientName || 
+          clientName: legalCase.clientName ||
                      (legalCase.client ? `${legalCase.client.firstName} ${legalCase.client.lastName}` : 'Unknown Client')
         }));
       }),
@@ -291,24 +273,20 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
 
   private applyFilters(): void {
     let filtered = [...this.timeEntries];
-    console.log(`🔍 Applying filters to ${filtered.length} time entries`);
 
     // Apply employee filter
     if (this.filters.attorneyId) {
       filtered = filtered.filter(entry => entry.userId === this.filters.attorneyId);
-      console.log(`👤 After employee filter: ${filtered.length} entries`);
     }
 
     // Apply status filter
     if (this.filters.status && this.filters.status !== 'ALL') {
       filtered = filtered.filter(entry => entry.status === this.filters.status);
-      console.log(`📋 After status filter (${this.filters.status}): ${filtered.length} entries`);
     }
 
-    // Apply case filter - THIS WAS MISSING!
+    // Apply case filter
     if (this.filters.caseId) {
       filtered = filtered.filter(entry => entry.caseId === this.filters.caseId);
-      console.log(`📁 After case filter: ${filtered.length} entries`);
     }
 
     // Apply date range filter
@@ -317,7 +295,6 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         const entryDate = new Date(entry.date).toISOString().split('T')[0];
         return entryDate >= this.filters.startDate!;
       });
-      console.log(`📅 After start date filter: ${filtered.length} entries`);
     }
 
     if (this.filters.endDate) {
@@ -325,7 +302,6 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         const entryDate = new Date(entry.date).toISOString().split('T')[0];
         return entryDate <= this.filters.endDate!;
       });
-      console.log(`📅 After end date filter: ${filtered.length} entries`);
     }
 
     // Apply search filter
@@ -337,14 +313,11 @@ export class TimeApprovalComponent implements OnInit, OnDestroy {
         entry.caseNumber?.toLowerCase().includes(term) ||
         entry.userName?.toLowerCase().includes(term)
       );
-      console.log(`🔍 After search filter: ${filtered.length} entries`);
     }
 
     this.filteredEntries = filtered;
     this.totalElements = filtered.length;
     this.totalPages = Math.ceil(this.totalElements / this.pageSize);
-    
-    console.log(`✅ Final filtered entries: ${this.filteredEntries.length}`);
   }
 
   private calculateStats(): void {

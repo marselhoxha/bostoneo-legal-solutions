@@ -25,17 +25,12 @@ export class PushNotificationService {
   private initializeBroadcastChannel(): void {
     if ('BroadcastChannel' in window) {
       this.broadcastChannel = new BroadcastChannel('notifications');
-      
+
       // Listen for notifications from other tabs
       this.broadcastChannel.onmessage = (event) => {
-        console.log('📻 Received notification from another tab:', event.data);
         this.notificationSubject.next(event.data);
         this.showNotification(event.data);
       };
-      
-      console.log('✅ Broadcast channel initialized for cross-tab notifications');
-    } else {
-      console.warn('⚠️ BroadcastChannel not supported - cross-tab notifications disabled');
     }
   }
 
@@ -51,17 +46,14 @@ export class PushNotificationService {
     try {
       // Check if Firebase is properly configured
       if (!environment.firebase || !environment.firebase.apiKey) {
-        console.warn('⚠️ Firebase not configured - Push notifications disabled');
         return;
       }
-      
+
       const firebaseApp = initializeApp(environment.firebase);
       this.messaging = getMessaging(firebaseApp);
       this.isFirebaseEnabled = true;
       this.listenForMessages();
-      console.log('✅ Firebase initialized successfully');
     } catch (error) {
-      console.warn('⚠️ Firebase initialization failed - Push notifications disabled:', error);
       this.isFirebaseEnabled = false;
     }
   }
@@ -79,7 +71,6 @@ export class PushNotificationService {
       // Request permission for notifications
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
-          console.log('Notification permission granted.');
           // Get the token
           getToken(this.messaging, { vapidKey: environment.firebase.vapidKey })
             .then(token => {
@@ -88,7 +79,6 @@ export class PushNotificationService {
                 this.saveTokenToDatabase(token);
                 resolve(token);
               } else {
-                console.log('No registration token available.');
                 reject('No registration token available');
               }
             })
@@ -97,7 +87,6 @@ export class PushNotificationService {
               reject(err);
             });
         } else {
-          console.log('Notification permission denied.');
           reject('Permission denied');
         }
       });
@@ -109,14 +98,10 @@ export class PushNotificationService {
    */
   private listenForMessages(): void {
     if (!this.isFirebaseEnabled) return;
-    
+
     onMessage(this.messaging, (payload) => {
-      console.log('🔔 Received foreground FCM message:', payload);
-      console.log('🔔 Notification data:', payload.notification);
-      console.log('🔔 Data payload:', payload.data);
-      
       this.notificationSubject.next(payload);
-      
+
       // Always display a notification for foreground messages
       this.showNotification(payload);
     });
@@ -128,17 +113,7 @@ export class PushNotificationService {
    * The topbar component will handle in-app notifications via this.notificationSubject
    */
   private showNotification(payload: any): void {
-    console.log('🔔 showNotification called with payload:', payload);
-    console.log('🔔 IN-APP NOTIFICATION ONLY - Browser notifications disabled');
-    
-    // Simply log the notification payload for debugging
-    const title = payload.notification?.title || payload.data?.title || 'BostonEO Solutions';
-    const body = payload.notification?.body || payload.data?.body || '';
-    
-    console.log('📱 IN-APP notification:', { title, body, payload });
-    console.log('✅ Notification sent to topbar component via notificationSubject');
-    
-    // DO NOT show browser notifications - they are handled by the topbar component
+    // In-app notification only - browser notifications are handled by the topbar component
     // The notification has already been sent via this.notificationSubject.next(payload) in listenForMessages()
   }
 
@@ -166,24 +141,17 @@ export class PushNotificationService {
     }
     
     if (!userId) {
-      console.warn('🔔 FCM Token generated but no user ID found for saving:', token.substring(0, 20) + '...');
-      console.warn('🔔 Checked UserService, localStorage, and sessionStorage');
       return;
     }
-    
-    console.log('🔔 Saving FCM Token to backend for user:', userId);
-    console.log('🔔 Token:', token.substring(0, 20) + '...');
-    
+
     this.http.post(`${environment.apiUrl}/api/v1/notifications/token`, {
       token,
       userId: parseInt(userId),
       platform: 'web'
     }).subscribe({
-      next: (response) => {
-        console.log('✅ FCM Token saved to database:', response);
-      },
+      next: () => {},
       error: (error) => {
-        console.error('❌ Error saving FCM token:', error);
+        console.error('Error saving FCM token:', error);
         // Don't throw error - token generation was successful even if backend save fails
       }
     });
@@ -221,10 +189,9 @@ export class PushNotificationService {
     // Send notification to current tab
     this.notificationSubject.next(payload);
     this.showNotification(payload);
-    
+
     // Broadcast to other tabs
     if (this.broadcastChannel) {
-      console.log('📻 Broadcasting notification to other tabs');
       this.broadcastChannel.postMessage(payload);
     }
   }

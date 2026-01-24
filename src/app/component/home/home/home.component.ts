@@ -31,8 +31,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    console.log('Home component initializing...');
-
     // Clear any stale session data when component initializes
     this.clearStaleSessionData();
 
@@ -41,7 +39,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // If no current user, try to load from profile
     if (!this.currentUser) {
-      console.log('No current user found, attempting to load from profile...');
       this.userService.profile$().subscribe({
         next: (response) => {
           if (response?.data?.user) {
@@ -65,8 +62,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Detect and monitor theme changes
     this.detectTheme();
     this.setupThemeObserver();
-
-    console.log('Home component initialized with role:', this.userRole);
   }
 
   /**
@@ -75,7 +70,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private redirectBasedOnRole(): void {
     // Redirect CLIENT users to the client portal dashboard
     if (this.userRole === 'CLIENT') {
-      console.log('🔄 Redirecting CLIENT user to /client/dashboard');
       this.router.navigate(['/client/dashboard']);
     }
   }
@@ -94,19 +88,15 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Force refresh user role - useful when role might have changed
    */
   public refreshUserRole(): void {
-    console.log('🔄 Force refreshing user role...');
-    
     // Clear all caches
     sessionStorage.removeItem('userRole');
     sessionStorage.removeItem('userRoleId');
-    
+
     // Re-detect role
     this.userRole = this.detectUserRole();
-    
+
     // Force change detection
     this.cdr.detectChanges();
-    
-    console.log('🔄 Role refreshed to:', this.userRole);
   }
 
   /**
@@ -118,9 +108,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     
     // Clear session data if user changed or if we have suspicious CLIENT role for potential admin
     const sessionRole = sessionStorage.getItem('userRole');
-    if (sessionUserId !== currentUserId || 
+    if (sessionUserId !== currentUserId ||
         (sessionRole === 'CLIENT' && this.isPotentialAdminUser())) {
-      console.log('Clearing stale session data - user changed or suspicious role detected');
       sessionStorage.removeItem('userRole');
       sessionStorage.removeItem('userRoleId');
     }
@@ -143,19 +132,16 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Detect current user role from various sources
    */
   private detectUserRole(): string {
-    console.log('🔍 Starting role detection for user:', this.currentUser?.email);
-    
     // IMPORTANT: Do NOT use session storage for admin users to avoid stale data issues
     const isAdminUser = this.isPotentialAdminUser();
-    
+
     if (!isAdminUser) {
       // Only check session storage for non-admin users
       const sessionRole = sessionStorage.getItem('userRole');
       const sessionUserId = sessionStorage.getItem('userRoleId');
       const currentUserId = this.currentUser?.id?.toString();
-      
+
       if (sessionRole && sessionUserId === currentUserId && sessionRole !== 'CLIENT') {
-        console.log('Using persisted role from session for non-admin user:', sessionRole);
         return sessionRole;
       }
     }
@@ -166,15 +152,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     // 1. Check current user object for multiple roles
     if (this.currentUser?.roleName) {
       roles.push(this.currentUser.roleName);
-      console.log('Role from currentUser.roleName:', this.currentUser.roleName);
     }
     if (this.currentUser?.primaryRoleName) {
       roles.push(this.currentUser.primaryRoleName);
-      console.log('Role from currentUser.primaryRoleName:', this.currentUser.primaryRoleName);
     }
     if (this.currentUser?.roles && Array.isArray(this.currentUser.roles)) {
       roles.push(...this.currentUser.roles);
-      console.log('Roles from currentUser.roles:', this.currentUser.roles);
     }
 
     // 2. Check local storage (synchronous)
@@ -223,9 +206,8 @@ export class HomeComponent implements OnInit, OnDestroy {
           if (payload.primaryRoleName) roles.push(payload.primaryRoleName);
           if (payload.roleName) roles.push(payload.roleName);
           if (payload.roles && Array.isArray(payload.roles)) roles.push(...payload.roles);
-          console.log('Roles from JWT token:', roles);
         } catch (error) {
-          console.warn('Could not parse JWT token:', error);
+          // Could not parse JWT token
         }
       }
     }
@@ -234,24 +216,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (roles.length === 0) {
       // For potential admin users, try harder to find their role
       if (this.isPotentialAdminUser()) {
-        console.warn('⚠️ No roles detected for potential admin user - attempting fallback detection');
-        
         // Check for any admin-like properties in the user object
         if (this.currentUser) {
           const userStr = JSON.stringify(this.currentUser).toLowerCase();
           if (userStr.includes('admin') || userStr.includes('partner') || userStr.includes('managing')) {
-            console.log('Found admin indicators in user object, assigning ADMIN role');
             roles = ['ADMIN'];
           }
         }
-        
+
         // If still no roles, DO NOT default to CLIENT for admin users
         if (roles.length === 0) {
-          console.error('❌ CRITICAL: No roles found for admin user, defaulting to ADMIN to prevent security issue');
           roles = ['ADMIN']; // Safe default for admin users
         }
       } else {
-        console.warn('No roles detected for regular user - using CLIENT as default');
         roles = ['CLIENT']; // Safe default for non-admin users
       }
     }
@@ -259,9 +236,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Normalize and prioritize roles
     const normalizedRoles = roles.map(role => this.normalizeRole(role));
     const prioritizedRole = this.prioritizeRole(normalizedRoles);
-    
-    console.log('Raw roles:', roles, 'Normalized roles:', normalizedRoles, 'Prioritized role:', prioritizedRole);
-    
+
     // Only persist role in session storage for non-admin users to avoid caching issues
     if (!this.isPotentialAdminUser() && prioritizedRole !== 'ADMIN') {
       sessionStorage.setItem('userRole', prioritizedRole);
@@ -272,9 +247,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       // Clear any existing session storage for admin users
       sessionStorage.removeItem('userRole');
       sessionStorage.removeItem('userRoleId');
-      console.log('🔒 Not caching role for admin user to prevent stale data issues');
     }
-    
+
     return prioritizedRole;
   }
 
@@ -332,18 +306,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     };
     
     const mappedRole = roleMapping[normalizedRole] || 'CLIENT';
-    
-    // Log mapping for debugging
-    if (role && normalizedRole) {
-      console.log(`🎭 Role mapping: "${role}" -> "${normalizedRole}" -> "${mappedRole}"`);
-      
-      // Warning if a potential admin role is being mapped to CLIENT
-      if (mappedRole === 'CLIENT' && 
-          (normalizedRole.includes('ADMIN') || normalizedRole.includes('PARTNER'))) {
-        console.error(`❌ WARNING: Potential admin role "${normalizedRole}" mapped to CLIENT!`);
-      }
+
+    // Warning if a potential admin role is being mapped to CLIENT
+    if (mappedRole === 'CLIENT' &&
+        (normalizedRole.includes('ADMIN') || normalizedRole.includes('PARTNER'))) {
+      console.error(`WARNING: Potential admin role "${normalizedRole}" mapped to CLIENT!`);
     }
-    
+
     return mappedRole;
   }
 
@@ -361,11 +330,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Find the highest priority role
     for (const priority of rolePriority) {
       if (roles.includes(priority)) {
-        console.log(`Selected role ${priority} from available roles:`, roles);
         return priority;
       }
     }
-    
+
     // Fallback to first role
     return roles[0];
   }
@@ -388,8 +356,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       html.getAttribute('data-theme') === 'dark' ||
       body.getAttribute('data-bs-theme') === 'dark' ||
       html.getAttribute('data-bs-theme') === 'dark';
-
-    console.log('Theme detected:', this.isDarkMode ? 'Dark' : 'Light');
   }
 
   /**

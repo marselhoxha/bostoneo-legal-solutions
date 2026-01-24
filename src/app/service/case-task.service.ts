@@ -11,7 +11,7 @@ import {
   TaskStatistics,
   TaskFilter
 } from '../interface/case-task';
-import { tap, catchError } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -32,14 +32,12 @@ export class CaseTaskService {
   updateTask(taskId: number, task: TaskUpdateRequest): Observable<ApiResponse<CaseTask>> {
     // Validate taskId to prevent undefined in URL
     if (!taskId || taskId === undefined || taskId === null || isNaN(taskId)) {
-      console.error('❌ CaseTaskService.updateTask: Invalid taskId:', taskId);
+      console.error('CaseTaskService.updateTask: Invalid taskId:', taskId);
       throw new Error('Invalid task ID provided to updateTask');
     }
-    
-    console.log('🔧 CaseTaskService.updateTask with validated taskId:', taskId);
-    
+
     return this.http.put<ApiResponse<CaseTask>>(
-      `${this.apiUrl}/tasks/${taskId}`, 
+      `${this.apiUrl}/tasks/${taskId}`,
       task
     );
   }
@@ -58,60 +56,34 @@ export class CaseTaskService {
 
   // Task Listing and Filtering
   getTasksByCaseId(caseId: number, page: number = 0, size: number = 100): Observable<ApiResponse<any>> {
-    console.log('🌐 CaseTaskService - getTasksByCaseId called:', { caseId, page, size });
-    
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sortBy', 'createdAt')
       .set('sortDirection', 'DESC');
-    
+
     const url = `${this.apiUrl}/tasks/case/${caseId}`;
-    console.log('📡 CaseTaskService - Making request to:', url);
-    console.log('📋 CaseTaskService - Request params:', params.toString());
-    
+
     return this.http.get<ApiResponse<any>>(url, { params })
       .pipe(
-        tap(response => {
-          console.log('✅ CaseTaskService - Response received:', response);
-          console.log('📑 CaseTaskService - Response analysis:', {
-            hasData: !!response.data,
-            hasTasks: !!response.data?.tasks,
-            hasContent: !!response.data?.tasks?.content,
-            tasksCount: response.data?.tasks?.content?.length || 0
-          });
-        }),
         catchError(error => {
-          console.error('❌ CaseTaskService - Error in getTasksByCaseId:', error);
+          console.error('CaseTaskService - Error in getTasksByCaseId:', error);
           throw error;
         })
       );
   }
 
   getAllTasks(page: number = 0, size: number = 100): Observable<ApiResponse<any>> {
-    console.log('🌐 CaseTaskService - getAllTasks called:', { page, size });
-    
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sortBy', 'createdAt')
       .set('sortDirection', 'DESC');
-    
+
     const url = `${this.apiUrl}/tasks`;
-    console.log('📡 CaseTaskService - Making request to:', url);
-    console.log('📋 CaseTaskService - Request params:', params.toString());
-    
+
     return this.http.get<ApiResponse<any>>(url, { params })
       .pipe(
-        tap(response => {
-          console.log('✅ CaseTaskService - Response received for getAllTasks:', response);
-          console.log('📑 CaseTaskService - Response analysis:', {
-            hasData: !!response.data,
-            hasTasks: !!response.data?.tasks,
-            hasContent: !!response.data?.tasks?.content,
-            tasksCount: response.data?.tasks?.content?.length || 0
-          });
-        }),
         map(response => {
           // Backend returns { data: { tasks: Page } }
           // Return the response with tasks in the expected format
@@ -123,7 +95,7 @@ export class CaseTaskService {
           };
         }),
         catchError(error => {
-          console.error('❌ CaseTaskService - Error in getAllTasks:', error);
+          console.error('CaseTaskService - Error in getAllTasks:', error);
           throw error;
         })
       );
@@ -182,17 +154,15 @@ export class CaseTaskService {
   assignTask(taskId: number, userId: number): Observable<ApiResponse<CaseTask>> {
     // Validate inputs to prevent undefined in URL
     if (!taskId || taskId === undefined || taskId === null || isNaN(taskId)) {
-      console.error('❌ CaseTaskService.assignTask: Invalid taskId:', taskId);
+      console.error('CaseTaskService.assignTask: Invalid taskId:', taskId);
       throw new Error('Invalid task ID provided to assignTask');
     }
-    
+
     if (!userId || userId === undefined || userId === null || isNaN(userId)) {
-      console.error('❌ CaseTaskService.assignTask: Invalid userId:', userId);
+      console.error('CaseTaskService.assignTask: Invalid userId:', userId);
       throw new Error('Invalid user ID provided to assignTask');
     }
-    
-    console.log('🔧 CaseTaskService.assignTask with validated IDs:', { taskId, userId });
-    
+
     return this.http.post<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}/assign/${userId}`,
       {}

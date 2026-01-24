@@ -115,7 +115,6 @@ export class UsersDirectoryComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (response) => {
-        console.log('Users loaded:', response);
         this.state.users = response?.data?.users || [];
         this.allUsers = [...this.state.users]; // Store original data
         this.state.totalUsers = this.state.users.length;

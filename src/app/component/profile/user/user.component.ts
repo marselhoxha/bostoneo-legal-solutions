@@ -45,7 +45,6 @@ export class UserComponent implements OnInit, OnDestroy {
     this.profileState$ = this.userService.profile$()
       .pipe(
         map(response => {
-          console.log('Profile data loaded:', response);
           // Update the dataSubject to store the latest response
           this.dataSubject.next(response);
   
@@ -72,7 +71,6 @@ export class UserComponent implements OnInit, OnDestroy {
     // Subscribe to user data changes from the service
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
       if (user) {
-        console.log('User data updated:', user);
         // Update the data subject with the new user data
         this.dataSubject.next({
           ...this.dataSubject.value,
@@ -182,9 +180,8 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(
         map(response => {
           this.noficationService.onDefault(response.message);
-          console.log(response);
           this.dataSubject.next({ ...response, data: response.data });
-          
+
           // Update profile completion after successful update
           if (response?.data?.user) {
             // Use setTimeout to ensure the form is updated before calculating profile completion
@@ -212,7 +209,6 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(
         map(response => {
           this.noficationService.onDefault(response.message);
-          console.log(response);
           this.dataSubject.next({ ...response, data: response.data });
           passwordForm.reset();
           this.isLoadingSubject.next(false);
@@ -236,7 +232,6 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(
         map(response => {
           this.noficationService.onDefault(response.message);
-          console.log(response);
           this.dataSubject.next({ ...response, data: response.data });
           this.isLoadingSubject.next(false);
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
@@ -256,7 +251,6 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(
         map(response => {
           this.noficationService.onDefault(response.message);
-          console.log(response);
           this.dataSubject.next({ ...response, data: response.data });
           this.isLoadingSubject.next(false);
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
@@ -277,7 +271,6 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(
         map(response => {
           this.noficationService.onDefault(response.message);
-          console.log(response);
           this.dataSubject.next({ ...response, data: response.data });
           this.isLoadingSubject.next(false);
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
@@ -298,8 +291,7 @@ export class UserComponent implements OnInit, OnDestroy {
         .pipe(
           map(response => {
             this.noficationService.onDefault(response.message);
-            console.log(response);
-            
+
             // Update the user data in the service with a timestamp to force cache refresh
             const updatedUser = {
               ...response.data.user,

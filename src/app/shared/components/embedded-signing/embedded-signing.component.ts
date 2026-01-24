@@ -180,7 +180,6 @@ export class EmbeddedSigningComponent implements OnInit, OnDestroy {
 
   onIframeLoad(): void {
     // iFrame has loaded
-    console.log('Signing iframe loaded');
   }
 
   private setupMessageListener(): void {

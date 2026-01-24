@@ -193,8 +193,6 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
   private setupFormListeners(): void {
     // Listen for client selection changes
     const clientSub = this.invoiceForm.get('clientId')?.valueChanges.subscribe(clientId => {
-      console.log('Client selected:', clientId);
-      
       // Enable/disable legal case selection based on client selection
       const legalCaseControl = this.invoiceForm.get('legalCaseId');
       if (clientId) {
@@ -215,7 +213,6 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
     const caseSub = this.invoiceForm.get('legalCaseId')?.valueChanges.subscribe(caseId => {
       const clientId = this.invoiceForm.get('clientId')?.value;
       if (clientId) {
-        console.log('Case selected:', caseId);
         this.loadUnbilledEntries(clientId, caseId);
       }
     });
@@ -229,88 +226,45 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   private loadClients(): void {
-    console.log('🔄 Starting to load clients...');
     this.loadingClients = true;
     this.clientService.allClients$().subscribe({
       next: (response: any) => {
-        console.log('✅ All clients response received:', response);
-        console.log('📑 Response type:', typeof response);
-        console.log('📑 Response keys:', response ? Object.keys(response) : 'null');
-        
         // Handle the actual response structure
         if (response && response.data) {
-          console.log('📑 Response.data:', response.data);
-          console.log('📑 Response.data type:', typeof response.data);
-          console.log('📑 Response.data keys:', Object.keys(response.data));
-          
-          // Based on the logs, it looks like response.data has {page: {...}, user: {...}}
-          // Let's specifically check for the page structure
           if (response.data.page) {
-            console.log('📑 Response.data.page:', response.data.page);
-            console.log('📑 Response.data.page keys:', Object.keys(response.data.page));
-            
             if (response.data.page.content && Array.isArray(response.data.page.content)) {
-              console.log('✅ Found clients in response.data.page.content:', response.data.page.content.length, 'clients');
-              console.log('✅ First client sample:', response.data.page.content[0]);
               this.clients = response.data.page.content;
             } else {
-              console.warn('⚠️ response.data.page.content is not an array:', response.data.page.content);
               this.clients = [];
             }
-          }
-          // Fallback: Check for direct content array: response.data.content
-          else if (response.data.content && Array.isArray(response.data.content)) {
-            console.log('✅ Found clients in response.data.content:', response.data.content.length, 'clients');
+          } else if (response.data.content && Array.isArray(response.data.content)) {
             this.clients = response.data.content;
-          }
-          // Fallback: Check if response.data is directly an array
-          else if (Array.isArray(response.data)) {
-            console.log('✅ Found clients in response.data array:', response.data.length, 'clients');
+          } else if (Array.isArray(response.data)) {
             this.clients = response.data;
-          }
-          // Fallback: Handle case where response.data has clients or other properties
-          else if (response.data.clients && Array.isArray(response.data.clients)) {
-            console.log('✅ Found clients in response.data.clients:', response.data.clients.length, 'clients');
+          } else if (response.data.clients && Array.isArray(response.data.clients)) {
             this.clients = response.data.clients;
-          }
-          else {
-            console.warn('⚠️ Unexpected response.data structure. Checking all properties:', response.data);
+          } else {
             // Try to find any array property that might contain clients
-            const arrayProperties = Object.keys(response.data).filter(key => 
+            const arrayProperties = Object.keys(response.data).filter(key =>
               Array.isArray(response.data[key])
             );
-            console.log('🔍 Array properties found:', arrayProperties);
-            
+
             if (arrayProperties.length > 0) {
               const firstArrayProp = arrayProperties[0];
-              console.log(`🔍 Using first array property '${firstArrayProp}':`, response.data[firstArrayProp]);
               this.clients = response.data[firstArrayProp];
             } else {
-              console.warn('⚠️ No array properties found. Setting clients to empty array.');
               this.clients = [];
             }
           }
         } else {
-          console.warn('⚠️ No response.data found:', response);
           this.clients = [];
         }
-        
-        console.log('📋 Final clients array:', this.clients);
-        console.log('📋 Clients count:', this.clients.length);
-        console.log('📋 Clients sample (first 3):', this.clients.slice(0, 3));
-        
+
         this.loadingClients = false;
-        // Trigger change detection
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('❌ Error loading clients:', error);
-        console.error('❌ Error type:', typeof error);
-        console.error('❌ Error keys:', error ? Object.keys(error) : 'null');
-        console.error('❌ Error status:', error?.status);
-        console.error('❌ Error message:', error?.message);
-        console.error('❌ Error error:', error?.error);
-        
+        console.error('Error loading clients:', error);
         this.clients = [];
         this.loadingClients = false;
         this.cdr.detectChanges();
@@ -416,8 +370,6 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
     const taxRate = this.invoiceForm.get('taxRate')?.value || 0;
     const taxAmount = subtotal * (taxRate / 100);
     const totalAmount = subtotal + taxAmount;
-
-    console.log('💰 Updating totals:', { subtotal, taxRate, taxAmount, totalAmount });
 
     this.invoiceForm.patchValue({
       subtotal,
@@ -540,52 +492,17 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
 
     // Calculate current totals manually from ALL line items (including disabled ones)
     let subtotal = 0;
-    console.log('🔍 Debug line items calculation:');
-    console.log('Total line items:', this.lineItems.length);
-    
-    this.lineItems.controls.forEach((control, index) => {
-      // Get values directly from the control, regardless of disabled state
+
+    this.lineItems.controls.forEach((control) => {
       const quantity = control.get('quantity')?.value || 0;
       const unitPrice = control.get('unitPrice')?.value || 0;
       const amount = control.get('amount')?.value || (quantity * unitPrice);
-      const isTimeEntry = control.get('isTimeEntry')?.value || false;
-      
-      console.log(`Line item ${index}:`, {
-        quantity: quantity,
-        unitPrice: unitPrice,
-        amount: amount,
-        isTimeEntry: isTimeEntry,
-        calculation: quantity * unitPrice
-      });
-      
       subtotal += amount;
     });
 
     const taxRate = formValue.taxRate || 0;
     const taxAmount = subtotal * (taxRate / 100);
     const totalAmount = subtotal + taxAmount;
-
-    console.log('📑 Manual totals calculation:', { 
-      lineItemsCount: this.lineItems.length,
-      subtotal, 
-      taxRate, 
-      taxAmount, 
-      totalAmount 
-    });
-
-    // Also debug the time entries themselves
-    console.log('🕐 Time entries debug:');
-    this.timeEntries.forEach((entry, index) => {
-      if (this.selectedEntries.has(entry.id!)) {
-        console.log(`Selected time entry ${index}:`, {
-          id: entry.id,
-          hours: entry.hours,
-          rate: entry.rate,
-          amount: entry.hours * entry.rate,
-          description: entry.description
-        });
-      }
-    });
 
     // Create base invoice object for time entries (matching service structure)
     const baseInvoice: any = {
@@ -599,14 +516,8 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
       notes: formValue.notes || ''
     };
 
-    console.log('Invoice request data:', baseInvoice);
-    console.log('Selected time entries:', Array.from(this.selectedEntries));
-
     // Check if we have selected time entries
     if (this.selectedEntries.size > 0) {
-      // Use the new endpoint for time entries
-      console.log('Creating invoice from time entries:', Array.from(this.selectedEntries));
-      
       this.invoiceService.createInvoiceFromTimeEntries(baseInvoice, Array.from(this.selectedEntries)).subscribe({
         next: (response: any) => {
           this.isGenerating = false;
@@ -656,8 +567,6 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
       });
     } else {
       // Use the old endpoint for manual line items only
-      console.log('Creating invoice from manual line items');
-      
       const invoice: TimeTrackingInvoice = {
         clientId: formValue.clientId,
         clientName: client?.name || '',
@@ -861,32 +770,10 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   private checkAuthenticationStatus(): void {
+    // Verify authentication status for debugging purposes
     const token = localStorage.getItem(Key.TOKEN);
-    const refreshToken = localStorage.getItem(Key.REFRESH_TOKEN);
-    
-    console.log('🔐 Authentication Status Check:');
-    console.log('🔐 Token Key:', Key.TOKEN);
-    console.log('🔐 Refresh Token Key:', Key.REFRESH_TOKEN);
-    console.log('🔐 Token exists:', !!token);
-    console.log('🔐 Token length:', token?.length || 0);
-    console.log('🔐 Refresh token exists:', !!refreshToken);
-    console.log('🔐 Refresh token length:', refreshToken?.length || 0);
-    
-    if (token) {
-      const tokenParts = token.split('.');
-      console.log('🔐 Token parts count:', tokenParts.length);
-      if (tokenParts.length === 3) {
-        try {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          console.log('🔐 Token payload:', payload);
-          console.log('🔐 Token expires:', new Date(payload.exp * 1000));
-          console.log('🔐 Token expired:', Date.now() > payload.exp * 1000);
-        } catch (e) {
-          console.error('🔐 Failed to decode token:', e);
-        }
-      }
-    } else {
-      console.warn('🔐 No authentication token found - user needs to log in first');
+    if (!token) {
+      console.warn('No authentication token found');
     }
   }
 } 

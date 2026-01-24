@@ -192,8 +192,6 @@ export class InvoicesComponent implements OnInit {
         // If user confirms, proceed with deletion
         this.invoiceService.deleteInvoice(invoiceId).subscribe(
           () => {
-            console.log(`Invoice ${invoiceId} deleted successfully`);
-
             // Show success message using SweetAlert2
             Swal.fire({
               title: 'Deleted!',
@@ -378,7 +376,6 @@ export class InvoicesComponent implements OnInit {
     this.invoicesState$ = this.clientService.downloadInvoiceReport$()
       .pipe(
         map(response => {
-          console.log(response);
           this.reportProgress(response);
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
         }),
@@ -395,7 +392,7 @@ export class InvoicesComponent implements OnInit {
         this.fileStatusSubject.next({ status: 'progress', type: 'Downloading...', percent: Math.round(100 * httpEvent.loaded / httpEvent.total) });
         break;
       case HttpEventType.ResponseHeader:
-        console.log('Got response Headers', httpEvent);
+        // Response headers received
         break;
       case HttpEventType.Response:
         saveAs(new File([<Blob>httpEvent.body], httpEvent.headers.get('File-Name'),
@@ -403,7 +400,7 @@ export class InvoicesComponent implements OnInit {
         this.fileStatusSubject.next(undefined);
         break;
       default:
-        console.log(httpEvent);
+        // Other HTTP event types
         break;
     }
   }

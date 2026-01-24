@@ -440,14 +440,12 @@ export class AiWorkspaceStateService {
   clearStaleGenerationState(): void {
     // If isGenerating is true but we're just initializing, it's stale state
     if (this.isGeneratingSubject.value) {
-      console.log('🧹 Clearing stale generation state');
       this.isGeneratingSubject.next(false);
     }
 
     // Clear any in-progress workflow steps (reset to empty, not pending)
     const steps = this.workflowStepsSubject.value;
     if (steps.length > 0 && steps.some(s => s.status === WorkflowStepStatus.Active || s.status === WorkflowStepStatus.Completed)) {
-      console.log('🧹 Clearing stale workflow steps');
       this.workflowStepsSubject.next([]);
     }
 
@@ -455,7 +453,6 @@ export class AiWorkspaceStateService {
     const docs = this.analyzedDocumentsSubject.value;
     const staleAnalyzingDocs = docs.filter(d => d.status === 'analyzing');
     if (staleAnalyzingDocs.length > 0) {
-      console.log('🧹 Clearing', staleAnalyzingDocs.length, 'stale analyzing documents');
       // Remove stale analyzing docs - they'll be refetched from DB with correct status
       const cleanedDocs = docs.filter(d => d.status !== 'analyzing');
       this.analyzedDocumentsSubject.next(cleanedDocs);
@@ -474,7 +471,6 @@ export class AiWorkspaceStateService {
     const newResults = new Map(currentResults);
     newResults.set(conversationId, result);
     this.pendingBackgroundResultsSubject.next(newResults);
-    console.log(`📦 Stored background result for conversation: ${conversationId}`);
   }
 
   /**
@@ -510,7 +506,6 @@ export class AiWorkspaceStateService {
       const newResults = new Map(currentResults);
       newResults.delete(conversationId);
       this.pendingBackgroundResultsSubject.next(newResults);
-      console.log(`🗑️ Cleared background result for conversation: ${conversationId}`);
     }
   }
 
@@ -519,6 +514,5 @@ export class AiWorkspaceStateService {
    */
   clearAllBackgroundResults(): void {
     this.pendingBackgroundResultsSubject.next(new Map());
-    console.log('🗑️ Cleared all pending background results');
   }
 }

@@ -48,7 +48,6 @@ export class ClientGuard implements CanActivate, CanActivateChild {
                               user.roles?.some((role: string) => role === 'ROLE_CLIENT');
 
         if (hasClientRole) {
-          console.log('ClientGuard: Client access granted to:', state.url);
           return true;
         }
 

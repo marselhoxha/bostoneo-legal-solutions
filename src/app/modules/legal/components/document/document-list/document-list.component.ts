@@ -438,9 +438,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           caseId: '123'
         }
       ];
-      
+
       this.documents = testDocs;
-      console.info('Added test document data for UI demonstration purposes');
     }
   }
 
@@ -530,7 +529,6 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
         users.forEach(user => {
           this.userCache.set(user.id, user);
         });
-        console.log('[fetchUsersForCache] Cached', users.length, 'users');
       },
       error: (error) => {
         console.error('[fetchUsersForCache] Error fetching users:', error);
@@ -1168,9 +1166,8 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           status: 'PENDING'
         }
       ];
-      
+
       this.caseList = testCases;
-      console.info('Added test case data for UI demonstration purposes');
     }
   }
 

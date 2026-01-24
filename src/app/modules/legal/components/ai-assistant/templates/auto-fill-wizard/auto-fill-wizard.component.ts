@@ -112,11 +112,6 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   ngOnInit() {
-    console.log('=== WIZARD INITIALIZATION ===');
-    console.log('Template ID:', this.templateId);
-    console.log('Template Name:', this.templateName);
-    console.log('Initial Context:', this.selectedContext);
-
     this.loadContextTypes();
     this.loadCasesFromDatabase();
     this.loadClientsFromDatabase();
@@ -171,7 +166,6 @@ export class AutoFillWizardComponent implements OnInit {
     const headers = this.getAuthHeaders();
     this.http.get<any[]>(`${this.apiUrl}/context-types`, { headers }).subscribe({
       next: (types) => {
-        console.log('Loaded context types from API:', types);
         if (types && types.length > 0) {
           this.contextTypes = types.map(t => ({
             value: t.value,
@@ -181,26 +175,21 @@ export class AutoFillWizardComponent implements OnInit {
             requiresClient: t.value === 'CLIENT',
             requiresMultipleCases: t.value === 'MULTI_CASE'
           }));
-          console.log('Context types loaded:', this.contextTypes);
         }
       },
       error: (error) => {
-        console.log('Using default context types, error:', error);
         // Keep default context types if API fails
       }
     });
   }
 
   loadCasesFromDatabase() {
-    console.log('=== LOADING CASES ===');
     this.isLoading = true;
     const headers = this.getAuthHeaders();
     const url = `${environment.apiUrl}/legal-case/list?page=0&size=100`;
-    console.log('Cases API URL:', url);
 
     this.http.get<any>(url, { headers }).subscribe({
       next: (response) => {
-        console.log('Cases API Response:', response);
 
         // Handle different possible response structures
         let casesList = [];
@@ -216,8 +205,6 @@ export class AutoFillWizardComponent implements OnInit {
           }
         }
 
-        console.log('Extracted cases list:', casesList);
-
         this.cases = casesList.map((c: any) => ({
           id: c.id,
           caseNumber: c.caseNumber || c.reference || `CASE-${c.id}`,
@@ -227,7 +214,6 @@ export class AutoFillWizardComponent implements OnInit {
         }));
 
         this.filteredCases = [...this.cases];
-        console.log('Loaded cases:', this.cases.length);
         this.isLoading = false;
       },
       error: (error) => {
@@ -240,16 +226,12 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   loadClientsFromDatabase() {
-    console.log('=== LOADING CLIENTS ===');
     this.isLoading = true;
     const headers = this.getAuthHeaders();
     const url = `${environment.apiUrl}/client?page=0&size=100`;
-    console.log('Clients API URL:', url);
 
     this.http.get<any>(url, { headers }).subscribe({
       next: (response) => {
-        console.log('Clients API Response:', response);
-
         // Handle different possible response structures
         let clientsList = [];
         if (response) {
@@ -264,8 +246,6 @@ export class AutoFillWizardComponent implements OnInit {
           }
         }
 
-        console.log('Extracted clients list:', clientsList);
-
         this.clients = clientsList.map((c: any) => ({
           id: c.id,
           name: c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || 'Unknown',
@@ -273,7 +253,6 @@ export class AutoFillWizardComponent implements OnInit {
         }));
 
         this.filteredClients = [...this.clients];
-        console.log('Loaded clients:', this.clients.length);
         this.isLoading = false;
       },
       error: (error) => {
@@ -287,7 +266,6 @@ export class AutoFillWizardComponent implements OnInit {
 
   loadVariables() {
     if (!this.templateId) {
-      console.log('No templateId provided, using sample variables');
       this.loadSampleVariables();
       return;
     }
@@ -297,8 +275,6 @@ export class AutoFillWizardComponent implements OnInit {
 
     this.http.get<any[]>(`${this.apiUrl}/${this.templateId}/variables`, { headers }).subscribe({
       next: (variables) => {
-        console.log('Loaded template variables:', variables);
-
         if (variables && variables.length > 0) {
           this.templateVariables = variables;
           this.buildVariablesForm(variables);
@@ -399,8 +375,7 @@ export class AutoFillWizardComponent implements OnInit {
       );
     });
 
-    console.log('Variables form built with controls:', Object.keys(this.variablesForm.controls));
-  }
+      }
 
   onContextChange() {
     // Update form value when selectedContext changes
@@ -408,12 +383,6 @@ export class AutoFillWizardComponent implements OnInit {
 
     const contextType = this.selectedContext;
     const context = this.contextTypes.find(c => c.value === contextType);
-
-    console.log('=== CONTEXT CHANGE TRIGGERED ===');
-    console.log('Context changed to:', contextType, context);
-    console.log('Context requires case:', context?.requiresCase);
-    console.log('Context requires client:', context?.requiresClient);
-    console.log('Context requires multiple cases:', context?.requiresMultipleCases);
 
     if (context) {
       // Reset selections based on context
@@ -439,7 +408,6 @@ export class AutoFillWizardComponent implements OnInit {
 
   getAiSuggestions() {
     if (!this.templateId) {
-      console.log('No templateId for AI suggestions');
       return;
     }
 
@@ -457,15 +425,11 @@ export class AutoFillWizardComponent implements OnInit {
       context.caseIds = this.selectedCases.map(c => c.id);
     }
 
-    console.log('Getting AI suggestions with context:', context);
-
     this.isLoading = true;
     const headers = this.getAuthHeaders();
 
     this.http.post<any>(`${this.apiUrl}/${this.templateId}/suggest-values`, context, { headers }).subscribe({
       next: (response) => {
-        console.log('AI suggestions response:', response);
-
         this.variableSuggestions = response.variables || [];
 
         // Apply suggestions to form
@@ -493,11 +457,6 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   nextStep() {
-    console.log('=== NEXT STEP CLICKED ===');
-    console.log('Current Step:', this.currentStep);
-    console.log('Current Context:', this.currentContext);
-    console.log('Selected Context Value:', this.selectedContext);
-
     if (this.currentStep === 1) {
       // Validate context selection
       const contextType = this.contextForm.get('contextType')?.value;
@@ -534,14 +493,6 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   generateDocument() {
-    console.log('=== GENERATE DOCUMENT CALLED ===');
-    console.log('Template ID:', this.templateId);
-    console.log('Selected Context:', this.selectedContext);
-    console.log('Selected Case:', this.selectedCase);
-    console.log('Selected Client:', this.selectedClient);
-    console.log('Variables:', this.variablesForm.value);
-    console.log('API URL:', this.apiUrl);
-
     if (!this.templateId) {
       // Generate sample document for demonstration
       this.generateSampleDocument();
@@ -561,15 +512,11 @@ export class AutoFillWizardComponent implements OnInit {
       outputFormat: this.outputFormat
     };
 
-    console.log('Document generation request:', request);
-
     this.isLoading = true;
     const headers = this.getAuthHeaders();
 
     this.http.post<any>(`${this.apiUrl}/generate-flexible`, request, { headers }).subscribe({
       next: (response) => {
-        console.log('Document generation response:', response);
-
         this.generatedContent = response.generatedContent || response.content || this.createSampleContent();
         this.warnings = response.warnings || [];
         this.complianceChecks = response.complianceChecks || [];
@@ -605,20 +552,14 @@ export class AutoFillWizardComponent implements OnInit {
   }
 
   private generateSampleDocument() {
-    console.log('=== GENERATING SAMPLE DOCUMENT ===');
     const variables = this.variablesForm.value;
-    console.log('Variables for sample:', variables);
 
     this.generatedContent = this.createSampleContent(variables);
     this.warnings = ['This is a sample document for demonstration purposes'];
     this.complianceChecks = ['Document format validated', 'Legal terminology checked'];
 
-    console.log('Generated content length:', this.generatedContent.length);
-    console.log('Moving to step 4');
     this.currentStep = 4;
     this.isLoading = false;
-
-    console.log('Current step after generation:', this.currentStep);
 
     this.documentGenerated.emit({
       content: this.generatedContent,
@@ -1103,8 +1044,7 @@ My Commission Expires: __________
 
   get currentContext(): ContextType | undefined {
     const context = this.contextTypes.find(c => c.value === this.selectedContext);
-    console.log('Getting current context:', this.selectedContext, context);
-    return context;
+        return context;
   }
 
   get progressPercentage(): number {
@@ -1187,9 +1127,6 @@ My Commission Expires: __________
   }
 
   selectContext(contextValue: string) {
-    console.log('=== CONTEXT SELECTED ===');
-    console.log('Previous context:', this.selectedContext);
-    console.log('New context:', contextValue);
     this.selectedContext = contextValue;
     this.onContextChange();
 
@@ -1198,14 +1135,10 @@ My Commission Expires: __________
   }
 
   selectCase(caseItem: Case) {
-    console.log('=== CASE SELECTED ===');
-    console.log('Selected case:', caseItem);
     this.selectedCase = caseItem;
   }
 
   selectClient(client: Client) {
-    console.log('=== CLIENT SELECTED ===');
-    console.log('Selected client:', client);
     this.selectedClient = client;
   }
 

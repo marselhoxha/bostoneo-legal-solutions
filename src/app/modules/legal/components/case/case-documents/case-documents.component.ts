@@ -816,10 +816,8 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Set available categories based on user role
     this.setAvailableCategories();
-    
+
     if (this.caseId) {
-      const caseIdStr = String(this.caseId);
-      console.log('Loading documents for case ID:', caseIdStr);
       this.loadDocuments();
       this.loadFileManagerFiles();
     } else {
@@ -828,7 +826,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       this.documents = [];
       this.filteredDocuments = [];
     }
-    
+
     // Initialize Bootstrap dropdowns
     this.initDropdowns();
   }
@@ -940,57 +938,34 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   loadDocuments(): void {
     this.isLoading = true;
     const caseIdStr = String(this.caseId);
-    
-    console.log('Loading documents for case ID:', caseIdStr);
-    console.log('Raw caseId value:', this.caseId, 'Type:', typeof this.caseId);
-    
+
     this.documentsService.getDocuments(caseIdStr).subscribe({
       next: (response) => {
-        console.log('Raw documents response:', response);
-        console.log('Response type:', typeof response, 'Is array:', Array.isArray(response));
-        
         try {
           // Enhanced response processing
           let docsArray: any[] = [];
-          
+
           if (Array.isArray(response)) {
-            console.log('Response is an array with', response.length, 'documents');
             docsArray = response;
           } else if (response && response.data && Array.isArray(response.data)) {
-            console.log('Response has data array with', response.data.length, 'documents');
             docsArray = response.data;
           } else if (response && response.data && response.data.documents && Array.isArray(response.data.documents)) {
-            console.log('Response has nested documents array with', response.data.documents.length, 'documents');
             docsArray = response.data.documents;
           } else {
             console.error('Unexpected response format:', response);
-            console.log('Response keys:', response ? Object.keys(response) : 'null');
             this.toastr.warning('Unexpected document format received. Contact support if documents are missing.');
             docsArray = [];
           }
-          
-          console.log('Extracted documents array:', docsArray);
-          console.log('Documents array length:', docsArray.length);
-          
-          // Log results without showing intrusive toast messages
-          if (docsArray.length === 0) {
-            console.log('No documents found for case ID:', caseIdStr);
-          } else {
-            console.log(`Found ${docsArray.length} documents for case ID:`, caseIdStr);
-          }
-          
+
           // Process and normalize each document
           this.documents = docsArray.map(doc => {
             if (!doc || typeof doc !== 'object') {
-              console.warn('Invalid document object:', doc);
               return null;
             }
-            
-            console.log('Processing document:', doc);
-            
+
             // Normalize category from string to enum if needed
             let normalizedCategory = doc.category || 'OTHER';
-            
+
             // Create a normalized document object with default values
             const normalizedDoc: any = {
               id: doc.id,
@@ -1007,11 +982,10 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
               currentVersion: doc.currentVersion || 1,
               versions: Array.isArray(doc.versions) ? doc.versions : []
             };
-            
+
             return normalizedDoc;
           }).filter(doc => doc !== null);
-          
-          console.log('Normalized documents:', this.documents);
+
           this.combineCaseDocuments();
         } catch (err) {
           console.error('Error processing documents response:', err);
@@ -1089,9 +1063,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
           return false;
         }
       });
-      
-      console.log(`Filtered to ${this.filteredDocuments.length} documents`);
-      
+
       // If no documents match the filters, show a message
       if (this.filteredDocuments.length === 0 && this.combinedDocuments.length > 0) {
         this.toastr.info('No documents match the current filters.');
@@ -1104,8 +1076,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   }
 
   openPreviewModal(document: any): void {
-    console.log('Opening preview for document:', document);
-    
     // If this is a file manager file, use the file preview modal
     if (document.isFileManagerFile) {
       this.openFileManagerPreview(document);
@@ -1158,9 +1128,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
       return;
     }
-    
-    console.log(`Downloading document ${document.id} for preview`);
-    
+
     this.documentsService.downloadDocument(String(this.caseId), document.id)
       .pipe(
         finalize(() => {
@@ -1170,29 +1138,22 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (blob: Blob) => {
-          console.log('Blob received for preview:', blob);
-          console.log('Blob type:', blob.type);
-          
           if (blob && blob.size > 0) {
             // Force PDF type if filename ends with .pdf but type is incorrect
             let blobToUse = blob;
             const filename = document.fileName || '';
-            
+
             // If file is PDF but content type is not set correctly, fix it
             if (filename.toLowerCase().endsWith('.pdf') && blob.type !== 'application/pdf') {
-              console.log('File appears to be PDF but has wrong content type. Creating new blob with correct type');
               blobToUse = new Blob([blob], { type: 'application/pdf' });
             }
-            
+
             // Check blob type for preview compatibility
             if (blobToUse.type === 'application/pdf' || blobToUse.type.startsWith('image/')) {
-              console.log('Creating object URL for blob type:', blobToUse.type);
               this.currentObjectUrl = URL.createObjectURL(blobToUse);
               this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentObjectUrl);
-              console.log('Preview URL generated:', this.currentObjectUrl);
               this.previewError = null;
             } else {
-              console.warn(`Preview not supported for type: ${blobToUse.type}`);
               this.previewError = `Preview is not available for this file type (${blobToUse.type || 'unknown'}). Please download the file instead.`;
             }
           } else {
@@ -1251,7 +1212,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   private revokeCurrentObjectUrl(): void {
     if (this.currentObjectUrl) {
       try {
-        console.log('Revoking previous object URL:', this.currentObjectUrl);
         URL.revokeObjectURL(this.currentObjectUrl);
       } catch (error) {
         console.error('Error revoking URL:', error);
@@ -1322,12 +1282,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     const categoryValue = typeof this.newDocument.category === 'string' ?
       this.newDocument.category : String(this.newDocument.category);
 
-    console.log('Uploading document via File Manager with data:', {
-      title: this.newDocument.title,
-      category: categoryValue,
-      caseId: this.caseId
-    });
-
     // Use File Manager service for upload - documents will appear in both places
     this.fileManagerService.uploadFile(
       this.selectedFile,
@@ -1337,7 +1291,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       'DRAFT' // documentStatus
     ).subscribe({
       next: (response) => {
-        console.log('Upload response:', response);
         this.loadFileManagerFiles();
 
         // Show sweet alert success message
@@ -1538,8 +1491,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             // Delete file manager file
             this.fileManagerService.deleteFile(document.id).subscribe({
               next: () => {
-                console.log('File manager file deleted successfully');
-                
                 // Update UI
                 this.fileManagerFiles = this.fileManagerFiles.filter(f => f.id !== document.id);
                 this.combineCaseDocuments();
@@ -1568,8 +1519,6 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             this.documentsService.deleteDocument(String(this.caseId), document.id)
               .subscribe({
                 next: () => {
-                  console.log('Document deleted successfully');
-                  
                   // Update UI
                   this.documents = this.documents.filter(d => d.id !== document.id);
                   this.combineCaseDocuments();

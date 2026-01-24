@@ -83,7 +83,6 @@ export class RequestCacheService {
       entry.timestamp = Date.now();
     }
 
-    console.log(`Cache hit for: ${url} (age: ${age}ms, hits: ${entry.hits})`);
     return entry.response;
   }
 
@@ -108,7 +107,6 @@ export class RequestCacheService {
     };
 
     this.cache.set(url, entry);
-    console.log(`Cached response for: ${url}`);
 
     // Notify pending requests
     const pending = this.pendingRequests.get(url);
@@ -134,9 +132,8 @@ export class RequestCacheService {
   getPendingRequest(req: HttpRequest<any>): Observable<HttpResponse<any>> | null {
     const url = this.getCacheKey(req);
     const pending = this.pendingRequests.get(url);
-    
+
     if (pending) {
-      console.log(`Request already pending for: ${url}`);
       return pending.subject.asObservable();
     }
     
@@ -238,7 +235,6 @@ export class RequestCacheService {
     }
 
     if (entryToEvict) {
-      console.log(`Evicting cache entry: ${entryToEvict}`);
       this.cache.delete(entryToEvict);
     }
   }
@@ -252,7 +248,6 @@ export class RequestCacheService {
       Array.from(this.cache.entries()).forEach(([key, entry]) => {
         if (now - entry.timestamp > maxAge) {
           this.cache.delete(key);
-          console.log(`Expired cache entry removed: ${key}`);
         }
       });
     }, 60000);

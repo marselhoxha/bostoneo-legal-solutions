@@ -213,16 +213,13 @@ export class NotificationTriggerService {
    * Get relevant users based on event type - Enhanced with flexible role matching
    */
   private async getRelevantUsersByEventType(eventType: EventType): Promise<any[]> {
-    console.log(`🔍 🎯 Getting relevant users for event type: ${eventType}`);
-    
     try {
       let relevantUsers: any[] = [];
-      
+
       switch (eventType) {
         case EventType.INVOICE_CREATED:
         case EventType.PAYMENT_RECEIVED:
         case EventType.EXPENSE_SUBMITTED:
-          console.log(`🔍 🎯 Financial event - getting managers, attorneys, finance team`);
           // Financial events: notify managers, attorneys, and finance team (using enhanced role matching)
           const managers = await this.notificationManager.getUsersByRole('MANAGER');
           const attorneys = await this.notificationManager.getUsersByRole('ATTORNEY');
@@ -234,7 +231,6 @@ export class NotificationTriggerService {
         case EventType.LEAD_STATUS_CHANGED:
         case EventType.LEAD_ASSIGNED:
         case EventType.INTAKE_FORM_SUBMITTED:
-          console.log(`🔍 🎯 CRM event - getting attorneys, managers, paralegals`);
           // CRM events: notify attorneys, managers, and paralegals (who often handle intake)
           const crmAttorneys = await this.notificationManager.getUsersByRole('ATTORNEY');
           const crmManagers = await this.notificationManager.getUsersByRole('MANAGER');
@@ -247,7 +243,6 @@ export class NotificationTriggerService {
         case EventType.TASK_STATUS_CHANGED:
         case EventType.TASK_ASSIGNED:
         case EventType.DEADLINE_APPROACHING:
-          console.log(`🔍 🎯 Task event - getting attorneys, managers, paralegals`);
           // Task events: notify attorneys, managers, and paralegals
           const taskAttorneys = await this.notificationManager.getUsersByRole('ATTORNEY');
           const taskManagers = await this.notificationManager.getUsersByRole('MANAGER');
@@ -258,7 +253,6 @@ export class NotificationTriggerService {
 
         case EventType.DOCUMENT_UPLOADED:
         case EventType.DOCUMENT_VERSION_UPDATED:
-          console.log(`🔍 🎯 Document event - getting attorneys, paralegals, managers`);
           // Document events: notify attorneys, paralegals, and managers
           const docAttorneys = await this.notificationManager.getUsersByRole('ATTORNEY');
           const docManagers = await this.notificationManager.getUsersByRole('MANAGER');
@@ -269,7 +263,6 @@ export class NotificationTriggerService {
 
         case EventType.CALENDAR_EVENT_CREATED:
         case EventType.CALENDAR_EVENT_UPDATED:
-          console.log(`🔍 🎯 Calendar event - getting all team members`);
           // Calendar events: notify all team members who need to be aware of schedule changes
           const calAttorneys = await this.notificationManager.getUsersByRole('ATTORNEY');
           const calManagers = await this.notificationManager.getUsersByRole('MANAGER');
@@ -280,34 +273,22 @@ export class NotificationTriggerService {
           break;
 
         default:
-          console.log(`🔍 🎯 Default/unknown event - getting all eligible users`);
           // Default: Use comprehensive fallback to ensure everyone gets notified
           relevantUsers = await this.notificationManager.getAllEligibleUsers();
           break;
       }
-      
+
       // Remove duplicates based on user ID
-      const uniqueUsers = relevantUsers.filter((user, index, arr) => 
+      const uniqueUsers = relevantUsers.filter((user, index, arr) =>
         arr.findIndex(u => u.id === user.id) === index
       );
-      
-      console.log(`🔍 🎯 Event ${eventType} - Found ${uniqueUsers.length} relevant users:`);
-      uniqueUsers.forEach(user => {
-        console.log(`🔍 🎯   - ${user.firstName} ${user.lastName} (${user.email}) - Role: ${user.roleName}`);
-        
-        // Special attention for Jennifer Rodriguez
-        if (user.firstName?.toLowerCase().includes('jennifer') || user.lastName?.toLowerCase().includes('rodriguez')) {
-          console.log(`🎯 🎯 🎯 JENNIFER RODRIGUEZ FOUND IN RECIPIENT LIST FOR ${eventType} 🎯 🎯 🎯`);
-        }
-      });
-      
+
       return uniqueUsers;
-      
+
     } catch (error) {
-      console.error(`🔍 🎯 Failed to get relevant users for event ${eventType}:`, error);
-      
+      console.error(`Failed to get relevant users for event ${eventType}:`, error);
+
       // Fallback: return all eligible users to ensure notifications still go out
-      console.log(`🔍 🎯 Using fallback - all eligible users`);
       return await this.notificationManager.getAllEligibleUsers();
     }
   }
@@ -430,8 +411,6 @@ export class NotificationTriggerService {
    */
   async triggerSmartCaseStatusChanged(caseId: number, oldStatus: string, newStatus: string, caseName?: string, caseNumber?: string, casePriority?: string): Promise<void> {
     try {
-      console.log(`🎯 Smart case status notification: ${caseName} (${oldStatus} → ${newStatus})`);
-
       // Use smart targeting to get appropriate recipients
       const smartContext: SmartNotificationContext = {
         eventType: SmartEventType.CASE_STATUS_CHANGED,
@@ -442,11 +421,8 @@ export class NotificationTriggerService {
       };
 
       const recipients = await this.smartTargeting.getSmartRecipients(smartContext);
-      
-      console.log(`🎯 Smart recipients: ${recipients.primaryUsers.length} primary, ${recipients.secondaryUsers.length} secondary`);
 
       if (recipients.primaryUsers.length === 0 && recipients.secondaryUsers.length === 0) {
-        console.log('🎯 No recipients found, skipping notification');
         return;
       }
 
@@ -473,10 +449,8 @@ export class NotificationTriggerService {
         notificationContext
       );
 
-      console.log(`🎯 ✅ Smart case status notification sent successfully`);
-
     } catch (error) {
-      console.error('🎯 ❌ Failed to send smart case status notification:', error);
+      console.error('Failed to send smart case status notification:', error);
     }
   }
 
@@ -715,18 +689,8 @@ export class NotificationTriggerService {
         );
       }
 
-      console.log(`✅ Personalized unassignment notifications sent:`, {
-        removedUser: removedUserName,
-        case: caseName || `Case #${caseId}`,
-        removedBy: removerName,
-        recipientCounts: {
-          removedUser: removedUser ? 1 : 0,
-          teamMembers: remainingTeamMembers.length
-        }
-      });
-
     } catch (error) {
-      console.error('❌ Failed to send personalized case unassignment notifications:', error);
+      console.error('Failed to send personalized case unassignment notifications:', error);
       throw error;
     }
   }

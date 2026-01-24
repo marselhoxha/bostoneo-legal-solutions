@@ -10,7 +10,7 @@ export class TaskManagementComponent implements OnInit {
   constructor() { }
 
   ngOnInit(): void {
-    console.log('TaskManagementComponent initialized');
+    // Component initialized
   }
 
 }

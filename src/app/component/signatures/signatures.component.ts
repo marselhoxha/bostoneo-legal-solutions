@@ -922,7 +922,6 @@ export class SignaturesComponent implements OnInit {
   }
 
   onDocumentSent(event: BoldSignEvent): void {
-    console.log('Document sent:', event);
     this.loadStats();
 
     // Allow user to see BoldSign's success message, then redirect after 2.5 seconds
@@ -934,7 +933,6 @@ export class SignaturesComponent implements OnInit {
   }
 
   onDocumentSentFromTemplate(event: BoldSignEvent): void {
-    console.log('Document sent from template:', event);
     this.loadStats();
 
     // Allow user to see BoldSign's success message, then close modal and redirect
@@ -947,7 +945,6 @@ export class SignaturesComponent implements OnInit {
   }
 
   onEmbedCancelled(): void {
-    console.log('Embed cancelled');
     this.switchToDocumentsTab();
   }
 
@@ -957,11 +954,10 @@ export class SignaturesComponent implements OnInit {
   }
 
   onEmbedLoaded(): void {
-    console.log('Embed loaded successfully');
+    // Embed loaded successfully
   }
 
   onTemplateCreated(event: BoldSignEvent): void {
-    console.log('Template created:', event);
     this.loadTemplates();
 
     // Allow user to see BoldSign's success message, then close modal
@@ -1086,7 +1082,6 @@ export class SignaturesComponent implements OnInit {
   onGlobalSearch(): void {
     if (this.globalSearch.trim()) {
       // TODO: Implement search functionality
-      console.log('Searching for:', this.globalSearch);
     }
   }
 

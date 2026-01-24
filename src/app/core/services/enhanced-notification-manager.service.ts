@@ -21,7 +21,6 @@ export class EnhancedNotificationManagerService {
    */
   initialize(): void {
     this.eventBus.initialize();
-    console.log('🔔 Enhanced Notification Manager initialized');
   }
 
   /**
@@ -56,8 +55,6 @@ export class EnhancedNotificationManagerService {
 
     // Communication Events
     this.eventBus.register(EVENT_TYPES.NOTE_ADDED, this.handleNoteAdded.bind(this), 100);
-
-    console.log('🔔 Event handlers registered for notification management');
   }
 
   /**
@@ -174,7 +171,7 @@ export class EnhancedNotificationManagerService {
 
   private async handleTaskAssigned(event: EventBusEvent): Promise<void> {
     // Implementation for task assignment notifications
-    console.log('Handling task assignment event:', event);
+    // TODO: Implement task assignment notification handling
   }
 
   private async handleTaskDeadlineApproaching(event: EventBusEvent): Promise<void> {

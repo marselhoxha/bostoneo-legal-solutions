@@ -186,8 +186,6 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
     // Always load from API
     this.calendarService.getEvents().subscribe({
       next: (response: any) => {
-        console.log('Calendar API response:', response);
-        
         // Check if the response contains a data structure with events array
         if (response && typeof response === 'object' && 'data' in response && response.data && Array.isArray(response.data.events)) {
           // API response with data.events structure
@@ -347,7 +345,6 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       (reason) => {
         // Modal was closed without saving
-        console.log('Modal dismissed:', reason);
       }
     );
   }
@@ -375,11 +372,10 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       (reason) => {
         // Modal was closed without saving
-        console.log('Modal dismissed:', reason);
       }
     );
   }
-  
+
   openCreateEventModal(date?: Date): void {
     // Close any open modals first to prevent multiple instances
     this.modalService.dismissAll();
@@ -413,11 +409,10 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       (reason) => {
         // Modal was closed without saving
-        console.log('Modal dismissed:', reason);
       }
     );
   }
-  
+
   // Toggle button is hidden in UI now, but keeping the method for future use if needed
   toggleDataSource(): void {
     // Toggle between mock data and API data

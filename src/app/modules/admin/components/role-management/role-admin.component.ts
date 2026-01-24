@@ -571,8 +571,6 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
   }
 
   openPermissionManager(role: Role): void {
-    console.log('Opening permission manager for role:', role);
-    
     const dialogRef = this.dialog.open(PermissionAssignmentComponent, {
       width: '90vw',
       maxWidth: '1200px',
@@ -586,7 +584,6 @@ export class RoleAdminComponent implements OnInit, OnDestroy {
     });
     
     dialogRef.afterClosed().subscribe(result => {
-      console.log('Permission dialog closed with result:', result);
       if (result) {
         this.loadData(); // Refresh data if changes were made
         this.showSuccess('Permissions updated successfully');

@@ -180,8 +180,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log('🎬 CaseAssignmentDashboardComponent - ngOnInit started');
-
     // Initialize breadcrumbs
     this.breadCrumbItems = [
       { label: 'Case Management' },
@@ -190,7 +188,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     // Get current user ID - try multiple methods
     this.currentUserId = this.resolveCurrentUserId();
-    console.log('👤 Current User ID resolved:', this.currentUserId);
 
     // Determine context mode from route
     const caseId = this.route.snapshot.params['caseId'] || this.route.snapshot.queryParams['caseId'];
@@ -199,19 +196,16 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       // Case-specific mode
       this.caseMode = true;
       this.currentCaseId = +caseId;
-      console.log('📁 Case-specific assignment mode - caseId:', this.currentCaseId);
       this.initializeCaseMode(this.currentCaseId);
     } else {
       // All assignments mode
       this.caseMode = false;
-      console.log('📂 All assignments mode');
 
       // If we have user ID, load data immediately
       if (this.currentUserId) {
         this.initializeAllAssignmentsMode();
       } else {
         // Wait for user data before loading
-        console.log('⏳ Waiting for user data before loading...');
         this.userService.userData$.pipe(
           takeUntil(this.destroy$),
           filter(user => user !== null),
@@ -219,7 +213,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         ).subscribe(user => {
           if (user) {
             this.currentUserId = user.id;
-            console.log('👤 User ID from subscription:', this.currentUserId);
             this.initializeAllAssignmentsMode();
           }
         });
@@ -234,7 +227,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       if (user && user.id && user.id !== this.currentUserId) {
         const previousUserId = this.currentUserId;
         this.currentUserId = user.id;
-        console.log('👤 User ID updated:', this.currentUserId);
         // Reload my assignments if user changes (and we had a previous ID)
         if (previousUserId) {
           this.loadMyAssignments();
@@ -247,8 +239,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     // Subscribe to WebSocket updates for real-time assignment changes
     this.subscribeToWebSocketUpdates();
-
-    console.log('🎬 CaseAssignmentDashboardComponent - ngOnInit completed');
   }
 
   ngOnDestroy(): void {
@@ -293,27 +283,23 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    * Initialize case-specific mode with context
    */
   private initializeCaseMode(caseId: number): void {
-    console.log('🎯 CaseAssignmentDashboardComponent - Initializing case mode for:', caseId);
-    
     // Check if case context already exists
     const currentCase = this.caseContextService.getCurrentCaseSnapshot();
-    
+
     if (currentCase && currentCase.id === caseId) {
-      console.log('✅ CaseAssignmentDashboardComponent - Using existing context');
       this.loadFromContext();
       return;
     }
-    
+
     // Load case context if not available
     this.caseContextService.syncWithBackend(caseId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          console.log('✅ CaseAssignmentDashboardComponent - Context loaded from backend');
           this.loadFromContext();
         },
         error: (error) => {
-          console.error('❌ CaseAssignmentDashboardComponent - Failed to load context:', error);
+          console.error('Failed to load context:', error);
           this.handleContextLoadError(error);
         }
       });
@@ -323,13 +309,11 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    * Initialize all assignments mode
    */
   private initializeAllAssignmentsMode(): void {
-    console.log('🌍 CaseAssignmentDashboardComponent - Initializing all assignments mode');
-    
     // Clear any existing case context
     this.currentCase = null;
     this.availableTeamMembers = [];
     this.userCaseRole = null;
-    
+
     // Load all data
     this.loadInitialData();
   }
@@ -410,8 +394,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    * Handle context notifications
    */
   private handleContextNotification(notification: any): void {
-    console.log('📢 CaseAssignmentDashboardComponent - Received notification:', notification);
-    
     switch (notification.type) {
       case 'ASSIGNMENT_ADDED':
       case 'ASSIGNMENT_UPDATED':
@@ -494,8 +476,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     this.loading.attorneys = true;
     this.loading.assignments = true;
 
-    console.log('📊 Loading initial data with currentUserId:', this.currentUserId);
-
     forkJoin({
       cases: this.legalCaseService.getAllCases(0, 1000).pipe(
         catchError(error => {
@@ -547,9 +527,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
         // Fallback: If myAssignments is empty but we have a userId, filter from allAssignments
         if (this.myAssignments.length === 0 && this.currentUserId && this.assignments.length > 0) {
-          console.log('📋 Filtering myAssignments from allAssignments for userId:', this.currentUserId);
           this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
-          console.log('📋 Filtered myAssignments:', this.myAssignments.length);
         }
 
         this.processWorkloadData(response.workload);
@@ -594,29 +572,19 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     this.filteredCases = [...this.cases];
     this.pagination.cases.total = this.cases.length;
-    console.log('📁 Loaded cases:', this.cases.length);
   }
 
   private processAttorneysData(response: any): void {
     // Backend returns { data: { users: [...] } } from /user/list endpoint
     let usersArray: any[] = [];
 
-    console.log('👥 Processing attorneys data, response structure:', Object.keys(response || {}));
-
     if (response?.data?.users && Array.isArray(response.data.users)) {
       usersArray = response.data.users;
-      console.log('👥 Found users in response.data.users');
     } else if (Array.isArray(response?.data)) {
       usersArray = response.data;
-      console.log('👥 Found users in response.data (array)');
     } else if (response?.data?.content && Array.isArray(response.data.content)) {
       usersArray = response.data.content;
-      console.log('👥 Found users in response.data.content');
-    } else {
-      console.warn('👥 Could not find users array in response:', response);
     }
-
-    console.log('👥 Total users loaded:', usersArray.length);
 
     // Filter for attorneys/lawyers
     this.attorneys = usersArray.filter(user => {
@@ -636,13 +604,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     // If no attorneys found after filtering, include all users
     if (this.attorneys.length === 0 && usersArray.length > 0) {
-      console.log('⚠️ No attorneys found by role filter, using all users');
       this.attorneys = usersArray;
-    }
-
-    console.log('👥 Attorneys loaded:', this.attorneys.length);
-    if (this.attorneys.length > 0) {
-      console.log('👥 First attorney:', this.attorneys[0]?.firstName, this.attorneys[0]?.lastName, '- Role:', this.attorneys[0]?.roleName);
     }
   }
 
@@ -666,11 +628,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     this.assignments = assignmentsArray;
     this.pagination.assignments.total = this.assignments.length;
-    console.log('📋 Loaded all assignments:', this.assignments.length);
-    // Debug: Log first few assignments to verify data structure
-    if (this.assignments.length > 0) {
-      console.log('📋 First assignment sample:', JSON.stringify(this.assignments[0], null, 2));
-    }
   }
 
   private processMyAssignmentsData(response: any): void {
@@ -692,7 +649,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.myAssignments = assignmentsArray;
-    console.log('📋 Loaded my assignments:', this.myAssignments.length);
   }
 
   private processWorkloadData(response: any): void {
@@ -710,10 +666,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadWorkloadData(): void {
-    console.log('📊 Loading workload data. Attorneys:', this.attorneys.length);
-
     if (this.attorneys.length === 0) {
-      console.warn('⚠️ No attorneys available for workload calculation');
       this.workloadData = [];
       this.loading.workload = false;
       this.cdr.markForCheck();
@@ -737,7 +690,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (responses) => {
         this.workloadData = responses.map(response => response.data);
-        console.log('📊 Workload data loaded:', this.workloadData.length);
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -757,7 +709,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         // Ensure pendingTransfers is always an array
         const data = response.data;
         this.pendingTransfers = Array.isArray(data) ? data : [];
-        console.log('📋 Pending transfers loaded:', this.pendingTransfers.length);
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -805,23 +756,19 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
   // Case Selection and Filtering
   selectCase(caseItem: LegalCase): void {
-    console.log('📁 selectCase called:', caseItem?.id, caseItem?.title);
     this.selectedCase = caseItem;
     this.assignmentForm.patchValue({ caseId: caseItem.id });
     this.loadCaseAssignments(caseItem.id);
     this.getAssignmentRecommendations(caseItem.id);
     // Force change detection for OnPush
     this.cdr.detectChanges();
-    console.log('📁 selectedCase set:', this.selectedCase?.id, 'selectedAttorney:', this.selectedAttorney?.id);
   }
 
   selectAttorney(attorney: User): void {
-    console.log('👤 selectAttorney called:', attorney?.id, attorney?.firstName);
     this.selectedAttorney = attorney;
     this.assignmentForm.patchValue({ userId: attorney.id });
     // Force change detection for OnPush
     this.cdr.detectChanges();
-    console.log('👤 selectedAttorney set:', this.selectedAttorney?.id, 'selectedCase:', this.selectedCase?.id);
   }
 
   filterCases(): void {
@@ -1113,8 +1060,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   removeAssignment(assignment: CaseAssignment): void {
-    console.log('🗑️ Removing assignment:', assignment);
-
     import('sweetalert2').then(Swal => {
       Swal.default.fire({
         title: 'Remove Assignment',
@@ -1209,7 +1154,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private getAssignmentRecommendations(caseId: number): void {
-    console.log('Getting assignment recommendations for case:', caseId);
+    // Get assignment recommendations for case
   }
 
   private calculateStatistics(): void {
@@ -1240,10 +1185,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private calculateAttorneyExpertise(): void {
-    console.log('📊 Calculating attorney expertise. Attorneys:', this.attorneys.length, 'Assignments:', this.assignments.length);
-
     if (this.attorneys.length === 0) {
-      console.warn('⚠️ No attorneys available for expertise calculation');
       this.attorneyExpertise = [];
       return;
     }
@@ -1262,14 +1204,13 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       return {
         userId: attorney.id,
         userName: `${attorney.firstName || ''} ${attorney.lastName || ''}`.trim() || attorney.email || 'Unknown',
-        specializations: Object.keys(caseTypeExp).filter(type => caseTypeExp[type] >= 1), // Lowered threshold from 3 to 1
+        specializations: Object.keys(caseTypeExp).filter(type => caseTypeExp[type] >= 1),
         caseTypeExperience: caseTypeExp,
-        successRate: Math.round(Math.random() * 20 + 80), // 80-100%
-        avgCaseCompletionTime: Math.round(Math.random() * 30 + 30) // 30-60 days
+        successRate: Math.round(Math.random() * 20 + 80),
+        avgCaseCompletionTime: Math.round(Math.random() * 30 + 30)
       };
     });
 
-    console.log('📊 Attorney expertise calculated:', this.attorneyExpertise.length);
     this.cdr.markForCheck();
   }
 
@@ -1444,11 +1385,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   onTabChange(tab: string): void {
     this.ngZone.run(() => {
       this.selectedTab = tab;
-      // Reset selections when switching to all-assignments tab for clean state
-      if (tab === 'all-assignments') {
-        // Keep selections but ensure UI updates
-        console.log('📂 Switching to all-assignments tab');
-      }
       if (tab === 'analytics' && !this.analytics) {
         this.loadWorkloadData();
       }
@@ -1470,7 +1406,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshData(): void {
-    console.log('🔄 Refreshing data...');
     this.loadInitialData();
     this.cdr.markForCheck();
   }
@@ -1660,14 +1595,12 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     // 1. Try from user service (cached user data)
     const currentUser = this.userService.getCurrentUser();
     if (currentUser?.id) {
-      console.log('👤 Got user ID from getCurrentUser():', currentUser.id);
       return currentUser.id;
     }
 
     // 2. Try from user service's getCurrentUserId
     const storedUserId = this.userService.getCurrentUserId();
     if (storedUserId) {
-      console.log('👤 Got user ID from getCurrentUserId():', storedUserId);
       return storedUserId;
     }
 
@@ -1679,17 +1612,13 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         // The user ID might be stored in different claims
         const userId = decodedToken?.userId || decodedToken?.id || decodedToken?.sub;
         if (userId && typeof userId === 'number') {
-          console.log('👤 Got user ID from JWT token:', userId);
           return userId;
         }
-        // If sub is email, we can't get ID directly
-        console.log('🔍 JWT token decoded but no numeric userId found:', decodedToken);
       }
     } catch (error) {
       console.error('Error decoding JWT token:', error);
     }
 
-    console.warn('⚠️ Could not resolve user ID from any source');
     return 0;
   }
 
@@ -1739,14 +1668,11 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    */
   private loadMyAssignments(): void {
     if (!this.currentUserId) {
-      console.warn('⚠️ Cannot load my assignments - no user ID');
       // Try filtering from all assignments as fallback
       this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
       this.cdr.markForCheck();
       return;
     }
-
-    console.log('👤 Loading assignments for user:', this.currentUserId);
 
     this.caseAssignmentService.getUserAssignments(this.currentUserId, 0, 100).pipe(
       takeUntil(this.destroy$),
@@ -1754,7 +1680,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         console.error('Error loading my assignments from API:', error);
         // Fallback: filter from all assignments
         this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
-        console.log('📋 My assignments (from filter fallback):', this.myAssignments.length);
         this.cdr.markForCheck();
         return of(null);
       })
@@ -1766,27 +1691,20 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
         let assignmentsArray: any[] = [];
 
         if (response?.data?.content) {
-          // Paginated format: { data: { content: [...] } }
           assignmentsArray = response.data.content;
         } else if (response?.data?.assignments?.content) {
-          // Nested paginated: { data: { assignments: { content: [...] } } }
           assignmentsArray = response.data.assignments.content;
         } else if (response?.data?.assignments && Array.isArray(response.data.assignments)) {
-          // Nested array: { data: { assignments: [...] } }
           assignmentsArray = response.data.assignments;
         } else if (Array.isArray(response?.data)) {
-          // Direct array: { data: [...] }
           assignmentsArray = response.data;
         }
 
         this.myAssignments = assignmentsArray;
-        console.log('📋 My assignments loaded from API:', this.myAssignments.length);
 
         // If API returned empty but we have all assignments, try filtering
         if (this.myAssignments.length === 0 && this.assignments.length > 0) {
-          console.log('🔄 API returned empty, trying to filter from all assignments for user:', this.currentUserId);
           this.myAssignments = this.assignments.filter(a => a.userId === this.currentUserId);
-          console.log('📋 My assignments (from filter):', this.myAssignments.length);
         }
 
         this.cdr.markForCheck();

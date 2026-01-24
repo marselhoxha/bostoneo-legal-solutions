@@ -110,21 +110,16 @@ export class EventModalComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (event) => {
           if (event) {
-            console.log('Loaded event details:', event);
             // Ensure we have the complete event data with proper types
             this.event = {
               ...event,
               // Make sure reminderMinutes is a number
-              reminderMinutes: event.reminderMinutes !== null && event.reminderMinutes !== undefined ? 
+              reminderMinutes: event.reminderMinutes !== null && event.reminderMinutes !== undefined ?
                 Number(event.reminderMinutes) : 0,
               // Make sure we have proper array values
-              additionalReminders: Array.isArray(event.additionalReminders) ? 
+              additionalReminders: Array.isArray(event.additionalReminders) ?
                 event.additionalReminders.map(m => Number(m)) : []
             };
-            
-            console.log('Processed event with reminderMinutes:', this.event.reminderMinutes, 
-                      'type:', typeof this.event.reminderMinutes, 
-                      'reminderSent:', this.event.reminderSent);
           } else {
             this.errorMessage = 'Unable to load event details. Please try again.';
           }
@@ -174,16 +169,11 @@ export class EventModalComponent implements OnInit, OnDestroy {
       // Ensure reminderMinutes is a number
       reminderMinutes: eventRequest.reminderMinutes !== undefined ? Number(eventRequest.reminderMinutes) : 0,
       // Ensure additionalReminders is an array of numbers
-      additionalReminders: Array.isArray(eventRequest.additionalReminders) 
-        ? eventRequest.additionalReminders.map(min => Number(min)) 
+      additionalReminders: Array.isArray(eventRequest.additionalReminders)
+        ? eventRequest.additionalReminders.map(min => Number(min))
         : []
     };
-    
-    console.log('Saving event with reminder data:', {
-      reminderMinutes: formattedRequest.reminderMinutes,
-      additionalReminders: formattedRequest.additionalReminders
-    });
-    
+
     const saveObservable = eventRequest.id
       ? this.calendarService.updateEvent(eventRequest.id.toString(), formattedRequest)
       : this.calendarService.createEvent(formattedRequest);

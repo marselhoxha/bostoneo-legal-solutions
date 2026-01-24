@@ -207,7 +207,6 @@ export class AiDashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
-          console.log('Joined session:', session);
           // Navigate to collaboration interface when implemented
           // this.router.navigate(['/legal/ai-assistant/collaboration', sessionId]);
         },

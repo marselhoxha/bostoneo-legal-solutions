@@ -510,9 +510,6 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
               this.submissionForm.get(key)?.setValue(draftData.formValue[key]);
             }
           });
-          
-          // Show draft loaded notification
-          console.log('Draft loaded successfully');
         }
       }
     } catch (error) {

@@ -17,8 +17,6 @@ export class ReminderService implements OnDestroy {
    * Start the reminder service to check for upcoming deadlines
    */
   startReminders(): void {
-    console.log('Starting deadline reminder service...');
-    
     // Check for reminders immediately and then at regular intervals
     this.reminderSubscription = interval(this.checkInterval)
       .pipe(
@@ -26,10 +24,7 @@ export class ReminderService implements OnDestroy {
         tap(() => {
           // Only start checking if not already in progress
           if (!this.isCheckingReminders) {
-            console.log('Checking for deadline reminders...');
             this.checkForReminders();
-          } else {
-            console.log('Reminder check already in progress, skipping...');
           }
         })
       )
@@ -42,7 +37,6 @@ export class ReminderService implements OnDestroy {
   stopReminders(): void {
     if (this.reminderSubscription) {
       this.reminderSubscription.unsubscribe();
-      console.log('Deadline reminder service stopped.');
     }
     this.isCheckingReminders = false;
   }
@@ -68,9 +62,6 @@ export class ReminderService implements OnDestroy {
       )
     ).subscribe({
       next: (results) => {
-        if (results && results.length > 0) {
-          console.log(`Sent ${results.length} deadline reminders.`);
-        }
         this.checkAdditionalRemindersWithErrorHandling();
       },
       error: (error) => {
@@ -98,9 +89,6 @@ export class ReminderService implements OnDestroy {
       )
     ).subscribe({
       next: (results) => {
-        if (results && results.length > 0) {
-          console.log(`Sent ${results.length} additional deadline reminders.`);
-        }
         this.isCheckingReminders = false;
       },
       error: (error) => {

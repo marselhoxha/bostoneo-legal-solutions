@@ -73,8 +73,6 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
       } else {
         // FOR TESTING: Send to ALL users in the database
-        console.log('🧪 TESTING MODE: Sending file upload notification to ALL users');
-        
         // Get all users by getting all different role types and combining them
         const roleAdmins = await this.notificationManager.getUsersByRole('ROLE_ADMIN');
         const roleManagers = await this.notificationManager.getUsersByRole('ROLE_MANAGER');  
@@ -94,11 +92,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         ];
         
         // Deduplicate users by ID (in case someone has multiple roles)
-        const uniqueUsers = allUsers.filter((user, index, arr) => 
+        const uniqueUsers = allUsers.filter((user, index, arr) =>
           arr.findIndex(u => u.id === user.id) === index
         );
-        
-        console.log(`📑 Found ${uniqueUsers.length} total unique users in database (from ${allUsers.length} role assignments)`);
         
         recipients = {
           primaryUsers: uniqueUsers, // Send to everyone for testing

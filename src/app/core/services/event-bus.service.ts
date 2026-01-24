@@ -23,7 +23,6 @@ export class EventBusService {
   private handlers: Map<string, EventHandler[]> = new Map();
   
   constructor() {
-    console.log('🚌 EventBus service initialized');
   }
 
   /**
@@ -35,7 +34,6 @@ export class EventBusService {
       timestamp: new Date()
     };
 
-    console.log(`🚌 Publishing event: ${event.type}`, fullEvent);
     this.eventSubject.next(fullEvent);
   }
 
@@ -71,11 +69,9 @@ export class EventBusService {
 
     const handlers = this.handlers.get(eventType)!;
     handlers.push(eventHandler);
-    
+
     // Sort handlers by priority (higher numbers first)
     handlers.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-
-    console.log(`🚌 Registered handler for event type: ${eventType} (priority: ${priority})`);
   }
 
   /**
@@ -87,7 +83,6 @@ export class EventBusService {
       const index = handlers.findIndex(h => h.handler === handler);
       if (index !== -1) {
         handlers.splice(index, 1);
-        console.log(`🚌 Unregistered handler for event type: ${eventType}`);
       }
     }
   }
@@ -100,8 +95,6 @@ export class EventBusService {
     if (!handlers || handlers.length === 0) {
       return;
     }
-
-    console.log(`🚌 Executing ${handlers.length} handlers for event: ${event.type}`);
 
     for (const eventHandler of handlers) {
       try {
@@ -122,8 +115,6 @@ export class EventBusService {
     this.subscribeToAll().subscribe(async (event) => {
       await this.executeHandlers(event);
     });
-    
-    console.log('🚌 EventBus initialized with automatic handler execution');
   }
 }
 

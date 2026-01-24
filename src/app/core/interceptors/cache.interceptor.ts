@@ -24,14 +24,12 @@ export class CacheInterceptor implements HttpInterceptor {
     // Check for cached response
     const cachedResponse = this.cache.get(req);
     if (cachedResponse) {
-      console.log(`Returning cached response for: ${req.urlWithParams}`);
       return of(cachedResponse);
     }
 
     // Check if request is already pending
     const pendingRequest = this.cache.getPendingRequest(req);
     if (pendingRequest) {
-      console.log(`Returning pending request for: ${req.urlWithParams}`);
       return pendingRequest;
     }
 

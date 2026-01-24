@@ -116,9 +116,6 @@ export class NotificationPreferencesService {
    * Update user notification preferences
    */
   updateUserPreferences(userId: number, preferences: NotificationPreference[]): Observable<NotificationPreference[]> {
-    console.log('=== ANGULAR: Updating preferences for user:', userId);
-    console.log('=== ANGULAR: Preferences array:', preferences);
-    
     const preferencesMap = preferences.reduce((map, pref) => {
       // Ensure all required fields are present
       const cleanPref = {
@@ -130,26 +127,20 @@ export class NotificationPreferencesService {
         inAppEnabled: pref.inAppEnabled !== undefined ? pref.inAppEnabled : true,
         priority: pref.priority || 'NORMAL'
       };
-      
+
       // Don't include id, createdAt, updatedAt in the request
       map[pref.eventType] = cleanPref;
       return map;
     }, {} as { [eventType: string]: NotificationPreference });
-    
-    console.log('=== ANGULAR: Sending preferences map:', JSON.stringify(preferencesMap, null, 2));
 
     return this.http.put<NotificationPreference[]>(`${this.apiUrl}/${userId}`, preferencesMap)
       .pipe(
         map(updatedPreferences => {
-          console.log('=== ANGULAR: Received updated preferences:', updatedPreferences);
           this.updateCache(userId, updatedPreferences);
           return updatedPreferences;
         }),
         catchError(error => {
-          console.error('=== ANGULAR: Error updating notification preferences:', error);
-          console.error('=== ANGULAR: Error response:', error.error);
-          console.error('=== ANGULAR: Error status:', error.status);
-          console.error('=== ANGULAR: Error headers:', error.headers);
+          console.error('Error updating notification preferences:', error);
           throw error;
         })
       );

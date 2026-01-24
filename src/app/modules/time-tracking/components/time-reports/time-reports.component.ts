@@ -11,6 +11,6 @@ import { CommonModule } from '@angular/common';
 export class TimeReportsComponent implements OnInit {
 
   ngOnInit(): void {
-    console.log('Time Reports loaded successfully!');
+    // Component initialized
   }
 } 

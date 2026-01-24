@@ -162,24 +162,11 @@ export class CriminalDefenseComponent extends PracticeAreaBaseComponent implemen
   }
 
   generateMotion(): void {
-    console.log('Generate Motion clicked');
-    console.log('Form valid:', this.motionForm.valid);
-    console.log('Form values:', this.motionForm.value);
-    
     if (this.motionForm.invalid) {
-      console.log('Form is invalid, marking as touched');
       this.markFormGroupTouched(this.motionForm);
-      console.log('Form errors:', this.motionForm.errors);
-      Object.keys(this.motionForm.controls).forEach(key => {
-        const control = this.motionForm.get(key);
-        if (control && control.errors) {
-          console.log(`Field ${key} errors:`, control.errors);
-        }
-      });
       return;
     }
 
-    console.log('Sending request to backend...');
     this.isGeneratingMotion = true;
     const formData = this.motionForm.value;
     
@@ -480,7 +467,6 @@ Attorney for Defendant
 
   // Charges Management Methods
   addCharge(): void {
-    console.log('addCharge called, newCharge:', this.newCharge);
     if (this.newCharge.trim()) {
       const countNumber = this.charges.length + 1;
       const formattedCharge = `Count ${countNumber}: ${this.newCharge.trim()}`;
