@@ -2886,13 +2886,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       });
     } else {
       // Export from editor content - workflow drafts without document ID
-      const content = this.getEditorContent();
-      if (!content) {
+      const htmlContent = this.getEditorContent();
+      if (!htmlContent) {
         this.notificationService.error('Error', 'No content to export');
         return;
       }
 
-      this.documentGenerationService.exportContentToPDF(content, this.activeDocumentTitle)
+      // Convert HTML to Markdown for backend PDF generation
+      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+      this.documentGenerationService.exportContentToPDF(markdownContent, this.activeDocumentTitle)
         .subscribe({
           next: (response) => this.handleExportResponse(response, 'pdf'),
           error: (error) => {
@@ -2926,13 +2928,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       });
     } else {
       // Export from editor content - workflow drafts without document ID
-      const content = this.getEditorContent();
-      if (!content) {
+      const htmlContent = this.getEditorContent();
+      if (!htmlContent) {
         this.notificationService.error('Error', 'No content to export');
         return;
       }
 
-      this.documentGenerationService.exportContentToWord(content, this.activeDocumentTitle)
+      // Convert HTML to Markdown for backend Word generation
+      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+      this.documentGenerationService.exportContentToWord(markdownContent, this.activeDocumentTitle)
         .subscribe({
           next: (response) => this.handleExportResponse(response, 'docx'),
           error: (error) => {
