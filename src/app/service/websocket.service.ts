@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { Key } from '../enum/key.enum';
+import { environment } from '../../environments/environment';
 
 export interface WebSocketMessage {
   type: string;
@@ -36,7 +37,7 @@ export class WebSocketService implements OnDestroy {
       return;
     }
 
-    const wsUrl = `ws://localhost:8085/ws?token=${token}`;
+    const wsUrl = `${environment.wsUrl}?token=${token}`;
 
     try {
       this.socket = new WebSocket(wsUrl);

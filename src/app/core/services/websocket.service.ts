@@ -3,6 +3,7 @@ import { Observable, BehaviorSubject, Subject, EMPTY, timer } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { retryWhen, delay, takeUntil, tap, catchError, filter } from 'rxjs/operators';
 import { Key } from '../../enum/key.enum';
+import { environment } from '../../../environments/environment';
 
 export interface WebSocketMessage {
   type: string;
@@ -45,7 +46,7 @@ export class WebSocketService implements OnDestroy {
   private notificationMessages$ = new Subject<WebSocketMessage>();
   
   // Configuration
-  private readonly wsUrl = 'ws://localhost:8085/ws';
+  private readonly wsUrl = environment.wsUrl;
   private readonly reconnectInterval = 5000;
   private readonly maxReconnectAttempts = 3;
   

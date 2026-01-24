@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../../environments/environment';
 
 interface PDFTemplate {
   id: number;
@@ -74,7 +75,7 @@ export class PdfFormsComponent implements OnInit, OnDestroy {
   editMode = false;
   editableFields: any = {};
 
-  private apiUrl = 'http://localhost:8085/api';
+  private apiUrl = '${environment.apiUrl}/api';
 
   constructor(
     private fb: FormBuilder,

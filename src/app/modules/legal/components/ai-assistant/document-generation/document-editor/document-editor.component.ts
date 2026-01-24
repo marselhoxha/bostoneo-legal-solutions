@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 
 import { AIDocumentService, DocumentGenerationRequest } from '../../services/ai-document.service';
 import { Key } from '../../../../../../enum/key.enum';
+import { environment } from '../../../../../../../environments/environment';
 
 @Component({
   selector: 'app-document-editor',
@@ -433,7 +434,7 @@ Generated Date: [CURRENT_DATE]`;
       caseId: parseInt(selectedCase.id)
     };
 
-    fetch('http://localhost:8085/api/ai/documents/generate', {
+    fetch('${environment.apiUrl}/api/ai/documents/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -502,7 +503,7 @@ Generated Date: [CURRENT_DATE]`;
       }
     };
 
-    fetch('http://localhost:8085/api/ai/documents/save', {
+    fetch('${environment.apiUrl}/api/ai/documents/save', {
       method: 'POST',
       headers: this.createAuthHeaders(token),
       body: JSON.stringify(saveRequest)
@@ -695,7 +696,7 @@ Generated Date: [CURRENT_DATE]`;
   loadAvailableCases(): void {
     const token = localStorage.getItem(Key.TOKEN);
 
-    fetch('http://localhost:8085/legal-case/list?page=0&size=20', {
+    fetch('${environment.apiUrl}/legal-case/list?page=0&size=20', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

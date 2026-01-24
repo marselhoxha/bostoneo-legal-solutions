@@ -4,6 +4,7 @@ import { map, switchMap } from 'rxjs/operators';
 import { CaseContextService } from './case-context.service';
 import { AssignmentRulesService } from './assignment-rules.service';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface WorkloadMetrics {
   userId: number;
@@ -31,7 +32,7 @@ export interface DistributionRecommendation {
   providedIn: 'root'
 })
 export class WorkloadBalancerService {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
 
   constructor(
     private http: HttpClient,

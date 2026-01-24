@@ -4,6 +4,7 @@ import { DOCUMENT } from '@angular/common';
 //Logout
 
 import { Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 // Language
 import { CookieService } from 'ngx-cookie-service';
@@ -397,7 +398,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
     } catch (error) {
       // Fallback: Try direct API call as a backup
       try {
-        const response = await fetch(`http://localhost:8085/api/v1/notifications/user/${userId}?page=0&size=10`, {
+        const response = await fetch(`${environment.apiUrl}/api/v1/notifications/user/${userId}?page=0&size=10`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem(Key.TOKEN)}`,
             'Content-Type': 'application/json'

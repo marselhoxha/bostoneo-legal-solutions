@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
+import { environment } from '../../../../../../../environments/environment';
 
 interface CustodySchedule {
   weekdays: string;
@@ -205,7 +206,7 @@ export class FamilyLawComponent extends PracticeAreaBaseComponent implements OnI
     this.isCalculatingSupport = true;
     const formData = this.childSupportForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/family-law/calculate-child-support', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/family-law/calculate-child-support', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.calculation) {
@@ -292,7 +293,7 @@ export class FamilyLawComponent extends PracticeAreaBaseComponent implements OnI
     this.isGeneratingCustody = true;
     const formData = this.custodyForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/family-law/generate-custody-agreement', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/family-law/generate-custody-agreement', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.agreement) {
@@ -382,7 +383,7 @@ Parent A                     Parent B
     this.isPreparingDocuments = true;
     const formData = this.divorceForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/family-law/prepare-divorce-documents', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/family-law/prepare-divorce-documents', formData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -502,7 +503,7 @@ Parent A                     Parent B
       propertyAssets: this.propertyAssets
     };
 
-    this.http.post<any>('http://localhost:8085/api/ai/family-law/analyze-property-division', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/family-law/analyze-property-division', requestData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -594,7 +595,7 @@ Parent A                     Parent B
     this.isCalculatingAlimony = true;
     const formData = this.alimonyForm.value;
 
-    this.http.post<any>('http://localhost:8085/api/ai/family-law/calculate-alimony', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/family-law/calculate-alimony', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.calculation) {

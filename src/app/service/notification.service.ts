@@ -6,12 +6,13 @@ import { map, tap, catchError } from 'rxjs/operators';
 import { CustomHttpResponse } from '../interface/custom-http-response';
 import { UserNotification, NotificationAction, NotificationPreferences, NotificationDelivery } from '../interface/user-notification';
 import { UserService } from './user.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class NotificationService {
-    private readonly apiUrl = 'http://localhost:8085/api/v1';
+    private readonly apiUrl = `${environment.apiUrl}/api/v1`;
     private readonly notifier: ToastrService;
     
     // In-memory notification store for current user

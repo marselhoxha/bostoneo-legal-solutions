@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface ResearchActionItem {
   id: number;
@@ -23,7 +24,7 @@ export interface ResearchActionItem {
   providedIn: 'root'
 })
 export class ResearchActionService {
-  private apiUrl = 'http://localhost:8085/api/ai/research/actions';
+  private apiUrl = `${environment.apiUrl}/api/ai/research/actions`;
 
   constructor(private http: HttpClient) {}
 

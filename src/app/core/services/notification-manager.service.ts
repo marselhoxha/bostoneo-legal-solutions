@@ -5,6 +5,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { User } from '../../interface/user';
 import { Key } from '../../enum/key.enum';
+import { environment } from '../../../environments/environment';
 
 export interface NotificationContext {
   triggeredBy: {
@@ -49,7 +50,7 @@ export enum NotificationCategory {
   providedIn: 'root'
 })
 export class NotificationManagerService {
-  private readonly server: string = 'http://localhost:8085';
+  private readonly server: string = environment.apiUrl;
   private currentUser: User | null = null;
 
   constructor(

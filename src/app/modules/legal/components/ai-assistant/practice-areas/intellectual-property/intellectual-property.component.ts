@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
+import { environment } from '../../../../../../../environments/environment';
 
 interface PatentClaim {
   id: string;
@@ -283,7 +284,7 @@ export class IntellectualPropertyComponent extends PracticeAreaBaseComponent imp
     this.isGeneratingPatent = true;
     const formData = { ...this.patentForm.value, claims: this.patentClaims };
     
-    this.http.post<any>('http://localhost:8085/api/ai/intellectual-property/generate-patent-application', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/intellectual-property/generate-patent-application', formData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -358,7 +359,7 @@ Address: ${data.inventorAddress}
     this.isSearchingTrademark = true;
     const data = this.trademarkForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/intellectual-property/search-trademark', data)
+    this.http.post<any>('${environment.apiUrl}/api/ai/intellectual-property/search-trademark', data)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -455,7 +456,7 @@ Address: ${data.inventorAddress}
     this.isGeneratingCopyright = true;
     const formData = this.copyrightForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/intellectual-property/generate-copyright-registration', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/intellectual-property/generate-copyright-registration', formData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -538,7 +539,7 @@ Deposit accompanying this application consists of the best edition of the work.
     this.isSearchingPriorArt = true;
     const data = this.priorArtForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/intellectual-property/search-prior-art', data)
+    this.http.post<any>('${environment.apiUrl}/api/ai/intellectual-property/search-prior-art', data)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -620,7 +621,7 @@ Deposit accompanying this application consists of the best edition of the work.
     this.isGeneratingLicense = true;
     const formData = this.licenseForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/intellectual-property/generate-license-agreement', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/intellectual-property/generate-license-agreement', formData)
       .subscribe({
         next: (response) => {
           if (response.success) {

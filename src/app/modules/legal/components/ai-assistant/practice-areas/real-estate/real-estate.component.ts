@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
+import { environment } from '../../../../../../../environments/environment';
 
 interface PropertyDetails {
   address: string;
@@ -244,7 +245,7 @@ export class RealEstateComponent implements OnInit {
     this.isGeneratingAgreement = true;
     const formData = this.purchaseForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/real-estate/generate-purchase-agreement', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/real-estate/generate-purchase-agreement', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.content) {
@@ -352,7 +353,7 @@ BUYER: _______________________  Date: __________
       closingDate: data.closingDate
     };
     
-    this.http.post<any>('http://localhost:8085/api/ai/real-estate/generate-closing-checklist', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/real-estate/generate-closing-checklist', requestData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -452,7 +453,7 @@ BUYER: _______________________  Date: __________
       easements: data.easements
     };
     
-    this.http.post<any>('http://localhost:8085/api/ai/real-estate/analyze-title', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/real-estate/analyze-title', requestData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -586,7 +587,7 @@ BUYER: _______________________  Date: __________
       consideration: formData.consideration
     };
     
-    this.http.post<any>('http://localhost:8085/api/ai/real-estate/generate-deed', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/real-estate/generate-deed', requestData)
       .subscribe({
         next: (response) => {
           if (response.success && response.content) {
@@ -681,7 +682,7 @@ My commission expires: __________
     this.isGeneratingLease = true;
     const formData = this.leaseForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/real-estate/generate-lease', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/real-estate/generate-lease', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.content) {

@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { InvoicePayment, PaymentAnalytics } from '../interface/invoice-payment';
 import { CustomHttpResponse } from '../interface/custom-http-response';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InvoicePaymentService {
-  private readonly apiUrl = 'http://localhost:8085/api/invoices';
+  private readonly apiUrl = `${environment.apiUrl}/api/invoices`;
 
   constructor(private http: HttpClient) { }
 

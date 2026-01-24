@@ -8,6 +8,7 @@ import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.compo
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../../../../environments/environment';
 
 interface VisaType {
   code: string;
@@ -307,7 +308,7 @@ export class ImmigrationComponent extends PracticeAreaBaseComponent implements O
     caseData.petitionerUSCitizen = caseData.petitionerUSCitizen ? 'Yes' : 'Off';
 
     // Call the SAME PDF fill endpoint that the working PDF forms component uses
-    this.http.post<any>(`http://localhost:8085/api/ai/pdf-forms/${formInfo.templateId}/fill`, {
+    this.http.post<any>(`${environment.apiUrl}/api/ai/pdf-forms/${formInfo.templateId}/fill`, {
       caseData: caseData
     }).subscribe({
       next: (response) => {
@@ -315,7 +316,7 @@ export class ImmigrationComponent extends PracticeAreaBaseComponent implements O
 
         // Create the PDF URL
         const filledPath = response.filledPdfPath;
-        this.pdfUrl = `http://localhost:8085/api/files/download?path=${encodeURIComponent(filledPath)}`;
+        this.pdfUrl = `${environment.apiUrl}/api/files/download?path=${encodeURIComponent(filledPath)}`;
 
         // Fetch PDF as blob and create blob URL for display
         this.http.get(this.pdfUrl, { responseType: 'blob' }).subscribe({
@@ -369,7 +370,7 @@ export class ImmigrationComponent extends PracticeAreaBaseComponent implements O
     this.isGeneratingPetition = true;
     const formData = this.visaPetitionForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/immigration/generate-visa-petition', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/immigration/generate-visa-petition', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.petition) {
@@ -495,7 +496,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
       notes: caseData.notes
     };
     
-    this.http.post<any>('http://localhost:8085/api/ai/immigration/check-case-status', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/immigration/check-case-status', requestData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -555,7 +556,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
 
     const data = this.checklistForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/immigration/generate-document-checklist', data)
+    this.http.post<any>('${environment.apiUrl}/api/ai/immigration/generate-document-checklist', data)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -646,7 +647,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
 
     const data = this.timelineForm.value;
     
-    this.http.post<any>('http://localhost:8085/api/ai/immigration/calculate-timeline', data)
+    this.http.post<any>('${environment.apiUrl}/api/ai/immigration/calculate-timeline', data)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -912,7 +913,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
 
   // PDF Form Methods
   loadPDFTemplates(): void {
-    this.http.get<PDFTemplate[]>('http://localhost:8085/api/ai/templates/pdf-forms').subscribe({
+    this.http.get<PDFTemplate[]>('${environment.apiUrl}/api/ai/templates/pdf-forms').subscribe({
       next: (templates) => {
         this.pdfTemplates = templates.filter(t =>
           t.templateType === 'PDF_FORM' &&
@@ -1106,7 +1107,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
       this.isGeneratingForm = true;
 
       const formInfo = this.availableForms.find(f => f.code === this.selectedForm);
-      this.http.post<any>('http://localhost:8085/api/ai/generate/form-data', {
+      this.http.post<any>('${environment.apiUrl}/api/ai/generate/form-data', {
         templateId: formInfo?.templateId,
         prompt: caseInfo,
         formFields: this.pdfFormFields.map(f => f.caseDataPath)
@@ -1222,7 +1223,7 @@ NOTICE: This petition must be filed with the appropriate filing fee and supporti
       status: 'COMPLETED'
     };
 
-    this.http.post('http://localhost:8085/api/ai/pdf-forms/save', formData).subscribe({
+    this.http.post('${environment.apiUrl}/api/ai/pdf-forms/save', formData).subscribe({
       next: () => {
         Swal.fire('Saved!', 'The form has been saved successfully.', 'success');
         this.backToForm();

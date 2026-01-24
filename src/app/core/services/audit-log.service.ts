@@ -6,12 +6,13 @@ import { CustomHttpResponse } from '../../interface/custom-http-response';
 import { AuditEntry, AuditQuery, AuditReport, ComplianceAlert, AuditChange } from '../../interface/audit-log';
 import { UserService } from '../../service/user.service';
 import { User } from '../../interface/user';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuditLogService {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
   
   // Current user info for audit entries
   private currentUser: User | null = null;

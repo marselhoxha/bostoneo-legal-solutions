@@ -3,9 +3,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CustomHttpResponse as ApiResponse } from '../interface/custom-http-response';
-import { 
-  CaseAssignment, 
-  CaseAssignmentRequest, 
+import {
+  CaseAssignment,
+  CaseAssignmentRequest,
   CaseTransferRequest,
   UserWorkload,
   WorkloadAnalytics,
@@ -13,12 +13,13 @@ import {
   AssignmentHistory,
   CaseTransferRequestDTO
 } from '../interface/case-assignment';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CaseAssignmentService {
-  private readonly apiUrl = 'http://localhost:8085/api/legal';
+  private readonly apiUrl = `${environment.apiUrl}/api/legal`;
 
   constructor(private http: HttpClient) {}
 

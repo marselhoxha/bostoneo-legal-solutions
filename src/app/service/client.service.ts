@@ -7,11 +7,12 @@ import { Key } from '../enum/key.enum';
 import { Stats } from '../interface/stats';
 import { Client } from '../interface/client';
 import { Invoice } from '../interface/invoice';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
-    
-    private readonly server: string = 'http://localhost:8085';
+
+    private readonly server: string = environment.apiUrl;
 
     constructor(private http: HttpClient) { }
 

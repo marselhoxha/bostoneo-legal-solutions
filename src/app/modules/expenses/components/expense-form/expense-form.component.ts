@@ -15,6 +15,7 @@ import { NotificationService } from '../../../../service/notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
 import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import { Key } from '../../../../enum/key.enum';
+import { environment } from '../../../../../environments/environment';
 
 interface Client {
   id: number;
@@ -148,7 +149,7 @@ export class ExpenseFormComponent implements OnInit {
       'Authorization': `Bearer ${token}`
     });
 
-    return this.http.get('http://localhost:8085/client/invoice/list?page=0&size=100', { headers }).pipe(
+    return this.http.get(`${environment.apiUrl}/client/invoice/list?page=0&size=100`, { headers }).pipe(
       tap((response: any) => {
         const data = response?.data as any;
 

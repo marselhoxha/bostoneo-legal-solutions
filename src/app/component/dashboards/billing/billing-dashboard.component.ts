@@ -55,7 +55,7 @@ export class BillingDashboardComponent implements OnInit {
   topClients: TopClient[] = [];
   caseProfitability: CaseProfitability[] = [];
 
-  private apiUrl = environment.apiUrl || 'http://localhost:8085';
+  private apiUrl = environment.apiUrl;
 
   constructor(
     private http: HttpClient,

@@ -3,21 +3,22 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CustomHttpResponse as ApiResponse } from '../interface/custom-http-response';
-import { 
-  CaseTask, 
-  TaskCreateRequest, 
+import {
+  CaseTask,
+  TaskCreateRequest,
   TaskUpdateRequest,
   TaskComment,
   TaskStatistics,
   TaskFilter
 } from '../interface/case-task';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CaseTaskService {
-  private readonly apiUrl = 'http://localhost:8085/api/legal';
+  private readonly apiUrl = `${environment.apiUrl}/api/legal`;
 
   constructor(private http: HttpClient) {}
 

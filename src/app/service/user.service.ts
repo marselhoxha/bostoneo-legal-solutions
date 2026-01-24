@@ -9,12 +9,13 @@ import { Key } from '../enum/key.enum';
 import { HttpCacheService } from './http.cache.service';
 import { Router } from '@angular/router';
 import { PreloaderService } from './preloader.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private readonly server: string = 'http://localhost:8085';
+  private readonly server: string = environment.apiUrl;
   private jwtHelper = new JwtHelperService();
   private userDataSubject = new BehaviorSubject<User | null>(null);
   userData$ = this.userDataSubject.asObservable();

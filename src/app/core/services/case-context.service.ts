@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { WebSocketService, WebSocketMessage } from './websocket.service';
 import { RbacService, CaseRole } from './rbac.service';
 import { CaseTask as ImportedCaseTask } from '../../interface/case-task';
+import { environment } from '../../../environments/environment';
 
 // Interfaces
 interface LegalCase {
@@ -85,7 +86,7 @@ interface TeamSummary {
   providedIn: 'root'
 })
 export class CaseContextService {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
   
   // Core state subjects
   private currentCase$ = new BehaviorSubject<LegalCase | null>(null);

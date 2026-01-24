@@ -5,12 +5,13 @@ import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { CaseContextService } from '../services/case-context.service';
 import { NavigationContextService } from '../services/navigation-context.service';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CaseContextGuard implements CanActivate {
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
 
   constructor(
     private caseContextService: CaseContextService,
@@ -174,5 +175,5 @@ export class CaseContextResolver {
     );
   }
 
-  private readonly apiUrl = 'http://localhost:8085/api/v1';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
 }

@@ -6,6 +6,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
+import { environment } from '../../../../../../../environments/environment';
 
 interface SentencingGuideline {
   offense: string;
@@ -171,7 +172,7 @@ export class CriminalDefenseComponent extends PracticeAreaBaseComponent implemen
     const formData = this.motionForm.value;
     
     // Call backend API
-    this.http.post<any>('http://localhost:8085/api/ai/criminal-defense/generate-motion', formData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/criminal-defense/generate-motion', formData)
       .subscribe({
         next: (response) => {
           if (response.success && response.content) {
@@ -246,7 +247,7 @@ Attorney for Defendant
     }
 
     // Call backend API
-    this.http.post<any>('http://localhost:8085/api/ai/criminal-defense/calculate-sentence', this.sentencingForm.value)
+    this.http.post<any>('${environment.apiUrl}/api/ai/criminal-defense/calculate-sentence', this.sentencingForm.value)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -324,7 +325,7 @@ Attorney for Defendant
       ...this.caseAnalysisForm.value,
       charges: this.charges.join('; ')
     };
-    this.http.post<any>('http://localhost:8085/api/ai/criminal-defense/analyze-case', requestData)
+    this.http.post<any>('${environment.apiUrl}/api/ai/criminal-defense/analyze-case', requestData)
       .subscribe({
         next: (response) => {
           if (response.success) {
@@ -414,7 +415,7 @@ Attorney for Defendant
     }
     
     // Call backend API
-    this.http.post<any>('http://localhost:8085/api/ai/criminal-defense/analyze-plea', this.pleaForm.value)
+    this.http.post<any>('${environment.apiUrl}/api/ai/criminal-defense/analyze-plea', this.pleaForm.value)
       .subscribe({
         next: (response) => {
           if (response.success) {

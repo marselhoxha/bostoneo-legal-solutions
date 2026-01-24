@@ -14,6 +14,7 @@ import { CaseTaskService } from '../../../../../service/case-task.service';
 import { TaskType, TaskPriority } from '../../../../../interface/case-task';
 import { CalendarService } from '../../../services/calendar.service';
 import { UserService } from '../../../../../service/user.service';
+import { environment } from '../../../../../../environments/environment';
 
 // Conversation interface for multi-conversation support
 interface Conversation {
@@ -1933,7 +1934,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   private connectToSSE(sessionId: string): void {
     this.closeSSEConnection(); // Close any existing connection
 
-    const sseUrl = `http://localhost:8085/api/ai/legal-research/progress-stream?sessionId=${sessionId}`;
+    const sseUrl = `${environment.apiUrl}/api/ai/legal-research/progress-stream?sessionId=${sessionId}`;
 
     this.eventSource = new EventSource(sseUrl);
 
