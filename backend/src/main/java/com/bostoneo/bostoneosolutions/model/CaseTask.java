@@ -30,7 +30,10 @@ public class CaseTask {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "case_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

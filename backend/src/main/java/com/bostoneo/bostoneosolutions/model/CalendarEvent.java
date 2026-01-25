@@ -24,6 +24,9 @@ public class CalendarEvent {
     @GeneratedValue(strategy = IDENTITY)
     @Column(name = "id")
     private Long id;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @Column(name = "title", nullable = false)
     private String title;

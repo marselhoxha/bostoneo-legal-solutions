@@ -27,6 +27,9 @@ public class CaseActivity {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "case_id", nullable = false)
     private Long caseId;
 

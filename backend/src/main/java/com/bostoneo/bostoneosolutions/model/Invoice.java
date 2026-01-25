@@ -30,6 +30,9 @@ public class Invoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "invoice_number", unique = true)
     private String invoiceNumber;
 
