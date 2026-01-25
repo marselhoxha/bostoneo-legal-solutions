@@ -117,4 +117,27 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, Long> {
            "AND ct.status = 'COMPLETED' AND ct.completed_at IS NOT NULL",
            nativeQuery = true)
     Double calculateAverageCompletionTime(@Param("userId") Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    @Query("SELECT ct FROM CaseTask ct WHERE ct.organizationId = :orgId ORDER BY ct.priority DESC, ct.dueDate ASC")
+    Page<CaseTask> findByOrganizationId(@Param("orgId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT ct FROM CaseTask ct WHERE ct.organizationId = :orgId AND ct.legalCase.id = :caseId " +
+           "ORDER BY ct.priority DESC, ct.dueDate ASC")
+    List<CaseTask> findByOrganizationIdAndCaseId(@Param("orgId") Long organizationId, @Param("caseId") Long caseId);
+
+    @Query("SELECT ct FROM CaseTask ct WHERE ct.organizationId = :orgId AND ct.assignedTo.id = :userId " +
+           "AND ct.status IN :statuses ORDER BY ct.priority DESC, ct.dueDate ASC")
+    Page<CaseTask> findByOrganizationIdAndAssignedToAndStatuses(@Param("orgId") Long organizationId,
+                                                                @Param("userId") Long userId,
+                                                                @Param("statuses") List<TaskStatus> statuses,
+                                                                Pageable pageable);
+
+    @Query("SELECT COUNT(ct) FROM CaseTask ct WHERE ct.organizationId = :orgId")
+    long countByOrganizationId(@Param("orgId") Long organizationId);
+
+    @Query("SELECT COUNT(ct) FROM CaseTask ct WHERE ct.organizationId = :orgId " +
+           "AND ct.dueDate < CURRENT_TIMESTAMP AND ct.status NOT IN ('COMPLETED', 'CANCELLED')")
+    int countOverdueTasksByOrganization(@Param("orgId") Long organizationId);
 }

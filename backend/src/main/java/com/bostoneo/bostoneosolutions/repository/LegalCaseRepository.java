@@ -54,4 +54,37 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
 
     @Query("SELECT c FROM LegalCase c WHERE LOWER(c.clientName) = LOWER(:clientName) ORDER BY c.createdAt DESC")
     List<LegalCase> findAllByClientNameIgnoreCase(@Param("clientName") String clientName);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<LegalCase> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<LegalCase> findByOrganizationId(Long organizationId);
+
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND " +
+           "(LOWER(c.caseNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.clientName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<LegalCase> searchCasesByOrganization(@Param("orgId") Long organizationId,
+                                              @Param("search") String search,
+                                              Pageable pageable);
+
+    Page<LegalCase> findByOrganizationIdAndStatus(Long organizationId, CaseStatus status, Pageable pageable);
+
+    List<LegalCase> findByOrganizationIdAndStatus(Long organizationId, CaseStatus status);
+
+    Page<LegalCase> findByOrganizationIdAndStatusIn(Long organizationId, List<CaseStatus> statuses, Pageable pageable);
+
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND c.status IN :statuses AND " +
+           "(LOWER(c.caseNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.clientName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<LegalCase> searchCasesByOrganizationAndStatus(@Param("orgId") Long organizationId,
+                                                       @Param("statuses") List<CaseStatus> statuses,
+                                                       @Param("search") String search,
+                                                       Pageable pageable);
+
+    long countByOrganizationId(Long organizationId);
+
+    long countByOrganizationIdAndStatus(Long organizationId, CaseStatus status);
 } 

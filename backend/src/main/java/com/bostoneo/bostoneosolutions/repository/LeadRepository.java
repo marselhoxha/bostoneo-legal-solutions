@@ -71,4 +71,35 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     
     @Query("SELECT l FROM Lead l WHERE l.status = :status AND l.updatedAt < :staleDate")
     List<Lead> findStaleLeads(@Param("status") String status, @Param("staleDate") Timestamp staleDate);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<Lead> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<Lead> findByOrganizationId(Long organizationId);
+
+    Page<Lead> findByOrganizationIdAndStatus(Long organizationId, String status, Pageable pageable);
+
+    List<Lead> findByOrganizationIdAndStatus(Long organizationId, String status);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.status IN :statuses")
+    Page<Lead> findByOrganizationIdAndStatusIn(@Param("orgId") Long organizationId,
+                                               @Param("statuses") List<String> statuses,
+                                               Pageable pageable);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.assignedTo = :assignedTo")
+    Page<Lead> findByOrganizationIdAndAssignedTo(@Param("orgId") Long organizationId,
+                                                 @Param("assignedTo") Long assignedTo,
+                                                 Pageable pageable);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.status IN ('NEW', 'CONTACTED', 'QUALIFIED') " +
+           "ORDER BY l.leadScore DESC, l.createdAt ASC")
+    Page<Lead> findActiveLeadsByOrganization(@Param("orgId") Long organizationId, Pageable pageable);
+
+    long countByOrganizationId(Long organizationId);
+
+    long countByOrganizationIdAndStatus(Long organizationId, String status);
+
+    @Query("SELECT l.status, COUNT(l) FROM Lead l WHERE l.organizationId = :orgId GROUP BY l.status")
+    List<Object[]> countByOrganizationIdGroupedByStatus(@Param("orgId") Long organizationId);
 }

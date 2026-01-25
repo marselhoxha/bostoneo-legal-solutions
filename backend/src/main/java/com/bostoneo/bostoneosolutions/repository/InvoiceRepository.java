@@ -65,6 +65,39 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     
     // For workflows
     List<Invoice> findByDueDateAndStatusIn(LocalDate dueDate, List<InvoiceStatus> statuses);
-    
+
     List<Invoice> findByDueDateLessThanEqualAndStatusIn(LocalDate dueDate, List<InvoiceStatus> statuses);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<Invoice> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<Invoice> findByOrganizationId(Long organizationId);
+
+    Page<Invoice> findByOrganizationIdAndStatus(Long organizationId, InvoiceStatus status, Pageable pageable);
+
+    Page<Invoice> findByOrganizationIdAndClientId(Long organizationId, Long clientId, Pageable pageable);
+
+    @Query("SELECT i FROM Invoice i WHERE i.organizationId = :orgId AND " +
+           "(:clientId IS NULL OR i.clientId = :clientId) AND " +
+           "(:status IS NULL OR i.status = :status) AND " +
+           "(:startDate IS NULL OR i.issueDate >= :startDate) AND " +
+           "(:endDate IS NULL OR i.issueDate <= :endDate)")
+    Page<Invoice> findByOrganizationIdWithFilters(@Param("orgId") Long organizationId,
+                                                  @Param("clientId") Long clientId,
+                                                  @Param("status") InvoiceStatus status,
+                                                  @Param("startDate") LocalDate startDate,
+                                                  @Param("endDate") LocalDate endDate,
+                                                  Pageable pageable);
+
+    long countByOrganizationId(Long organizationId);
+
+    long countByOrganizationIdAndStatus(Long organizationId, InvoiceStatus status);
+
+    @Query("SELECT SUM(i.totalAmount) FROM Invoice i WHERE i.organizationId = :orgId AND i.status = :status")
+    Double sumTotalAmountByOrganizationAndStatus(@Param("orgId") Long organizationId,
+                                                  @Param("status") InvoiceStatus status);
+
+    @Query("SELECT i FROM Invoice i WHERE i.organizationId = :orgId ORDER BY i.createdAt DESC")
+    List<Invoice> findTop5ByOrganizationIdOrderByCreatedAtDesc(@Param("orgId") Long organizationId, Pageable pageable);
 }

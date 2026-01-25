@@ -100,4 +100,24 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
            "AND NOT EXISTS (SELECT 1 FROM FileItem fi WHERE fi.folderId = f.id AND fi.deleted = false) " +
            "AND NOT EXISTS (SELECT 1 FROM Folder sf WHERE sf.parentFolderId = f.id AND sf.deleted = false)")
     List<Folder> findEmptyFolders();
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<Folder> findByOrganizationIdAndDeletedFalse(Long organizationId);
+
+    @Query("SELECT f FROM Folder f WHERE f.organizationId = :orgId AND f.parentFolderId IS NULL AND f.deleted = false")
+    List<Folder> findRootFoldersByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT f FROM Folder f WHERE f.organizationId = :orgId AND f.parentFolderId = :parentId AND f.deleted = false")
+    List<Folder> findSubFoldersByOrganization(@Param("orgId") Long organizationId, @Param("parentId") Long parentId);
+
+    @Query("SELECT f FROM Folder f WHERE f.organizationId = :orgId AND f.caseId = :caseId AND f.deleted = false")
+    List<Folder> findByOrganizationIdAndCaseId(@Param("orgId") Long organizationId, @Param("caseId") Long caseId);
+
+    @Query("SELECT f FROM Folder f WHERE f.organizationId = :orgId AND f.deleted = false AND " +
+           "LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    List<Folder> searchByOrganizationAndName(@Param("orgId") Long organizationId, @Param("searchTerm") String searchTerm);
+
+    @Query("SELECT COUNT(f) FROM Folder f WHERE f.organizationId = :orgId AND f.deleted = false")
+    Long countByOrganization(@Param("orgId") Long organizationId);
 }

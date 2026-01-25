@@ -66,4 +66,27 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
     Page<CalendarEvent> findByCaseIdIn(List<Long> caseIds, Pageable pageable);
 
     List<CalendarEvent> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<CalendarEvent> findByOrganizationId(Long organizationId);
+
+    Page<CalendarEvent> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<CalendarEvent> findByOrganizationIdAndUserId(Long organizationId, Long userId);
+
+    @Query("SELECT e FROM CalendarEvent e WHERE e.organizationId = :orgId AND " +
+           "(e.startTime BETWEEN :startDate AND :endDate)")
+    List<CalendarEvent> findByOrganizationIdAndDateRange(@Param("orgId") Long organizationId,
+                                                         @Param("startDate") LocalDateTime startDate,
+                                                         @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT e FROM CalendarEvent e WHERE e.organizationId = :orgId AND e.userId = :userId AND " +
+           "(e.startTime BETWEEN :startDate AND :endDate)")
+    List<CalendarEvent> findByOrganizationIdAndUserIdAndDateRange(@Param("orgId") Long organizationId,
+                                                                   @Param("userId") Long userId,
+                                                                   @Param("startDate") LocalDateTime startDate,
+                                                                   @Param("endDate") LocalDateTime endDate);
+
+    long countByOrganizationId(Long organizationId);
 } 

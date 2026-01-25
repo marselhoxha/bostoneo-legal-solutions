@@ -39,4 +39,32 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
            "WHERE te.billable = true AND te.invoiceId IS NULL " +
            "ORDER BY c.name")
     List<Client> findClientsWithUnbilledTimeEntries();
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<Client> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<Client> findByOrganizationId(Long organizationId);
+
+    @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND c.name LIKE CONCAT('%', :name, '%')")
+    Page<Client> findByOrganizationIdAndNameContaining(@Param("orgId") Long organizationId,
+                                                       @Param("name") String name,
+                                                       Pageable pageable);
+
+    @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND c.email = :email")
+    List<Client> findByOrganizationIdAndEmail(@Param("orgId") Long organizationId,
+                                              @Param("email") String email);
+
+    @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND c.userId = :userId")
+    Client findByOrganizationIdAndUserId(@Param("orgId") Long organizationId,
+                                         @Param("userId") Long userId);
+
+    long countByOrganizationId(Long organizationId);
+
+    @Query("SELECT DISTINCT c FROM Client c " +
+           "JOIN LegalCase lc ON c.name = lc.clientName " +
+           "JOIN TimeEntry te ON lc.id = te.legalCaseId " +
+           "WHERE c.organizationId = :orgId AND te.billable = true AND te.invoiceId IS NULL " +
+           "ORDER BY c.name")
+    List<Client> findClientsWithUnbilledTimeEntriesByOrganization(@Param("orgId") Long organizationId);
 }

@@ -117,6 +117,54 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
 
     @Query("SELECT COALESCE(SUM(te.hours * te.rate), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = true")
     BigDecimal getTotalBillableAmountByCase(@Param("legalCaseId") Long legalCaseId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<TimeEntry> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<TimeEntry> findByOrganizationId(Long organizationId);
+
+    Page<TimeEntry> findByOrganizationIdAndUserId(Long organizationId, Long userId, Pageable pageable);
+
+    Page<TimeEntry> findByOrganizationIdAndLegalCaseId(Long organizationId, Long legalCaseId, Pageable pageable);
+
+    Page<TimeEntry> findByOrganizationIdAndStatus(Long organizationId, TimeEntryStatus status, Pageable pageable);
+
+    Page<TimeEntry> findByOrganizationIdAndDateBetween(Long organizationId, LocalDate startDate, LocalDate endDate, Pageable pageable);
+
+    @Query(value = "SELECT * FROM time_entries te WHERE " +
+           "te.organization_id = :orgId AND " +
+           "(:userId IS NULL OR te.user_id = :userId) AND " +
+           "(:legalCaseId IS NULL OR te.legal_case_id = :legalCaseId) AND " +
+           "(CAST(:startDate AS DATE) IS NULL OR te.date >= :startDate) AND " +
+           "(CAST(:endDate AS DATE) IS NULL OR te.date <= :endDate) AND " +
+           "(:status IS NULL OR te.status = :status) AND " +
+           "(:billable IS NULL OR te.billable = :billable)",
+           countQuery = "SELECT COUNT(*) FROM time_entries te WHERE " +
+           "te.organization_id = :orgId AND " +
+           "(:userId IS NULL OR te.user_id = :userId) AND " +
+           "(:legalCaseId IS NULL OR te.legal_case_id = :legalCaseId) AND " +
+           "(CAST(:startDate AS DATE) IS NULL OR te.date >= :startDate) AND " +
+           "(CAST(:endDate AS DATE) IS NULL OR te.date <= :endDate) AND " +
+           "(:status IS NULL OR te.status = :status) AND " +
+           "(:billable IS NULL OR te.billable = :billable)",
+           nativeQuery = true)
+    Page<TimeEntry> findByOrganizationIdWithFilters(@Param("orgId") Long organizationId,
+                                                    @Param("userId") Long userId,
+                                                    @Param("legalCaseId") Long legalCaseId,
+                                                    @Param("startDate") LocalDate startDate,
+                                                    @Param("endDate") LocalDate endDate,
+                                                    @Param("status") String status,
+                                                    @Param("billable") Boolean billable,
+                                                    Pageable pageable);
+
+    long countByOrganizationId(Long organizationId);
+
+    @Query("SELECT SUM(te.hours) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.status = 'APPROVED'")
+    BigDecimal getTotalApprovedHoursByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.billable = true AND te.status = 'APPROVED'")
+    BigDecimal getTotalBillableAmountByOrganization(@Param("orgId") Long organizationId);
 } 
  
  

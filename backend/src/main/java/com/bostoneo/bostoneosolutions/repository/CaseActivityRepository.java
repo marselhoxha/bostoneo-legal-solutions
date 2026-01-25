@@ -21,10 +21,20 @@ public interface CaseActivityRepository extends JpaRepository<CaseActivity, Long
     
     /**
      * Find activities by type for a specific case
-     * 
+     *
      * @param caseId The ID of the case
      * @param activityType The type of activity to filter by
      * @return List of matching activities
      */
     List<CaseActivity> findByCaseIdAndActivityTypeOrderByCreatedAtDesc(Long caseId, String activityType);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    @Query("SELECT a FROM CaseActivity a WHERE a.organizationId = :orgId ORDER BY a.createdAt DESC")
+    List<CaseActivity> findByOrganizationIdOrderByCreatedAtDesc(Long orgId);
+
+    @Query("SELECT a FROM CaseActivity a WHERE a.organizationId = :orgId AND a.caseId = :caseId ORDER BY a.createdAt DESC")
+    List<CaseActivity> findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(Long orgId, Long caseId);
+
+    long countByOrganizationId(Long organizationId);
 } 
