@@ -118,7 +118,7 @@ public class FileItem {
     // private String encryptionMetadata;
     
     // Additional metadata
-    @Column(name = "metadata", columnDefinition = "JSON")
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
     
     // Relationships

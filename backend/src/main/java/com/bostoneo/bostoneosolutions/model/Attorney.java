@@ -30,10 +30,10 @@ public class Attorney {
     @Column(name = "license_state")
     private String licenseState;
 
-    @Column(name = "practice_areas", columnDefinition = "JSON")
+    @Column(name = "practice_areas", columnDefinition = "jsonb")
     private String practiceAreas;
 
-    @Column(name = "specializations", columnDefinition = "JSON")
+    @Column(name = "specializations", columnDefinition = "jsonb")
     private String specializations;
 
     @Column(name = "experience_years")
@@ -48,7 +48,7 @@ public class Attorney {
     @Column(name = "max_case_load")
     private Integer maxCaseLoad;
 
-    @Column(name = "preferred_case_types", columnDefinition = "JSON")
+    @Column(name = "preferred_case_types", columnDefinition = "jsonb")
     private String preferredCaseTypes;
 
     @Column(name = "hourly_rate")
@@ -60,13 +60,13 @@ public class Attorney {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "jsonb")
     private String education;
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "jsonb")
     private String certifications;
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "jsonb")
     private String languages;
 
     @Column(name = "created_at")

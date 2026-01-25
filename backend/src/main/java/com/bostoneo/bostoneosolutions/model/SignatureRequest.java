@@ -83,7 +83,7 @@ public class SignatureRequest {
     private String signerPhone;
 
     // Additional signers (JSON array)
-    @Column(name = "additional_signers", columnDefinition = "JSON")
+    @Column(name = "additional_signers", columnDefinition = "jsonb")
     private String additionalSigners;
 
     // Reminder settings

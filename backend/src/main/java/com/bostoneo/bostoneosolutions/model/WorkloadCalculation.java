@@ -35,7 +35,7 @@ public class WorkloadCalculation {
     private LocalDate calculationDate;
     
     @Type(JsonType.class)
-    @Column(name = "case_points", columnDefinition = "json")
+    @Column(name = "case_points", columnDefinition = "jsonb")
     @Builder.Default
     private Map<Long, BigDecimal> casePoints = new HashMap<>();
     
@@ -43,7 +43,7 @@ public class WorkloadCalculation {
     private BigDecimal totalPoints;
     
     @Type(JsonType.class)
-    @Column(columnDefinition = "json")
+    @Column(columnDefinition = "jsonb")
     @Builder.Default
     private Map<String, Object> factors = new HashMap<>();
     

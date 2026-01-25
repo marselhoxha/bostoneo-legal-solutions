@@ -89,13 +89,13 @@ public class AIRealEstateTransaction {
     @Column(name = "deed_type")
     private DeedType deedType = DeedType.WARRANTY;
 
-    @Column(name = "title_issues", columnDefinition = "JSON")
+    @Column(name = "title_issues", columnDefinition = "jsonb")
     private String titleIssues;
 
     @Column(name = "special_conditions", columnDefinition = "TEXT")
     private String specialConditions;
 
-    @Column(name = "closing_costs", columnDefinition = "JSON")
+    @Column(name = "closing_costs", columnDefinition = "jsonb")
     private String closingCosts;
 
     @CreationTimestamp

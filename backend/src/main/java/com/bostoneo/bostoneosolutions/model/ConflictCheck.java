@@ -36,13 +36,13 @@ public class ConflictCheck {
     @Column(name = "check_type", nullable = false, length = 50)
     private String checkType;
 
-    @Column(name = "search_terms", nullable = false, columnDefinition = "JSON")
+    @Column(name = "search_terms", nullable = false, columnDefinition = "jsonb")
     private String searchTerms;
 
-    @Column(name = "search_parameters", columnDefinition = "JSON")
+    @Column(name = "search_parameters", columnDefinition = "jsonb")
     private String searchParameters;
 
-    @Column(name = "results", columnDefinition = "JSON")
+    @Column(name = "results", columnDefinition = "jsonb")
     private String results;
 
     @Column(name = "status", length = 50)

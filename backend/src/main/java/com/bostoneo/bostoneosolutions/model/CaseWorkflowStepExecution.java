@@ -54,11 +54,11 @@ public class CaseWorkflowStepExecution {
     private LocalDateTime completedAt;
 
     @Type(JsonType.class)
-    @Column(name = "input_data", columnDefinition = "json")
+    @Column(name = "input_data", columnDefinition = "jsonb")
     private Map<String, Object> inputData;
 
     @Type(JsonType.class)
-    @Column(name = "output_data", columnDefinition = "json")
+    @Column(name = "output_data", columnDefinition = "jsonb")
     private Map<String, Object> outputData;
 
     @Column(name = "related_resource_type")

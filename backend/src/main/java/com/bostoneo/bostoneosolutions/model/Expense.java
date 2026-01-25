@@ -22,7 +22,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @JsonInclude(NON_DEFAULT)
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Entity
-@Table(name = "Expense")
+@Table(name = "expenses")
 public class Expense {
 
     @Id

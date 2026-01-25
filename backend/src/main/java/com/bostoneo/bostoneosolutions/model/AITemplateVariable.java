@@ -44,7 +44,7 @@ public class AITemplateVariable {
     @Column(name = "source_field", length = 100)
     private String sourceField;
 
-    @Column(name = "validation_rules", columnDefinition = "JSON")
+    @Column(name = "validation_rules", columnDefinition = "jsonb")
     private String validationRules;
 
     @Column(name = "default_value", columnDefinition = "TEXT")

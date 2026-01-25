@@ -37,10 +37,10 @@ public class AIFamilyLawCalculation {
     @Column(name = "ma_guidelines_version", length = 20)
     private String maGuidelinesVersion = "2021";
 
-    @Column(name = "input_parameters", nullable = false, columnDefinition = "JSON")
+    @Column(name = "input_parameters", nullable = false, columnDefinition = "jsonb")
     private String inputParameters;
 
-    @Column(name = "calculation_result", nullable = false, columnDefinition = "JSON")
+    @Column(name = "calculation_result", nullable = false, columnDefinition = "jsonb")
     private String calculationResult;
 
     @Column(name = "gross_income_payor", precision = 12, scale = 2)

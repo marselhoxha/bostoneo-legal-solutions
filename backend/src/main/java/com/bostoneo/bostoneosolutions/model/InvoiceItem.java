@@ -17,7 +17,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 @AllArgsConstructor
 @JsonInclude(NON_DEFAULT)
 @Entity
-@Table(name = "InvoiceItem")
+@Table(name = "invoice_items")
 public class InvoiceItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

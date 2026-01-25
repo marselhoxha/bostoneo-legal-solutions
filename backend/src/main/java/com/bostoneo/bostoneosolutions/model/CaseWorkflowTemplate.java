@@ -37,7 +37,7 @@ public class CaseWorkflowTemplate {
     private WorkflowTemplateType templateType;
 
     @Type(JsonType.class)
-    @Column(name = "steps_config", columnDefinition = "json", nullable = false)
+    @Column(name = "steps_config", columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> stepsConfig;
 
     @Column(name = "is_system")

@@ -35,7 +35,7 @@ public class AICriminalCase {
     @Column(name = "court_name", length = 200)
     private String courtName;
 
-    @Column(name = "charge_codes", nullable = false, columnDefinition = "JSON")
+    @Column(name = "charge_codes", nullable = false, columnDefinition = "jsonb")
     private String chargeCodes;
 
     @Column(name = "primary_offense", length = 200)
@@ -55,13 +55,13 @@ public class AICriminalCase {
     @Column(name = "prior_record_points")
     private Integer priorRecordPoints = 0;
 
-    @Column(name = "criminal_history", columnDefinition = "JSON")
+    @Column(name = "criminal_history", columnDefinition = "jsonb")
     private String criminalHistory;
 
-    @Column(name = "sentencing_guidelines", columnDefinition = "JSON")
+    @Column(name = "sentencing_guidelines", columnDefinition = "jsonb")
     private String sentencingGuidelines;
 
-    @Column(name = "plea_offer", columnDefinition = "JSON")
+    @Column(name = "plea_offer", columnDefinition = "jsonb")
     private String pleaOffer;
 
     @Column(name = "plea_deadline")
@@ -73,7 +73,7 @@ public class AICriminalCase {
     @Column(name = "discovery_deadline")
     private LocalDate discoveryDeadline;
 
-    @Column(name = "motion_deadlines", columnDefinition = "JSON")
+    @Column(name = "motion_deadlines", columnDefinition = "jsonb")
     private String motionDeadlines;
 
     @Column(name = "bail_amount", precision = 10, scale = 2)
@@ -82,7 +82,7 @@ public class AICriminalCase {
     @Column(name = "bail_conditions", columnDefinition = "TEXT")
     private String bailConditions;
 
-    @Column(name = "victim_information", columnDefinition = "JSON")
+    @Column(name = "victim_information", columnDefinition = "jsonb")
     private String victimInformation;
 
     @Column(name = "prosecutor_name", length = 200)
@@ -97,7 +97,7 @@ public class AICriminalCase {
     @Column(name = "case_weaknesses", columnDefinition = "TEXT")
     private String caseWeaknesses;
 
-    @Column(name = "potential_defenses", columnDefinition = "JSON")
+    @Column(name = "potential_defenses", columnDefinition = "jsonb")
     private String potentialDefenses;
 
     @CreationTimestamp

@@ -38,10 +38,10 @@ public class AIImmigrationForm {
     @Column(name = "form_template", columnDefinition = "LONGTEXT")
     private String formTemplate;
 
-    @Column(name = "required_documents", columnDefinition = "JSON")
+    @Column(name = "required_documents", columnDefinition = "jsonb")
     private String requiredDocuments;
 
-    @Column(name = "filing_requirements", columnDefinition = "JSON")
+    @Column(name = "filing_requirements", columnDefinition = "jsonb")
     private String filingRequirements;
 
     @Column(name = "processing_time_range", length = 50)
@@ -53,7 +53,7 @@ public class AIImmigrationForm {
     @Column(name = "form_instructions", columnDefinition = "TEXT")
     private String formInstructions;
 
-    @Column(name = "ai_assistance_prompts", columnDefinition = "JSON")
+    @Column(name = "ai_assistance_prompts", columnDefinition = "jsonb")
     private String aiAssistancePrompts;
 
     @Builder.Default

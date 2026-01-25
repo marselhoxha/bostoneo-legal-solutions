@@ -68,7 +68,7 @@ public class LeadActivity {
     @Column(name = "external_id", length = 100)
     private String externalId;
 
-    @Column(name = "metadata", columnDefinition = "JSON")
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
     @Column(name = "created_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")

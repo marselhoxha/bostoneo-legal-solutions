@@ -55,7 +55,7 @@ public class AuditLog {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "metadata", columnDefinition = "JSON")
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
     @Column(name = "ip_address", length = 45)

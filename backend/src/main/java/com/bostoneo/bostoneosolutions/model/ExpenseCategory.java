@@ -22,7 +22,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @AllArgsConstructor
 @JsonInclude(NON_DEFAULT)
 @Entity
-@Table(name = "ExpenseCategory")
+@Table(name = "expense_categories")
 public class ExpenseCategory {
 
     @Id

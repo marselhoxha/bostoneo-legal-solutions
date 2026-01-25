@@ -43,7 +43,7 @@ public class SignatureAuditLog {
     @Column(name = "event_type", nullable = false, length = 50)
     private String eventType;
 
-    @Column(name = "event_data", columnDefinition = "JSON")
+    @Column(name = "event_data", columnDefinition = "jsonb")
     private String eventData;
 
     @Enumerated(EnumType.STRING)

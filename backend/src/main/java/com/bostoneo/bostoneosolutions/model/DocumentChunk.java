@@ -49,7 +49,7 @@ public class DocumentChunk {
      * OpenAI embeddings are 1536 dimensions (text-embedding-ada-002)
      * or 3072 dimensions (text-embedding-3-large)
      */
-    @Column(name = "embedding", columnDefinition = "JSON")
+    @Column(name = "embedding", columnDefinition = "jsonb")
     private String embedding;
 
     @Column(name = "embedding_model")

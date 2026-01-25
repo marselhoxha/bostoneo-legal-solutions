@@ -33,10 +33,10 @@ public class AIStyleGuide {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "rules_json", columnDefinition = "JSON")
+    @Column(name = "rules_json", columnDefinition = "jsonb")
     private String rulesJson;
 
-    @Column(name = "formatting_preferences", columnDefinition = "JSON")
+    @Column(name = "formatting_preferences", columnDefinition = "jsonb")
     private String formattingPreferences;
 
     @Builder.Default
@@ -44,10 +44,10 @@ public class AIStyleGuide {
     @Column(name = "citation_style")
     private CitationStyle citationStyle = CitationStyle.BLUEBOOK;
 
-    @Column(name = "terminology_preferences", columnDefinition = "JSON")
+    @Column(name = "terminology_preferences", columnDefinition = "jsonb")
     private String terminologyPreferences;
 
-    @Column(name = "signature_blocks", columnDefinition = "JSON")
+    @Column(name = "signature_blocks", columnDefinition = "jsonb")
     private String signatureBlocks;
 
     @Column(name = "letterhead_template", columnDefinition = "TEXT")
@@ -56,10 +56,10 @@ public class AIStyleGuide {
     @Column(name = "footer_template", columnDefinition = "TEXT")
     private String footerTemplate;
 
-    @Column(name = "font_preferences", columnDefinition = "JSON")
+    @Column(name = "font_preferences", columnDefinition = "jsonb")
     private String fontPreferences;
 
-    @Column(name = "margin_settings", columnDefinition = "JSON")
+    @Column(name = "margin_settings", columnDefinition = "jsonb")
     private String marginSettings;
 
     @Builder.Default

@@ -53,7 +53,7 @@ public class InvoiceWorkflowRule {
     @Column(name = "action_type", nullable = false, length = 50)
     private ActionType actionType;
     
-    @Column(name = "action_config", columnDefinition = "JSON")
+    @Column(name = "action_config", columnDefinition = "jsonb")
     @Convert(converter = JsonMapConverter.class)
     private Map<String, Object> actionConfig;
     

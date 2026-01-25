@@ -50,7 +50,7 @@ public class AiConversationMessage {
     @Column(name = "cost_usd", precision = 10, scale = 4)
     private BigDecimal costUsd;
 
-    @Column(name = "metadata", columnDefinition = "JSON")
+    @Column(name = "metadata", columnDefinition = "jsonb")
     @Convert(converter = JsonMapConverter.class)
     private Map<String, Object> metadata;
 

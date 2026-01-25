@@ -44,7 +44,7 @@ public class IntakeForm {
     @Column(name = "public_url", unique = true)
     private String publicUrl;
 
-    @Column(name = "form_config", columnDefinition = "JSON", nullable = false)
+    @Column(name = "form_config", columnDefinition = "jsonb", nullable = false)
     private String formConfig;
 
     @Column(name = "success_message", columnDefinition = "TEXT")

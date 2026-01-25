@@ -47,19 +47,19 @@ public class AIMACourtRule {
     @Column(name = "last_amended")
     private LocalDate lastAmended;
 
-    @Column(name = "deadlines_json", columnDefinition = "JSON")
+    @Column(name = "deadlines_json", columnDefinition = "jsonb")
     private String deadlinesJson;
 
-    @Column(name = "related_statutes", columnDefinition = "JSON")
+    @Column(name = "related_statutes", columnDefinition = "jsonb")
     private String relatedStatutes;
 
     @Column(name = "practice_notes", columnDefinition = "TEXT")
     private String practiceNotes;
 
-    @Column(name = "local_rules", columnDefinition = "JSON")
+    @Column(name = "local_rules", columnDefinition = "jsonb")
     private String localRules;
 
-    @Column(name = "forms_required", columnDefinition = "JSON")
+    @Column(name = "forms_required", columnDefinition = "jsonb")
     private String formsRequired;
 
     @Builder.Default

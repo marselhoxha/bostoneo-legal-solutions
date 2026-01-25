@@ -70,7 +70,7 @@ public class AIPatentPriorArt {
     @Column(name = "blocking_analysis", columnDefinition = "TEXT")
     private String blockingAnalysis;
 
-    @Column(name = "classification_codes", columnDefinition = "JSON")
+    @Column(name = "classification_codes", columnDefinition = "jsonb")
     private String classificationCodes;
 
     @Column(name = "search_query_used", columnDefinition = "TEXT")

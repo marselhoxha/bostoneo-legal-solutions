@@ -17,7 +17,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @AllArgsConstructor
 @JsonInclude(NON_DEFAULT)
 @Entity
-@Table(name = "Receipt")
+@Table(name = "receipts")
 public class Receipt {
 
     @Id

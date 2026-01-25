@@ -69,7 +69,7 @@ public class AIRealEstateDocument {
     @Column(name = "property_address", length = 500)
     private String propertyAddress;
 
-    @Column(name = "parties_involved", columnDefinition = "JSON")
+    @Column(name = "parties_involved", columnDefinition = "jsonb")
     private String partiesInvolved;
 
     @Column(name = "document_content", columnDefinition = "LONGTEXT")
