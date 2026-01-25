@@ -228,10 +228,10 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
                     Sort.by(Sort.Direction.DESC, filterRequest.getSortBy())
         );
 
-        // Convert status list to single status for now (simplified)
-        TimeEntryStatus status = null;
+        // Convert status list to single status string for native query
+        String statusStr = null;
         if (filterRequest.getStatuses() != null && !filterRequest.getStatuses().isEmpty()) {
-            status = filterRequest.getStatuses().get(0);
+            statusStr = filterRequest.getStatuses().get(0).name();
         }
 
         Page<TimeEntry> timeEntries = timeEntryRepository.findWithFilters(
@@ -239,7 +239,7 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
                 filterRequest.getLegalCaseId(),
                 filterRequest.getStartDate(),
                 filterRequest.getEndDate(),
-                status,
+                statusStr,
                 filterRequest.getBillable(),
                 filterRequest.getDescription(),
                 pageable

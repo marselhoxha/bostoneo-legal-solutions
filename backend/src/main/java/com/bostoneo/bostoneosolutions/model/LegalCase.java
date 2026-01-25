@@ -35,6 +35,9 @@ public class LegalCase {
     @Column(name = "organization_id")
     private Long organizationId;
 
+    @Column(name = "client_id")
+    private Long clientId;
+
     @Column(name = "case_number", nullable = false, unique = true)
     private String caseNumber;
 
@@ -57,6 +60,9 @@ public class LegalCase {
     @Enumerated(EnumType.STRING)
     private CaseStatus status;
 
+    @Column(name = "is_confidential")
+    private Boolean isConfidential;
+
     @Column(name = "priority")
     @Enumerated(EnumType.STRING)
     private CasePriority priority;
@@ -64,8 +70,7 @@ public class LegalCase {
     @Column(name = "type")
     private String type;
 
-    @Column(name = "description")
-    @Lob
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     // Court Information

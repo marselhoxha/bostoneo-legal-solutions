@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class SimpleRateLimitFilter extends OncePerRequestFilter {
     
-    private static final int MAX_REQUESTS_PER_MINUTE = 60;
-    private static final int MAX_REQUESTS_PER_HOUR = 1000;
+    private static final int MAX_REQUESTS_PER_MINUTE = 300;
+    private static final int MAX_REQUESTS_PER_HOUR = 5000;
     
     private final Map<String, RequestCounter> minuteCounters = new ConcurrentHashMap<>();
     private final Map<String, RequestCounter> hourCounters = new ConcurrentHashMap<>();

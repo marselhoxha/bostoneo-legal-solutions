@@ -40,8 +40,7 @@ public class Expense {
     @Temporal(TemporalType.TIMESTAMP)
     private Date date;
 
-    @Column(name = "description")
-    @Lob
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "tax", precision = 19, scale = 4)

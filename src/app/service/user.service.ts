@@ -429,10 +429,15 @@ export class UserService {
     if (this.isAuthenticated()) {
       // Clear the HTTP cache for profile endpoint
       this.httpCache.evict(`${this.server}/user/profile`);
-      // Clear the current user data
-      this.clearUserCache();
-      // Fetch fresh data
-      this.profile$().subscribe();
+      // DON'T clear current user data - keep it until new data arrives
+      // This prevents the topbar from flickering/showing no user during navigation
+      // Fetch fresh data - setUserData is called in profile$() on success
+      this.profile$().subscribe({
+        error: (err) => {
+          // Only log error, don't clear user data on temporary failures
+          console.warn('Failed to refresh user profile:', err);
+        }
+      });
     }
   }
 

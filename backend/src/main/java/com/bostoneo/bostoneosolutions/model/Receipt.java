@@ -34,12 +34,10 @@ public class Receipt {
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    @Lob
-    @Column(name = "thumbnail")
+    @Column(name = "thumbnail", columnDefinition = "BYTEA")
     private byte[] thumbnail;
 
-    @Lob
-    @Column(name = "content", nullable = false)
+    @Column(name = "content", nullable = false, columnDefinition = "BYTEA")
     private byte[] content;
 
     @Column(name = "created_at", nullable = false)

@@ -41,20 +41,29 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
     
     List<TimeEntry> findByStatusIn(List<TimeEntryStatus> statuses);
     
-    // Complex filtering
-    @Query("SELECT te FROM TimeEntry te WHERE " +
-           "(:userId IS NULL OR te.userId = :userId) AND " +
-           "(:legalCaseId IS NULL OR te.legalCaseId = :legalCaseId) AND " +
-           "(:startDate IS NULL OR te.date >= :startDate) AND " +
-           "(:endDate IS NULL OR te.date <= :endDate) AND " +
+    // Complex filtering - using native query for PostgreSQL ILIKE support
+    @Query(value = "SELECT * FROM time_entries te WHERE " +
+           "(:userId IS NULL OR te.user_id = :userId) AND " +
+           "(:legalCaseId IS NULL OR te.legal_case_id = :legalCaseId) AND " +
+           "(CAST(:startDate AS DATE) IS NULL OR te.date >= :startDate) AND " +
+           "(CAST(:endDate AS DATE) IS NULL OR te.date <= :endDate) AND " +
            "(:status IS NULL OR te.status = :status) AND " +
            "(:billable IS NULL OR te.billable = :billable) AND " +
-           "(:description IS NULL OR LOWER(te.description) LIKE LOWER(CONCAT('%', :description, '%')))")
+           "(CAST(:description AS TEXT) IS NULL OR te.description ILIKE '%' || CAST(:description AS TEXT) || '%')",
+           countQuery = "SELECT COUNT(*) FROM time_entries te WHERE " +
+           "(:userId IS NULL OR te.user_id = :userId) AND " +
+           "(:legalCaseId IS NULL OR te.legal_case_id = :legalCaseId) AND " +
+           "(CAST(:startDate AS DATE) IS NULL OR te.date >= :startDate) AND " +
+           "(CAST(:endDate AS DATE) IS NULL OR te.date <= :endDate) AND " +
+           "(:status IS NULL OR te.status = :status) AND " +
+           "(:billable IS NULL OR te.billable = :billable) AND " +
+           "(CAST(:description AS TEXT) IS NULL OR te.description ILIKE '%' || CAST(:description AS TEXT) || '%')",
+           nativeQuery = true)
     Page<TimeEntry> findWithFilters(@Param("userId") Long userId,
                                    @Param("legalCaseId") Long legalCaseId,
                                    @Param("startDate") LocalDate startDate,
                                    @Param("endDate") LocalDate endDate,
-                                   @Param("status") TimeEntryStatus status,
+                                   @Param("status") String status,
                                    @Param("billable") Boolean billable,
                                    @Param("description") String description,
                                    Pageable pageable);
