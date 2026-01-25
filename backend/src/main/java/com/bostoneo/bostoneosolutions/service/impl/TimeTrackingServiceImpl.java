@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.repository.TimeEntryRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.TimeTrackingService;
 import com.bostoneo.bostoneosolutions.service.TimeEntryValidationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     private final TimeEntryValidationService timeEntryValidationService;
     private final UserRepository<User> userRepository;
     private final LegalCaseRepository legalCaseRepository;
+    private final TenantService tenantService;
 
     @Override
     public TimeEntryDTO createTimeEntry(TimeEntryDTO timeEntryDTO) {
@@ -171,10 +173,14 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public Page<TimeEntryDTO> getTimeEntries(int page, int size) {
         log.info("Retrieving time entries, page: {}, size: {}", page, size);
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
-        Page<TimeEntry> timeEntries = timeEntryRepository.findAll(pageable);
-        
+
+        // Use tenant-filtered query if organization context is available
+        Page<TimeEntry> timeEntries = tenantService.getCurrentOrganizationId()
+            .map(orgId -> timeEntryRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> timeEntryRepository.findAll(pageable));
+
         return timeEntries.map(this::mapToDTO);
     }
 

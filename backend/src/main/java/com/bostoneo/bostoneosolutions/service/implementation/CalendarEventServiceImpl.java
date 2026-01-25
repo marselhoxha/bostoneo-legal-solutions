@@ -16,6 +16,7 @@ import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     private final ReminderQueueService reminderQueueService;
     private final RoleService roleService;
     private final CaseAssignmentRepository caseAssignmentRepository;
+    private final TenantService tenantService;
 
     @Override
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
@@ -163,14 +165,18 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public Page<CalendarEventDTO> getAllEvents(int page, int size) {
         //log.info("Fetching all calendar events, page: {}, size: {}", page, size);
-        
+
         PageRequest pageRequest = PageRequest.of(page, size);
-        Page<CalendarEvent> eventsPage = calendarEventRepository.findAll(pageRequest);
-        
+
+        // Use tenant-filtered query if organization context is available
+        Page<CalendarEvent> eventsPage = tenantService.getCurrentOrganizationId()
+            .map(orgId -> calendarEventRepository.findByOrganizationId(orgId, pageRequest))
+            .orElseGet(() -> calendarEventRepository.findAll(pageRequest));
+
         List<CalendarEventDTO> eventDTOs = eventsPage.getContent().stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
-        
+
         return new PageImpl<>(eventDTOs, pageRequest, eventsPage.getTotalElements());
     }
 

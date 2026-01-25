@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.rowmapper.StatsRowMapper;
 import com.bostoneo.bostoneosolutions.service.ClientService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,7 @@ public class ClientServiceImpl implements ClientService {
     private final InvoiceRepository invoiceRepository;
     private final NamedParameterJdbcTemplate jdbc;
     private final EntityManager entityManager;
+    private final TenantService tenantService;
 
     @Override
     public Client createClient(Client client) {
@@ -49,7 +52,12 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Page<Client> getClients(int page, int size) {
-        return clientRepository.findAll(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> clientRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> clientRepository.findAll(pageable));
     }
 
     @Override
@@ -64,13 +72,23 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Page<Client> searchClients(String name, int page, int size) {
-        return clientRepository.findByNameContaining(name, PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Use tenant-filtered search if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> clientRepository.findByOrganizationIdAndNameContaining(orgId, name, pageable))
+            .orElseGet(() -> clientRepository.findByNameContaining(name, pageable));
     }
 
     @Override
     public List<Client> getClientsWithUnbilledTimeEntries() {
         log.info("Retrieving clients with unbilled time entries");
-        List<Client> clients = clientRepository.findClientsWithUnbilledTimeEntries();
+
+        // Use tenant-filtered query if organization context is available
+        List<Client> clients = tenantService.getCurrentOrganizationId()
+            .map(orgId -> clientRepository.findClientsWithUnbilledTimeEntriesByOrganization(orgId))
+            .orElseGet(() -> clientRepository.findClientsWithUnbilledTimeEntries());
+
         log.info("Found {} clients with unbilled time entries", clients.size());
         return clients;
     }
@@ -203,10 +221,12 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Page<Client> getClientsForUser(Long userId, int page, int size) {
-        // For non-admin users, return clients related to their cases
-        // This would typically join with case assignments
-        // For now, returning regular client list with potential filtering
-        return clientRepository.findAll(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> clientRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> clientRepository.findAll(pageable));
     }
     
     @Override

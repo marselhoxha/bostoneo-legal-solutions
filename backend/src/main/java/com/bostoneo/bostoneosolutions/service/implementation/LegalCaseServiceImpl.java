@@ -34,6 +34,7 @@ import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import com.bostoneo.bostoneosolutions.util.RoleUtils;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -73,6 +75,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final ClientRepository clientRepository;
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
+    private final TenantService tenantService;
 
     @Override
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
@@ -219,9 +222,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     @Override
     public Page<LegalCaseDTO> getAllCases(int page, int size) {
         // Sort by created_at descending to show newest cases first
-        Page<LegalCase> cases = legalCaseRepository.findAll(
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // Use tenant-filtered query if organization context is available
+        Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
+            .map(orgId -> legalCaseRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> legalCaseRepository.findAll(pageable));
+
         return cases.map(this::toDTOWithAttorneys);
     }
 
@@ -394,10 +401,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     @Override
     public Page<LegalCaseDTO> searchCases(String search, int page, int size) {
         log.info("Searching cases with term: {}", search);
-        Page<LegalCase> cases = legalCaseRepository.searchCases(
-            search,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // Use tenant-filtered search if organization context is available
+        Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
+            .map(orgId -> legalCaseRepository.searchCasesByOrganization(orgId, search, pageable))
+            .orElseGet(() -> legalCaseRepository.searchCases(search, pageable));
+
         return cases.map(this::toDTOWithAttorneys);
     }
 
@@ -421,10 +431,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public Page<LegalCaseDTO> getCasesByStatus(CaseStatus status, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByStatus(
-            status,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // Use tenant-filtered query if organization context is available
+        Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
+            .map(orgId -> legalCaseRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
+            .orElseGet(() -> legalCaseRepository.findByStatus(status, pageable));
+
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
