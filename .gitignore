@@ -44,8 +44,9 @@ backend/src/main/resources/firebase-service-account.json
 src/environments/environment.ts
 src/environments/environment.prod.ts
 
-# SQL Scripts
+# SQL Scripts (except migrations)
 *.sql
+!backend/src/main/resources/db/migration/*.sql
 
 # Markdown Files
 *.md
