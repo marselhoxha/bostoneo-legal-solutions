@@ -18,6 +18,7 @@ import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import com.bostoneo.bostoneosolutions.model.Client;
 import com.bostoneo.bostoneosolutions.model.InvoiceLineItem;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -69,6 +70,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final ClientRepository clientRepository;
+    private final TenantService tenantService;
     
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice", includeResult = true)
     public Invoice createInvoice(Invoice invoice) {
@@ -347,15 +349,23 @@ public class InvoiceServiceImpl implements IInvoiceService {
     }
     
     public Page<Invoice> getInvoices(int page, int size, String sortBy, String sortDirection) {
-        Sort sort = sortDirection.equalsIgnoreCase("ASC") ? 
+        Sort sort = sortDirection.equalsIgnoreCase("ASC") ?
             Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return invoiceRepository.findAll(pageable);
+
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> invoiceRepository.findAll(pageable));
     }
     
     public Page<Invoice> getInvoicesByClient(Long clientId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return invoiceRepository.findByClientId(clientId, pageable);
+
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationIdAndClientId(orgId, clientId, pageable))
+            .orElseGet(() -> invoiceRepository.findByClientId(clientId, pageable));
     }
     
     public Page<Invoice> getInvoicesByCase(Long caseId, int page, int size) {
@@ -365,7 +375,11 @@ public class InvoiceServiceImpl implements IInvoiceService {
     
     public Page<Invoice> getInvoicesByStatus(InvoiceStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return invoiceRepository.findByStatus(status, pageable);
+
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
+            .orElseGet(() -> invoiceRepository.findByStatus(status, pageable));
     }
     
     public Page<Invoice> getInvoicesByFilters(Long clientId, Long caseId, InvoiceStatus status,

@@ -15,6 +15,7 @@ import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.service.TaskManagementService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -47,6 +48,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     private final TaskCommentRepository taskCommentRepository;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final NotificationService notificationService;
+    private final TenantService tenantService;
 
     @Override
     public CaseTaskDTO createTask(CreateTaskRequest request) {
@@ -323,12 +325,16 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     @Override
     public Page<CaseTaskDTO> getAllTasks(Pageable pageable) {
         //log.info("Getting all tasks with pagination");
-        Page<CaseTask> tasksPage = caseTaskRepository.findAll(pageable);
-        
+
+        // Use tenant-filtered query if organization context is available
+        Page<CaseTask> tasksPage = tenantService.getCurrentOrganizationId()
+            .map(orgId -> caseTaskRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> caseTaskRepository.findAll(pageable));
+
         List<CaseTaskDTO> taskDTOs = tasksPage.getContent().stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
-            
+
         return new PageImpl<>(taskDTOs, pageable, tasksPage.getTotalElements());
     }
     

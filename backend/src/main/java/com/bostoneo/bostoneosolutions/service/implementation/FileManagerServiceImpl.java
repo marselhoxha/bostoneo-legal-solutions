@@ -27,6 +27,7 @@ import com.bostoneo.bostoneosolutions.service.FileManagerService;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -115,6 +116,7 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final RoleService roleService;
+    private final TenantService tenantService;
 
     @Override
     @Transactional(readOnly = true)
@@ -586,8 +588,12 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public FolderDTO getRootFolder() {
         log.info("Getting root folder");
-        
-        List<Folder> rootFolders = folderRepository.findRootFolders();
+
+        // Use tenant-filtered query if organization context is available
+        List<Folder> rootFolders = tenantService.getCurrentOrganizationId()
+            .map(orgId -> folderRepository.findRootFoldersByOrganization(orgId))
+            .orElseGet(() -> folderRepository.findRootFolders());
+
         if (rootFolders.isEmpty()) {
             // Create default root folder
             Folder rootFolder = Folder.builder()
@@ -597,7 +603,7 @@ public class FileManagerServiceImpl implements FileManagerService {
             rootFolder = folderRepository.save(rootFolder);
             return convertToFolderDTO(rootFolder);
         }
-        
+
         return convertToFolderDTO(rootFolders.get(0));
     }
     

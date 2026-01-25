@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.repository.PipelineStageRepository;
 import com.bostoneo.bostoneosolutions.service.LeadService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class LeadServiceImpl implements LeadService {
     private final PipelineStageRepository pipelineStageRepository;
     private final AuthenticatedWebSocketHandler webSocketHandler;
     private final NotificationService notificationService;
+    private final TenantService tenantService;
 
     // Valid pipeline status transitions
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
@@ -62,13 +64,19 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findAll() {
-        return leadRepository.findAll();
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationId(orgId))
+            .orElseGet(() -> leadRepository.findAll());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findAll(Pageable pageable) {
-        return leadRepository.findAll(pageable);
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationId(orgId, pageable))
+            .orElseGet(() -> leadRepository.findAll(pageable));
     }
 
     @Override
@@ -310,13 +318,19 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findByStatus(String status) {
-        return leadRepository.findByStatus(status);
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndStatus(orgId, status))
+            .orElseGet(() -> leadRepository.findByStatus(status));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findByStatus(String status, Pageable pageable) {
-        return leadRepository.findByStatus(status, pageable);
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
+            .orElseGet(() -> leadRepository.findByStatus(status, pageable));
     }
 
     @Override
@@ -352,7 +366,10 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findActiveLeads(Pageable pageable) {
-        return leadRepository.findActiveLeadsOrderByScoreAndCreatedAt(pageable);
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findActiveLeadsByOrganization(orgId, pageable))
+            .orElseGet(() -> leadRepository.findActiveLeadsOrderByScoreAndCreatedAt(pageable));
     }
 
     @Override
