@@ -30,10 +30,10 @@ public class SignatureTemplate {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "organization_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "organization_id", nullable = false)
     private Long organizationId;
 
     @Column(name = "boldsign_template_id", length = 100)
@@ -77,7 +77,7 @@ public class SignatureTemplate {
     @Builder.Default
     private Boolean isGlobal = false;
 
-    @Column(name = "created_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @Column(name = "created_at")

@@ -23,10 +23,10 @@ public class LeadPipelineHistory {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "lead_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "lead_id", nullable = false)
     private Long leadId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,7 +34,7 @@ public class LeadPipelineHistory {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Lead lead;
 
-    @Column(name = "from_stage_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "from_stage_id")
     private Long fromStageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,7 +42,7 @@ public class LeadPipelineHistory {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PipelineStage fromStage;
 
-    @Column(name = "to_stage_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "to_stage_id", nullable = false)
     private Long toStageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -50,7 +50,7 @@ public class LeadPipelineHistory {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PipelineStage toStage;
 
-    @Column(name = "moved_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "moved_by", nullable = false)
     private Long movedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

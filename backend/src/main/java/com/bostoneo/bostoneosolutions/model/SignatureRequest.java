@@ -34,23 +34,23 @@ public class SignatureRequest {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "organization_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "organization_id", nullable = false)
     private Long organizationId;
 
     @Column(name = "boldsign_document_id", unique = true, length = 100)
     private String boldsignDocumentId;
 
     // Internal references
-    @Column(name = "case_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "case_id")
     private Long caseId;
 
-    @Column(name = "client_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "client_id")
     private Long clientId;
 
-    @Column(name = "document_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "document_id")
     private Long documentId;
 
     // Request details
@@ -129,7 +129,7 @@ public class SignatureRequest {
     private String declineReason;
 
     // Tracking
-    @Column(name = "created_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @Column(name = "created_at")

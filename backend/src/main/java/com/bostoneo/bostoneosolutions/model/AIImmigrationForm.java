@@ -35,7 +35,7 @@ public class AIImmigrationForm {
     @Column(name = "form_category", nullable = false)
     private FormCategory formCategory;
 
-    @Column(name = "form_template", columnDefinition = "LONGTEXT")
+    @Column(name = "form_template", columnDefinition = "TEXT")
     private String formTemplate;
 
     @Column(name = "required_documents", columnDefinition = "jsonb")

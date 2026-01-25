@@ -23,13 +23,13 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 public class TimerSession {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "legal_case_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "legal_case_id", nullable = false)
     private Long legalCaseId;
 
     @Column(name = "start_time", nullable = false)
@@ -55,7 +55,7 @@ public class TimerSession {
     @Builder.Default
     private Boolean convertedToTimeEntry = false;
 
-    @Column(name = "time_entry_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "time_entry_id")
     private Long timeEntryId;
 
     @Column(name = "created_at", nullable = false)

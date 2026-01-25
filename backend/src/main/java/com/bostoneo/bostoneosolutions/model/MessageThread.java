@@ -21,16 +21,16 @@ public class MessageThread {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "case_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "case_id", nullable = false)
     private Long caseId;
 
-    @Column(name = "client_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "client_id", nullable = false)
     private Long clientId;
 
-    @Column(name = "attorney_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "attorney_id")
     private Long attorneyId;
 
     @Column(name = "subject", nullable = false)

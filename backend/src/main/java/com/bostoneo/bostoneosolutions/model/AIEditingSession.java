@@ -60,7 +60,7 @@ public class AIEditingSession {
     @Column(name = "locked_by")
     private Long lockedBy;
 
-    @Column(name = "current_content", columnDefinition = "LONGTEXT")
+    @Column(name = "current_content", columnDefinition = "TEXT")
     private String currentContent;
 
     @Column(name = "change_log", columnDefinition = "jsonb")

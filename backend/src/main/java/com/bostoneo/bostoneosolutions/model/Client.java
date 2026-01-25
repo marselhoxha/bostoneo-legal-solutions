@@ -27,13 +27,13 @@ public class Client {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "organization_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "organization_id")
     private Long organizationId;
 
-    @Column(name = "user_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "user_id")
     private Long userId;
 
     @Column(name = "name", nullable = false, length = 100)

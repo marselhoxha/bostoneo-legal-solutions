@@ -24,7 +24,7 @@ public class Lead {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "first_name", nullable = false, length = 100)
@@ -51,7 +51,7 @@ public class Lead {
     @Column(name = "priority", length = 20)
     private String priority = "MEDIUM";
 
-    @Column(name = "assigned_to", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "assigned_to")
     private Long assignedTo;
 
     @ManyToOne(fetch = FetchType.LAZY)

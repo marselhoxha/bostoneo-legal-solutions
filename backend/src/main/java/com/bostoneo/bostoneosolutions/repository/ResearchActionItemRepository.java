@@ -29,8 +29,8 @@ public interface ResearchActionItemRepository extends JpaRepository<ResearchActi
 
     @Modifying
     @Query(value = "INSERT INTO ai_conversation_sessions (id, user_id, session_name, session_type, is_active, message_count, total_tokens_used, total_cost_usd) " +
-                   "VALUES (:sessionId, :userId, :sessionName, :sessionType, 1, 0, 0, 0.0000) " +
-                   "ON DUPLICATE KEY UPDATE id=id", nativeQuery = true)
+                   "VALUES (:sessionId, :userId, :sessionName, :sessionType, true, 0, 0, 0.0000) " +
+                   "ON CONFLICT (id) DO NOTHING", nativeQuery = true)
     void createConversationSession(@Param("sessionId") Long sessionId,
                                    @Param("userId") Long userId,
                                    @Param("sessionName") String sessionName,

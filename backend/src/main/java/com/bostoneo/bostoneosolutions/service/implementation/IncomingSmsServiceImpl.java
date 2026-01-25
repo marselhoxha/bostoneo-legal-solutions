@@ -372,7 +372,7 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
                 String sql = """
                     SELECT user_id FROM case_assignments
                     WHERE case_id = :caseId
-                    AND is_active = 1
+                    AND is_active = true
                     AND user_id IS NOT NULL
                     """;
                 List<Long> caseAttorneys = jdbc.query(sql,

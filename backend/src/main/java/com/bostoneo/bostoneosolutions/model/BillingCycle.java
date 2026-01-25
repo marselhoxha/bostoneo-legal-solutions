@@ -26,10 +26,10 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 public class BillingCycle {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "legal_case_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "legal_case_id", nullable = false)
     private Long legalCaseId;
 
     @Column(name = "cycle_name", nullable = false, length = 100)
@@ -54,7 +54,7 @@ public class BillingCycle {
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Column(name = "invoice_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "invoice_id")
     private Long invoiceId;
 
     @Column(name = "generated_at")

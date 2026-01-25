@@ -31,8 +31,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     long countByTimestampBetween(LocalDateTime startDate, LocalDateTime endDate);
 
     // Count today's activities
-    @Query("SELECT COUNT(a) FROM AuditLog a WHERE DATE(a.timestamp) = CURRENT_DATE")
-    long countTodayActivities();
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.timestamp >= :startOfDay AND a.timestamp < :endOfDay")
+    long countTodayActivities(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
 
     // Count this week's activities
     @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.timestamp >= :weekStart")
@@ -57,8 +57,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByEntityTypeAndEntityIdOrderByTimestampDesc(AuditLog.EntityType entityType, Long entityId);
 
     // Count unique active users today
-    @Query("SELECT COUNT(DISTINCT a.userId) FROM AuditLog a WHERE DATE(a.timestamp) = CURRENT_DATE AND a.userId IS NOT NULL")
-    long countUniqueActiveUsersToday();
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM AuditLog a WHERE a.timestamp >= :startOfDay AND a.timestamp < :endOfDay AND a.userId IS NOT NULL")
+    long countUniqueActiveUsersToday(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
 
     // Find recent activities for dashboard (with user info)
     @Query("SELECT a FROM AuditLog a WHERE a.timestamp >= :since ORDER BY a.timestamp DESC")

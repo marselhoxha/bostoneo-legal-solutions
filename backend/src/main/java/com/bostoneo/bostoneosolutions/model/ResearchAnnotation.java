@@ -38,7 +38,7 @@ public class ResearchAnnotation {
     @Column(name = "document_title", columnDefinition = "TEXT")
     private String documentTitle;
 
-    @Column(name = "annotation_text", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "annotation_text", nullable = false, columnDefinition = "TEXT")
     private String annotationText;
 
     @Column(name = "highlighted_text", columnDefinition = "TEXT")

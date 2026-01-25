@@ -242,85 +242,85 @@ public class AnalyticsResource {
     // Real database query methods using JdbcTemplate
     private Map<String, Double> getMonthlyRevenueFromDB() {
         Map<String, Double> monthlyRevenue = new HashMap<>();
-        
+
         try {
-            String sql = "SELECT DATE_FORMAT(date, '%Y-%m') as month, SUM(total) as revenue " +
+            String sql = "SELECT TO_CHAR(date, 'YYYY-MM') as month, SUM(total) as revenue " +
                         "FROM invoice " +
                         "WHERE date IS NOT NULL " +
-                        "GROUP BY DATE_FORMAT(date, '%Y-%m') " +
+                        "GROUP BY TO_CHAR(date, 'YYYY-MM') " +
                         "ORDER BY month";
-            
+
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
-            
+
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
                 Double revenue = ((Number) row.get("revenue")).doubleValue();
                 monthlyRevenue.put(month, revenue);
             }
-            
+
             log.debug("Retrieved monthly revenue from DB: " + monthlyRevenue);
-            
+
         } catch (Exception e) {
             log.error("Error querying monthly revenue: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return monthlyRevenue;
     }
 
     private Map<String, Integer> getMonthlyCasesFromDB() {
         Map<String, Integer> monthlyCases = new HashMap<>();
-        
+
         try {
-            String sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cases " +
+            String sql = "SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as cases " +
                         "FROM legal_cases " +
                         "WHERE created_at IS NOT NULL " +
-                        "GROUP BY DATE_FORMAT(created_at, '%Y-%m') " +
+                        "GROUP BY TO_CHAR(created_at, 'YYYY-MM') " +
                         "ORDER BY month";
-            
+
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
-            
+
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
                 Integer cases = ((Number) row.get("cases")).intValue();
                 monthlyCases.put(month, cases);
             }
-            
+
             log.debug("Retrieved monthly cases from DB: " + monthlyCases);
-            
+
         } catch (Exception e) {
             log.error("Error querying monthly cases: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return monthlyCases;
     }
 
     private Map<String, Integer> getMonthlyUsersFromDB() {
         Map<String, Integer> monthlyUsers = new HashMap<>();
-        
+
         try {
-            String sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as users " +
+            String sql = "SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as users " +
                         "FROM users " +
                         "WHERE created_at IS NOT NULL " +
-                        "GROUP BY DATE_FORMAT(created_at, '%Y-%m') " +
+                        "GROUP BY TO_CHAR(created_at, 'YYYY-MM') " +
                         "ORDER BY month";
-            
+
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
-            
+
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
                 Integer users = ((Number) row.get("users")).intValue();
                 monthlyUsers.put(month, users);
             }
-            
+
             log.debug("Retrieved monthly users from DB: " + monthlyUsers);
-            
+
         } catch (Exception e) {
             log.error("Error querying monthly users: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return monthlyUsers;
     }
 
@@ -489,12 +489,12 @@ public class AnalyticsResource {
 
     private double calculateAverageResolutionTimeFromDB() {
         try {
-            String sql = "SELECT AVG(DATEDIFF(updated_at, created_at)) as avg_days " +
+            String sql = "SELECT AVG(EXTRACT(DAY FROM (updated_at - created_at))) as avg_days " +
                         "FROM legal_cases " +
                         "WHERE status = 'CLOSED' AND created_at IS NOT NULL AND updated_at IS NOT NULL";
-            
+
             Double avgDays = jdbcTemplate.queryForObject(sql, Double.class);
-            
+
             if (avgDays != null && avgDays > 0) {
                 // Convert days to months
                 double avgMonths = avgDays / 30.0;
@@ -503,7 +503,7 @@ public class AnalyticsResource {
         } catch (Exception e) {
             log.error("Error calculating average resolution time: " + e.getMessage());
         }
-        
+
         // If no closed cases or error, return 0
         return 0.0;
     }
@@ -538,82 +538,74 @@ public class AnalyticsResource {
 
     private Map<String, Integer> getRealActivityDataFromDB() {
         Map<String, Integer> activityData = new HashMap<>();
-        
+
         try {
             // Query case activity (created and updated)
-            String caseActivitySql = "SELECT DAYOFWEEK(created_at) - 2 as day_of_week, " +
-                                   "HOUR(created_at) as hour, " +
+            // PostgreSQL EXTRACT(ISODOW FROM ...) returns 1=Monday, 7=Sunday
+            String caseActivitySql = "SELECT EXTRACT(ISODOW FROM created_at)::int - 1 as day_of_week, " +
+                                   "EXTRACT(HOUR FROM created_at)::int as hour, " +
                                    "COUNT(*) as activity_count " +
                                    "FROM legal_cases " +
-                                   "WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
-                                   "GROUP BY DAYOFWEEK(created_at), HOUR(created_at)";
-            
+                                   "WHERE created_at >= NOW() - INTERVAL '30 days' " +
+                                   "GROUP BY EXTRACT(ISODOW FROM created_at), EXTRACT(HOUR FROM created_at)";
+
             List<Map<String, Object>> caseResults = jdbcTemplate.queryForList(caseActivitySql);
-            
+
             for (Map<String, Object> row : caseResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
                 Integer hour = ((Number) row.get("hour")).intValue();
                 Integer count = ((Number) row.get("activity_count")).intValue();
-                
-                // Adjust day of week (MySQL DAYOFWEEK: 1=Sunday, we want 0=Monday)
-                dayOfWeek = (dayOfWeek + 5) % 7; // Convert to 0=Monday, 6=Sunday
-                
+
                 String key = dayOfWeek + "-" + hour;
                 activityData.put(key, activityData.getOrDefault(key, 0) + count);
             }
-            
+
             // Query invoice activity
-            String invoiceActivitySql = "SELECT DAYOFWEEK(date) - 2 as day_of_week, " +
-                                      "HOUR(date) as hour, " +
+            String invoiceActivitySql = "SELECT EXTRACT(ISODOW FROM date)::int - 1 as day_of_week, " +
+                                      "EXTRACT(HOUR FROM date)::int as hour, " +
                                       "COUNT(*) as activity_count " +
                                       "FROM invoice " +
-                                      "WHERE date >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
-                                      "GROUP BY DAYOFWEEK(date), HOUR(date)";
-            
+                                      "WHERE date >= NOW() - INTERVAL '30 days' " +
+                                      "GROUP BY EXTRACT(ISODOW FROM date), EXTRACT(HOUR FROM date)";
+
             List<Map<String, Object>> invoiceResults = jdbcTemplate.queryForList(invoiceActivitySql);
-            
+
             for (Map<String, Object> row : invoiceResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
                 Integer hour = ((Number) row.get("hour")).intValue();
                 Integer count = ((Number) row.get("activity_count")).intValue();
-                
-                // Adjust day of week
-                dayOfWeek = (dayOfWeek + 5) % 7;
-                
+
                 String key = dayOfWeek + "-" + hour;
                 activityData.put(key, activityData.getOrDefault(key, 0) + (count * 2)); // Weight invoices higher
             }
-            
+
             // Query case updates (for ongoing activity)
-            String updateActivitySql = "SELECT DAYOFWEEK(updated_at) - 2 as day_of_week, " +
-                                     "HOUR(updated_at) as hour, " +
+            String updateActivitySql = "SELECT EXTRACT(ISODOW FROM updated_at)::int - 1 as day_of_week, " +
+                                     "EXTRACT(HOUR FROM updated_at)::int as hour, " +
                                      "COUNT(*) as activity_count " +
                                      "FROM legal_cases " +
-                                     "WHERE updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) " +
+                                     "WHERE updated_at >= NOW() - INTERVAL '7 days' " +
                                      "AND updated_at != created_at " +
-                                     "GROUP BY DAYOFWEEK(updated_at), HOUR(updated_at)";
-            
+                                     "GROUP BY EXTRACT(ISODOW FROM updated_at), EXTRACT(HOUR FROM updated_at)";
+
             List<Map<String, Object>> updateResults = jdbcTemplate.queryForList(updateActivitySql);
-            
+
             for (Map<String, Object> row : updateResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
                 Integer hour = ((Number) row.get("hour")).intValue();
                 Integer count = ((Number) row.get("activity_count")).intValue();
-                
-                // Adjust day of week
-                dayOfWeek = (dayOfWeek + 5) % 7;
-                
+
                 String key = dayOfWeek + "-" + hour;
                 activityData.put(key, activityData.getOrDefault(key, 0) + (count * 3)); // Weight updates highest
             }
-            
+
             log.debug("Real activity data points: " + activityData.size());
-            
+
         } catch (Exception e) {
             log.error("Error querying real activity data: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return activityData;
     }
 
@@ -769,12 +761,12 @@ public class AnalyticsResource {
             String currentMonth = YearMonth.now().toString();
             String sql = "SELECT COALESCE(SUM(total), 0) as revenue " +
                         "FROM invoice " +
-                        "WHERE DATE_FORMAT(date, '%Y-%m') = ? " +
+                        "WHERE TO_CHAR(date, 'YYYY-MM') = ? " +
                         "AND status = 'PAID'";
-            
+
             Double revenue = jdbcTemplate.queryForObject(sql, Double.class, currentMonth);
             return revenue != null ? revenue : 0.0;
-            
+
         } catch (Exception e) {
             log.error("Error calculating current month revenue: " + e.getMessage());
             return 0.0;
@@ -919,38 +911,38 @@ public class AnalyticsResource {
     @GetMapping("/recent-activity")
     public Map<String, Object> getRecentActivity() {
         Map<String, Object> activity = new HashMap<>();
-        
+
         try {
             // Recent cases (last 30 days)
             String recentCasesSql = "SELECT COUNT(*) as count " +
                                    "FROM legal_cases " +
-                                   "WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-            
+                                   "WHERE created_at >= NOW() - INTERVAL '30 days'";
+
             Integer recentCases = jdbcTemplate.queryForObject(recentCasesSql, Integer.class);
-            
+
             // Recent invoices (last 30 days)
             String recentInvoicesSql = "SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total " +
                                       "FROM invoice " +
-                                      "WHERE date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-            
+                                      "WHERE date >= NOW() - INTERVAL '30 days'";
+
             Map<String, Object> invoiceData = jdbcTemplate.queryForMap(recentInvoicesSql);
             Integer recentInvoices = ((Number) invoiceData.get("count")).intValue();
             Double recentRevenue = ((Number) invoiceData.get("total")).doubleValue();
-            
+
             // Case status changes (approximated by recent updates)
             String statusChangesSql = "SELECT COUNT(*) as count " +
                                      "FROM legal_cases " +
-                                     "WHERE updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-            
+                                     "WHERE updated_at >= NOW() - INTERVAL '7 days'";
+
             Integer recentStatusChanges = jdbcTemplate.queryForObject(statusChangesSql, Integer.class);
-            
+
             activity.put("recentCases", recentCases != null ? recentCases : 0);
             activity.put("recentInvoices", recentInvoices);
             activity.put("recentRevenue", recentRevenue);
             activity.put("recentStatusChanges", recentStatusChanges != null ? recentStatusChanges : 0);
-            
+
             log.debug("Recent activity data: " + activity);
-            
+
         } catch (Exception e) {
             log.error("Error getting recent activity: " + e.getMessage());
             // Return zero values instead of fallback
@@ -959,30 +951,30 @@ public class AnalyticsResource {
             activity.put("recentRevenue", 0.0);
             activity.put("recentStatusChanges", 0);
         }
-        
+
         return activity;
     }
 
     @GetMapping("/payment-trends")
     public List<Map<String, Object>> getPaymentTrends() {
         List<Map<String, Object>> trends = new ArrayList<>();
-        
+
         try {
-            String sql = "SELECT DATE_FORMAT(date, '%Y-%m') as month, " +
+            String sql = "SELECT TO_CHAR(date, 'YYYY-MM') as month, " +
                         "COUNT(CASE WHEN status = 'PAID' THEN 1 END) as paid_count, " +
                         "COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_count, " +
                         "COUNT(CASE WHEN status = 'OVERDUE' THEN 1 END) as overdue_count, " +
-                        "SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END) as paid_amount, " +
-                        "SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END) as pending_amount, " +
-                        "SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END) as overdue_amount " +
+                        "COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) as paid_amount, " +
+                        "COALESCE(SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END), 0) as pending_amount, " +
+                        "COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END), 0) as overdue_amount " +
                         "FROM invoice " +
                         "WHERE date IS NOT NULL " +
-                        "GROUP BY DATE_FORMAT(date, '%Y-%m') " +
+                        "GROUP BY TO_CHAR(date, 'YYYY-MM') " +
                         "ORDER BY month DESC " +
                         "LIMIT 12";
-            
+
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
-            
+
             for (Map<String, Object> row : results) {
                 Map<String, Object> trendData = new HashMap<>();
                 trendData.put("month", row.get("month"));
@@ -992,18 +984,18 @@ public class AnalyticsResource {
                 trendData.put("paidAmount", ((Number) row.get("paid_amount")).doubleValue());
                 trendData.put("pendingAmount", ((Number) row.get("pending_amount")).doubleValue());
                 trendData.put("overdueAmount", ((Number) row.get("overdue_amount")).doubleValue());
-                
+
                 trends.add(trendData);
             }
-            
+
             // Reverse to get chronological order
             Collections.reverse(trends);
-            
+
         } catch (Exception e) {
             log.error("Error getting payment trends: " + e.getMessage());
             // Return empty list as fallback
         }
-        
+
         return trends;
     }
 
@@ -1050,78 +1042,77 @@ public class AnalyticsResource {
     @GetMapping("/financial-summary")
     public Map<String, Object> getFinancialSummary() {
         Map<String, Object> summary = new HashMap<>();
-        
+
         try {
             // Outstanding receivables analysis
             String receivablesSQL = """
-                SELECT 
-                    SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END) as pending_amount,
-                    SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END) as overdue_amount,
-                    SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END) as collected_amount,
-                    COUNT(CASE WHEN status = 'OVERDUE' AND DATEDIFF(NOW(), date) > 90 THEN 1 END) as overdue_90_plus,
-                    COUNT(CASE WHEN status = 'OVERDUE' AND DATEDIFF(NOW(), date) BETWEEN 60 AND 90 THEN 1 END) as overdue_60_90,
-                    COUNT(CASE WHEN status = 'OVERDUE' AND DATEDIFF(NOW(), date) BETWEEN 30 AND 60 THEN 1 END) as overdue_30_60,
-                    COUNT(CASE WHEN status = 'OVERDUE' AND DATEDIFF(NOW(), date) < 30 THEN 1 END) as overdue_under_30
+                SELECT
+                    COALESCE(SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END), 0) as pending_amount,
+                    COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END), 0) as overdue_amount,
+                    COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) as collected_amount,
+                    COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) > 90 THEN 1 END) as overdue_90_plus,
+                    COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) BETWEEN 60 AND 90 THEN 1 END) as overdue_60_90,
+                    COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) BETWEEN 30 AND 60 THEN 1 END) as overdue_30_60,
+                    COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) < 30 THEN 1 END) as overdue_under_30
                 FROM invoice
                 """;
-                
+
             Map<String, Object> receivables = jdbcTemplate.queryForMap(receivablesSQL);
             summary.put("receivables", receivables);
-            
+
             // Collection rate analysis
             String collectionSQL = """
-                SELECT 
-                    ROUND(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END) * 100.0 / SUM(total), 2) as collection_rate,
-                    ROUND(AVG(DATEDIFF(NOW(), date)), 0) as avg_days_outstanding
+                SELECT
+                    ROUND(COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) * 100.0 / NULLIF(SUM(total), 0), 2) as collection_rate,
+                    ROUND(AVG(EXTRACT(DAY FROM (NOW() - date))), 0) as avg_days_outstanding
                 FROM invoice
                 """;
-                
+
             Map<String, Object> collection = jdbcTemplate.queryForMap(collectionSQL);
             summary.put("collection", collection);
-            
+
             // Revenue by month for trend analysis
             String monthlyRevenueSQL = """
-                SELECT 
-                    DATE_FORMAT(date, '%Y-%m') as month,
-                    SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END) as revenue,
+                SELECT
+                    TO_CHAR(date, 'YYYY-MM') as month,
+                    COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) as revenue,
                     COUNT(CASE WHEN status = 'PAID' THEN 1 END) as paid_invoices,
-                    SUM(total) as total_billed
-                FROM invoice 
-                WHERE date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                GROUP BY DATE_FORMAT(date, '%Y-%m')
+                    COALESCE(SUM(total), 0) as total_billed
+                FROM invoice
+                WHERE date >= NOW() - INTERVAL '12 months'
+                GROUP BY TO_CHAR(date, 'YYYY-MM')
                 ORDER BY month
                 """;
-                
+
             List<Map<String, Object>> monthlyRevenue = jdbcTemplate.queryForList(monthlyRevenueSQL);
             summary.put("monthlyTrends", monthlyRevenue);
-            
+
         } catch (Exception e) {
             log.error("Error getting financial summary: " + e.getMessage());
             summary.put("receivables", new HashMap<>());
             summary.put("collection", new HashMap<>());
             summary.put("monthlyTrends", new ArrayList<>());
         }
-        
+
         return summary;
     }
 
     @GetMapping("/case-performance-metrics")
     public Map<String, Object> getCasePerformanceMetrics() {
         Map<String, Object> metrics = new HashMap<>();
-        
+
         try {
             // Case status distribution with values
             String statusSQL = """
-                SELECT 
+                SELECT
                     status,
                     COUNT(*) as count,
                     AVG(total_amount) as avg_value,
                     SUM(total_amount) as total_value,
-                    AVG(DATEDIFF(
-                        COALESCE(updated_at, NOW()), 
-                        created_at
-                    )) as avg_duration_days
-                FROM legal_cases 
+                    AVG(EXTRACT(DAY FROM (
+                        COALESCE(updated_at, NOW()) - created_at
+                    ))) as avg_duration_days
+                FROM legal_cases
                 GROUP BY status
                 ORDER BY count DESC
                 """;
@@ -1185,11 +1176,11 @@ public class AnalyticsResource {
     @GetMapping("/team-productivity")
     public Map<String, Object> getTeamProductivity() {
         Map<String, Object> productivity = new HashMap<>();
-        
+
         try {
             // User activity analysis (based on available data)
             String userSQL = """
-                SELECT 
+                SELECT
                     u.id,
                     CONCAT(u.first_name, ' ', u.last_name) as name,
                     u.title,
@@ -1197,57 +1188,57 @@ public class AnalyticsResource {
                     COALESCE(SUM(lc.total_amount), 0) as total_case_value,
                     COALESCE(AVG(lc.total_amount), 0) as avg_case_value
                 FROM users u
-                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7  -- Simulate case assignments
-                WHERE u.enabled = 1
+                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7
+                WHERE u.enabled = true
                 GROUP BY u.id, u.first_name, u.last_name, u.title
                 ORDER BY total_case_value DESC
                 """;
-                
+
             List<Map<String, Object>> teamMetrics = jdbcTemplate.queryForList(userSQL);
             productivity.put("teamPerformance", teamMetrics);
-            
+
             // Department productivity (simulated based on titles)
             String deptSQL = """
-                SELECT 
+                SELECT
                     COALESCE(u.title, 'General') as department,
                     COUNT(u.id) as team_size,
                     COUNT(DISTINCT lc.id) as total_cases,
                     COALESCE(SUM(lc.total_amount), 0) as total_revenue
                 FROM users u
                 LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7
-                WHERE u.enabled = 1
+                WHERE u.enabled = true
                 GROUP BY u.title
                 ORDER BY total_revenue DESC
                 """;
-                
+
             List<Map<String, Object>> deptMetrics = jdbcTemplate.queryForList(deptSQL);
             productivity.put("departmentMetrics", deptMetrics);
-            
+
         } catch (Exception e) {
             log.error("Error getting team productivity: " + e.getMessage());
             productivity.put("teamPerformance", new ArrayList<>());
             productivity.put("departmentMetrics", new ArrayList<>());
         }
-        
+
         return productivity;
     }
 
     @GetMapping("/client-analytics")
     public Map<String, Object> getClientAnalytics() {
         Map<String, Object> analytics = new HashMap<>();
-        
+
         try {
             // Client acquisition trends
             String acquisitionSQL = """
-                SELECT 
-                    DATE_FORMAT(created_at, '%Y-%m') as month,
+                SELECT
+                    TO_CHAR(created_at, 'YYYY-MM') as month,
                     COUNT(*) as new_clients,
                     AVG(
                         (SELECT COUNT(*) FROM invoice i WHERE i.client_id = c.id)
                     ) as avg_invoices_per_client
                 FROM client c
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                WHERE created_at >= NOW() - INTERVAL '12 months'
+                GROUP BY TO_CHAR(created_at, 'YYYY-MM')
                 ORDER BY month
                 """;
                 
@@ -1305,77 +1296,76 @@ public class AnalyticsResource {
     @GetMapping("/business-intelligence")
     public Map<String, Object> getBusinessIntelligence() {
         Map<String, Object> intelligence = new HashMap<>();
-        
+
         try {
             // Revenue vs Cases correlation
             String correlationSQL = """
-                SELECT 
-                    DATE_FORMAT(COALESCE(i.date, lc.created_at), '%Y-%m') as month,
+                SELECT
+                    TO_CHAR(COALESCE(i.date, lc.created_at), 'YYYY-MM') as month,
                     COUNT(DISTINCT lc.id) as new_cases,
                     COUNT(DISTINCT i.id) as new_invoices,
                     COALESCE(SUM(CASE WHEN i.status = 'PAID' THEN i.total END), 0) as revenue,
                     COALESCE(SUM(i.total), 0) as total_billed
                 FROM legal_cases lc
-                LEFT JOIN invoice i ON DATE_FORMAT(lc.created_at, '%Y-%m') = DATE_FORMAT(i.date, '%Y-%m')
-                WHERE COALESCE(i.date, lc.created_at) >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                GROUP BY DATE_FORMAT(COALESCE(i.date, lc.created_at), '%Y-%m')
+                LEFT JOIN invoice i ON TO_CHAR(lc.created_at, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM')
+                WHERE COALESCE(i.date, lc.created_at) >= NOW() - INTERVAL '12 months'
+                GROUP BY TO_CHAR(COALESCE(i.date, lc.created_at), 'YYYY-MM')
                 ORDER BY month
                 """;
-                
+
             List<Map<String, Object>> correlation = jdbcTemplate.queryForList(correlationSQL);
             intelligence.put("revenueVsCases", correlation);
-            
+
             // Performance benchmarks
             Map<String, Object> benchmarks = new HashMap<>();
-            
+
             // Average case value by practice area
             String practiceValueSQL = """
-                SELECT 
+                SELECT
                     type as practice_area,
                     COUNT(*) as case_count,
                     AVG(total_amount) as avg_case_value,
                     SUM(total_amount) as total_value,
-                    AVG(DATEDIFF(
-                        COALESCE(updated_at, NOW()), 
-                        created_at
-                    )) as avg_days_to_resolution
-                FROM legal_cases 
+                    AVG(EXTRACT(DAY FROM (
+                        COALESCE(updated_at, NOW()) - created_at
+                    ))) as avg_days_to_resolution
+                FROM legal_cases
                 WHERE type IS NOT NULL AND total_amount IS NOT NULL
                 GROUP BY type
                 ORDER BY avg_case_value DESC
                 """;
-                
+
             List<Map<String, Object>> practiceMetrics = jdbcTemplate.queryForList(practiceValueSQL);
             benchmarks.put("practiceAreaPerformance", practiceMetrics);
-            
+
             // Collection efficiency
             String efficiencySQL = """
-                SELECT 
+                SELECT
                     ROUND(
-                        SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END) * 100.0 / 
-                        SUM(total), 2
+                        COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) * 100.0 /
+                        NULLIF(SUM(total), 0), 2
                     ) as collection_rate,
                     ROUND(AVG(
-                        CASE WHEN status = 'PAID' 
-                        THEN DATEDIFF(NOW(), date) 
+                        CASE WHEN status = 'PAID'
+                        THEN EXTRACT(DAY FROM (NOW() - date))
                         END
                     ), 0) as avg_collection_days,
                     COUNT(CASE WHEN status = 'OVERDUE' THEN 1 END) as overdue_count,
-                    SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END) as overdue_amount
+                    COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END), 0) as overdue_amount
                 FROM invoice
                 """;
-                
+
             Map<String, Object> efficiency = jdbcTemplate.queryForMap(efficiencySQL);
             benchmarks.put("collectionEfficiency", efficiency);
-            
+
             intelligence.put("benchmarks", benchmarks);
-            
+
         } catch (Exception e) {
             log.error("Error getting business intelligence: " + e.getMessage());
             intelligence.put("revenueVsCases", new ArrayList<>());
             intelligence.put("benchmarks", new HashMap<>());
         }
-        
+
         return intelligence;
     }
 

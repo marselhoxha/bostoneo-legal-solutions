@@ -23,7 +23,7 @@ public class IntakeForm {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "name", nullable = false, length = 100)
@@ -56,7 +56,7 @@ public class IntakeForm {
     @Column(name = "email_template_id")
     private Long emailTemplateId;
 
-    @Column(name = "auto_assign_to", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "auto_assign_to")
     private Long autoAssignTo;
 
     @Column(name = "practice_area", length = 100)
@@ -71,7 +71,7 @@ public class IntakeForm {
     @Column(name = "conversion_rate", precision = 5, scale = 2)
     private BigDecimal conversionRate = BigDecimal.ZERO;
 
-    @Column(name = "created_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @Column(name = "created_at")

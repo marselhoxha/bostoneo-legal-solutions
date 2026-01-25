@@ -29,13 +29,13 @@ public class SignatureReminderQueue {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "organization_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "organization_id", nullable = false)
     private Long organizationId;
 
-    @Column(name = "signature_request_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "signature_request_id", nullable = false)
     private Long signatureRequestId;
 
     @Enumerated(EnumType.STRING)
@@ -56,7 +56,7 @@ public class SignatureReminderQueue {
     @Column(name = "error_message", length = 500)
     private String errorMessage;
 
-    @Column(name = "communication_log_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "communication_log_id")
     private Long communicationLogId;
 
     @Column(name = "created_at")

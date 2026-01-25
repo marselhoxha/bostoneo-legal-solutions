@@ -26,19 +26,19 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 public class BillingRate {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "matter_type_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "matter_type_id")
     private Long matterTypeId;
 
-    @Column(name = "customer_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "customer_id")
     private Long clientId;
 
-    @Column(name = "legal_case_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "legal_case_id")
     private Long legalCaseId;
 
     @Column(name = "rate_type", nullable = false)
@@ -55,7 +55,7 @@ public class BillingRate {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1)")
+    @Column(name = "is_active", nullable = false, columnDefinition = "BOOLEAN")
     @Builder.Default
     private Boolean isActive = true;
 

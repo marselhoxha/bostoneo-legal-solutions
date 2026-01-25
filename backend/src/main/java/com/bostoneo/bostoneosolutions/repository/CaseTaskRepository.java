@@ -105,14 +105,14 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, Long> {
     /**
      * Find tasks by tag
      */
-    @Query(value = "SELECT * FROM case_tasks ct WHERE JSON_CONTAINS(ct.tags, :tag, '$')", 
+    @Query(value = "SELECT * FROM case_tasks ct WHERE ct.tags @> :tag::jsonb",
            nativeQuery = true)
     List<CaseTask> findByTag(@Param("tag") String tag);
-    
+
     /**
      * Calculate average task completion time
      */
-    @Query(value = "SELECT AVG(TIMESTAMPDIFF(HOUR, ct.created_at, ct.completed_at)) " +
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (ct.completed_at - ct.created_at))/3600) " +
            "FROM case_tasks ct WHERE ct.assigned_to = :userId " +
            "AND ct.status = 'COMPLETED' AND ct.completed_at IS NOT NULL",
            nativeQuery = true)

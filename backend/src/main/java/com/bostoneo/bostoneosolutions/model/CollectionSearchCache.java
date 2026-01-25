@@ -40,7 +40,7 @@ public class CollectionSearchCache {
     @Column(name = "expanded_query", length = 1000)
     private String expandedQuery;
 
-    @Column(name = "results_json", columnDefinition = "LONGTEXT")
+    @Column(name = "results_json", columnDefinition = "TEXT")
     private String resultsJson;
 
     @Column(name = "result_count")

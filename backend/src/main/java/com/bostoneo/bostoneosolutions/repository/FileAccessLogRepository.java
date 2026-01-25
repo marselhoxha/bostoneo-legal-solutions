@@ -156,12 +156,14 @@ public interface FileAccessLogRepository extends JpaRepository<FileAccessLog, Lo
     List<FileAccessLog> findOrphanedLogs();
     
     // Bulk statistics
-    @Query("SELECT DATE(l.accessedAt) as accessDate, COUNT(l) as dailyCount FROM FileAccessLog l " +
-           "WHERE l.accessedAt >= :since GROUP BY DATE(l.accessedAt) ORDER BY accessDate DESC")
+    @Query(value = "SELECT CAST(l.accessed_at AS DATE) as access_date, COUNT(*) as daily_count FROM file_access_logs l " +
+           "WHERE l.accessed_at >= :since GROUP BY CAST(l.accessed_at AS DATE) ORDER BY access_date DESC",
+           nativeQuery = true)
     List<Object[]> getDailyAccessStatistics(@Param("since") LocalDateTime since);
-    
-    @Query("SELECT HOUR(l.accessedAt) as accessHour, COUNT(l) as hourlyCount FROM FileAccessLog l " +
-           "WHERE l.accessedAt >= :since GROUP BY HOUR(l.accessedAt) ORDER BY accessHour ASC")
+
+    @Query(value = "SELECT EXTRACT(HOUR FROM l.accessed_at) as access_hour, COUNT(*) as hourly_count FROM file_access_logs l " +
+           "WHERE l.accessed_at >= :since GROUP BY EXTRACT(HOUR FROM l.accessed_at) ORDER BY access_hour ASC",
+           nativeQuery = true)
     List<Object[]> getHourlyAccessStatistics(@Param("since") LocalDateTime since);
     
     @Modifying

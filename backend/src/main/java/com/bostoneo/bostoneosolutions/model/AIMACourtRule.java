@@ -35,7 +35,7 @@ public class AIMACourtRule {
     @Column(name = "rule_title", nullable = false, length = 300)
     private String ruleTitle;
 
-    @Column(name = "rule_text", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "rule_text", nullable = false, columnDefinition = "TEXT")
     private String ruleText;
 
     @Column(name = "rule_category", length = 100)

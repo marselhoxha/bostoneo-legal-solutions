@@ -22,7 +22,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 public class CalendarEvent {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
     
     @Column(name = "title", nullable = false)

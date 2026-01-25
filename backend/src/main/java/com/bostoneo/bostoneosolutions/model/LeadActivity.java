@@ -24,10 +24,10 @@ public class LeadActivity {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "lead_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "lead_id", nullable = false)
     private Long leadId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -62,7 +62,7 @@ public class LeadActivity {
     @Column(name = "billable_rate", precision = 10, scale = 2)
     private BigDecimal billableRate;
 
-    @Column(name = "related_document_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "related_document_id")
     private Long relatedDocumentId;
 
     @Column(name = "external_id", length = 100)
@@ -71,7 +71,7 @@ public class LeadActivity {
     @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
-    @Column(name = "created_by", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

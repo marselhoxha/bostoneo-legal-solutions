@@ -46,7 +46,7 @@ public class AIResearchCache {
     @Column(name = "case_id", length = 50)
     private String caseId;
 
-    @Column(name = "ai_response", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "ai_response", nullable = false, columnDefinition = "TEXT")
     private String aiResponse;
 
     @Column(name = "ai_model_used", length = 50)

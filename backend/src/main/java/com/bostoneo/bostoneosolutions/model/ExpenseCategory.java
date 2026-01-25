@@ -27,7 +27,7 @@ public class ExpenseCategory {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "name", nullable = false, length = 100)

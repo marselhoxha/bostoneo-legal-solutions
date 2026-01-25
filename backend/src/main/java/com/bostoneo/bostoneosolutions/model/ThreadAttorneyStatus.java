@@ -27,13 +27,13 @@ public class ThreadAttorneyStatus {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "thread_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "thread_id", nullable = false)
     private Long threadId;
 
-    @Column(name = "attorney_user_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "attorney_user_id", nullable = false)
     private Long attorneyUserId;
 
     @Column(name = "unread_count")

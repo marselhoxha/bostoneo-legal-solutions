@@ -27,7 +27,7 @@ public class Expense {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)

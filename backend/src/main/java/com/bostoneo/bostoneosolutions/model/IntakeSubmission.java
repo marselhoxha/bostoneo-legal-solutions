@@ -23,10 +23,10 @@ public class IntakeSubmission {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "form_id", nullable = true, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "form_id", nullable = true)
     private Long formId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,7 +34,7 @@ public class IntakeSubmission {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private IntakeForm intakeForm;
 
-    @Column(name = "lead_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "lead_id")
     private Long leadId;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -60,7 +60,7 @@ public class IntakeSubmission {
     @Column(name = "priority_score")
     private Integer priorityScore = 0;
 
-    @Column(name = "reviewed_by", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "reviewed_by")
     private Long reviewedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

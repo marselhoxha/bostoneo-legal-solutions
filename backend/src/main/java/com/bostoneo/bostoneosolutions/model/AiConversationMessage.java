@@ -38,7 +38,7 @@ public class AiConversationMessage {
     @Column(name = "role", nullable = false, length = 20)
     private String role; // "user" or "assistant"
 
-    @Column(name = "content", columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
     @Column(name = "model_used", length = 100)

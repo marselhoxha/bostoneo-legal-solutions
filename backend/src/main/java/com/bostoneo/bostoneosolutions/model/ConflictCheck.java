@@ -24,13 +24,13 @@ public class ConflictCheck {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "entity_type", nullable = false, length = 50)
     private String entityType;
 
-    @Column(name = "entity_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "entity_id", nullable = false)
     private Long entityId;
 
     @Column(name = "check_type", nullable = false, length = 50)
@@ -54,7 +54,7 @@ public class ConflictCheck {
     @Column(name = "auto_checked")
     private Boolean autoChecked = true;
 
-    @Column(name = "checked_by", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "checked_by")
     private Long checkedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -74,7 +74,7 @@ public class ConflictCheck {
     @Column(name = "waiver_document_path")
     private String waiverDocumentPath;
 
-    @Column(name = "resolved_by", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "resolved_by")
     private Long resolvedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

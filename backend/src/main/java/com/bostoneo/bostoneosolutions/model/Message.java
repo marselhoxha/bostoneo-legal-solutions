@@ -21,13 +21,13 @@ public class Message {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "thread_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "thread_id", nullable = false)
     private Long threadId;
 
-    @Column(name = "sender_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "sender_id", nullable = false)
     private Long senderId;
 
     @Enumerated(EnumType.STRING)
@@ -51,7 +51,7 @@ public class Message {
     @Column(name = "has_attachment")
     private Boolean hasAttachment = false;
 
-    @Column(name = "attachment_file_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "attachment_file_id")
     private Long attachmentFileId;
 
     @Column(name = "created_at")

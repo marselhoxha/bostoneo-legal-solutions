@@ -32,10 +32,10 @@ public class AuditLog {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "user_id")
     private Long userId;
 
     @Column(name = "session_id", length = 255)
@@ -49,7 +49,7 @@ public class AuditLog {
     @Column(name = "entity_type", nullable = false, length = 50)
     private EntityType entityType;
 
-    @Column(name = "entity_id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "entity_id")
     private Long entityId;
 
     @Column(name = "description", columnDefinition = "TEXT")

@@ -49,7 +49,7 @@ public class AILegalTemplate {
     @Column(name = "document_type", length = 100)
     private String documentType;
 
-    @Column(name = "template_content", columnDefinition = "LONGTEXT")
+    @Column(name = "template_content", columnDefinition = "TEXT")
     private String templateContent;
 
     @Column(name = "template_type", length = 20)

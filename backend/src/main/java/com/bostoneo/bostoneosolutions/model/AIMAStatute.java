@@ -33,7 +33,7 @@ public class AIMAStatute {
     @Column(nullable = false, length = 500)
     private String title;
 
-    @Column(name = "statute_text", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "statute_text", nullable = false, columnDefinition = "TEXT")
     private String statuteText;
 
     @Column(name = "practice_area", length = 100)

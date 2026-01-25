@@ -69,8 +69,8 @@ public interface UserWorkloadRepository extends JpaRepository<UserWorkload, Long
     @Query(value = "SELECT COUNT(*) FROM (" +
            "SELECT calculation_date FROM user_workload " +
            "WHERE user_id = :userId AND capacity_percentage >= :threshold " +
-           "AND calculation_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) " +
-           "ORDER BY calculation_date DESC) t", 
+           "AND calculation_date >= CURRENT_DATE - INTERVAL '30 days' " +
+           "ORDER BY calculation_date DESC) t",
            nativeQuery = true)
     int countConsecutiveHighWorkloadDays(
         @Param("userId") Long userId,

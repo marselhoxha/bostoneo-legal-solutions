@@ -96,10 +96,10 @@ public class AIPatentApplication {
     @Column(name = "independent_claims_count")
     private Integer independentClaimsCount;
 
-    @Column(name = "description", columnDefinition = "LONGTEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "claims", columnDefinition = "LONGTEXT")
+    @Column(name = "claims", columnDefinition = "TEXT")
     private String claims;
 
     @Column(name = "drawings_count")

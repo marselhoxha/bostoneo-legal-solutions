@@ -35,7 +35,7 @@ public class AICriminalMotion {
     @Column(name = "motion_title", nullable = false, length = 300)
     private String motionTitle;
 
-    @Column(name = "motion_text", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "motion_text", nullable = false, columnDefinition = "TEXT")
     private String motionText;
 
     @Column(name = "filing_date")

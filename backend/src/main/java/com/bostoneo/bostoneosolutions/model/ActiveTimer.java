@@ -29,13 +29,13 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 public class ActiveTimer {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "legal_case_id", nullable = false, columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "legal_case_id", nullable = false)
     private Long legalCaseId;
 
     @Column(name = "start_time", nullable = false)

@@ -23,7 +23,7 @@ public class CaseNote {
     
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
+    @Column(name = "id")
     private Long id;
     
     @Column(name = "case_id", nullable = false)
