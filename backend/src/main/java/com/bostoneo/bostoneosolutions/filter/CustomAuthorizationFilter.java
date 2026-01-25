@@ -2,6 +2,8 @@ package com.bostoneo.bostoneosolutions.filter;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -57,6 +59,11 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                // Set tenant context from authenticated user
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof User user && user.getOrganizationId() != null) {
+                    TenantContext.setCurrentTenant(user.getOrganizationId());
+                }
             } else {
                 log.warn("Token invalid for user {}, clearing SecurityContext", userId);
                 SecurityContextHolder.clearContext();
@@ -77,6 +84,9 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             log.error("Authorization error for {}: {}",
                 maskPath(request.getRequestURI()), exception.getMessage());
             processError(request, response, exception);
+        } finally {
+            // Always clear tenant context after request to prevent memory leaks
+            TenantContext.clear();
         }
     }
 
