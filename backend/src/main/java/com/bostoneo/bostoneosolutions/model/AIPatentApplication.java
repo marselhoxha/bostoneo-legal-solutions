@@ -84,10 +84,10 @@ public class AIPatentApplication {
     @Column(name = "priority_application_number", length = 50)
     private String priorityApplicationNumber;
 
-    @Column(name = "inventors", columnDefinition = "jsonb")
+    @Column(name = "inventors", columnDefinition = "TEXT")
     private String inventors;
 
-    @Column(name = "assignees", columnDefinition = "jsonb")
+    @Column(name = "assignees", columnDefinition = "TEXT")
     private String assignees;
 
     @Column(name = "claims_count")
@@ -135,13 +135,13 @@ public class AIPatentApplication {
     @Column(name = "response_due_date")
     private LocalDate responseDueDate;
 
-    @Column(name = "continuation_data", columnDefinition = "jsonb")
+    @Column(name = "continuation_data", columnDefinition = "TEXT")
     private String continuationData;
 
-    @Column(name = "foreign_filing_data", columnDefinition = "jsonb")
+    @Column(name = "foreign_filing_data", columnDefinition = "TEXT")
     private String foreignFilingData;
 
-    @Column(name = "prior_art_references", columnDefinition = "jsonb")
+    @Column(name = "prior_art_references", columnDefinition = "TEXT")
     private String priorArtReferences;
 
     @Column(name = "cited_references_count")

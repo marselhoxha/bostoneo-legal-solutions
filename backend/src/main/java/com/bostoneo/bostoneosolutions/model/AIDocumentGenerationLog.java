@@ -40,10 +40,10 @@ public class AIDocumentGenerationLog {
     @Column(name = "generation_type", nullable = false)
     private GenerationType generationType;
 
-    @Column(name = "input_data", columnDefinition = "jsonb")
+    @Column(name = "input_data", columnDefinition = "TEXT")
     private String inputData;
 
-    @Column(name = "variables_used", columnDefinition = "jsonb")
+    @Column(name = "variables_used", columnDefinition = "TEXT")
     private String variablesUsed;
 
     @Column(name = "ai_model_used", length = 50)

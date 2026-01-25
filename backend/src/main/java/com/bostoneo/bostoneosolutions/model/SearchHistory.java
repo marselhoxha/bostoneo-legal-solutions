@@ -33,7 +33,7 @@ public class SearchHistory {
     @Column(name = "query_type")
     private QueryType queryType;
 
-    @Column(name = "search_filters", columnDefinition = "jsonb")
+    @Column(name = "search_filters", columnDefinition = "TEXT")
     private String searchFilters;
 
     @Column(name = "results_count")

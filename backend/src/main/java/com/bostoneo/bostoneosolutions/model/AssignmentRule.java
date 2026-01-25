@@ -54,11 +54,11 @@ public class AssignmentRule {
     private boolean preferPreviousAttorney = true;
     
     @Type(JsonType.class)
-    @Column(name = "rule_conditions", columnDefinition = "jsonb")
+    @Column(name = "rule_conditions", columnDefinition = "TEXT")
     private Map<String, Object> ruleConditions = new HashMap<>();
     
     @Type(JsonType.class)
-    @Column(name = "rule_actions", columnDefinition = "jsonb")
+    @Column(name = "rule_actions", columnDefinition = "TEXT")
     private Map<String, Object> ruleActions = new HashMap<>();
     
     @Column(name = "created_at", nullable = false, updatable = false)

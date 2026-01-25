@@ -42,7 +42,7 @@ public class IntakeSubmission {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Lead lead;
 
-    @Column(name = "submission_data", columnDefinition = "jsonb", nullable = false)
+    @Column(name = "submission_data", columnDefinition = "TEXT", nullable = false)
     private String submissionData;
 
     @Column(name = "ip_address", length = 45)
@@ -74,7 +74,7 @@ public class IntakeSubmission {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "tags", columnDefinition = "jsonb")
+    @Column(name = "tags", columnDefinition = "TEXT")
     private String tags;
 
     @Column(name = "created_at")

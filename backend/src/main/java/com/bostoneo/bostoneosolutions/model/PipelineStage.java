@@ -49,10 +49,10 @@ public class PipelineStage {
     @Column(name = "is_final")
     private Boolean isFinal = false;
 
-    @Column(name = "auto_actions", columnDefinition = "jsonb")
+    @Column(name = "auto_actions", columnDefinition = "TEXT")
     private String autoActions;
 
-    @Column(name = "required_fields", columnDefinition = "jsonb")
+    @Column(name = "required_fields", columnDefinition = "TEXT")
     private String requiredFields;
 
     @Column(name = "estimated_days")

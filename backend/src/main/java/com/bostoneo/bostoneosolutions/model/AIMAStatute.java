@@ -39,13 +39,13 @@ public class AIMAStatute {
     @Column(name = "practice_area", length = 100)
     private String practiceArea;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private String keywords;
 
-    @Column(name = "related_cases", columnDefinition = "jsonb")
+    @Column(name = "related_cases", columnDefinition = "TEXT")
     private String relatedCases;
 
-    @Column(name = "amendments_history", columnDefinition = "jsonb")
+    @Column(name = "amendments_history", columnDefinition = "TEXT")
     private String amendmentsHistory;
 
     @Column(name = "effective_date")
@@ -57,7 +57,7 @@ public class AIMAStatute {
     @Column(name = "citation_format", length = 100)
     private String citationFormat;
 
-    @Column(name = "cross_references", columnDefinition = "jsonb")
+    @Column(name = "cross_references", columnDefinition = "TEXT")
     private String crossReferences;
 
     @Column(name = "practice_notes", columnDefinition = "TEXT")

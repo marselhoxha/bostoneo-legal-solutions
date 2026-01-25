@@ -34,7 +34,7 @@ public class AIEditingSession {
     @Column(name = "session_name", length = 200)
     private String sessionName;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private String participants;
 
     @Column(name = "owner_id", nullable = false)
@@ -63,7 +63,7 @@ public class AIEditingSession {
     @Column(name = "current_content", columnDefinition = "TEXT")
     private String currentContent;
 
-    @Column(name = "change_log", columnDefinition = "jsonb")
+    @Column(name = "change_log", columnDefinition = "TEXT")
     private String changeLog;
 
     @Builder.Default

@@ -54,7 +54,7 @@ public class SignatureTemplate {
     @Column(name = "file_url", length = 500)
     private String fileUrl;
 
-    @Column(name = "field_config", columnDefinition = "jsonb")
+    @Column(name = "field_config", columnDefinition = "TEXT")
     private String fieldConfig;
 
     @Column(name = "default_expiry_days")

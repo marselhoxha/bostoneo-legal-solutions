@@ -59,7 +59,7 @@ public class AILegalTemplate {
     @Column(name = "pdf_form_url", length = 500)
     private String pdfFormUrl; // URL to the official PDF form
 
-    @Column(name = "pdf_field_mappings", columnDefinition = "jsonb")
+    @Column(name = "pdf_field_mappings", columnDefinition = "TEXT")
     private String pdfFieldMappings; // JSON mapping of form fields to case data
 
     @Column(name = "pdf_form_hash", length = 64)
@@ -68,10 +68,10 @@ public class AILegalTemplate {
     @Column(name = "ai_prompt_structure", columnDefinition = "TEXT")
     private String aiPromptStructure;
 
-    @Column(name = "variable_mappings", columnDefinition = "jsonb")
+    @Column(name = "variable_mappings", columnDefinition = "TEXT")
     private String variableMappings;
 
-    @Column(name = "formatting_rules", columnDefinition = "jsonb")
+    @Column(name = "formatting_rules", columnDefinition = "TEXT")
     private String formattingRules;
 
     @Column(name = "style_guide_id")

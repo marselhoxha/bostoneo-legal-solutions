@@ -75,7 +75,7 @@ public class AIImmigrationCase {
     @Column(name = "case_notes", columnDefinition = "TEXT")
     private String caseNotes;
 
-    @Column(name = "documents_checklist", columnDefinition = "jsonb")
+    @Column(name = "documents_checklist", columnDefinition = "TEXT")
     private String documentsChecklist;
 
     @Column(name = "filing_fee", precision = 10, scale = 2)

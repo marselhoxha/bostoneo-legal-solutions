@@ -50,7 +50,7 @@ public class ResearchAnnotation {
     @Column(name = "page_number")
     private Integer pageNumber;
 
-    @Column(name = "position_data", columnDefinition = "jsonb")
+    @Column(name = "position_data", columnDefinition = "TEXT")
     private String positionData; // For storing highlight position coordinates
 
     @Builder.Default

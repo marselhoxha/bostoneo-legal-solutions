@@ -55,7 +55,7 @@ public class InvoiceReminder {
     @Column(columnDefinition = "TEXT")
     private String message;
     
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = StringListConverter.class)
     private List<String> recipients;
     

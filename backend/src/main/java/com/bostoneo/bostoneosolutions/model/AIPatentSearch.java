@@ -41,19 +41,19 @@ public class AIPatentSearch {
     @Column(name = "invention_description", columnDefinition = "TEXT")
     private String inventionDescription;
 
-    @Column(name = "search_terms", columnDefinition = "jsonb")
+    @Column(name = "search_terms", columnDefinition = "TEXT")
     private String searchTerms;
 
-    @Column(name = "search_databases", columnDefinition = "jsonb")
+    @Column(name = "search_databases", columnDefinition = "TEXT")
     private String searchDatabases;
 
     @Column(name = "search_strategy", columnDefinition = "TEXT")
     private String searchStrategy;
 
-    @Column(name = "search_results", columnDefinition = "jsonb")
+    @Column(name = "search_results", columnDefinition = "TEXT")
     private String searchResults;
 
-    @Column(name = "prior_art_references", columnDefinition = "jsonb")
+    @Column(name = "prior_art_references", columnDefinition = "TEXT")
     private String priorArtReferences;
 
     @Column(name = "analysis_results", columnDefinition = "TEXT")

@@ -105,7 +105,7 @@ public class Lead {
     @Column(name = "client_budget_range", length = 50)
     private String clientBudgetRange;
 
-    @Column(name = "competitor_firms", columnDefinition = "jsonb")
+    @Column(name = "competitor_firms", columnDefinition = "TEXT")
     private String competitorFirms;
 
     @Column(name = "geographic_location", length = 100)

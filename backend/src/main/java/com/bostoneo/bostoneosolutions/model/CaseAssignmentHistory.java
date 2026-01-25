@@ -65,7 +65,7 @@ public class CaseAssignmentHistory {
     private LocalDateTime performedAt;
     
     @Type(JsonType.class)
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private Map<String, Object> metadata = new HashMap<>();
     
     @PrePersist

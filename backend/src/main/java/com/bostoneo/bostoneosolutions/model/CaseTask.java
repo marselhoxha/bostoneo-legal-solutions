@@ -88,11 +88,11 @@ public class CaseTask {
     private LocalDateTime reminderDate;
     
     @Type(JsonType.class)
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private List<Long> dependencies = new ArrayList<>();
     
     @Type(JsonType.class)
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private List<String> tags = new ArrayList<>();
     
     @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

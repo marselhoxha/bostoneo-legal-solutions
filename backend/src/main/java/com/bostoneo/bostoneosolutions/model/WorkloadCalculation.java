@@ -1,11 +1,9 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,16 +32,16 @@ public class WorkloadCalculation {
     @Column(name = "calculation_date", nullable = false)
     private LocalDate calculationDate;
     
-    @Type(JsonType.class)
-    @Column(name = "case_points", columnDefinition = "jsonb")
+    @Column(name = "case_points", columnDefinition = "TEXT")
+    @Convert(converter = JsonMapConverter.class)
     @Builder.Default
-    private Map<Long, BigDecimal> casePoints = new HashMap<>();
-    
+    private Map<String, Object> casePoints = new HashMap<>();
+
     @Column(name = "total_points", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPoints;
-    
-    @Type(JsonType.class)
-    @Column(columnDefinition = "jsonb")
+
+    @Column(name = "factors", columnDefinition = "TEXT")
+    @Convert(converter = JsonMapConverter.class)
     @Builder.Default
     private Map<String, Object> factors = new HashMap<>();
     
@@ -65,7 +63,7 @@ public class WorkloadCalculation {
         if (casePoints == null) {
             casePoints = new HashMap<>();
         }
-        casePoints.put(caseId, points);
+        casePoints.put(String.valueOf(caseId), points);
     }
     
     /**
