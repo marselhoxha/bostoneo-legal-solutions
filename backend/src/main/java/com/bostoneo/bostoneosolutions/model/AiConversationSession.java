@@ -77,7 +77,7 @@ public class AiConversationSession {
     @Column(name = "primary_topic", length = 255)
     private String primaryTopic;
 
-    @Column(name = "key_entities", columnDefinition = "jsonb")
+    @Column(name = "key_entities", columnDefinition = "TEXT")
     @Convert(converter = JsonMapConverter.class)
     private Map<String, Object> keyEntities;
 
