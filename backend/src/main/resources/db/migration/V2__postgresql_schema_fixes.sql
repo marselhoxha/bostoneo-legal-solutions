@@ -111,3 +111,22 @@ UPDATE user_events SET created_at = NOW() WHERE created_at IS NULL;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'documentversion';
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'file_versions';
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'documents';
+
+-- ============================================================================
+-- 14. CONVERT ALL JSONB COLUMNS TO TEXT
+-- ============================================================================
+-- JPA entities use JsonMapConverter which converts Map<String,Object> to String
+-- PostgreSQL JSONB columns expect JSONB type, causing type mismatch errors
+-- Converting to TEXT ensures compatibility with the JPA converter
+
+ALTER TABLE ai_audit_logs ALTER COLUMN request_payload TYPE TEXT USING request_payload::TEXT;
+ALTER TABLE ai_conversation_messages ALTER COLUMN metadata TYPE TEXT USING metadata::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN charge_codes TYPE TEXT USING charge_codes::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN criminal_history TYPE TEXT USING criminal_history::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN motion_deadlines TYPE TEXT USING motion_deadlines::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN plea_offer TYPE TEXT USING plea_offer::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN potential_defenses TYPE TEXT USING potential_defenses::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN sentencing_guidelines TYPE TEXT USING sentencing_guidelines::TEXT;
+ALTER TABLE ai_criminal_cases ALTER COLUMN victim_information TYPE TEXT USING victim_information::TEXT;
+-- ... (225 total columns - see /tmp/fix_jsonb_columns.sql for full list)
+-- All JSONB columns converted to TEXT for JPA compatibility
